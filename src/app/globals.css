@@ -1,0 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: #1C1C1C;
+    --color-background: #FAFAF7;
+    --color-accent: #C4A882;
+    --color-cream: #F5EFE6;
+    --color-border: #E8E2D9;
+    --color-gray: #8A8480;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: #FAFAF7;
+    color: #1C1C1C;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  input, textarea, select {
+    font-family: inherit;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #F5EFE6;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #D4CEC8;
+    border-radius: 2px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #B8B2AC;
+  }
+}
+
+@layer components {
+  /* Focus ring */
+  .focus-ring {
+    @apply outline-none ring-1 ring-accent ring-offset-1;
+  }
+
+  /* Gold divider */
+  .gold-divider {
+    @apply border-none h-px bg-gradient-to-r from-transparent via-accent to-transparent;
+  }
+
+  /* Premium card */
+  .card-luxury {
+    @apply bg-white border border-border shadow-luxury rounded;
+  }
+
+  /* Section label */
+  .label-luxury {
+    @apply text-2xs font-medium tracking-widest uppercase text-gray-500;
+  }
+
+  /* Quantity input */
+  .qty-input {
+    @apply w-12 text-center border border-border rounded text-sm font-medium bg-white focus:outline-none focus:border-accent;
+  }
+
+  /* Table styles */
+  .table-luxury {
+    @apply w-full text-sm;
+  }
+
+  .table-luxury th {
+    @apply text-left py-3 px-4 text-2xs font-medium tracking-widest uppercase text-gray-500 border-b border-border;
+  }
+
+  .table-luxury td {
+    @apply py-3 px-4 border-b border-border/60;
+  }
+
+  .table-luxury tbody tr {
+    @apply hover:bg-cream/50 transition-colors duration-100;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+}

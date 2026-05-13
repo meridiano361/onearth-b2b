@@ -1,0 +1,108 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+
+const updateSchema = z.object({
+  code: z.string().min(1).optional(),
+  name: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  costPrice: z.number().positive().optional(),
+  retailPrice: z.number().positive().optional(),
+  lotSize: z.number().int().positive().optional(),
+  imageUrl: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  categoryId: z.string().optional().nullable(),
+  collectionId: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+  stock: z.number().int().optional().nullable(),
+});
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const product = await prisma.product.findUnique({
+      where: { id: params.id },
+      include: { category: true, collection: true },
+    });
+
+    if (!product) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    return NextResponse.json({
+      data: {
+        ...product,
+        costPrice: Number(product.costPrice),
+        retailPrice: Number(product.retailPrice),
+        createdAt: product.createdAt.toISOString(),
+        updatedAt: product.updatedAt.toISOString(),
+      },
+    });
+  } catch (err) {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const data = updateSchema.parse(body);
+
+    const product = await prisma.product.update({
+      where: { id: params.id },
+      data,
+      include: { category: true },
+    });
+
+    return NextResponse.json({
+      data: {
+        ...product,
+        costPrice: Number(product.costPrice),
+        retailPrice: Number(product.retailPrice),
+        createdAt: product.createdAt.toISOString(),
+        updatedAt: product.updatedAt.toISOString(),
+      },
+    });
+  } catch (err: any) {
+    if (err.name === 'ZodError') {
+      return NextResponse.json({ error: 'Invalid data', details: err.errors }, { status: 400 });
+    }
+    if (err.code === 'P2025') {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    await prisma.product.delete({ where: { id: params.id } });
+    return NextResponse.json({ message: 'Product deleted' });
+  } catch (err: any) {
+    if (err.code === 'P2025') {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

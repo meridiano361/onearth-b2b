@@ -1,0 +1,137 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+import { slugify } from '@/lib/utils';
+
+const productSchema = z.object({
+  code: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  costPrice: z.number().positive(),
+  retailPrice: z.number().positive(),
+  lotSize: z.number().int().positive().default(1),
+  imageUrl: z.string().url().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  categoryId: z.string().optional().nullable(),
+  collectionId: z.string().optional().nullable(),
+  isActive: z.boolean().default(true),
+  stock: z.number().int().optional().nullable(),
+});
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const active = searchParams.get('active');
+    const categoryId = searchParams.get('categoryId');
+    const search = searchParams.get('search');
+    const collectionId = searchParams.get('collectionId');
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '100', 10);
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (active === 'true') where.isActive = true;
+    if (categoryId) where.categoryId = categoryId;
+    if (collectionId) where.collectionId = collectionId;
+    if (search) {
+      where.OR = [
+        { code: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        include: {
+          category: {
+            include: {
+              parent: true,
+            },
+          },
+        },
+        orderBy: [{ category: { order: 'asc' } }, { code: 'asc' }],
+        skip,
+        take: limit,
+      }),
+      prisma.product.count({ where }),
+    ]);
+
+    // Serialize Decimals
+    const serialized = products.map((p) => ({
+      ...p,
+      costPrice: Number(p.costPrice),
+      retailPrice: Number(p.retailPrice),
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
+    }));
+
+    return NextResponse.json({
+      data: serialized,
+      total,
+      page,
+      pageSize: limit,
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (err) {
+    console.error('GET /api/products error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const data = productSchema.parse(body);
+
+    const product = await prisma.product.create({
+      data: {
+        code: data.code.toUpperCase().trim(),
+        name: data.name.trim(),
+        description: data.description || null,
+        costPrice: data.costPrice,
+        retailPrice: data.retailPrice,
+        lotSize: data.lotSize,
+        imageUrl: data.imageUrl || null,
+        notes: data.notes || null,
+        categoryId: data.categoryId || null,
+        collectionId: data.collectionId || null,
+        isActive: data.isActive,
+        stock: data.stock || null,
+      },
+      include: { category: true },
+    });
+
+    return NextResponse.json({
+      data: {
+        ...product,
+        costPrice: Number(product.costPrice),
+        retailPrice: Number(product.retailPrice),
+        createdAt: product.createdAt.toISOString(),
+        updatedAt: product.updatedAt.toISOString(),
+      },
+    }, { status: 201 });
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      return NextResponse.json({ error: 'Product code already exists' }, { status: 409 });
+    }
+    if (err.name === 'ZodError') {
+      return NextResponse.json({ error: 'Invalid data', details: err.errors }, { status: 400 });
+    }
+    console.error('POST /api/products error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
