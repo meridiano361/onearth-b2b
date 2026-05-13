@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Collection {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  season    String
+  year      Int
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  categories Category[]
+  products   Product[]
+  orders     Order[]
+
+  @@map("collections")
+}
+
+model Category {
+  id           String     @id @default(cuid())
+  name         String
+  slug         String
+  parentId     String?
+  order        Int        @default(0)
+  collectionId String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  parent     Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children   Category[] @relation("CategoryTree")
+  collection Collection? @relation(fields: [collectionId], references: [id])
+  products   Product[]
+
+  @@unique([slug, collectionId])
+  @@map("categories")
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  name         String
+  description  String?
+  costPrice    Decimal  @db.Decimal(10, 2)
+  retailPrice  Decimal  @db.Decimal(10, 2)
+  lotSize      Int      @default(1)
+  imageUrl     String?
+  notes        String?
+  categoryId   String?
+  collectionId String?
+  isActive     Boolean  @default(true)
+  stock        Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  category   Category?   @relation(fields: [categoryId], references: [id])
+  collection Collection? @relation(fields: [collectionId], references: [id])
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+model Customer {
+  id            String   @id @default(cuid())
+  companyName   String
+  customerCode  String   @unique
+  email         String   @unique
+  passwordHash  String
+  isActive      Boolean  @default(true)
+  role          Role     @default(CUSTOMER)
+  phone         String?
+  address       String?
+  city          String?
+  country       String?
+  vatNumber     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  orders Order[]
+
+  @@map("customers")
+}
+
+enum OrderStatus {
+  DRAFT
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  CANCELLED
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  customerId   String
+  collectionId String?
+  status       OrderStatus @default(DRAFT)
+  totalValue   Decimal     @db.Decimal(10, 2) @default(0)
+  totalItems   Int         @default(0)
+  notes        String?
+  createdAt    DateTime    @default(now())
+  confirmedAt  DateTime?
+  updatedAt    DateTime    @updatedAt
+
+  customer   Customer    @relation(fields: [customerId], references: [id])
+  collection Collection? @relation(fields: [collectionId], references: [id])
+  items      OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  unitPrice Decimal @db.Decimal(10, 2)
+  subtotal  Decimal @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId])
+  @@map("order_items")
+}
