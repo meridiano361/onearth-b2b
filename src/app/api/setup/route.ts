@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const catLighting = await prisma.category.upsert({ where: { slug_collectionId: { slug: 'lighting', collectionId: collection.id } }, update: {}, create: { name: 'Lighting', slug: 'lighting', parentId: catDecor.id, order: 1, collectionId: collection.id } });
     const catTextiles = await prisma.category.upsert({ where: { slug_collectionId: { slug: 'textiles', collectionId: collection.id } }, update: {}, create: { name: 'Textiles', slug: 'textiles', parentId: catBedroom.id, order: 1, collectionId: collection.id } });
     const adminHash = await bcrypt.hash('admin123', 12);
-    await prisma.customer.upsert({ where: { email: 'admin@meridiano361.com' }, update: {}, create: { companyName: 'Meridiano 361', customerCode: 'ADMIN001', email: 'admin@meridiano361.com', passwordHash: adminHash, role: 'ADMIN', isActive: true } });
+          update: { passwordHash: adminHash, isActive: true },, create: { companyName: 'Meridiano 361', customerCode: 'ADMIN001', email: 'admin@meridiano361.com', passwordHash: adminHash, role: 'ADMIN', isActive: true } });
     const customerHash = await bcrypt.hash('customer123', 12);
     await prisma.customer.upsert({ where: { email: 'showroom@designstore.it' }, update: {}, create: { companyName: 'Design Store Milano', customerCode: 'DSM001', email: 'showroom@designstore.it', passwordHash: customerHash, role: 'CUSTOMER', isActive: true, city: 'Milano', country: 'Italy' } });
     await prisma.customer.upsert({ where: { email: 'orders@luxtrade.de' }, update: {}, create: { companyName: 'Lux Trade GmbH', customerCode: 'LTG001', email: 'orders@luxtrade.de', passwordHash: customerHash, role: 'CUSTOMER', isActive: true, city: 'Berlin', country: 'Germany' } });
