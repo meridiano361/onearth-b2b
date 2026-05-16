@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Nunito } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import Providers from '@/components/layout/Providers';
 import './globals.css';
 
-const inter = Inter({
+const nunito = Nunito({
   subsets: ['latin'],
-  variable: '--font-inter',
+  weight: ['200', '300', '400', '500', '600', '700'],
+  variable: '--font-nunito',
   display: 'swap',
 });
 
@@ -25,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="it" className={nunito.variable}>
       <body>
         <Providers>
           {children}
@@ -34,24 +35,26 @@ export default function RootLayout({
             toastOptions={{
               duration: 3000,
               style: {
-                background: '#1C1C1C',
-                color: '#FAFAF7',
+                background: '#000000',
+                color: '#FFFFFF',
                 borderRadius: '4px',
                 fontSize: '13px',
-                fontFamily: 'Inter, sans-serif',
+                fontFamily: 'Nunito, sans-serif',
+                fontWeight: '400',
+                letterSpacing: '0.03em',
                 padding: '12px 16px',
-                boxShadow: '0 4px 24px rgba(28,28,28,0.16)',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.16)',
               },
               success: {
                 iconTheme: {
-                  primary: '#C4A882',
-                  secondary: '#1C1C1C',
+                  primary: '#ACA39A',
+                  secondary: '#000000',
                 },
               },
               error: {
                 iconTheme: {
                   primary: '#EF4444',
-                  secondary: '#FAFAF7',
+                  secondary: '#FFFFFF',
                 },
               },
             }}

@@ -197,7 +197,7 @@ export default function CartSidebar() {
                 'w-full py-2.5 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2',
                 hasWarnings
                   ? 'bg-amber-100 text-amber-700 cursor-not-allowed'
-                  : 'bg-primary text-background hover:bg-gray-800 disabled:opacity-60'
+                  : 'bg-primary text-background hover:bg-warm-darker disabled:opacity-60'
               )}
             >
               {isConfirming ? (

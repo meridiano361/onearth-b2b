@@ -107,7 +107,7 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full py-3.5 bg-primary text-background text-sm font-medium tracking-wide rounded transition-all duration-150 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full py-3.5 bg-primary text-background text-sm font-semibold tracking-wide rounded transition-all duration-150 hover:bg-warm-darker disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {isLoading ? (
           <>

@@ -205,7 +205,7 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
             {isDragActive ? 'Rilascia il file qui' : 'Trascina il file qui'}
           </p>
           <p className="text-xs text-gray-400">CSV, XLSX o XLS · fino a 10.000 righe</p>
-          <button className="mt-4 px-4 py-2 text-xs font-medium bg-primary text-background rounded hover:bg-gray-800 transition-colors">
+          <button className="mt-4 px-4 py-2 text-xs font-semibold bg-primary text-background rounded hover:bg-warm-darker transition-colors">
             Sfoglia File
           </button>
         </div>

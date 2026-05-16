@@ -146,7 +146,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               'w-full py-2 text-xs font-medium rounded transition-all duration-200',
               justAdded
                 ? 'bg-accent/20 text-accent border border-accent/30'
-                : 'bg-primary text-background hover:bg-gray-800 active:scale-95'
+                : 'bg-primary text-background hover:bg-warm-darker active:scale-95'
             )}
           >
             {justAdded ? (

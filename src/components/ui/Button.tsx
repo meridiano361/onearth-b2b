@@ -24,10 +24,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const base =
-      'inline-flex items-center justify-center gap-2 font-medium transition-all duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed select-none';
+      'inline-flex items-center justify-center gap-2 font-semibold tracking-wide transition-all duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed select-none';
 
     const variants = {
-      primary: 'bg-primary text-background hover:bg-gray-800 active:bg-gray-900',
+      primary: 'bg-primary text-background hover:bg-warm-darker active:bg-near-black',
       secondary: 'bg-cream text-primary border border-border hover:bg-accent/10 active:bg-accent/20',
       ghost: 'bg-transparent text-primary hover:bg-cream active:bg-cream/80',
       danger: 'bg-red-500 text-white hover:bg-red-600 active:bg-red-700',

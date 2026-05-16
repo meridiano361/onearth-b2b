@@ -233,7 +233,7 @@ export default function AdminDashboard() {
             <div
               className="absolute inset-0 opacity-5"
               style={{
-                backgroundImage: 'repeating-linear-gradient(45deg, #C4A882 0px, #C4A882 1px, transparent 1px, transparent 40px)',
+                backgroundImage: 'repeating-linear-gradient(45deg, #ACA39A 0px, #ACA39A 1px, transparent 1px, transparent 40px)',
               }}
             />
             <p className="relative text-2xs tracking-widest uppercase text-accent font-medium mb-1">

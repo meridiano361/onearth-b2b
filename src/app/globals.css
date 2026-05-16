@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@200;300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,12 +6,15 @@
 
 @layer base {
   :root {
-    --color-primary: #1C1C1C;
-    --color-background: #FAFAF7;
-    --color-accent: #C4A882;
-    --color-cream: #F5EFE6;
-    --color-border: #E8E2D9;
-    --color-gray: #8A8480;
+    --color-primary: #000000;
+    --color-background: #FFFFFF;
+    --color-accent: #ACA39A;
+    --color-cream: #F5F4F2;
+    --color-border: #DEDAD7;
+    --color-warm-mid: #83786F;
+    --color-warm-dark: #6E6259;
+    --color-warm-darker: #3D3935;
+    --color-near-black: #101820;
   }
 
   * {
@@ -27,17 +30,19 @@
   }
 
   body {
-    background-color: #FAFAF7;
-    color: #1C1C1C;
-    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #FFFFFF;
+    color: #000000;
+    font-family: 'Nunito', system-ui, sans-serif;
     font-size: 14px;
+    font-weight: 400;
     line-height: 1.6;
+    letter-spacing: 0.03em;
   }
 
-  h1, h2, h3 {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-weight: 400;
-    letter-spacing: -0.01em;
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Nunito', system-ui, sans-serif;
+    font-weight: 300;
+    letter-spacing: 0.1em;
   }
 
   input, textarea, select {
@@ -51,16 +56,16 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: #F5EFE6;
+    background: #F5F4F2;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #D4CEC8;
+    background: #DEDAD7;
     border-radius: 2px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #B8B2AC;
+    background: #B1B3B3;
   }
 }
 
@@ -70,7 +75,7 @@
     @apply outline-none ring-1 ring-accent ring-offset-1;
   }
 
-  /* Gold divider */
+  /* Accent divider */
   .gold-divider {
     @apply border-none h-px bg-gradient-to-r from-transparent via-accent to-transparent;
   }
@@ -82,7 +87,7 @@
 
   /* Section label */
   .label-luxury {
-    @apply text-2xs font-medium tracking-widest uppercase text-gray-500;
+    @apply text-2xs font-semibold tracking-widest uppercase text-gray-500;
   }
 
   /* Quantity input */
@@ -96,7 +101,7 @@
   }
 
   .table-luxury th {
-    @apply text-left py-3 px-4 text-2xs font-medium tracking-widest uppercase text-gray-500 border-b border-border;
+    @apply text-left py-3 px-4 text-2xs font-semibold tracking-widest uppercase text-gray-500 border-b border-border;
   }
 
   .table-luxury td {

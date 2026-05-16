@@ -27,8 +27,8 @@ export default async function LoginPage() {
           style={{
             backgroundImage: `repeating-linear-gradient(
               45deg,
-              #C4A882 0px,
-              #C4A882 1px,
+              #ACA39A 0px,
+              #ACA39A 1px,
               transparent 1px,
               transparent 60px
             )`,
