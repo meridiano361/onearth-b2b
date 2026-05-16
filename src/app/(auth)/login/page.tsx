@@ -36,13 +36,15 @@ export default async function LoginPage() {
         />
 
         <div className="relative z-10">
-          <div className="mb-2">
-            <p className="text-2xs tracking-widest uppercase text-accent font-medium">Meridiano 361</p>
-          </div>
-          <h1 className="font-display text-5xl text-white font-light leading-tight">
-            ON<br />EARTH
-          </h1>
-          <div className="mt-4 w-12 h-px bg-accent" />
+          <Image
+            src="/logo-on-earth/onearth_solo_bianco.png"
+            alt="On Earth"
+            height={40}
+            width={256}
+            className="object-contain"
+            priority
+          />
+          <div className="mt-6 w-12 h-px bg-accent" />
         </div>
 
         <div className="relative z-10">
@@ -61,8 +63,14 @@ export default async function LoginPage() {
         <div className="max-w-sm w-full mx-auto">
           {/* Mobile logo */}
           <div className="lg:hidden mb-12">
-            <p className="text-2xs tracking-widest uppercase text-gray-500 font-medium">Meridiano 361</p>
-            <h1 className="font-display text-3xl text-primary font-light">ON EARTH</h1>
+            <Image
+              src="/logo-on-earth/onearth_solo.png"
+              alt="On Earth"
+              height={32}
+              width={205}
+              className="object-contain"
+              priority
+            />
           </div>
 
           <div className="mb-10">

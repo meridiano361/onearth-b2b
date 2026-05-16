@@ -23,11 +23,15 @@ export default function Header({ session }: HeaderProps) {
   return (
     <header className="h-14 bg-white border-b border-border flex items-center px-6 gap-6 flex-shrink-0 z-10">
       {/* Logo */}
-      <Link href="/catalog" className="flex items-center gap-3 mr-2">
-        <div className="flex flex-col">
-          <span className="text-2xs tracking-widest uppercase text-accent leading-none">Meridiano 361</span>
-          <span className="font-display text-base text-primary leading-tight tracking-widest">ON EARTH</span>
-        </div>
+      <Link href="/catalog" className="flex items-center mr-2 flex-shrink-0">
+        <Image
+          src="/logo-on-earth/onearth_solo.png"
+          alt="On Earth"
+          height={28}
+          width={179}
+          className="object-contain"
+          priority
+        />
       </Link>
 
       {/* Divider */}

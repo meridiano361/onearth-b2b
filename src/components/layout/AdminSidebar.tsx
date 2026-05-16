@@ -13,6 +13,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -34,11 +35,15 @@ export default function AdminSidebar() {
     <aside className="w-56 bg-primary flex flex-col h-full flex-shrink-0">
       {/* Brand */}
       <div className="px-6 py-6 border-b border-white/10">
-        <p className="text-2xs tracking-widest uppercase text-accent font-medium leading-none mb-1">
-          Meridiano 361
-        </p>
-        <h1 className="font-display text-lg text-white tracking-widest">ON EARTH</h1>
-        <p className="text-2xs text-gray-600 uppercase tracking-widest mt-1">Amministrazione</p>
+        <Image
+          src="/logo-on-earth/onearth_solo_bianco.png"
+          alt="On Earth"
+          height={24}
+          width={154}
+          className="object-contain mb-2"
+          priority
+        />
+        <p className="text-2xs text-gray-600 uppercase tracking-widest">Amministrazione</p>
       </div>
 
       {/* Navigation */}
