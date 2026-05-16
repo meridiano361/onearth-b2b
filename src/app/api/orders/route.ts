@@ -26,6 +26,7 @@ function serializeOrder(order: any) {
     updatedAt: order.updatedAt?.toISOString(),
     items: order.items?.map((item: any) => ({
       ...item,
+      mercePronta: item.mercePronta ?? 0,
       unitPrice: Number(item.unitPrice),
       subtotal: Number(item.subtotal),
       product: item.product
@@ -158,7 +159,7 @@ export async function POST(req: NextRequest) {
       data: {
         customerId: effectiveCustomerId,
         collectionId: data.collectionId || null,
-        status: 'CONFIRMED',
+        status: 'MERCE_DA_ORDINARE',
         totalValue,
         totalItems,
         notes: data.notes || null,

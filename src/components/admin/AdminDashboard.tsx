@@ -55,11 +55,11 @@ export default function AdminDashboard() {
   const revenue = orders.reduce((sum: number, o: any) => sum + Number(o.totalValue), 0);
 
   const statusVariant: Record<string, string> = {
-    DRAFT: 'default',
-    CONFIRMED: 'info',
-    PROCESSING: 'warning',
-    SHIPPED: 'success',
-    CANCELLED: 'danger',
+    MERCE_DA_ORDINARE:        'default',
+    MERCE_ORDINATA:           'info',
+    MERCE_PARZIALMENTE_PRONTA:'warning',
+    MERCE_PRONTA_DA_AVVISARE: 'success',
+    MERCE_PRONTA_AVVISATO:    'success',
   };
 
   const stats = [

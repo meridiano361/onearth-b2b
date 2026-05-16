@@ -16,11 +16,11 @@ export default function OrdersTable({
   showCustomer = true,
 }: OrdersTableProps) {
   const statusVariant: Record<string, string> = {
-    DRAFT: 'default',
-    CONFIRMED: 'info',
-    PROCESSING: 'warning',
-    SHIPPED: 'success',
-    CANCELLED: 'danger',
+    MERCE_DA_ORDINARE:        'default',
+    MERCE_ORDINATA:           'info',
+    MERCE_PARZIALMENTE_PRONTA:'warning',
+    MERCE_PRONTA_DA_AVVISARE: 'success',
+    MERCE_PRONTA_AVVISATO:    'success',
   };
 
   if (orders.length === 0) {
@@ -70,7 +70,7 @@ export default function OrdersTable({
                     onChange={(e) => onStatusChange(order.id, e.target.value)}
                     className="text-xs border border-border rounded px-2 py-1 focus:outline-none focus:border-accent"
                   >
-                    {['DRAFT', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'CANCELLED'].map((s) => (
+                    {['MERCE_DA_ORDINARE','MERCE_ORDINATA','MERCE_PARZIALMENTE_PRONTA','MERCE_PRONTA_DA_AVVISARE','MERCE_PRONTA_AVVISATO'].map((s) => (
                       <option key={s} value={s}>{getOrderStatusLabel(s)}</option>
                     ))}
                   </select>

@@ -5,9 +5,21 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
 const updateSchema = z.object({
-  status: z.enum(['DRAFT', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'CANCELLED']).optional(),
+  status: z.enum([
+    'MERCE_DA_ORDINARE',
+    'MERCE_ORDINATA',
+    'MERCE_PARZIALMENTE_PRONTA',
+    'MERCE_PRONTA_DA_AVVISARE',
+    'MERCE_PRONTA_AVVISATO',
+  ]).optional(),
   notes: z.string().optional().nullable(),
 });
+
+const FILL_MERCE_STATUSES = new Set([
+  'MERCE_PARZIALMENTE_PRONTA',
+  'MERCE_PRONTA_DA_AVVISARE',
+  'MERCE_PRONTA_AVVISATO',
+]);
 
 function serializeOrder(order: any) {
   return {
@@ -18,6 +30,7 @@ function serializeOrder(order: any) {
     updatedAt: order.updatedAt?.toISOString(),
     items: order.items?.map((item: any) => ({
       ...item,
+      mercePronta: item.mercePronta ?? 0,
       unitPrice: Number(item.unitPrice),
       subtotal: Number(item.subtotal),
       product: item.product
@@ -83,8 +96,23 @@ export async function PATCH(
     const data = updateSchema.parse(body);
 
     const updateData: any = { ...data };
-    if (data.status === 'CONFIRMED') {
-      updateData.confirmedAt = new Date();
+
+    // When moving to a "ready" status, auto-fill mercePronta = quantity for all items
+    if (data.status && FILL_MERCE_STATUSES.has(data.status)) {
+      const existing = await prisma.order.findUnique({
+        where: { id: params.id },
+        select: { items: { select: { id: true, quantity: true } } },
+      });
+      if (existing?.items.length) {
+        await prisma.$transaction(
+          existing.items.map((item) =>
+            prisma.orderItem.update({
+              where: { id: item.id },
+              data: { mercePronta: item.quantity },
+            })
+          )
+        );
+      }
     }
 
     const order = await prisma.order.update({

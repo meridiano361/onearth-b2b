@@ -17,11 +17,11 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
   const [isExporting, setIsExporting] = useState(false);
 
   const statusColors: Record<string, string> = {
-    DRAFT: 'default',
-    CONFIRMED: 'info',
-    PROCESSING: 'warning',
-    SHIPPED: 'success',
-    CANCELLED: 'danger',
+    MERCE_DA_ORDINARE:        'default',
+    MERCE_ORDINATA:           'info',
+    MERCE_PARZIALMENTE_PRONTA:'warning',
+    MERCE_PRONTA_DA_AVVISARE: 'success',
+    MERCE_PRONTA_AVVISATO:    'success',
   };
 
   async function handleExportExcel() {
@@ -107,7 +107,8 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
                 <tr className="border-b border-border">
                   <th className="text-left pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Codice</th>
                   <th className="text-left pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Prodotto</th>
-                  <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Qtà</th>
+                  <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Qtà ord.</th>
+                  <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-green-600">Merce pronta</th>
                   <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Unità</th>
                   <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Totale</th>
                 </tr>
@@ -118,6 +119,9 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
                     <td className="py-2 text-gray-400 font-mono">{item.product?.code}</td>
                     <td className="py-2 text-primary">{item.product?.name}</td>
                     <td className="py-2 text-right font-medium">{item.quantity}</td>
+                    <td className="py-2 text-right font-medium text-green-700">
+                      {item.mercePronta > 0 ? item.mercePronta : <span className="text-gray-300">—</span>}
+                    </td>
                     <td className="py-2 text-right text-gray-500">{formatCurrency(item.unitPrice)}</td>
                     <td className="py-2 text-right font-medium text-primary">{formatCurrency(item.subtotal)}</td>
                   </tr>
@@ -125,7 +129,7 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={4} className="pt-3 text-right text-2xs font-medium uppercase tracking-wide text-gray-500">
+                  <td colSpan={5} className="pt-3 text-right text-2xs font-medium uppercase tracking-wide text-gray-500">
                     Totale Ordine
                   </td>
                   <td className="pt-3 text-right font-semibold text-primary">

@@ -101,18 +101,18 @@ model Customer {
 }
 
 enum OrderStatus {
-  DRAFT
-  CONFIRMED
-  PROCESSING
-  SHIPPED
-  CANCELLED
+  MERCE_DA_ORDINARE
+  MERCE_ORDINATA
+  MERCE_PARZIALMENTE_PRONTA
+  MERCE_PRONTA_DA_AVVISARE
+  MERCE_PRONTA_AVVISATO
 }
 
 model Order {
   id           String      @id @default(cuid())
   customerId   String
   collectionId String?
-  status       OrderStatus @default(DRAFT)
+  status       OrderStatus @default(MERCE_DA_ORDINARE)
   totalValue   Decimal     @db.Decimal(10, 2) @default(0)
   totalItems   Int         @default(0)
   notes        String?
@@ -128,12 +128,13 @@ model Order {
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
-  orderId   String
-  productId String
-  quantity  Int
-  unitPrice Decimal @db.Decimal(10, 2)
-  subtotal  Decimal @db.Decimal(10, 2)
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String
+  quantity    Int
+  mercePronta Int     @default(0)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  subtotal    Decimal @db.Decimal(10, 2)
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])

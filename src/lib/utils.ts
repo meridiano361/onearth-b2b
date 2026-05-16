@@ -62,22 +62,22 @@ export function isValidLotQuantity(quantity: number, lotSize: number): boolean {
 
 export function getOrderStatusLabel(status: string): string {
   const labels: Record<string, string> = {
-    DRAFT: 'Bozza',
-    CONFIRMED: 'Confermato',
-    PROCESSING: 'In Lavorazione',
-    SHIPPED: 'Spedito',
-    CANCELLED: 'Annullato',
+    MERCE_DA_ORDINARE: 'Da ordinare',
+    MERCE_ORDINATA: 'Ordinata',
+    MERCE_PARZIALMENTE_PRONTA: 'Parz. pronta',
+    MERCE_PRONTA_DA_AVVISARE: 'Pronta - da avvisare',
+    MERCE_PRONTA_AVVISATO: 'Pronta - avvisato',
   };
   return labels[status] || status;
 }
 
 export function getOrderStatusColor(status: string): string {
   const colors: Record<string, string> = {
-    DRAFT: 'bg-gray-100 text-gray-600',
-    CONFIRMED: 'bg-blue-50 text-blue-700',
-    PROCESSING: 'bg-amber-50 text-amber-700',
-    SHIPPED: 'bg-green-50 text-green-700',
-    CANCELLED: 'bg-red-50 text-red-700',
+    MERCE_DA_ORDINARE: 'bg-gray-100 text-gray-600',
+    MERCE_ORDINATA: 'bg-blue-50 text-blue-700',
+    MERCE_PARZIALMENTE_PRONTA: 'bg-amber-50 text-amber-700',
+    MERCE_PRONTA_DA_AVVISARE: 'bg-green-50 text-green-700',
+    MERCE_PRONTA_AVVISATO: 'bg-green-100 text-green-800',
   };
   return colors[status] || 'bg-gray-100 text-gray-600';
 }

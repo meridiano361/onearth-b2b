@@ -1,5 +1,10 @@
 export type Role = 'ADMIN' | 'CUSTOMER';
-export type OrderStatus = 'DRAFT' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'CANCELLED';
+export type OrderStatus =
+  | 'MERCE_DA_ORDINARE'
+  | 'MERCE_ORDINATA'
+  | 'MERCE_PARZIALMENTE_PRONTA'
+  | 'MERCE_PRONTA_DA_AVVISARE'
+  | 'MERCE_PRONTA_AVVISATO';
 
 export interface Collection {
   id: string;
@@ -65,6 +70,7 @@ export interface OrderItem {
   orderId: string;
   productId: string;
   quantity: number;
+  mercePronta: number;
   unitPrice: number;
   subtotal: number;
   product?: Product;
