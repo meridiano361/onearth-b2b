@@ -114,7 +114,7 @@ export default function CatalogView() {
             className="absolute inset-0 bg-primary/30"
             onClick={() => setShowFilters(false)}
           />
-          <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-luxury-xl overflow-y-auto">
+          <div className="absolute left-0 top-0 bottom-0 w-64 sm:w-72 bg-white shadow-luxury-xl overflow-y-auto">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <span className="text-sm font-medium">Filtri</span>
               <button onClick={() => setShowFilters(false)} className="text-gray-400">
@@ -136,18 +136,18 @@ export default function CatalogView() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 bg-background border-b border-border px-6 py-3 flex items-center gap-3">
+        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 sm:px-6 py-3 flex items-center gap-2 sm:gap-3">
           {/* Mobile filter button */}
           <button
             onClick={() => setShowFilters(true)}
-            className="md:hidden flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-border rounded px-2.5 py-1.5 hover:bg-cream transition-colors"
+            className="md:hidden flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-border rounded px-2.5 py-2 hover:bg-cream transition-colors flex-shrink-0"
           >
             <SlidersHorizontal size={13} />
             Filtri
           </button>
 
-          {/* Search */}
-          <div className="relative flex-1 max-w-sm">
+          {/* Search — full width on mobile */}
+          <div className="relative flex-1 md:max-w-sm">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
@@ -167,7 +167,7 @@ export default function CatalogView() {
           </div>
 
           {/* Results count */}
-          <div className="flex-1 hidden sm:flex items-center justify-end">
+          <div className="hidden sm:flex items-center flex-shrink-0">
             <span className="text-xs text-gray-400">
               {productsLoading ? 'Caricamento...' : `${filteredProducts.length} prodotti`}
             </span>
@@ -175,19 +175,15 @@ export default function CatalogView() {
         </div>
 
         {/* Collection header */}
-        <div className="px-6 py-6 border-b border-border/50">
-          <div className="flex items-center gap-3">
-            <div>
-              <p className="label-luxury text-accent">Collezione</p>
-              <h1 className="font-display text-2xl text-primary font-light tracking-wide">
-                CASA 2027
-              </h1>
-            </div>
-          </div>
+        <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-border/50">
+          <p className="label-luxury text-accent">Collezione</p>
+          <h1 className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide">
+            CASA 2027
+          </h1>
         </div>
 
         {/* Product grid */}
-        <div className="px-6 py-6">
+        <div className="px-3 sm:px-6 py-4 sm:py-6">
           <ProductGrid products={filteredProducts} isLoading={productsLoading} />
         </div>
       </div>

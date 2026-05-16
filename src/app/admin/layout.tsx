@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
-import AdminSidebar from '@/components/layout/AdminSidebar';
+import AdminLayoutWrapper from '@/components/layout/AdminLayoutWrapper';
 
 export default async function AdminLayout({
   children,
@@ -13,12 +13,5 @@ export default async function AdminLayout({
   if (!session) redirect('/login');
   if (session.user.role !== 'ADMIN') redirect('/catalog');
 
-  return (
-    <div className="min-h-screen flex bg-background">
-      <AdminSidebar />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
-    </div>
-  );
+  return <AdminLayoutWrapper>{children}</AdminLayoutWrapper>;
 }

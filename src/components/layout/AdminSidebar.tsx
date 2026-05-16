@@ -10,7 +10,7 @@ import {
   ShoppingCart,
   Tag,
   LogOut,
-  Settings,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -23,7 +23,11 @@ const navItems = [
   { href: '/admin/categories', label: 'Categorie', icon: Tag },
 ];
 
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+  onClose?: () => void;
+}
+
+export default function AdminSidebar({ onClose }: AdminSidebarProps) {
   const pathname = usePathname();
 
   function isActive(href: string, exact?: boolean) {
@@ -34,16 +38,27 @@ export default function AdminSidebar() {
   return (
     <aside className="w-56 bg-primary flex flex-col h-full flex-shrink-0">
       {/* Brand */}
-      <div className="px-6 py-6 border-b border-white/10">
-        <Image
-          src="/logo-on-earth/onearth_solo_bianco.png"
-          alt="On Earth"
-          height={24}
-          width={154}
-          className="object-contain mb-2"
-          priority
-        />
-        <p className="text-2xs text-gray-600 uppercase tracking-widest">Amministrazione</p>
+      <div className="px-6 py-6 border-b border-white/10 flex items-start justify-between">
+        <div>
+          <Image
+            src="/logo-on-earth/onearth_solo_bianco.png"
+            alt="On Earth"
+            height={24}
+            width={154}
+            className="object-contain mb-2"
+            priority
+          />
+          <p className="text-2xs text-gray-600 uppercase tracking-widest">Amministrazione</p>
+        </div>
+        {/* Close button — mobile only */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden text-gray-500 hover:text-white transition-colors -mt-1 -mr-2 p-1"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -52,6 +67,7 @@ export default function AdminSidebar() {
           <Link
             key={href}
             href={href}
+            onClick={onClose}
             className={cn(
               'flex items-center gap-3 px-3 py-2.5 rounded text-xs font-medium transition-all duration-150',
               isActive(href, exact)

@@ -14,10 +14,10 @@ interface ModalProps {
 }
 
 const sizes = {
-  sm: 'max-w-sm',
-  md: 'max-w-lg',
-  lg: 'max-w-2xl',
-  xl: 'max-w-4xl',
+  sm: 'sm:max-w-sm',
+  md: 'sm:max-w-lg',
+  lg: 'sm:max-w-2xl',
+  xl: 'sm:max-w-4xl',
 };
 
 export default function Modal({
@@ -53,7 +53,7 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
       role="dialog"
       aria-modal="true"
     >
@@ -63,16 +63,18 @@ export default function Modal({
         onClick={onClose}
       />
 
-      {/* Panel */}
+      {/* Panel — slides up from bottom on mobile, centered on desktop */}
       <div
         className={cn(
-          'relative w-full bg-white rounded-lg shadow-luxury-xl animate-fade-in',
+          'relative w-full bg-white shadow-luxury-xl animate-slide-up',
+          'rounded-t-2xl sm:rounded-lg',
+          'max-h-[92vh] sm:max-h-[90vh] flex flex-col',
           sizes[size]
         )}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+          <div className="flex items-center justify-between px-5 sm:px-6 py-4 sm:py-5 border-b border-border flex-shrink-0">
             <h3 className="text-base font-medium text-primary">{title}</h3>
             <button
               onClick={onClose}
@@ -91,12 +93,14 @@ export default function Modal({
           </button>
         )}
 
-        {/* Body */}
-        <div className="px-6 py-5">{children}</div>
+        {/* Body — scrollable */}
+        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 sm:py-5">
+          {children}
+        </div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-border bg-cream/40 rounded-b-lg flex justify-end gap-3">
+          <div className="px-5 sm:px-6 py-4 border-t border-border bg-cream/40 rounded-b-lg flex justify-end gap-3 flex-shrink-0">
             {footer}
           </div>
         )}

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import Header from '@/components/layout/Header';
 import CartSidebar from '@/components/cart/CartSidebar';
-import MobileCartButton from '@/components/cart/MobileCartButton';
+import MobileNav from '@/components/layout/MobileNav';
 
 export default async function B2BLayout({
   children,
@@ -21,19 +21,19 @@ export default async function B2BLayout({
       <Header session={session} />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Main content */}
-        <main className="flex-1 overflow-y-auto">
+        {/* Main content — pb-20 on mobile to clear the tab bar */}
+        <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
           {children}
         </main>
 
-        {/* Cart sidebar — desktop */}
+        {/* Cart sidebar — desktop only */}
         <aside className="hidden lg:block w-80 xl:w-[340px] border-l border-border flex-shrink-0 bg-white overflow-y-auto">
           <CartSidebar />
         </aside>
       </div>
 
-      {/* Mobile cart button */}
-      <MobileCartButton />
+      {/* Mobile bottom tab bar (Catalogo | Cart | Ordini) */}
+      <MobileNav />
     </div>
   );
 }

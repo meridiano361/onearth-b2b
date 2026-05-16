@@ -238,7 +238,7 @@ export default function AdminCategoriesPage() {
   }
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="label-luxury text-accent mb-1">Admin</p>

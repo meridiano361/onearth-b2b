@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Download, ChevronDown, ChevronUp, Filter } from 'lucide-react';
+import { Search, Download, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatCurrency, formatDate, getOrderStatusLabel } from '@/lib/utils';
 import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
@@ -65,12 +65,13 @@ function OrderRow({ order, onStatusChange }: { order: Order; onStatusChange: () 
   return (
     <div className="border border-border rounded mb-2 overflow-hidden">
       <div
-        className="flex items-center gap-4 px-5 py-3.5 bg-white hover:bg-cream/30 cursor-pointer transition-colors"
+        className="flex items-start sm:items-center gap-3 px-4 sm:px-5 py-3.5 bg-white hover:bg-cream/30 cursor-pointer transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
+        {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-xs font-medium text-primary">
+          <div className="flex flex-wrap items-center gap-2 mb-0.5">
+            <span className="text-xs font-medium text-primary truncate max-w-[160px] sm:max-w-none">
               {order.customer?.companyName}
             </span>
             <span className="text-2xs text-gray-400 font-mono">
@@ -82,76 +83,100 @@ function OrderRow({ order, onStatusChange }: { order: Order; onStatusChange: () 
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Actions — wrap on mobile */}
+        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 flex-shrink-0">
           <span className="text-sm font-semibold text-primary">
             {formatCurrency(order.totalValue)}
           </span>
 
-          <select
-            value={order.status}
-            onChange={(e) => { e.stopPropagation(); handleStatusChange(e.target.value); }}
-            onClick={(e) => e.stopPropagation()}
-            disabled={isUpdating}
-            className="text-xs border border-border rounded px-2 py-1 focus:outline-none focus:border-accent bg-white"
-          >
-            {STATUS_OPTIONS.filter(Boolean).map((s) => (
-              <option key={s} value={s}>{getOrderStatusLabel(s)}</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <select
+              value={order.status}
+              onChange={(e) => { e.stopPropagation(); handleStatusChange(e.target.value); }}
+              onClick={(e) => e.stopPropagation()}
+              disabled={isUpdating}
+              className="text-xs border border-border rounded px-2 py-1 focus:outline-none focus:border-accent bg-white"
+            >
+              {STATUS_OPTIONS.filter(Boolean).map((s) => (
+                <option key={s} value={s}>{getOrderStatusLabel(s)}</option>
+              ))}
+            </select>
 
-          <div className="flex gap-1">
-            <button
-              onClick={(e) => { e.stopPropagation(); handleExport('excel'); }}
-              className="text-2xs px-2 py-1 border border-border rounded hover:bg-cream transition-colors text-gray-500"
-            >
-              XLSX
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); handleExport('pdf'); }}
-              className="text-2xs px-2 py-1 border border-border rounded hover:bg-cream transition-colors text-gray-500"
-            >
-              PDF
-            </button>
+            <div className="flex gap-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); handleExport('excel'); }}
+                className="text-2xs px-2 py-1 border border-border rounded hover:bg-cream transition-colors text-gray-500"
+              >
+                XLS
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleExport('pdf'); }}
+                className="text-2xs px-2 py-1 border border-border rounded hover:bg-cream transition-colors text-gray-500"
+              >
+                PDF
+              </button>
+            </div>
+
+            {expanded ? <ChevronUp size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
           </div>
-
-          {expanded ? <ChevronUp size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
         </div>
       </div>
 
       {expanded && order.items && (
-        <div className="border-t border-border bg-cream/20 px-5 py-4">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Codice</th>
-                <th className="text-left pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Prodotto</th>
-                <th className="text-left pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Categoria</th>
-                <th className="text-right pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Qtà</th>
-                <th className="text-right pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Unità</th>
-                <th className="text-right pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Totale</th>
-              </tr>
-            </thead>
-            <tbody>
-              {order.items.map((item) => (
-                <tr key={item.id} className="border-b border-border/40 last:border-0">
-                  <td className="py-2 font-mono text-gray-400">{item.product?.code}</td>
-                  <td className="py-2 text-primary">{item.product?.name}</td>
-                  <td className="py-2 text-gray-400">{item.product?.category?.name || '—'}</td>
-                  <td className="py-2 text-right font-medium">{item.quantity}</td>
-                  <td className="py-2 text-right text-gray-500">{formatCurrency(item.unitPrice)}</td>
-                  <td className="py-2 text-right font-medium">{formatCurrency(item.subtotal)}</td>
+        <div className="border-t border-border bg-cream/20 px-4 sm:px-5 py-4">
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full text-xs min-w-[500px]">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Codice</th>
+                  <th className="text-left pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Prodotto</th>
+                  <th className="text-left pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400 hidden md:table-cell">Categoria</th>
+                  <th className="text-right pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Qtà</th>
+                  <th className="text-right pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Unità</th>
+                  <th className="text-right pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Totale</th>
                 </tr>
-              ))}
-              <tr>
-                <td colSpan={5} className="pt-3 text-right text-2xs font-medium text-gray-400 uppercase tracking-wide">
-                  Totale Ordine
-                </td>
-                <td className="pt-3 text-right font-semibold text-primary">
-                  {formatCurrency(order.totalValue)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {order.items.map((item) => (
+                  <tr key={item.id} className="border-b border-border/40 last:border-0">
+                    <td className="py-2 font-mono text-gray-400">{item.product?.code}</td>
+                    <td className="py-2 text-primary">{item.product?.name}</td>
+                    <td className="py-2 text-gray-400 hidden md:table-cell">{item.product?.category?.name || '—'}</td>
+                    <td className="py-2 text-right font-medium">{item.quantity}</td>
+                    <td className="py-2 text-right text-gray-500">{formatCurrency(item.unitPrice)}</td>
+                    <td className="py-2 text-right font-medium">{formatCurrency(item.subtotal)}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <td colSpan={5} className="pt-3 text-right text-2xs font-medium text-gray-400 uppercase tracking-wide">
+                    Totale Ordine
+                  </td>
+                  <td className="pt-3 text-right font-semibold text-primary">
+                    {formatCurrency(order.totalValue)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list */}
+          <div className="sm:hidden space-y-2">
+            {order.items.map((item) => (
+              <div key={item.id} className="flex items-start justify-between bg-white rounded p-3 text-xs border border-border/50">
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-gray-400 text-2xs">{item.product?.code}</p>
+                  <p className="font-medium text-primary leading-snug mt-0.5">{item.product?.name}</p>
+                  <p className="text-gray-400 mt-0.5">{item.quantity} × {formatCurrency(item.unitPrice)}</p>
+                </div>
+                <p className="font-semibold text-primary flex-shrink-0 ml-3">{formatCurrency(item.subtotal)}</p>
+              </div>
+            ))}
+            <div className="flex justify-between items-center pt-2 border-t border-border">
+              <span className="text-2xs font-medium uppercase tracking-wide text-gray-500">Totale Ordine</span>
+              <span className="font-semibold text-primary">{formatCurrency(order.totalValue)}</span>
+            </div>
+          </div>
 
           {order.notes && (
             <div className="mt-3 pt-3 border-t border-border/50">
@@ -192,8 +217,8 @@ export default function AdminOrdersPage() {
   });
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
           <p className="label-luxury text-accent mb-1">Admin</p>
           <h1 className="font-display text-2xl text-primary font-light">Ordini</h1>
@@ -202,8 +227,8 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 mb-6">
-        <div className="max-w-xs flex-1">
+      <div className="flex flex-wrap gap-3 mb-6">
+        <div className="min-w-[200px] flex-1">
           <Input
             placeholder="Cerca per cliente o ID..."
             value={search}
@@ -214,7 +239,7 @@ export default function AdminOrdersPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent bg-white text-primary"
+          className="text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent bg-white text-primary flex-shrink-0"
         >
           <option value="">Tutti gli stati</option>
           {STATUS_OPTIONS.filter(Boolean).map((s) => (

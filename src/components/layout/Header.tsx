@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
-import { LogOut, LayoutGrid, Package, ShoppingBag } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
@@ -15,57 +15,33 @@ interface HeaderProps {
 export default function Header({ session }: HeaderProps) {
   const pathname = usePathname();
 
-  const navItems = [
-    { href: '/catalog', label: 'Catalogo', icon: LayoutGrid },
-    { href: '/orders', label: 'I miei Ordini', icon: Package },
-  ];
-
   return (
-    <header className="h-14 bg-white border-b border-border flex items-center px-6 gap-6 flex-shrink-0 z-10">
+    <header className="h-14 bg-white border-b border-border flex items-center px-4 sm:px-6 gap-3 sm:gap-6 flex-shrink-0 z-10">
       {/* Logo */}
-      <Link href="/catalog" className="flex items-center mr-2 flex-shrink-0">
+      <Link href="/catalog" className="flex items-center flex-shrink-0">
         <Image
           src="/logo-on-earth/onearth_solo.png"
           alt="On Earth"
-          height={28}
-          width={179}
+          height={24}
+          width={153}
           className="object-contain"
           priority
         />
       </Link>
 
-      {/* Divider */}
-      <div className="h-5 w-px bg-border" />
-
-      {/* Collection badge */}
-      <span className="text-2xs tracking-widest uppercase text-gray-400 font-medium">
-        CASA 2027
-      </span>
-
-      {/* Nav */}
-      <nav className="flex items-center gap-1 ml-4">
-        {navItems.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all duration-150',
-              pathname === href || pathname.startsWith(href + '/')
-                ? 'bg-cream text-primary'
-                : 'text-gray-500 hover:text-primary hover:bg-cream/60'
-            )}
-          >
-            <Icon size={13} />
-            {label}
-          </Link>
-        ))}
-      </nav>
+      {/* Divider + Collection badge — hidden on small phones */}
+      <div className="hidden sm:flex items-center gap-3">
+        <div className="h-5 w-px bg-border" />
+        <span className="text-2xs tracking-widest uppercase text-gray-400 font-medium">
+          CASA 2027
+        </span>
+      </div>
 
       {/* Spacer */}
       <div className="flex-1" />
 
       {/* User info */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <div className="text-right hidden sm:block">
           <p className="text-xs font-medium text-primary truncate max-w-[140px]">
             {session.user.companyName}
@@ -77,7 +53,7 @@ export default function Header({ session }: HeaderProps) {
 
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
-          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary transition-colors px-2 py-1.5 rounded hover:bg-cream"
+          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary transition-colors px-2 py-2 rounded hover:bg-cream"
           title="Esci"
         >
           <LogOut size={14} />

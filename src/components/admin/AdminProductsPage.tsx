@@ -62,27 +62,28 @@ export default function AdminProductsPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
           <p className="label-luxury text-accent mb-1">Admin</p>
           <h1 className="font-display text-2xl text-primary font-light">Prodotti</h1>
           <p className="text-sm text-gray-400 mt-0.5">{data?.total || 0} prodotti in collezione</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Button
             variant="secondary"
             icon={<Upload size={13} />}
             onClick={() => setShowImport(true)}
           >
-            Importa
+            <span className="hidden sm:inline">Importa</span>
           </Button>
           <Button
             icon={<Plus size={13} />}
             onClick={() => setShowCreateForm(true)}
           >
-            Aggiungi Prodotto
+            <span className="hidden sm:inline">Aggiungi Prodotto</span>
+            <span className="sm:hidden">Aggiungi</span>
           </Button>
         </div>
       </div>
@@ -98,8 +99,8 @@ export default function AdminProductsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-border rounded overflow-hidden">
-        <table className="table-luxury w-full">
+      <div className="bg-white border border-border rounded overflow-hidden overflow-x-auto">
+        <table className="table-luxury w-full min-w-[600px]">
           <thead>
             <tr>
               <th>Codice</th>

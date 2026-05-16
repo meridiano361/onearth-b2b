@@ -122,9 +122,31 @@
     animation: fadeIn 0.2s ease-out;
   }
 
+  .animate-slide-up {
+    animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  /* iOS safe-area insets */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+  .pl-safe { padding-left: env(safe-area-inset-left, 0px); }
+  .pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+  .mb-safe { margin-bottom: env(safe-area-inset-bottom, 0px); }
+
+  /* Minimum tap target (44px per Apple HIG) */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 
