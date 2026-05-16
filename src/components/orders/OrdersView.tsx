@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { Package, Download, ChevronDown, ChevronUp } from 'lucide-react';
+import OrderPDFExport from './OrderPDFExport';
 import { formatCurrency, formatDate, getOrderStatusLabel } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -21,30 +22,6 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
     SHIPPED: 'success',
     CANCELLED: 'danger',
   };
-
-  async function handleExportPDF() {
-    setIsExporting(true);
-    try {
-      const res = await fetch('/api/export/pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: order.id }),
-      });
-      if (!res.ok) throw new Error('Export failed');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `order-${order.id.slice(0, 8)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('PDF esportato');
-    } catch {
-      toast.error('Esportazione fallita');
-    } finally {
-      setIsExporting(false);
-    }
-  }
 
   async function handleExportExcel() {
     setIsExporting(true);
@@ -107,14 +84,7 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
             <Download size={11} />
             <span className="hidden sm:inline">XLSX</span>
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); handleExportPDF(); }}
-            disabled={isExporting}
-            className="text-xs text-gray-400 hover:text-primary border border-border rounded px-2 py-1.5 hover:bg-cream transition-all flex items-center gap-1"
-          >
-            <Download size={11} />
-            <span className="hidden sm:inline">PDF</span>
-          </button>
+          <OrderPDFExport order={order} />
           {isExpanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
         </div>
       </div>
