@@ -57,10 +57,10 @@ export default function CartSidebar() {
 
       const { data: order } = await res.json();
       clearCart();
-      toast.success('Order confirmed successfully!');
+      toast.success('Ordine confermato con successo!');
       router.push(`/orders?highlight=${order.id}`);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to confirm order');
+      toast.error(err.message || 'Impossibile confermare l\'ordine');
     } finally {
       setIsConfirming(false);
     }
@@ -98,9 +98,9 @@ export default function CartSidebar() {
       a.download = `order-${session?.user?.customerCode}-${new Date().toISOString().slice(0, 10)}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Excel exported');
+      toast.success('Excel esportato');
     } catch {
-      toast.error('Export failed');
+      toast.error('Esportazione fallita');
     } finally {
       setIsExporting(false);
     }
@@ -112,7 +112,7 @@ export default function CartSidebar() {
       <div className="px-4 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <ShoppingCart size={15} className="text-gray-500" />
-          <span className="text-xs font-medium text-primary tracking-wide">Current Order</span>
+          <span className="text-xs font-medium text-primary tracking-wide">Ordine Corrente</span>
           {totalItems > 0 && (
             <span className="bg-primary text-background text-2xs font-medium px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
               {totalItems}
@@ -122,10 +122,10 @@ export default function CartSidebar() {
         {!isEmpty && (
           <button
             onClick={() => {
-              if (confirm('Clear entire order?')) clearCart();
+              if (confirm('Svuotare l\'intero ordine?')) clearCart();
             }}
             className="text-gray-300 hover:text-gray-600 transition-colors"
-            title="Clear cart"
+            title="Svuota carrello"
           >
             <Trash2 size={13} />
           </button>
@@ -137,15 +137,15 @@ export default function CartSidebar() {
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center h-full py-12 px-4 text-center">
             <ShoppingCart size={32} className="text-gray-200 mb-3" />
-            <p className="text-sm text-gray-400 font-light">Your order is empty</p>
-            <p className="text-2xs text-gray-300 mt-1">Click on any product to add it</p>
+            <p className="text-sm text-gray-400 font-light">Il tuo ordine è vuoto</p>
+            <p className="text-2xs text-gray-300 mt-1">Clicca su qualsiasi prodotto per aggiungerlo</p>
           </div>
         ) : (
           <div>
             {hasWarnings && (
               <div className="mx-4 mt-3 mb-0 flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded">
                 <AlertTriangle size={13} className="text-amber-500 flex-shrink-0" />
-                <p className="text-2xs text-amber-700">Some quantities don&apos;t match required lot sizes</p>
+                <p className="text-2xs text-amber-700">Alcune quantità non corrispondono ai lotti richiesti</p>
               </div>
             )}
 
@@ -162,11 +162,11 @@ export default function CartSidebar() {
 
             {/* Notes */}
             <div className="px-4 py-3 border-t border-border/50">
-              <label className="label-luxury mb-1.5 block">Order Notes</label>
+              <label className="label-luxury mb-1.5 block">Note Ordine</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add notes, special instructions..."
+                placeholder="Aggiungi note, istruzioni speciali..."
                 rows={2}
                 className="w-full text-xs border border-border rounded px-3 py-2 resize-none focus:outline-none focus:border-accent bg-white placeholder-gray-300"
               />
@@ -187,7 +187,7 @@ export default function CartSidebar() {
               className="w-full py-2 text-xs font-medium border border-border rounded hover:bg-cream transition-colors flex items-center justify-center gap-2 text-gray-600 disabled:opacity-50"
             >
               <Download size={12} />
-              Export Excel
+              Esporta Excel
             </button>
 
             <button
@@ -201,13 +201,13 @@ export default function CartSidebar() {
               )}
             >
               {isConfirming ? (
-                <>Processing...</>
+                <>In elaborazione...</>
               ) : hasWarnings ? (
-                <>Fix lot sizes first</>
+                <>Correggi prima i lotti</>
               ) : (
                 <>
                   <Send size={12} />
-                  Confirm Order
+                  Conferma Ordine
                 </>
               )}
             </button>

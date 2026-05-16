@@ -116,7 +116,7 @@ export default function CatalogView() {
           />
           <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-luxury-xl overflow-y-auto">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <span className="text-sm font-medium">Filters</span>
+              <span className="text-sm font-medium">Filtri</span>
               <button onClick={() => setShowFilters(false)} className="text-gray-400">
                 <X size={16} />
               </button>
@@ -143,7 +143,7 @@ export default function CatalogView() {
             className="md:hidden flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-border rounded px-2.5 py-1.5 hover:bg-cream transition-colors"
           >
             <SlidersHorizontal size={13} />
-            Filters
+            Filtri
           </button>
 
           {/* Search */}
@@ -153,7 +153,7 @@ export default function CatalogView() {
               type="text"
               value={search}
               onChange={handleSearchChange}
-              placeholder="Search by code or name..."
+              placeholder="Cerca per codice o nome..."
               className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-border rounded focus:outline-none focus:border-accent transition-colors"
             />
             {search && (
@@ -169,7 +169,7 @@ export default function CatalogView() {
           {/* Results count */}
           <div className="flex-1 hidden sm:flex items-center justify-end">
             <span className="text-xs text-gray-400">
-              {productsLoading ? 'Loading...' : `${filteredProducts.length} products`}
+              {productsLoading ? 'Caricamento...' : `${filteredProducts.length} prodotti`}
             </span>
           </div>
         </div>
@@ -178,7 +178,7 @@ export default function CatalogView() {
         <div className="px-6 py-6 border-b border-border/50">
           <div className="flex items-center gap-3">
             <div>
-              <p className="label-luxury text-accent">Collection</p>
+              <p className="label-luxury text-accent">Collezione</p>
               <h1 className="font-display text-2xl text-primary font-light tracking-wide">
                 CASA 2027
               </h1>

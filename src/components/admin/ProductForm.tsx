@@ -10,11 +10,11 @@ import toast from 'react-hot-toast';
 import type { Product, Category } from '@/types';
 
 const schema = z.object({
-  code: z.string().min(1, 'Code required'),
-  name: z.string().min(1, 'Name required'),
+  code: z.string().min(1, 'Codice obbligatorio'),
+  name: z.string().min(1, 'Nome obbligatorio'),
   description: z.string().optional(),
-  costPrice: z.string().min(1, 'Required').transform(Number),
-  retailPrice: z.string().min(1, 'Required').transform(Number),
+  costPrice: z.string().min(1, 'Obbligatorio').transform(Number),
+  retailPrice: z.string().min(1, 'Obbligatorio').transform(Number),
   lotSize: z.string().optional().transform((v) => (v ? parseInt(v) : 1)),
   categoryId: z.string().optional(),
   notes: z.string().optional(),
@@ -88,10 +88,10 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         throw new Error(err.error || 'Failed');
       }
 
-      toast.success(isEdit ? 'Product updated' : 'Product created');
+      toast.success(isEdit ? 'Prodotto aggiornato' : 'Prodotto creato');
       onSuccess();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save product');
+      toast.error(err.message || 'Impossibile salvare il prodotto');
     }
   }
 
@@ -99,20 +99,20 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Product Code *"
+          label="Codice Prodotto *"
           {...register('code')}
           error={errors.code?.message}
           placeholder="OE-CAT-001"
         />
         <div>
           <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
-            Category
+            Categoria
           </label>
           <select
             {...register('categoryId')}
             className="w-full px-4 py-2.5 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent"
           >
-            <option value="">No category</option>
+            <option value="">Nessuna categoria</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
@@ -121,27 +121,27 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       </div>
 
       <Input
-        label="Product Name *"
+        label="Nome Prodotto *"
         {...register('name')}
         error={errors.name?.message}
-        placeholder="Anima Sofa 3-Seater"
+        placeholder="Divano Anima 3 Posti"
       />
 
       <div>
         <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
-          Description
+          Descrizione
         </label>
         <textarea
           {...register('description')}
           rows={2}
           className="w-full px-4 py-2.5 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent resize-none"
-          placeholder="Product description..."
+          placeholder="Descrizione del prodotto..."
         />
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <Input
-          label="Cost Price (€) *"
+          label="Prezzo Costo (€) *"
           type="number"
           step="0.01"
           {...register('costPrice')}
@@ -149,7 +149,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           placeholder="0.00"
         />
         <Input
-          label="Retail Price (€) *"
+          label="Prezzo Vendita (€) *"
           type="number"
           step="0.01"
           {...register('retailPrice')}
@@ -157,7 +157,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           placeholder="0.00"
         />
         <Input
-          label="Lot Size"
+          label="Quantità per Lotto"
           type="number"
           min="1"
           {...register('lotSize')}
@@ -166,13 +166,13 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       </div>
 
       <Input
-        label="Notes"
+        label="Note"
         {...register('notes')}
-        placeholder="Available in 6 fabric options..."
+        placeholder="Disponibile in 6 opzioni tessuto..."
       />
 
       <Input
-        label="Image URL"
+        label="URL Immagine"
         {...register('imageUrl')}
         placeholder="https://..."
       />
@@ -184,15 +184,15 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           {...register('isActive')}
           className="w-4 h-4 accent-accent"
         />
-        <label htmlFor="isActive" className="text-sm text-primary">Active (visible in catalog)</label>
+        <label htmlFor="isActive" className="text-sm text-primary">Attivo (visibile in catalogo)</label>
       </div>
 
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="ghost" type="button" onClick={onCancel}>
-          Cancel
+          Annulla
         </Button>
         <Button type="submit" loading={isSubmitting}>
-          {isEdit ? 'Save Changes' : 'Create Product'}
+          {isEdit ? 'Salva Modifiche' : 'Crea Prodotto'}
         </Button>
       </div>
     </form>

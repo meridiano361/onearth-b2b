@@ -16,8 +16,8 @@ export default function Header({ session }: HeaderProps) {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/catalog', label: 'Catalog', icon: LayoutGrid },
-    { href: '/orders', label: 'My Orders', icon: Package },
+    { href: '/catalog', label: 'Catalogo', icon: LayoutGrid },
+    { href: '/orders', label: 'I miei Ordini', icon: Package },
   ];
 
   return (
@@ -74,10 +74,10 @@ export default function Header({ session }: HeaderProps) {
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary transition-colors px-2 py-1.5 rounded hover:bg-cream"
-          title="Sign out"
+          title="Esci"
         >
           <LogOut size={14} />
-          <span className="hidden sm:inline">Sign Out</span>
+          <span className="hidden sm:inline">Esci</span>
         </button>
       </div>
     </header>

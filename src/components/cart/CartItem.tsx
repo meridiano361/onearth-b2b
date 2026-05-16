@@ -46,7 +46,7 @@ export default function CartItem({ item }: CartItemProps) {
             <div className="flex items-center gap-1 mt-1.5">
               <AlertCircle size={10} className="text-amber-500 flex-shrink-0" />
               <p className="text-2xs text-amber-600">
-                Multiple of {item.product.lotSize} required
+                Multiplo di {item.product.lotSize} richiesto
               </p>
             </div>
           )}

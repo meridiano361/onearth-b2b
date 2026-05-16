@@ -101,13 +101,13 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Prices */}
         <div className="flex items-end justify-between mb-3">
           <div>
-            <p className="text-2xs text-gray-400 uppercase tracking-wide">Cost</p>
+            <p className="text-2xs text-gray-400 uppercase tracking-wide">Costo</p>
             <p className="text-sm font-semibold text-primary">
               {formatCurrency(product.costPrice)}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-2xs text-gray-400 uppercase tracking-wide">Retail</p>
+            <p className="text-2xs text-gray-400 uppercase tracking-wide">Vendita</p>
             <p className="text-xs text-gray-500">
               {formatCurrency(product.retailPrice)}
             </p>
@@ -126,7 +126,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <div className="flex items-center gap-1 mb-2 p-1.5 bg-amber-50 rounded border border-amber-200">
             <AlertCircle size={11} className="text-amber-500 flex-shrink-0" />
             <p className="text-2xs text-amber-700">
-              Adjust qty to multiple of {product.lotSize}
+              Adatta la quantità al multiplo di {product.lotSize}
             </p>
           </div>
         )}
@@ -151,12 +151,12 @@ export default function ProductCard({ product }: ProductCardProps) {
           >
             {justAdded ? (
               <span className="flex items-center justify-center gap-1.5">
-                <Check size={12} /> Added
+                <Check size={12} /> Aggiunto
               </span>
             ) : (
               <span className="flex items-center justify-center gap-1.5">
                 <ShoppingBag size={12} />
-                Add to Order
+                Aggiungi all&apos;Ordine
               </span>
             )}
           </button>

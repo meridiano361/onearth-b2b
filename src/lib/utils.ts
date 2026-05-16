@@ -62,11 +62,11 @@ export function isValidLotQuantity(quantity: number, lotSize: number): boolean {
 
 export function getOrderStatusLabel(status: string): string {
   const labels: Record<string, string> = {
-    DRAFT: 'Draft',
-    CONFIRMED: 'Confirmed',
-    PROCESSING: 'Processing',
-    SHIPPED: 'Shipped',
-    CANCELLED: 'Cancelled',
+    DRAFT: 'Bozza',
+    CONFIRMED: 'Confermato',
+    PROCESSING: 'In Lavorazione',
+    SHIPPED: 'Spedito',
+    CANCELLED: 'Annullato',
   };
   return labels[status] || status;
 }

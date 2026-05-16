@@ -107,20 +107,20 @@ export default function CatalogFilters({
       <div className="p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <span className="label-luxury">Filters</span>
+          <span className="label-luxury">Filtri</span>
           {selectedCategoryId && (
             <button
               onClick={() => onCategoryChange(null)}
               className="text-2xs text-gray-400 hover:text-primary flex items-center gap-1 transition-colors"
             >
-              <X size={10} /> Clear
+              <X size={10} /> Cancella
             </button>
           )}
         </div>
 
         {/* Category tree */}
         <div className="mb-6">
-          <p className="label-luxury mb-2">Category</p>
+          <p className="label-luxury mb-2">Categoria</p>
           <button
             onClick={() => onCategoryChange(null)}
             className={cn(
@@ -131,7 +131,7 @@ export default function CatalogFilters({
             )}
           >
             <div className="w-3 h-3 flex-shrink-0" />
-            All Products
+            Tutti i Prodotti
           </button>
           {tree.map((cat) => (
             <CategoryNode
@@ -145,7 +145,7 @@ export default function CatalogFilters({
 
         {/* Price range */}
         <div>
-          <p className="label-luxury mb-3">Max Cost Price</p>
+          <p className="label-luxury mb-3">Prezzo Costo Max</p>
           <div className="px-1">
             <input
               type="range"

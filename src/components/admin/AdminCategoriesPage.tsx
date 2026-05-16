@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 const schema = z.object({
-  name: z.string().min(1, 'Name required'),
+  name: z.string().min(1, 'Nome obbligatorio'),
   parentId: z.string().optional(),
   order: z.string().optional().transform((v) => (v ? parseInt(v) : 0)),
 });
@@ -65,7 +65,7 @@ function CategoryForm({ category, categories, onSuccess, onCancel }: CategoryFor
         throw new Error(err.error || 'Failed');
       }
 
-      toast.success(isEdit ? 'Category updated' : 'Category created');
+      toast.success(isEdit ? 'Categoria aggiornata' : 'Categoria creata');
       onSuccess();
     } catch (err: any) {
       toast.error(err.message || 'Failed');
@@ -78,21 +78,21 @@ function CategoryForm({ category, categories, onSuccess, onCancel }: CategoryFor
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <Input
-        label="Category Name *"
+        label="Nome Categoria *"
         {...register('name')}
         error={errors.name?.message}
-        placeholder="Living, Outdoor, etc."
+        placeholder="Soggiorno, Outdoor, ecc."
       />
 
       <div>
         <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
-          Parent Category
+          Categoria Padre
         </label>
         <select
           {...register('parentId')}
           className="w-full px-4 py-2.5 bg-white border border-border rounded text-sm focus:outline-none focus:border-accent"
         >
-          <option value="">— Root category —</option>
+          <option value="">— Categoria principale —</option>
           {flat.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
@@ -100,17 +100,17 @@ function CategoryForm({ category, categories, onSuccess, onCancel }: CategoryFor
       </div>
 
       <Input
-        label="Display Order"
+        label="Ordine di Visualizzazione"
         type="number"
         {...register('order')}
         placeholder="0"
-        hint="Lower numbers appear first"
+        hint="I numeri più bassi appaiono prima"
       />
 
       <div className="flex justify-end gap-3 pt-2">
-        <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>
+        <Button variant="ghost" type="button" onClick={onCancel}>Annulla</Button>
         <Button type="submit" loading={isSubmitting}>
-          {isEdit ? 'Save Changes' : 'Create Category'}
+          {isEdit ? 'Salva Modifiche' : 'Crea Categoria'}
         </Button>
       </div>
     </form>
@@ -222,8 +222,8 @@ export default function AdminCategoriesPage() {
   async function handleDelete(category: Category) {
     const childCount = flatCategories.filter((c) => c.parentId === category.id).length;
     const msg = childCount > 0
-      ? `Delete "${category.name}" and all its ${childCount} subcategories?`
-      : `Delete category "${category.name}"?`;
+      ? `Eliminare "${category.name}" e tutte le sue ${childCount} sottocategorie?`
+      : `Eliminare la categoria "${category.name}"?`;
 
     if (!confirm(msg)) return;
 
@@ -231,9 +231,9 @@ export default function AdminCategoriesPage() {
       const res = await fetch(`/api/categories/${category.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed');
       await queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
-      toast.success('Category deleted');
+      toast.success('Categoria eliminata');
     } catch {
-      toast.error('Failed to delete category');
+      toast.error('Impossibile eliminare la categoria');
     }
   }
 
@@ -242,11 +242,11 @@ export default function AdminCategoriesPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="label-luxury text-accent mb-1">Admin</p>
-          <h1 className="font-display text-2xl text-primary font-light">Categories</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{flatCategories.length} categories in collection</p>
+          <h1 className="font-display text-2xl text-primary font-light">Categorie</h1>
+          <p className="text-sm text-gray-400 mt-0.5">{flatCategories.length} categorie in collezione</p>
         </div>
         <Button icon={<Plus size={13} />} onClick={() => setShowCreate(true)}>
-          Add Category
+          Aggiungi Categoria
         </Button>
       </div>
 
@@ -254,7 +254,7 @@ export default function AdminCategoriesPage() {
         {isLoading ? (
           <LoadingSpinner className="mx-auto my-8" />
         ) : rootCategories.length === 0 ? (
-          <p className="text-center text-sm text-gray-400 py-8">No categories yet</p>
+          <p className="text-center text-sm text-gray-400 py-8">Nessuna categoria ancora</p>
         ) : (
           rootCategories.map((cat) => (
             <TreeNode
@@ -271,7 +271,7 @@ export default function AdminCategoriesPage() {
       <Modal
         isOpen={showCreate}
         onClose={() => setShowCreate(false)}
-        title="Add Category"
+        title="Aggiungi Categoria"
       >
         <CategoryForm
           categories={flatCategories}
@@ -286,7 +286,7 @@ export default function AdminCategoriesPage() {
       <Modal
         isOpen={!!editingCategory}
         onClose={() => setEditingCategory(null)}
-        title="Edit Category"
+        title="Modifica Categoria"
       >
         {editingCategory && (
           <CategoryForm

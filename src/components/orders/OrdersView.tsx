@@ -38,9 +38,9 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
       a.download = `order-${order.id.slice(0, 8)}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('PDF exported');
+      toast.success('PDF esportato');
     } catch {
-      toast.error('Export failed');
+      toast.error('Esportazione fallita');
     } finally {
       setIsExporting(false);
     }
@@ -62,9 +62,9 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
       a.download = `order-${order.id.slice(0, 8)}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Excel exported');
+      toast.success('Excel esportato');
     } catch {
-      toast.error('Export failed');
+      toast.error('Esportazione fallita');
     } finally {
       setIsExporting(false);
     }
@@ -92,7 +92,7 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
           <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
             <span>{formatDate(order.createdAt, 'datetime')}</span>
             <span className="text-gray-300">·</span>
-            <span>{order.totalItems} pieces, {order.items?.length || 0} lines</span>
+            <span>{order.totalItems} pezzi, {order.items?.length || 0} righe</span>
             <span className="text-gray-300">·</span>
             <span className="font-semibold text-primary">{formatCurrency(order.totalValue)}</span>
           </div>
@@ -121,18 +121,18 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
         <div className="border-t border-border bg-cream/20 px-5 py-4">
           {order.notes && (
             <div className="mb-4 p-3 bg-white border border-border/50 rounded text-xs text-gray-600 italic">
-              <span className="font-medium not-italic text-gray-500 uppercase tracking-wide text-2xs block mb-0.5">Notes</span>
+              <span className="font-medium not-italic text-gray-500 uppercase tracking-wide text-2xs block mb-0.5">Note</span>
               {order.notes}
             </div>
           )}
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Code</th>
-                <th className="text-left pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Product</th>
-                <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Qty</th>
-                <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Unit</th>
-                <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Total</th>
+                <th className="text-left pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Codice</th>
+                <th className="text-left pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Prodotto</th>
+                <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Qtà</th>
+                <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Unità</th>
+                <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Totale</th>
               </tr>
             </thead>
             <tbody>
@@ -149,7 +149,7 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
             <tfoot>
               <tr>
                 <td colSpan={4} className="pt-3 text-right text-2xs font-medium uppercase tracking-wide text-gray-500">
-                  Order Total
+                  Totale Ordine
                 </td>
                 <td className="pt-3 text-right font-semibold text-primary">
                   {formatCurrency(order.totalValue)}
@@ -184,21 +184,21 @@ export default function OrdersView() {
     <div className="px-6 py-6 max-w-4xl">
       <div className="mb-6">
         <p className="label-luxury text-accent mb-1">CASA 2027</p>
-        <h1 className="font-display text-2xl text-primary font-light tracking-wide">My Orders</h1>
+        <h1 className="font-display text-2xl text-primary font-light tracking-wide">I miei Ordini</h1>
         <p className="mt-1 text-sm text-gray-400">
-          {orders.length > 0 ? `${orders.length} order${orders.length !== 1 ? 's' : ''} placed` : 'No orders yet'}
+          {orders.length > 0 ? `${orders.length} ordine${orders.length !== 1 ? 'i' : ''} effettuato${orders.length !== 1 ? 'i' : ''}` : 'Nessun ordine ancora'}
         </p>
       </div>
 
       {isLoading ? (
-        <LoadingSpinner fullPage text="Loading orders..." />
+        <LoadingSpinner fullPage text="Caricamento ordini..." />
       ) : orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-16 h-16 rounded-full bg-cream flex items-center justify-center mb-4">
             <Package size={24} className="text-gray-300" />
           </div>
-          <h3 className="font-display text-lg text-primary font-light">No orders yet</h3>
-          <p className="mt-1 text-sm text-gray-400">Start building your order from the catalog</p>
+          <h3 className="font-display text-lg text-primary font-light">Nessun ordine ancora</h3>
+          <p className="mt-1 text-sm text-gray-400">Inizia a costruire il tuo ordine dal catalogo</p>
         </div>
       ) : (
         <div>

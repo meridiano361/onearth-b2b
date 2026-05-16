@@ -16,10 +16,10 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
-  { href: '/admin/products', label: 'Products', icon: Package },
-  { href: '/admin/customers', label: 'Customers', icon: Users },
-  { href: '/admin/categories', label: 'Categories', icon: Tag },
+  { href: '/admin/orders', label: 'Ordini', icon: ShoppingCart },
+  { href: '/admin/products', label: 'Prodotti', icon: Package },
+  { href: '/admin/customers', label: 'Clienti', icon: Users },
+  { href: '/admin/categories', label: 'Categorie', icon: Tag },
 ];
 
 export default function AdminSidebar() {
@@ -38,7 +38,7 @@ export default function AdminSidebar() {
           Meridiano 361
         </p>
         <h1 className="font-display text-lg text-white tracking-widest">ON EARTH</h1>
-        <p className="text-2xs text-gray-600 uppercase tracking-widest mt-1">Admin</p>
+        <p className="text-2xs text-gray-600 uppercase tracking-widest mt-1">Amministrazione</p>
       </div>
 
       {/* Navigation */}
@@ -67,7 +67,7 @@ export default function AdminSidebar() {
           className="flex items-center gap-3 px-3 py-2.5 w-full rounded text-xs text-gray-500 hover:text-white hover:bg-white/5 transition-all duration-150"
         >
           <LogOut size={15} />
-          Sign Out
+          Esci
         </button>
       </div>
     </aside>

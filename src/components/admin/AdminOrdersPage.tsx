@@ -34,9 +34,9 @@ function OrderRow({ order, onStatusChange }: { order: Order; onStatusChange: () 
       });
       if (!res.ok) throw new Error('Failed');
       onStatusChange();
-      toast.success('Status updated');
+      toast.success('Stato aggiornato');
     } catch {
-      toast.error('Failed to update status');
+      toast.error('Impossibile aggiornare lo stato');
     } finally {
       setIsUpdating(false);
     }
@@ -58,7 +58,7 @@ function OrderRow({ order, onStatusChange }: { order: Order; onStatusChange: () 
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      toast.error('Export failed');
+      toast.error('Esportazione fallita');
     }
   }
 
@@ -78,7 +78,7 @@ function OrderRow({ order, onStatusChange }: { order: Order; onStatusChange: () 
             </span>
           </div>
           <p className="text-2xs text-gray-400">
-            {formatDate(order.createdAt, 'datetime')} · {order.totalItems} pcs · {order.items?.length || 0} lines
+            {formatDate(order.createdAt, 'datetime')} · {order.totalItems} pz · {order.items?.length || 0} righe
           </p>
         </div>
 
@@ -123,12 +123,12 @@ function OrderRow({ order, onStatusChange }: { order: Order; onStatusChange: () 
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Code</th>
-                <th className="text-left pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Product</th>
-                <th className="text-left pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Category</th>
-                <th className="text-right pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Qty</th>
-                <th className="text-right pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Unit</th>
-                <th className="text-right pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Total</th>
+                <th className="text-left pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Codice</th>
+                <th className="text-left pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Prodotto</th>
+                <th className="text-left pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Categoria</th>
+                <th className="text-right pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Qtà</th>
+                <th className="text-right pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Unità</th>
+                <th className="text-right pb-2 text-2xs font-medium uppercase tracking-wide text-gray-400">Totale</th>
               </tr>
             </thead>
             <tbody>
@@ -144,7 +144,7 @@ function OrderRow({ order, onStatusChange }: { order: Order; onStatusChange: () 
               ))}
               <tr>
                 <td colSpan={5} className="pt-3 text-right text-2xs font-medium text-gray-400 uppercase tracking-wide">
-                  Order Total
+                  Totale Ordine
                 </td>
                 <td className="pt-3 text-right font-semibold text-primary">
                   {formatCurrency(order.totalValue)}
@@ -155,7 +155,7 @@ function OrderRow({ order, onStatusChange }: { order: Order; onStatusChange: () 
 
           {order.notes && (
             <div className="mt-3 pt-3 border-t border-border/50">
-              <p className="text-2xs font-medium uppercase tracking-wide text-gray-400 mb-1">Notes</p>
+              <p className="text-2xs font-medium uppercase tracking-wide text-gray-400 mb-1">Note</p>
               <p className="text-xs text-gray-600 italic">{order.notes}</p>
             </div>
           )}
@@ -196,8 +196,8 @@ export default function AdminOrdersPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="label-luxury text-accent mb-1">Admin</p>
-          <h1 className="font-display text-2xl text-primary font-light">Orders</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{data?.total || 0} total orders</p>
+          <h1 className="font-display text-2xl text-primary font-light">Ordini</h1>
+          <p className="text-sm text-gray-400 mt-0.5">{data?.total || 0} ordini totali</p>
         </div>
       </div>
 
@@ -205,7 +205,7 @@ export default function AdminOrdersPage() {
       <div className="flex gap-3 mb-6">
         <div className="max-w-xs flex-1">
           <Input
-            placeholder="Search by customer or ID..."
+            placeholder="Cerca per cliente o ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             icon={<Search size={14} />}
@@ -216,7 +216,7 @@ export default function AdminOrdersPage() {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent bg-white text-primary"
         >
-          <option value="">All statuses</option>
+          <option value="">Tutti gli stati</option>
           {STATUS_OPTIONS.filter(Boolean).map((s) => (
             <option key={s} value={s}>{getOrderStatusLabel(s)}</option>
           ))}
@@ -227,7 +227,7 @@ export default function AdminOrdersPage() {
         <LoadingSpinner fullPage />
       ) : orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center text-gray-400">
-          <p className="text-sm">No orders found</p>
+          <p className="text-sm">Nessun ordine trovato</p>
         </div>
       ) : (
         <div>

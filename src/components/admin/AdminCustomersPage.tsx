@@ -41,14 +41,14 @@ export default function AdminCustomersPage() {
       });
       if (!res.ok) throw new Error('Failed');
       await queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
-      toast.success(`Customer ${customer.isActive ? 'deactivated' : 'activated'}`);
+      toast.success(`Cliente ${customer.isActive ? 'disattivato' : 'attivato'}`);
     } catch {
-      toast.error('Failed to update customer');
+      toast.error('Impossibile aggiornare il cliente');
     }
   }
 
   async function handleDelete(customer: Customer) {
-    if (!confirm(`Delete ${customer.companyName}? This cannot be undone.`)) return;
+    if (!confirm(`Eliminare ${customer.companyName}? Questa azione non può essere annullata.`)) return;
     try {
       const res = await fetch(`/api/customers/${customer.id}`, { method: 'DELETE' });
       if (!res.ok) {
@@ -56,9 +56,9 @@ export default function AdminCustomersPage() {
         throw new Error(err.error);
       }
       await queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
-      toast.success('Customer deleted');
+      toast.success('Cliente eliminato');
     } catch (err: any) {
-      toast.error(err.message || 'Failed to delete customer');
+      toast.error(err.message || 'Impossibile eliminare il cliente');
     }
   }
 
@@ -67,17 +67,17 @@ export default function AdminCustomersPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="label-luxury text-accent mb-1">Admin</p>
-          <h1 className="font-display text-2xl text-primary font-light">Customers</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{data?.total || 0} registered accounts</p>
+          <h1 className="font-display text-2xl text-primary font-light">Clienti</h1>
+          <p className="text-sm text-gray-400 mt-0.5">{data?.total || 0} account registrati</p>
         </div>
         <Button icon={<Plus size={13} />} onClick={() => setShowCreate(true)}>
-          Add Customer
+          Aggiungi Cliente
         </Button>
       </div>
 
       <div className="mb-4 max-w-sm">
         <Input
-          placeholder="Search by name, email or code..."
+          placeholder="Cerca per nome, email o codice..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           icon={<Search size={14} />}
@@ -88,14 +88,14 @@ export default function AdminCustomersPage() {
         <table className="table-luxury w-full">
           <thead>
             <tr>
-              <th>Company</th>
-              <th>Code</th>
+              <th>Azienda</th>
+              <th>Codice</th>
               <th>Email</th>
-              <th>City</th>
-              <th>Role</th>
-              <th>Orders</th>
-              <th>Status</th>
-              <th>Joined</th>
+              <th>Città</th>
+              <th>Ruolo</th>
+              <th>Ordini</th>
+              <th>Stato</th>
+              <th>Registrato</th>
               <th className="w-24"></th>
             </tr>
           </thead>
@@ -109,7 +109,7 @@ export default function AdminCustomersPage() {
             ) : customers.length === 0 ? (
               <tr>
                 <td colSpan={9} className="py-12 text-center text-gray-400 text-sm">
-                  No customers found
+                  Nessun cliente trovato
                 </td>
               </tr>
             ) : (
@@ -141,7 +141,7 @@ export default function AdminCustomersPage() {
                       variant={customer.isActive ? 'success' : 'default'}
                       size="xs"
                     >
-                      {customer.isActive ? 'Active' : 'Inactive'}
+                      {customer.isActive ? 'Attivo' : 'Inattivo'}
                     </Badge>
                   </td>
                   <td className="text-xs text-gray-400">
@@ -158,7 +158,7 @@ export default function AdminCustomersPage() {
                       <button
                         onClick={() => handleToggleActive(customer)}
                         className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
-                        title={customer.isActive ? 'Deactivate' : 'Activate'}
+                        title={customer.isActive ? 'Disattiva' : 'Attiva'}
                       >
                         {customer.isActive
                           ? <ToggleRight size={14} className="text-green-500" />
@@ -183,7 +183,7 @@ export default function AdminCustomersPage() {
       <Modal
         isOpen={showCreate}
         onClose={() => setShowCreate(false)}
-        title="Add Customer"
+        title="Aggiungi Cliente"
         size="lg"
       >
         <CustomerForm
@@ -198,7 +198,7 @@ export default function AdminCustomersPage() {
       <Modal
         isOpen={!!editingCustomer}
         onClose={() => setEditingCustomer(null)}
-        title="Edit Customer"
+        title="Modifica Cliente"
         size="lg"
       >
         {editingCustomer && (

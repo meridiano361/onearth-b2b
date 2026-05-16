@@ -14,7 +14,7 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <LoadingSpinner size="lg" text="Loading collection..." />
+        <LoadingSpinner size="lg" text="Caricamento collezione..." />
       </div>
     );
   }
@@ -25,8 +25,8 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
         <div className="w-16 h-16 rounded-full bg-cream flex items-center justify-center mb-4">
           <Package size={24} className="text-gray-300" />
         </div>
-        <h3 className="font-display text-lg text-primary font-light">No products found</h3>
-        <p className="mt-1 text-sm text-gray-400">Try adjusting your filters</p>
+        <h3 className="font-display text-lg text-primary font-light">Nessun prodotto trovato</h3>
+        <p className="mt-1 text-sm text-gray-400">Prova a modificare i filtri</p>
       </div>
     );
   }

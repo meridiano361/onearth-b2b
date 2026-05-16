@@ -10,8 +10,8 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
-  password: z.string().min(1, 'Password is required'),
+  email: z.string().email('Inserisci un\'email valida'),
+  password: z.string().min(1, 'La password è obbligatoria'),
 });
 
 type LoginValues = z.infer<typeof loginSchema>;
@@ -39,7 +39,7 @@ export default function LoginForm() {
       });
 
       if (result?.error) {
-        toast.error(result.error === 'CredentialsSignin' ? 'Invalid email or password' : result.error);
+        toast.error(result.error === 'CredentialsSignin' ? 'Email o password non validi' : result.error);
         return;
       }
 
@@ -55,7 +55,7 @@ export default function LoginForm() {
 
       router.refresh();
     } catch {
-      toast.error('An unexpected error occurred. Please try again.');
+      toast.error('Si è verificato un errore inatteso. Riprova.');
     } finally {
       setIsLoading(false);
     }
@@ -65,13 +65,13 @@ export default function LoginForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <div>
         <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
-          Email Address
+          Indirizzo Email
         </label>
         <input
           {...register('email')}
           type="email"
           autoComplete="email"
-          placeholder="you@company.com"
+          placeholder="tu@azienda.com"
           className="w-full px-4 py-3 bg-white border border-border rounded text-sm text-primary placeholder-gray-400 transition-all duration-150 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
         />
         {errors.email && (
@@ -112,10 +112,10 @@ export default function LoginForm() {
         {isLoading ? (
           <>
             <Loader2 size={16} className="animate-spin" />
-            Signing in...
+            Accesso in corso...
           </>
         ) : (
-          'Sign In'
+          'Accedi'
         )}
       </button>
     </form>

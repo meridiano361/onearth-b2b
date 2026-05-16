@@ -64,7 +64,7 @@ export default function AdminDashboard() {
 
   const stats = [
     {
-      label: 'Total Orders',
+      label: 'Ordini Totali',
       value: ordersData?.total || 0,
       icon: ShoppingCart,
       href: '/admin/orders',
@@ -72,7 +72,7 @@ export default function AdminDashboard() {
       bg: 'bg-blue-50',
     },
     {
-      label: 'Customers',
+      label: 'Clienti',
       value: customersData?.total || 0,
       icon: Users,
       href: '/admin/customers',
@@ -80,7 +80,7 @@ export default function AdminDashboard() {
       bg: 'bg-green-50',
     },
     {
-      label: 'Active Products',
+      label: 'Prodotti Attivi',
       value: productsData?.total || 0,
       icon: Package,
       href: '/admin/products',
@@ -88,7 +88,7 @@ export default function AdminDashboard() {
       bg: 'bg-amber-50',
     },
     {
-      label: 'Total Revenue',
+      label: 'Fatturato Totale',
       value: formatCurrency(revenue),
       icon: TrendingUp,
       href: '/admin/orders',
@@ -104,7 +104,7 @@ export default function AdminDashboard() {
       <div className="mb-8">
         <p className="label-luxury text-accent mb-1">Meridiano 361</p>
         <h1 className="font-display text-3xl text-primary font-light">Dashboard</h1>
-        <p className="text-sm text-gray-400 mt-1">Collection CASA 2027 overview</p>
+        <p className="text-sm text-gray-400 mt-1">Panoramica Collezione CASA 2027</p>
       </div>
 
       {/* Stats cards */}
@@ -134,12 +134,12 @@ export default function AdminDashboard() {
         {/* Recent orders */}
         <div className="lg:col-span-2 bg-white border border-border rounded">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-            <h2 className="text-sm font-medium text-primary">Recent Orders</h2>
+            <h2 className="text-sm font-medium text-primary">Ordini Recenti</h2>
             <Link
               href="/admin/orders"
               className="text-xs text-gray-400 hover:text-primary flex items-center gap-1 transition-colors"
             >
-              View all <ArrowRight size={12} />
+              Vedi tutti <ArrowRight size={12} />
             </Link>
           </div>
 
@@ -149,7 +149,7 @@ export default function AdminDashboard() {
             </div>
           ) : orders.length === 0 ? (
             <div className="px-5 py-12 text-center text-sm text-gray-400">
-              No orders yet
+              Nessun ordine ancora
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -165,7 +165,7 @@ export default function AdminDashboard() {
                       </Badge>
                     </div>
                     <p className="text-2xs text-gray-400 mt-0.5">
-                      {formatDate(order.createdAt, 'datetime')} · {order.totalItems} pieces
+                      {formatDate(order.createdAt, 'datetime')} · {order.totalItems} pezzi
                     </p>
                   </div>
                   <span className="text-sm font-semibold text-primary flex-shrink-0">
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
         <div>
           <div className="bg-white border border-border rounded">
             <div className="px-5 py-4 border-b border-border">
-              <h2 className="text-sm font-medium text-primary">Quick Actions</h2>
+              <h2 className="text-sm font-medium text-primary">Azioni Rapide</h2>
             </div>
             <div className="p-3 space-y-2">
               <Link
@@ -192,8 +192,8 @@ export default function AdminDashboard() {
                   <Upload size={14} className="text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-primary">Import Products</p>
-                  <p className="text-2xs text-gray-400">Upload CSV or Excel file</p>
+                  <p className="text-xs font-medium text-primary">Importa Prodotti</p>
+                  <p className="text-2xs text-gray-400">Carica file CSV o Excel</p>
                 </div>
                 <ArrowRight size={12} className="text-gray-300 group-hover:text-gray-600 ml-auto transition-colors" />
               </Link>
@@ -206,8 +206,8 @@ export default function AdminDashboard() {
                   <Plus size={14} className="text-green-600" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-primary">Add Customer</p>
-                  <p className="text-2xs text-gray-400">Create new account</p>
+                  <p className="text-xs font-medium text-primary">Aggiungi Cliente</p>
+                  <p className="text-2xs text-gray-400">Crea nuovo account</p>
                 </div>
                 <ArrowRight size={12} className="text-gray-300 group-hover:text-gray-600 ml-auto transition-colors" />
               </Link>
@@ -220,8 +220,8 @@ export default function AdminDashboard() {
                   <Package size={14} className="text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-primary">Manage Categories</p>
-                  <p className="text-2xs text-gray-400">Edit collection structure</p>
+                  <p className="text-xs font-medium text-primary">Gestisci Categorie</p>
+                  <p className="text-2xs text-gray-400">Modifica struttura collezione</p>
                 </div>
                 <ArrowRight size={12} className="text-gray-300 group-hover:text-gray-600 ml-auto transition-colors" />
               </Link>
@@ -237,13 +237,13 @@ export default function AdminDashboard() {
               }}
             />
             <p className="relative text-2xs tracking-widest uppercase text-accent font-medium mb-1">
-              Active Collection
+              Collezione Attiva
             </p>
             <p className="relative font-display text-2xl text-white font-light tracking-wide">
               CASA 2027
             </p>
             <p className="relative text-2xs text-gray-500 mt-2 uppercase tracking-wider">
-              FW 2027 · B2B Showroom
+              FW 2027 · Showroom B2B
             </p>
           </div>
         </div>

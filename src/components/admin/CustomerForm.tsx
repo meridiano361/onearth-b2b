@@ -9,10 +9,10 @@ import toast from 'react-hot-toast';
 import type { Customer } from '@/types';
 
 const createSchema = z.object({
-  companyName: z.string().min(1, 'Required'),
-  customerCode: z.string().min(1, 'Required'),
-  email: z.string().email('Invalid email'),
-  password: z.string().min(6, 'Min 6 characters'),
+  companyName: z.string().min(1, 'Obbligatorio'),
+  customerCode: z.string().min(1, 'Obbligatorio'),
+  email: z.string().email('Email non valida'),
+  password: z.string().min(6, 'Minimo 6 caratteri'),
   role: z.enum(['ADMIN', 'CUSTOMER']).default('CUSTOMER'),
   isActive: z.boolean().default(true),
   phone: z.string().optional(),
@@ -22,8 +22,8 @@ const createSchema = z.object({
 });
 
 const updateSchema = z.object({
-  companyName: z.string().min(1, 'Required').optional(),
-  email: z.string().email('Invalid email').optional(),
+  companyName: z.string().min(1, 'Obbligatorio').optional(),
+  email: z.string().email('Email non valida').optional(),
   isActive: z.boolean().optional(),
   role: z.enum(['ADMIN', 'CUSTOMER']).optional(),
   phone: z.string().optional(),
@@ -93,10 +93,10 @@ export default function CustomerForm({ customer, onSuccess, onCancel }: Customer
         throw new Error(err.error || 'Failed');
       }
 
-      toast.success(isEdit ? 'Customer updated' : 'Customer created');
+      toast.success(isEdit ? 'Cliente aggiornato' : 'Cliente creato');
       onSuccess();
     } catch (err: any) {
-      toast.error(err.message || 'Failed');
+      toast.error(err.message || 'Operazione fallita');
     }
   }
 
@@ -104,14 +104,14 @@ export default function CustomerForm({ customer, onSuccess, onCancel }: Customer
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Company Name *"
+          label="Nome Azienda *"
           {...register('companyName')}
           error={(errors as any).companyName?.message}
-          placeholder="Acme Design Studio"
+          placeholder="Studio Design Rossi"
         />
         {!isEdit && (
           <Input
-            label="Customer Code *"
+            label="Codice Cliente *"
             {...register('customerCode')}
             error={(errors as any).customerCode?.message}
             placeholder="ADS001"
@@ -120,7 +120,7 @@ export default function CustomerForm({ customer, onSuccess, onCancel }: Customer
         {isEdit && (
           <div>
             <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
-              Customer Code
+              Codice Cliente
             </label>
             <p className="px-4 py-2.5 bg-cream border border-border rounded text-sm text-gray-500 font-mono">
               {customer!.customerCode}
@@ -135,10 +135,10 @@ export default function CustomerForm({ customer, onSuccess, onCancel }: Customer
           type="email"
           {...register('email')}
           error={(errors as any).email?.message}
-          placeholder="buyer@company.com"
+          placeholder="acquisti@azienda.com"
         />
         <Input
-          label={isEdit ? 'New Password (leave blank to keep)' : 'Password *'}
+          label={isEdit ? 'Nuova Password (lascia vuoto per mantenerla)' : 'Password *'}
           type="password"
           {...register(isEdit ? 'newPassword' : 'password')}
           error={(errors as any).password?.message || (errors as any).newPassword?.message}
@@ -148,37 +148,37 @@ export default function CustomerForm({ customer, onSuccess, onCancel }: Customer
 
       <div className="grid grid-cols-3 gap-4">
         <Input
-          label="Phone"
+          label="Telefono"
           {...register('phone')}
           placeholder="+39 02 123456"
         />
         <Input
-          label="City"
+          label="Città"
           {...register('city')}
           placeholder="Milano"
         />
         <Input
-          label="Country"
+          label="Paese"
           {...register('country')}
-          placeholder="Italy"
+          placeholder="Italia"
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <Input
-          label="VAT Number"
+          label="Partita IVA"
           {...register('vatNumber')}
           placeholder="IT12345678901"
         />
         <div>
           <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
-            Role
+            Ruolo
           </label>
           <select
             {...register('role')}
             className="w-full px-4 py-2.5 bg-white border border-border rounded text-sm focus:outline-none focus:border-accent"
           >
-            <option value="CUSTOMER">Customer</option>
+            <option value="CUSTOMER">Cliente</option>
             <option value="ADMIN">Admin</option>
           </select>
         </div>
@@ -191,15 +191,15 @@ export default function CustomerForm({ customer, onSuccess, onCancel }: Customer
           {...register('isActive')}
           className="w-4 h-4 accent-accent"
         />
-        <label htmlFor="isActive" className="text-sm text-primary">Active (can log in)</label>
+        <label htmlFor="isActive" className="text-sm text-primary">Attivo (può accedere)</label>
       </div>
 
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="ghost" type="button" onClick={onCancel}>
-          Cancel
+          Annulla
         </Button>
         <Button type="submit" loading={isSubmitting}>
-          {isEdit ? 'Save Changes' : 'Create Customer'}
+          {isEdit ? 'Salva Modifiche' : 'Crea Cliente'}
         </Button>
       </div>
     </form>

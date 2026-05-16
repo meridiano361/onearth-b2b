@@ -43,21 +43,21 @@ export default function AdminProductsPage() {
       });
       if (!res.ok) throw new Error('Failed');
       await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      toast.success(`Product ${product.isActive ? 'deactivated' : 'activated'}`);
+      toast.success(`Prodotto ${product.isActive ? 'disattivato' : 'attivato'}`);
     } catch {
-      toast.error('Failed to update product');
+      toast.error('Impossibile aggiornare il prodotto');
     }
   }
 
   async function handleDelete(product: Product) {
-    if (!confirm(`Delete ${product.name}? This cannot be undone.`)) return;
+    if (!confirm(`Eliminare ${product.name}? Questa azione non può essere annullata.`)) return;
     try {
       const res = await fetch(`/api/products/${product.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed');
       await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      toast.success('Product deleted');
+      toast.success('Prodotto eliminato');
     } catch {
-      toast.error('Failed to delete product');
+      toast.error('Impossibile eliminare il prodotto');
     }
   }
 
@@ -67,8 +67,8 @@ export default function AdminProductsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="label-luxury text-accent mb-1">Admin</p>
-          <h1 className="font-display text-2xl text-primary font-light">Products</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{data?.total || 0} products in collection</p>
+          <h1 className="font-display text-2xl text-primary font-light">Prodotti</h1>
+          <p className="text-sm text-gray-400 mt-0.5">{data?.total || 0} prodotti in collezione</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -76,13 +76,13 @@ export default function AdminProductsPage() {
             icon={<Upload size={13} />}
             onClick={() => setShowImport(true)}
           >
-            Import
+            Importa
           </Button>
           <Button
             icon={<Plus size={13} />}
             onClick={() => setShowCreateForm(true)}
           >
-            Add Product
+            Aggiungi Prodotto
           </Button>
         </div>
       </div>
@@ -90,7 +90,7 @@ export default function AdminProductsPage() {
       {/* Search */}
       <div className="mb-4 max-w-sm">
         <Input
-          placeholder="Search by code or name..."
+          placeholder="Cerca per codice o nome..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           icon={<Search size={14} />}
@@ -102,13 +102,13 @@ export default function AdminProductsPage() {
         <table className="table-luxury w-full">
           <thead>
             <tr>
-              <th>Code</th>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Cost</th>
-              <th>Retail</th>
+              <th>Codice</th>
+              <th>Nome</th>
+              <th>Categoria</th>
+              <th>Costo</th>
+              <th>Vendita</th>
               <th>LOT</th>
-              <th>Status</th>
+              <th>Stato</th>
               <th className="w-20"></th>
             </tr>
           </thead>
@@ -122,7 +122,7 @@ export default function AdminProductsPage() {
             ) : products.length === 0 ? (
               <tr>
                 <td colSpan={8} className="py-12 text-center text-gray-400 text-sm">
-                  No products found
+                  Nessun prodotto trovato
                 </td>
               </tr>
             ) : (
@@ -153,7 +153,7 @@ export default function AdminProductsPage() {
                   </td>
                   <td>
                     <Badge variant={product.isActive ? 'success' : 'default'} size="xs">
-                      {product.isActive ? 'Active' : 'Inactive'}
+                      {product.isActive ? 'Attivo' : 'Inattivo'}
                     </Badge>
                   </td>
                   <td>
@@ -168,7 +168,7 @@ export default function AdminProductsPage() {
                       <button
                         onClick={() => handleToggleActive(product)}
                         className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
-                        title={product.isActive ? 'Deactivate' : 'Activate'}
+                        title={product.isActive ? 'Disattiva' : 'Attiva'}
                       >
                         {product.isActive ? <EyeOff size={13} /> : <Eye size={13} />}
                       </button>
@@ -192,7 +192,7 @@ export default function AdminProductsPage() {
       <Modal
         isOpen={showImport}
         onClose={() => setShowImport(false)}
-        title="Import Products"
+        title="Importa Prodotti"
         size="xl"
       >
         <ProductImport
@@ -207,7 +207,7 @@ export default function AdminProductsPage() {
       <Modal
         isOpen={!!editingProduct}
         onClose={() => setEditingProduct(null)}
-        title="Edit Product"
+        title="Modifica Prodotto"
         size="lg"
       >
         {editingProduct && (
@@ -226,7 +226,7 @@ export default function AdminProductsPage() {
       <Modal
         isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
-        title="Add Product"
+        title="Aggiungi Prodotto"
         size="lg"
       >
         <ProductForm

@@ -118,7 +118,7 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
           setColumnMapping(mapping);
           setStep('map');
         },
-        error: () => toast.error('Failed to parse CSV'),
+        error: () => toast.error('Impossibile leggere il file CSV'),
       });
     } else {
       const reader = new FileReader();
@@ -127,7 +127,7 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
           const wb = XLSX.read(e.target?.result, { type: 'binary' });
           const ws = wb.Sheets[wb.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(ws) as any[];
-          if (rows.length === 0) { toast.error('Empty file'); return; }
+          if (rows.length === 0) { toast.error('File vuoto'); return; }
           const hdrs = Object.keys(rows[0]);
           setHeaders(hdrs);
           setRawRows(rows);
@@ -135,7 +135,7 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
           setColumnMapping(mapping);
           setStep('map');
         } catch {
-          toast.error('Failed to parse Excel file');
+          toast.error('Impossibile leggere il file Excel');
         }
       };
       reader.readAsBinaryString(f);
@@ -169,11 +169,11 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
       setStep('done');
 
       if (data.success > 0) {
-        toast.success(`${data.success} products imported successfully`);
+        toast.success(`${data.success} prodotti importati con successo`);
         onSuccess();
       }
     } catch (err: any) {
-      toast.error(err.message || 'Import failed');
+      toast.error(err.message || 'Importazione fallita');
     } finally {
       setIsImporting(false);
     }
@@ -202,16 +202,16 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
           <input {...getInputProps()} />
           <Upload size={32} className="mx-auto text-gray-300 mb-4" />
           <p className="text-sm font-medium text-primary mb-1">
-            {isDragActive ? 'Drop file here' : 'Drag & drop your file here'}
+            {isDragActive ? 'Rilascia il file qui' : 'Trascina il file qui'}
           </p>
-          <p className="text-xs text-gray-400">CSV, XLSX or XLS · up to 10,000 rows</p>
+          <p className="text-xs text-gray-400">CSV, XLSX o XLS · fino a 10.000 righe</p>
           <button className="mt-4 px-4 py-2 text-xs font-medium bg-primary text-background rounded hover:bg-gray-800 transition-colors">
-            Browse Files
+            Sfoglia File
           </button>
         </div>
 
         <div className="mt-6 p-4 bg-cream rounded border border-border">
-          <p className="text-xs font-medium text-primary mb-2">Expected columns:</p>
+          <p className="text-xs font-medium text-primary mb-2">Colonne attese:</p>
           <div className="flex flex-wrap gap-1.5">
             {['code *', 'name *', 'costPrice *', 'retailPrice *', 'description', 'category', 'lotSize', 'notes', 'imageUrl'].map((col) => (
               <span key={col} className="px-2 py-0.5 bg-white border border-border rounded text-2xs text-gray-600 font-mono">
@@ -219,7 +219,7 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
               </span>
             ))}
           </div>
-          <p className="text-2xs text-gray-400 mt-2">Columns are auto-detected. Aliases like "sku", "price_cost", "moq" are recognized.</p>
+          <p className="text-2xs text-gray-400 mt-2">Le colonne vengono rilevate automaticamente. Alias come "sku", "price_cost", "moq" sono riconosciuti.</p>
         </div>
       </div>
     );
@@ -236,14 +236,14 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="text-sm font-medium text-primary">{file?.name}</p>
-            <p className="text-xs text-gray-400">{rawRows.length} rows detected</p>
+            <p className="text-xs text-gray-400">{rawRows.length} righe rilevate</p>
           </div>
           <button onClick={reset} className="text-gray-400 hover:text-primary">
             <X size={16} />
           </button>
         </div>
 
-        <p className="text-xs font-medium text-primary mb-3">Map columns:</p>
+        <p className="text-xs font-medium text-primary mb-3">Mappa colonne:</p>
         <div className="space-y-2 mb-6">
           {allFields.map((field) => (
             <div key={field} className="flex items-center gap-3">
@@ -256,7 +256,7 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
                 onChange={(e) => setColumnMapping({ ...columnMapping, [field]: e.target.value })}
                 className="flex-1 text-xs border border-border rounded px-3 py-1.5 focus:outline-none focus:border-accent bg-white"
               >
-                <option value="">— not mapped —</option>
+                <option value="">— non mappata —</option>
                 {headers.map((h) => (
                   <option key={h} value={h}>{h}</option>
                 ))}
@@ -271,13 +271,13 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
         </div>
 
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={reset}>Back</Button>
+          <Button variant="ghost" onClick={reset}>Indietro</Button>
           <Button
             onClick={applyAndPreview}
             disabled={!columnMapping.code || !columnMapping.name || !columnMapping.costPrice || !columnMapping.retailPrice}
             icon={<ArrowRight size={13} />}
           >
-            Preview
+            Anteprima
           </Button>
         </div>
       </div>
@@ -290,10 +290,10 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
       <div>
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-medium text-primary">
-            Preview — {rawRows.length} rows to import
+            Anteprima — {rawRows.length} righe da importare
           </p>
           <button onClick={() => setStep('map')} className="text-xs text-gray-400 hover:text-primary">
-            ← Back to mapping
+            ← Torna alla mappatura
           </button>
         </div>
 
@@ -301,19 +301,19 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
           <table className="w-full text-xs">
             <thead className="sticky top-0">
               <tr className="bg-cream border-b border-border">
-                <th className="text-left px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">Code</th>
-                <th className="text-left px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">Name</th>
-                <th className="text-left px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">Category</th>
-                <th className="text-right px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">Cost</th>
-                <th className="text-right px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">Retail</th>
+                <th className="text-left px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">Codice</th>
+                <th className="text-left px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">Nome</th>
+                <th className="text-left px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">Categoria</th>
+                <th className="text-right px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">Costo</th>
+                <th className="text-right px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">Vendita</th>
                 <th className="text-center px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">LOT</th>
               </tr>
             </thead>
             <tbody>
               {preview.map((row, i) => (
                 <tr key={i} className="border-b border-border/50 last:border-0 hover:bg-cream/30">
-                  <td className="px-3 py-2 font-mono text-gray-500">{row.code || <span className="text-red-400">MISSING</span>}</td>
-                  <td className="px-3 py-2 text-primary">{row.name || <span className="text-red-400">MISSING</span>}</td>
+                  <td className="px-3 py-2 font-mono text-gray-500">{row.code || <span className="text-red-400">MANCANTE</span>}</td>
+                  <td className="px-3 py-2 text-primary">{row.name || <span className="text-red-400">MANCANTE</span>}</td>
                   <td className="px-3 py-2 text-gray-500">{row.category || '—'}</td>
                   <td className="px-3 py-2 text-right">€{row.costPrice}</td>
                   <td className="px-3 py-2 text-right">€{row.retailPrice}</td>
@@ -325,16 +325,16 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
         </div>
 
         {rawRows.length > 100 && (
-          <p className="text-xs text-gray-400 mt-2">Showing first 100 rows of {rawRows.length}</p>
+          <p className="text-xs text-gray-400 mt-2">Mostrando le prime 100 righe di {rawRows.length}</p>
         )}
 
         <div className="flex justify-end gap-3 mt-4">
-          <Button variant="ghost" onClick={() => setStep('map')}>Back</Button>
+          <Button variant="ghost" onClick={() => setStep('map')}>Indietro</Button>
           <Button
             onClick={handleImport}
             loading={isImporting}
           >
-            Import {rawRows.length} Products
+            Importa {rawRows.length} Prodotti
           </Button>
         </div>
       </div>
@@ -352,9 +352,9 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
             <AlertCircle size={24} className="text-red-500" />
           )}
           <div>
-            <p className="font-medium text-primary">Import complete</p>
+            <p className="font-medium text-primary">Importazione completata</p>
             <p className="text-sm text-gray-500">
-              {result.success} of {result.total} products imported successfully
+              {result.success} di {result.total} prodotti importati con successo
             </p>
           </div>
         </div>
@@ -362,13 +362,13 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
         {result.errors.length > 0 && (
           <div className="border border-red-100 rounded mb-4 overflow-auto max-h-48">
             <p className="px-4 py-2 text-xs font-medium text-red-600 border-b border-red-100 bg-red-50">
-              {result.errors.length} errors
+              {result.errors.length} errori
             </p>
             {result.errors.map((err, i) => (
               <div key={i} className="px-4 py-2 border-b border-red-50 last:border-0">
-                <p className="text-xs text-red-600">Row {err.row}: {err.message}</p>
+                <p className="text-xs text-red-600">Riga {err.row}: {err.message}</p>
                 {err.data?.code && (
-                  <p className="text-2xs text-gray-400">Code: {err.data.code}</p>
+                  <p className="text-2xs text-gray-400">Codice: {err.data.code}</p>
                 )}
               </div>
             ))}
@@ -376,8 +376,8 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
         )}
 
         <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={reset}>Import Another File</Button>
-          <Button onClick={onSuccess}>Done</Button>
+          <Button variant="secondary" onClick={reset}>Importa un Altro File</Button>
+          <Button onClick={onSuccess}>Fine</Button>
         </div>
       </div>
     );

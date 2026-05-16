@@ -6,8 +6,8 @@ import { LayoutGrid, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const items = [
-  { href: '/catalog', label: 'Catalog', icon: LayoutGrid },
-  { href: '/orders', label: 'Orders', icon: Package },
+  { href: '/catalog', label: 'Catalogo', icon: LayoutGrid },
+  { href: '/orders', label: 'Ordini', icon: Package },
 ];
 
 export default function MobileNav() {
