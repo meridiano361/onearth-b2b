@@ -8,7 +8,7 @@ import { slugify } from '@/lib/utils';
 const productSchema = z.object({
   code: z.string().min(1),
   name: z.string().min(1),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   costPrice: z.number().positive(),
   retailPrice: z.number().positive(),
   lotSize: z.number().int().positive().default(1),
@@ -18,6 +18,12 @@ const productSchema = z.object({
   collectionId: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
   stock: z.number().int().optional().nullable(),
+  famiglia: z.string().optional().nullable(),
+  sottofamiglia: z.string().optional().nullable(),
+  colore: z.string().optional().nullable(),
+  nomLinea: z.string().optional().nullable(),
+  misura: z.string().optional().nullable(),
+  produttore: z.string().optional().nullable(),
 });
 
 export async function GET(req: NextRequest) {
@@ -111,6 +117,12 @@ export async function POST(req: NextRequest) {
         collectionId: data.collectionId || null,
         isActive: data.isActive,
         stock: data.stock || null,
+        famiglia: data.famiglia || null,
+        sottofamiglia: data.sottofamiglia || null,
+        colore: data.colore || null,
+        nomLinea: data.nomLinea || null,
+        misura: data.misura || null,
+        produttore: data.produttore || null,
       },
       include: { category: true },
     });

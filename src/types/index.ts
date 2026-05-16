@@ -35,6 +35,12 @@ export interface Product {
   collectionId: string | null;
   isActive: boolean;
   stock: number | null;
+  famiglia: string | null;
+  sottofamiglia: string | null;
+  colore: string | null;
+  nomLinea: string | null;
+  misura: string | null;
+  produttore: string | null;
   createdAt: string;
   category?: Category | null;
 }

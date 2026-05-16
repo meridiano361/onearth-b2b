@@ -15,6 +15,12 @@ export default function CatalogView() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 99999]);
   const [showFilters, setShowFilters] = useState(false);
 
+  // New filter states
+  const [selectedFamiglia, setSelectedFamiglia] = useState<string | null>(null);
+  const [selectedSottofamiglia, setSelectedSottofamiglia] = useState<string | null>(null);
+  const [selectedColore, setSelectedColore] = useState<string | null>(null);
+  const [selectedNomLinea, setSelectedNomLinea] = useState<string | null>(null);
+
   const debouncedSetSearch = useCallback(
     debounce((val: string) => setDebouncedSearch(val), 250),
     []
@@ -24,6 +30,24 @@ export default function CatalogView() {
     setSearch(e.target.value);
     debouncedSetSearch(e.target.value);
   }
+
+  function handleResetAll() {
+    setSelectedCategoryId(null);
+    setSelectedFamiglia(null);
+    setSelectedSottofamiglia(null);
+    setSelectedColore(null);
+    setSelectedNomLinea(null);
+    setPriceRange([0, maxPrice]);
+  }
+
+  const hasActiveFilters = !!(
+    selectedCategoryId ||
+    selectedFamiglia ||
+    selectedSottofamiglia ||
+    selectedColore ||
+    selectedNomLinea ||
+    priceRange[1] < 99999
+  );
 
   const { data: productsData, isLoading: productsLoading } = useQuery({
     queryKey: ['products'],
@@ -48,7 +72,6 @@ export default function CatalogView() {
   const products = productsData || [];
   const categories = categoriesData || [];
 
-  // Get all descendant IDs of a category
   function getDescendantIds(categoryId: string, cats: Category[]): string[] {
     const children = cats.filter((c) => c.parentId === categoryId);
     return [categoryId, ...children.flatMap((c) => getDescendantIds(c.id, cats))];
@@ -59,7 +82,6 @@ export default function CatalogView() {
     return Math.ceil(Math.max(...products.map((p) => p.costPrice)) / 100) * 100;
   }, [products]);
 
-  // Initialize price range when maxPrice is computed
   useMemo(() => {
     if (priceRange[1] === 99999 && maxPrice < 99999) {
       setPriceRange([0, maxPrice]);
@@ -69,13 +91,11 @@ export default function CatalogView() {
   const filteredProducts = useMemo(() => {
     let result = products;
 
-    // Category filter (include children)
     if (selectedCategoryId) {
       const ids = getDescendantIds(selectedCategoryId, categories);
       result = result.filter((p) => p.categoryId && ids.includes(p.categoryId));
     }
 
-    // Search
     if (debouncedSearch.trim()) {
       const q = debouncedSearch.toLowerCase();
       result = result.filter(
@@ -83,28 +103,69 @@ export default function CatalogView() {
           p.code.toLowerCase().includes(q) ||
           p.name.toLowerCase().includes(q) ||
           (p.description && p.description.toLowerCase().includes(q)) ||
-          (p.notes && p.notes.toLowerCase().includes(q))
+          (p.notes && p.notes.toLowerCase().includes(q)) ||
+          (p.famiglia && p.famiglia.toLowerCase().includes(q)) ||
+          (p.sottofamiglia && p.sottofamiglia.toLowerCase().includes(q)) ||
+          (p.nomLinea && p.nomLinea.toLowerCase().includes(q)) ||
+          (p.produttore && p.produttore.toLowerCase().includes(q))
       );
     }
 
-    // Price range
+    if (selectedFamiglia) {
+      result = result.filter((p) => p.famiglia === selectedFamiglia);
+    }
+
+    if (selectedSottofamiglia) {
+      result = result.filter((p) => p.sottofamiglia === selectedSottofamiglia);
+    }
+
+    if (selectedColore) {
+      result = result.filter((p) => p.colore === selectedColore);
+    }
+
+    if (selectedNomLinea) {
+      result = result.filter((p) => p.nomLinea === selectedNomLinea);
+    }
+
     result = result.filter((p) => p.costPrice <= priceRange[1] && p.costPrice >= priceRange[0]);
 
     return result;
-  }, [products, selectedCategoryId, debouncedSearch, priceRange, categories]);
+  }, [products, selectedCategoryId, debouncedSearch, priceRange, categories, selectedFamiglia, selectedSottofamiglia, selectedColore, selectedNomLinea]);
+
+  const filterProps = {
+    categories,
+    products,
+    selectedCategoryId,
+    onCategoryChange: setSelectedCategoryId,
+    priceRange,
+    onPriceRangeChange: setPriceRange,
+    maxPrice,
+    selectedFamiglia,
+    onFamigliaChange: setSelectedFamiglia,
+    selectedSottofamiglia,
+    onSottofamigliaChange: setSelectedSottofamiglia,
+    selectedColore,
+    onColoreChange: setSelectedColore,
+    selectedNomLinea,
+    onNomLineaChange: setSelectedNomLinea,
+    hasActiveFilters,
+    onResetAll: handleResetAll,
+  };
+
+  // Active filter count for the mobile button badge
+  const activeFilterCount = [
+    selectedCategoryId,
+    selectedFamiglia,
+    selectedSottofamiglia,
+    selectedColore,
+    selectedNomLinea,
+  ].filter(Boolean).length;
 
   return (
     <div className="flex h-full">
       {/* Filters sidebar — desktop */}
       <div className="hidden md:block">
-        <CatalogFilters
-          categories={categories}
-          selectedCategoryId={selectedCategoryId}
-          onCategoryChange={setSelectedCategoryId}
-          priceRange={priceRange}
-          onPriceRangeChange={setPriceRange}
-          maxPrice={maxPrice}
-        />
+        <CatalogFilters {...filterProps} />
       </div>
 
       {/* Mobile filters drawer */}
@@ -122,12 +183,9 @@ export default function CatalogView() {
               </button>
             </div>
             <CatalogFilters
-              categories={categories}
-              selectedCategoryId={selectedCategoryId}
+              {...filterProps}
               onCategoryChange={(id) => { setSelectedCategoryId(id); setShowFilters(false); }}
-              priceRange={priceRange}
-              onPriceRangeChange={setPriceRange}
-              maxPrice={maxPrice}
+              onFamigliaChange={(v) => { setSelectedFamiglia(v); setSelectedSottofamiglia(null); }}
             />
           </div>
         </div>
@@ -140,20 +198,25 @@ export default function CatalogView() {
           {/* Mobile filter button */}
           <button
             onClick={() => setShowFilters(true)}
-            className="md:hidden flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-border rounded px-2.5 py-2 hover:bg-cream transition-colors flex-shrink-0"
+            className="md:hidden flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-border rounded px-2.5 py-2 hover:bg-cream transition-colors flex-shrink-0 relative"
           >
             <SlidersHorizontal size={13} />
             Filtri
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-accent text-white text-2xs font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
 
-          {/* Search — full width on mobile */}
+          {/* Search */}
           <div className="relative flex-1 md:max-w-sm">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               value={search}
               onChange={handleSearchChange}
-              placeholder="Cerca per codice o nome..."
+              placeholder="Cerca per codice, nome, linea..."
               className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-border rounded focus:outline-none focus:border-accent transition-colors"
             />
             {search && (
@@ -166,13 +229,51 @@ export default function CatalogView() {
             )}
           </div>
 
-          {/* Results count */}
-          <div className="hidden sm:flex items-center flex-shrink-0">
+          {/* Results count + reset */}
+          <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
             <span className="text-xs text-gray-400">
               {productsLoading ? 'Caricamento...' : `${filteredProducts.length} prodotti`}
             </span>
+            {hasActiveFilters && (
+              <button
+                onClick={handleResetAll}
+                className="text-xs text-accent hover:text-primary transition-colors font-medium"
+              >
+                Azzera filtri
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Active filter chips — desktop */}
+        {hasActiveFilters && (
+          <div className="hidden md:flex flex-wrap gap-1.5 px-6 py-2 border-b border-border/50 bg-cream/30">
+            {selectedFamiglia && (
+              <span className="inline-flex items-center gap-1 text-2xs bg-white border border-border rounded-full px-2.5 py-1 text-primary">
+                {selectedFamiglia}
+                <button onClick={() => setSelectedFamiglia(null)} className="text-gray-400 hover:text-primary ml-0.5"><X size={10} /></button>
+              </span>
+            )}
+            {selectedSottofamiglia && (
+              <span className="inline-flex items-center gap-1 text-2xs bg-white border border-border rounded-full px-2.5 py-1 text-primary">
+                {selectedSottofamiglia}
+                <button onClick={() => setSelectedSottofamiglia(null)} className="text-gray-400 hover:text-primary ml-0.5"><X size={10} /></button>
+              </span>
+            )}
+            {selectedColore && (
+              <span className="inline-flex items-center gap-1 text-2xs bg-white border border-border rounded-full px-2.5 py-1 text-primary">
+                {selectedColore}
+                <button onClick={() => setSelectedColore(null)} className="text-gray-400 hover:text-primary ml-0.5"><X size={10} /></button>
+              </span>
+            )}
+            {selectedNomLinea && (
+              <span className="inline-flex items-center gap-1 text-2xs bg-white border border-border rounded-full px-2.5 py-1 text-primary">
+                {selectedNomLinea}
+                <button onClick={() => setSelectedNomLinea(null)} className="text-gray-400 hover:text-primary ml-0.5"><X size={10} /></button>
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Collection header */}
         <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-border/50">

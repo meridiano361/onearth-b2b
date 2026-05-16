@@ -20,6 +20,12 @@ const schema = z.object({
   notes: z.string().optional(),
   imageUrl: z.string().optional(),
   isActive: z.boolean().default(true),
+  famiglia: z.string().optional(),
+  sottofamiglia: z.string().optional(),
+  colore: z.string().optional(),
+  nomLinea: z.string().optional(),
+  misura: z.string().optional(),
+  produttore: z.string().optional(),
 });
 
 type FormValues = z.input<typeof schema>;
@@ -28,6 +34,14 @@ interface ProductFormProps {
   product?: Product;
   onSuccess: () => void;
   onCancel: () => void;
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-2xs font-semibold tracking-widest uppercase text-gray-400 mb-3 pt-1">
+      {children}
+    </p>
+  );
 }
 
 export default function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) {
@@ -61,6 +75,12 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           notes: product.notes || '',
           imageUrl: product.imageUrl || '',
           isActive: product.isActive,
+          famiglia: product.famiglia || '',
+          sottofamiglia: product.sottofamiglia || '',
+          colore: product.colore || '',
+          nomLinea: product.nomLinea || '',
+          misura: product.misura || '',
+          produttore: product.produttore || '',
         }
       : { isActive: true, lotSize: '1' },
   });
@@ -80,6 +100,12 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           description: parsed.description || null,
           notes: parsed.notes || null,
           imageUrl: parsed.imageUrl || null,
+          famiglia: parsed.famiglia || null,
+          sottofamiglia: parsed.sottofamiglia || null,
+          colore: parsed.colore || null,
+          nomLinea: parsed.nomLinea || null,
+          misura: parsed.misura || null,
+          produttore: parsed.produttore || null,
         }),
       });
 
@@ -97,6 +123,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {/* Identificazione */}
+      <SectionLabel>Identificazione</SectionLabel>
       <div className="grid grid-cols-2 gap-4">
         <Input
           label="Codice Prodotto *"
@@ -139,6 +167,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         />
       </div>
 
+      {/* Prezzi */}
+      <SectionLabel>Prezzi e logistica</SectionLabel>
       <div className="grid grid-cols-3 gap-4">
         <Input
           label="Prezzo Costo (€) *"
@@ -157,7 +187,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           placeholder="0.00"
         />
         <Input
-          label="Quantità per Lotto"
+          label="Qtà per Lotto"
           type="number"
           min="1"
           {...register('lotSize')}
@@ -165,12 +195,52 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         />
       </div>
 
+      {/* Classificazione */}
+      <SectionLabel>Classificazione prodotto</SectionLabel>
+      <div className="grid grid-cols-2 gap-4">
+        <Input
+          label="Famiglia"
+          {...register('famiglia')}
+          placeholder="es. Prodotti tessili casa"
+        />
+        <Input
+          label="Sottofamiglia"
+          {...register('sottofamiglia')}
+          placeholder="es. Tessili tavola e cucina"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <Input
+          label="Nome Linea"
+          {...register('nomLinea')}
+          placeholder="es. GEOMETRIC, WAVES, RAGGI"
+        />
+        <Input
+          label="Colore"
+          {...register('colore')}
+          placeholder="es. blu/bianco, naturale"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <Input
+          label="Misura"
+          {...register('misura')}
+          placeholder="es. 40x40 cm"
+        />
+        <Input
+          label="Produttore"
+          {...register('produttore')}
+          placeholder="Nome del produttore"
+        />
+      </div>
+
+      {/* Extra */}
+      <SectionLabel>Informazioni aggiuntive</SectionLabel>
       <Input
         label="Note"
         {...register('notes')}
         placeholder="Disponibile in 6 opzioni tessuto..."
       />
-
       <Input
         label="URL Immagine"
         {...register('imageUrl')}

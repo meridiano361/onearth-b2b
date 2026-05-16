@@ -20,6 +20,12 @@ interface ImportRow {
   lotSize?: number | string;
   notes?: string;
   imageUrl?: string;
+  famiglia?: string;
+  sottofamiglia?: string;
+  colore?: string;
+  nomLinea?: string;
+  misura?: string;
+  produttore?: string;
   [key: string]: any;
 }
 
@@ -34,12 +40,18 @@ const COLUMN_ALIASES: Record<string, string[]> = {
   code: ['code', 'sku', 'product_code', 'article', 'codice', 'cod'],
   name: ['name', 'product_name', 'nome', 'description_short', 'title'],
   description: ['description', 'descrizione', 'desc', 'long_description'],
-  category: ['category', 'categoria', 'cat', 'group', 'family'],
+  category: ['category', 'categoria', 'cat', 'group'],
   costPrice: ['cost_price', 'cost', 'price_cost', 'prezzo_costo', 'wholesale', 'buy_price'],
   retailPrice: ['retail_price', 'retail', 'price', 'prezzo', 'msrp', 'sell_price'],
   lotSize: ['lot_size', 'moq', 'min_qty', 'lot', 'minimum'],
   notes: ['notes', 'note', 'comments', 'info'],
   imageUrl: ['image_url', 'image', 'img', 'photo_url', 'foto'],
+  famiglia: ['famiglia', 'family', 'product_family', 'macro_categoria'],
+  sottofamiglia: ['sottofamiglia', 'subfamily', 'sub_family', 'sub_categoria'],
+  colore: ['colore', 'color', 'colour', 'col'],
+  nomLinea: ['nom_linea', 'nome_linea', 'linea', 'line', 'line_name', 'nome linea'],
+  misura: ['misura', 'size', 'dimensions', 'dimension', 'taglia'],
+  produttore: ['produttore', 'manufacturer', 'brand', 'supplier', 'fornitore'],
 };
 
 function mapColumn(headers: string[]): Record<string, string> {
@@ -213,7 +225,7 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
         <div className="mt-6 p-4 bg-cream rounded border border-border">
           <p className="text-xs font-medium text-primary mb-2">Colonne attese:</p>
           <div className="flex flex-wrap gap-1.5">
-            {['code *', 'name *', 'costPrice *', 'retailPrice *', 'description', 'category', 'lotSize', 'notes', 'imageUrl'].map((col) => (
+            {['code *', 'name *', 'costPrice *', 'retailPrice *', 'description', 'category', 'lotSize', 'famiglia', 'sottofamiglia', 'nomLinea', 'colore', 'misura', 'produttore', 'notes', 'imageUrl'].map((col) => (
               <span key={col} className="px-2 py-0.5 bg-white border border-border rounded text-2xs text-gray-600 font-mono">
                 {col}
               </span>
@@ -228,7 +240,7 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
   // Step: Map
   if (step === 'map') {
     const requiredFields = ['code', 'name', 'costPrice', 'retailPrice'];
-    const optionalFields = ['description', 'category', 'lotSize', 'notes', 'imageUrl'];
+    const optionalFields = ['description', 'category', 'lotSize', 'notes', 'imageUrl', 'famiglia', 'sottofamiglia', 'nomLinea', 'colore', 'misura', 'produttore'];
     const allFields = [...requiredFields, ...optionalFields];
 
     return (

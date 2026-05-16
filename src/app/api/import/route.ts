@@ -31,6 +31,12 @@ const importRowSchema = z.object({
   notes: z.string().optional().nullable(),
   imageUrl: z.string().optional().nullable(),
   collectionId: z.string().optional().nullable(),
+  famiglia: z.string().optional().nullable(),
+  sottofamiglia: z.string().optional().nullable(),
+  colore: z.string().optional().nullable(),
+  nomLinea: z.string().optional().nullable(),
+  misura: z.string().optional().nullable(),
+  produttore: z.string().optional().nullable(),
 });
 
 export async function POST(req: NextRequest) {
@@ -88,6 +94,15 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        const extraFields = {
+          famiglia: parsed.famiglia || null,
+          sottofamiglia: parsed.sottofamiglia || null,
+          colore: parsed.colore || null,
+          nomLinea: parsed.nomLinea || null,
+          misura: parsed.misura || null,
+          produttore: parsed.produttore || null,
+        };
+
         await prisma.product.upsert({
           where: { code: parsed.code.toUpperCase().trim() },
           update: {
@@ -100,6 +115,7 @@ export async function POST(req: NextRequest) {
             imageUrl: parsed.imageUrl || null,
             categoryId,
             collectionId: collectionId || null,
+            ...extraFields,
           },
           create: {
             code: parsed.code.toUpperCase().trim(),
@@ -113,6 +129,7 @@ export async function POST(req: NextRequest) {
             categoryId,
             collectionId: collectionId || null,
             isActive: true,
+            ...extraFields,
           },
         });
 

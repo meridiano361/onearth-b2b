@@ -45,21 +45,27 @@ model Category {
 }
 
 model Product {
-  id           String   @id @default(cuid())
-  code         String   @unique
-  name         String
-  description  String?
-  costPrice    Decimal  @db.Decimal(10, 2)
-  retailPrice  Decimal  @db.Decimal(10, 2)
-  lotSize      Int      @default(1)
-  imageUrl     String?
-  notes        String?
-  categoryId   String?
-  collectionId String?
-  isActive     Boolean  @default(true)
-  stock        Int?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default(cuid())
+  code          String   @unique
+  name          String
+  description   String?
+  costPrice     Decimal  @db.Decimal(10, 2)
+  retailPrice   Decimal  @db.Decimal(10, 2)
+  lotSize       Int      @default(1)
+  imageUrl      String?
+  notes         String?
+  categoryId    String?
+  collectionId  String?
+  isActive      Boolean  @default(true)
+  stock         Int?
+  famiglia      String?
+  sottofamiglia String?
+  colore        String?
+  nomLinea      String?
+  misura        String?
+  produttore    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   category   Category?   @relation(fields: [categoryId], references: [id])
   collection Collection? @relation(fields: [collectionId], references: [id])

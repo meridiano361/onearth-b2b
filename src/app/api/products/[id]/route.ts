@@ -17,6 +17,12 @@ const updateSchema = z.object({
   collectionId: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   stock: z.number().int().optional().nullable(),
+  famiglia: z.string().optional().nullable(),
+  sottofamiglia: z.string().optional().nullable(),
+  colore: z.string().optional().nullable(),
+  nomLinea: z.string().optional().nullable(),
+  misura: z.string().optional().nullable(),
+  produttore: z.string().optional().nullable(),
 });
 
 export async function GET(
