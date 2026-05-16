@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
     const catLighting = await prisma.category.upsert({ where: { slug_collectionId: { slug: 'lighting', collectionId: collection.id } }, update: {}, create: { name: 'Lighting', slug: 'lighting', parentId: catDecor.id, order: 1, collectionId: collection.id } });
     const catTextiles = await prisma.category.upsert({ where: { slug_collectionId: { slug: 'textiles', collectionId: collection.id } }, update: {}, create: { name: 'Textiles', slug: 'textiles', parentId: catBedroom.id, order: 1, collectionId: collection.id } });
 
-    const adminHash = await bcrypt.hash('admin123', 12);
-    await prisma.customer.upsert({ where: { email: 'admin@meridiano361.com' }, update: {}, create: { companyName: 'Meridiano 361', customerCode: 'ADMIN001', email: 'admin@meridiano361.com', passwordHash: adminHash, role: 'ADMIN', isActive: true } });
+    const adminHash = await bcrypt.hash('Oe2026!', 12);
+    await prisma.customer.upsert({ where: { email: 'e.mazzolari@meridiano361.it' }, update: {}, create: { companyName: 'Meridiano 361', customerCode: 'ADMIN001', email: 'e.mazzolari@meridiano361.it', passwordHash: adminHash, role: 'ADMIN', isActive: true } });
 
     const customerHash = await bcrypt.hash('customer123', 12);
     await prisma.customer.upsert({ where: { email: 'showroom@designstore.it' }, update: {}, create: { companyName: 'Design Store Milano', customerCode: 'DSM001', email: 'showroom@designstore.it', passwordHash: customerHash, role: 'CUSTOMER', isActive: true, city: 'Milano', country: 'Italy' } });
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
       seeded++;
     }
 
-    return NextResponse.json({ ok: true, message: 'Database seeded successfully', data: { products: seeded, admin: 'admin@meridiano361.com / admin123' } });
+    return NextResponse.json({ ok: true, message: 'Database seeded successfully', data: { products: seeded, admin: 'e.mazzolari@meridiano361.it' } });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

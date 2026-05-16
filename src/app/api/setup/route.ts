@@ -120,10 +120,10 @@ export async function GET(req: NextRequest) {
     });
 
     // 3. Admin + customers
-    const adminHash = await bcrypt.hash('admin123', 12);
+    const adminHash = await bcrypt.hash('Oe2026!', 12);
 
     await prisma.customer.upsert({
-      where: { email: 'admin@meridiano361.com' },
+      where: { email: 'e.mazzolari@meridiano361.it' },
       update: {
         passwordHash: adminHash,
         isActive: true,
@@ -131,7 +131,7 @@ export async function GET(req: NextRequest) {
       create: {
         companyName: 'Meridiano 361',
         customerCode: 'ADMIN001',
-        email: 'admin@meridiano361.com',
+        email: 'e.mazzolari@meridiano361.it',
         passwordHash: adminHash,
         role: 'ADMIN',
         isActive: true,
@@ -204,7 +204,7 @@ export async function GET(req: NextRequest) {
       message: 'Database seeded successfully',
       data: {
         products: seeded,
-        admin: 'admin@meridiano361.com / admin123',
+        admin: 'e.mazzolari@meridiano361.it',
       },
     });
   } catch (err: any) {
