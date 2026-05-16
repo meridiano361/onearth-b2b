@@ -118,12 +118,12 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
   workbook.creator = 'ON EARTH B2B';
   workbook.created = new Date();
 
-  const sheet = workbook.addWorksheet('Order', {
+  const sheet = workbook.addWorksheet('Ordine', {
     properties: { tabColor: { argb: 'FFC4A882' } },
   });
 
-  // Header info
-  sheet.mergeCells('A1:F1');
+  // Title
+  sheet.mergeCells('A1:K1');
   const titleCell = sheet.getCell('A1');
   titleCell.value = 'ON EARTH — CASA 2027';
   titleCell.font = { bold: true, size: 14, color: { argb: 'FF1C1C1C' } };
@@ -131,59 +131,80 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
   sheet.getRow(1).height = 30;
 
   sheet.addRow([]);
-  sheet.addRow(['Order ID', order.id.slice(0, 8).toUpperCase()]);
-  sheet.addRow(['Customer', order.customer?.companyName || '']);
-  sheet.addRow(['Date', new Date(order.createdAt).toLocaleDateString('it-IT')]);
-  sheet.addRow(['Status', order.status]);
+  sheet.addRow(['Numero Ordine', order.id.slice(0, 8).toUpperCase()]);
+  sheet.addRow(['Cliente', order.customer?.companyName || '']);
+  sheet.addRow(['Data', new Date(order.createdAt).toLocaleDateString('it-IT')]);
+  sheet.addRow(['Stato', order.status]);
   sheet.addRow([]);
 
-  // Column headers
+  // Column definitions
   sheet.columns = [
     { key: 'code', width: 18 },
-    { key: 'qty', width: 8 },
-    { key: 'name', width: 40 },
-    { key: 'unit', width: 14 },
+    { key: 'name', width: 38 },
+    { key: 'famiglia', width: 18 },
+    { key: 'sottofamiglia', width: 18 },
+    { key: 'linea', width: 18 },
+    { key: 'colore', width: 14 },
+    { key: 'misura', width: 12 },
+    { key: 'produttore', width: 18 },
+    { key: 'qty', width: 10 },
+    { key: 'unitPrice', width: 16 },
     { key: 'total', width: 14 },
-    { key: 'cat', width: 24 },
   ];
 
-  const headerRow = sheet.addRow(['Code', 'Qty', 'Product Name', 'Unit Price (€)', 'Total (€)', 'Category']);
-  headerRow.font = { bold: true, size: 9 };
+  // Header row
+  const headerRow = sheet.addRow([
+    'Codice prodotto', 'Descrizione', 'Famiglia', 'Sottofamiglia',
+    'Linea', 'Colore', 'Misura', 'Produttore',
+    'Quantità', 'Prezzo unitario', 'Totale riga',
+  ]);
+  headerRow.font = { bold: true, size: 9, color: { argb: 'FF1C1C1C' } };
   headerRow.fill = {
     type: 'pattern',
     pattern: 'solid',
     fgColor: { argb: 'FFF5EFE6' },
   };
-  headerRow.height = 20;
+  headerRow.height = 22;
+  headerRow.alignment = { vertical: 'middle' };
+  headerRow.border = { bottom: { style: 'thin', color: { argb: 'FFE8E2D9' } } };
 
-  // Items
+  // Data rows
   order.items?.forEach((item, i) => {
-    const row = sheet.addRow([
-      item.product?.code || '',
-      item.quantity,
-      item.product?.name || '',
-      Number(item.unitPrice),
-      Number(item.subtotal),
-      item.product?.category?.name || '',
-    ]);
+    const p = item.product as any;
+    const row = sheet.addRow({
+      code: p?.code || '',
+      name: p?.name || '',
+      famiglia: p?.famiglia || '',
+      sottofamiglia: p?.sottofamiglia || '',
+      linea: p?.nomLinea || '',
+      colore: p?.colore || '',
+      misura: p?.misura || '',
+      produttore: p?.produttore || '',
+      qty: item.quantity,
+      unitPrice: Number(item.unitPrice),
+      total: Number(item.subtotal),
+    });
 
-    row.getCell(4).numFmt = '€#,##0.00';
-    row.getCell(5).numFmt = '€#,##0.00';
+    row.getCell('unitPrice').numFmt = '€#,##0.00';
+    row.getCell('total').numFmt = '€#,##0.00';
     row.font = { size: 9 };
+    row.alignment = { vertical: 'middle' };
 
     if (i % 2 === 0) {
-      row.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFFAFAF7' },
-      };
+      row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAFAF7' } };
     }
   });
 
   // Total row
-  const totalRow = sheet.addRow(['', order.totalItems, 'TOTAL', '', Number(order.totalValue), '']);
+  const totalRow = sheet.addRow({
+    code: '', name: '', famiglia: '', sottofamiglia: '', linea: '',
+    colore: '', misura: '', produttore: 'TOTALE',
+    qty: order.totalItems, unitPrice: '', total: Number(order.totalValue),
+  });
   totalRow.font = { bold: true, size: 9 };
-  totalRow.getCell(5).numFmt = '€#,##0.00';
+  totalRow.getCell('total').numFmt = '€#,##0.00';
+  totalRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5EFE6' } };
+  totalRow.border = { top: { style: 'thin', color: { argb: 'FFCCBBAA' } } };
 
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { Package, Download, ChevronDown, ChevronUp } from 'lucide-react';
 import OrderPDFExport from './OrderPDFExport';
+import OrderDemetraExport from './OrderDemetraExport';
 import { formatCurrency, formatDate, getOrderStatusLabel } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -85,6 +86,7 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
             <span className="hidden sm:inline">XLSX</span>
           </button>
           <OrderPDFExport order={order} />
+          <OrderDemetraExport order={order} />
           {isExpanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
         </div>
       </div>
