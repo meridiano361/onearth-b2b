@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 import path from 'path';
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -20,6 +20,7 @@ const mimeToExt: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Accesso negato' }, { status: 403 });
