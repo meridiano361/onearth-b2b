@@ -14,12 +14,10 @@ const IVA_OPTIONS = [0, 4, 5, 10, 22];
 
 const schema = z
   .object({
-    // Anagrafica
     code: z.string().min(1, 'Codice obbligatorio'),
     name: z.string().min(1, 'Descrizione obbligatoria'),
     misura: z.string().optional(),
     produttore: z.string().optional(),
-    // Classificazione
     gruppoMerceologico: z.string().optional(),
     famiglia: z.string().optional(),
     classe: z.string().optional(),
@@ -30,23 +28,19 @@ const schema = z
     collezione: z.string().optional(),
     colore: z.string().optional(),
     temaColore: z.string().optional(),
-    // Prezzi e logistica
     lotSize: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 1)),
+    iva: z.string().default('22').transform(Number),
     costPrice: z.string().min(1, 'Obbligatorio').transform(Number),
     retailPrice: z.string().min(1, 'Obbligatorio').transform(Number),
-    iva: z.string().default('22').transform(Number),
     fasciaRicarico: z.string().optional(),
     notes: z.string().optional(),
-    // Foto
     imageUrl: z.string().optional(),
-    // Stato
     isActive: z.boolean().default(true),
   })
   .refine(
     (d) => {
       if (!d.costPrice || !d.retailPrice) return true;
-      const minRetail = d.costPrice * (1 + d.iva / 100);
-      return d.retailPrice >= minRetail - 0.001;
+      return d.retailPrice >= d.costPrice * (1 + d.iva / 100) - 0.001;
     },
     {
       message: 'Prezzo vendita i.i. inferiore al costo × (1 + IVA%)',
@@ -83,14 +77,12 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
 
 function ClassSelect({
   label,
-  name,
   value,
   onChange,
   options,
   currentValue,
 }: {
   label: string;
-  name: string;
   value: string;
   onChange: (v: string) => void;
   options: { id: string; nome: string }[];
@@ -110,9 +102,7 @@ function ClassSelect({
         className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent"
       >
         <option value="">—</option>
-        {extraOption && (
-          <option value={extraOption}>{extraOption}</option>
-        )}
+        {extraOption && <option value={extraOption}>{extraOption}</option>}
         {options.map((o) => (
           <option key={o.id} value={o.nome}>
             {o.nome}
@@ -172,9 +162,9 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           colore: product.colore || '',
           temaColore: product.temaColore || '',
           lotSize: String(product.lotSize),
+          iva: String(product.iva ?? 22),
           costPrice: String(product.costPrice),
           retailPrice: String(product.retailPrice),
-          iva: String(product.iva ?? 22),
           fasciaRicarico: product.fasciaRicarico || '',
           notes: product.notes || '',
           imageUrl: product.imageUrl || '',
@@ -188,7 +178,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const watchedRetail = watch('retailPrice');
   const watchedIva = watch('iva');
 
-  // Sync image preview
   useEffect(() => {
     setImagePreview((prev) => {
       if (watchedImageUrl && watchedImageUrl !== prev) return watchedImageUrl;
@@ -197,12 +186,10 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     });
   }, [watchedImageUrl]);
 
-  // Calculated fields
   const costNum = parseFloat(String(watchedCost || 0)) || 0;
   const retailNum = parseFloat(String(watchedRetail || 0)) || 0;
-  const ivaNum = parseInt(String(watchedIva || 22), 10) || 22;
-  const ivaFactor = 1 + ivaNum / 100;
-  const pvn = ivaFactor > 0 ? retailNum / ivaFactor : 0;
+  const ivaNum = parseInt(String(watchedIva || 22), 10) || 0;
+  const pvn = retailNum / (1 + ivaNum / 100);
   const ricarico = costNum > 0 ? ((pvn - costNum) / costNum) * 100 : null;
   const margine = pvn > 0 ? ((pvn - costNum) / pvn) * 100 : null;
   const fmtPct = (v: number | null) =>
@@ -272,7 +259,10 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     }
   }
 
-  const selectClass = 'w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent';
+  const selectClass =
+    'w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent';
+  const priceInputClass =
+    'w-full h-9 border border-border rounded pl-7 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent';
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -303,7 +293,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       <div className="grid grid-cols-2 gap-4">
         <ClassSelect
           label="Gruppo merceologico"
-          name="gruppoMerceologico"
           value={watch('gruppoMerceologico') || ''}
           onChange={(v) => setValue('gruppoMerceologico', v)}
           options={classMap['gruppoMerceologico'] || []}
@@ -311,7 +300,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         />
         <ClassSelect
           label="Famiglia"
-          name="famiglia"
           value={watch('famiglia') || ''}
           onChange={(v) => setValue('famiglia', v)}
           options={classMap['famiglia'] || []}
@@ -321,7 +309,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       <div className="grid grid-cols-2 gap-4">
         <ClassSelect
           label="Classe"
-          name="classe"
           value={watch('classe') || ''}
           onChange={(v) => setValue('classe', v)}
           options={classMap['classe'] || []}
@@ -329,7 +316,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         />
         <ClassSelect
           label="Sottoclasse"
-          name="sottoclasse"
           value={watch('sottoclasse') || ''}
           onChange={(v) => setValue('sottoclasse', v)}
           options={classMap['sottoclasse'] || []}
@@ -339,7 +325,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       <div className="grid grid-cols-2 gap-4">
         <ClassSelect
           label="Gruppo omogeneo"
-          name="gruppoOmogeneo"
           value={watch('gruppoOmogeneo') || ''}
           onChange={(v) => setValue('gruppoOmogeneo', v)}
           options={classMap['gruppoOmogeneo'] || []}
@@ -347,7 +332,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         />
         <ClassSelect
           label="Linea"
-          name="nomLinea"
           value={watch('nomLinea') || ''}
           onChange={(v) => setValue('nomLinea', v)}
           options={classMap['nomLinea'] || []}
@@ -357,7 +341,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       <div className="grid grid-cols-2 gap-4">
         <ClassSelect
           label="Stagione"
-          name="stagione"
           value={watch('stagione') || ''}
           onChange={(v) => setValue('stagione', v)}
           options={classMap['stagione'] || []}
@@ -365,7 +348,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         />
         <ClassSelect
           label="Collezione"
-          name="collezione"
           value={watch('collezione') || ''}
           onChange={(v) => setValue('collezione', v)}
           options={classMap['collezione'] || []}
@@ -375,7 +357,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       <div className="grid grid-cols-2 gap-4">
         <ClassSelect
           label="Colore"
-          name="colore"
           value={watch('colore') || ''}
           onChange={(v) => setValue('colore', v)}
           options={classMap['colore'] || []}
@@ -383,7 +364,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         />
         <ClassSelect
           label="Tema colore"
-          name="temaColore"
           value={watch('temaColore') || ''}
           onChange={(v) => setValue('temaColore', v)}
           options={classMap['temaColore'] || []}
@@ -394,8 +374,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       {/* ── Prezzi e Logistica ── */}
       <SectionLabel>Prezzi e Logistica</SectionLabel>
 
-      {/* Row 1: Confezione + Prezzi */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Confezione + IVA */}
+      <div className="grid grid-cols-2 gap-4">
         <Input
           label="Confezione"
           type="number"
@@ -405,7 +385,23 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           placeholder="1"
         />
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Prezzo costo i.e. (€) *</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">IVA (%)</label>
+          <select {...register('iva')} className={selectClass}>
+            {IVA_OPTIONS.map((v) => (
+              <option key={v} value={String(v)}>
+                {v}%
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Prezzi */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Prezzo costo i.e. (€) *
+          </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
             <input
@@ -413,14 +409,18 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
               step="0.01"
               min="0"
               {...register('costPrice')}
-              className="w-full h-9 border border-border rounded pl-7 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              className={priceInputClass}
               placeholder="0.00"
             />
           </div>
-          {errors.costPrice && <p className="text-xs text-red-500 mt-0.5">{errors.costPrice.message}</p>}
+          {errors.costPrice && (
+            <p className="text-xs text-red-500 mt-0.5">{errors.costPrice.message}</p>
+          )}
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Prezzo vendita i.i. (€) *</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Prezzo vendita i.i. (€) *
+          </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
             <input
@@ -428,28 +428,23 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
               step="0.01"
               min="0"
               {...register('retailPrice')}
-              className="w-full h-9 border border-border rounded pl-7 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              className={priceInputClass}
               placeholder="0.00"
             />
           </div>
-          {errors.retailPrice && <p className="text-xs text-red-500 mt-0.5">{errors.retailPrice.message}</p>}
+          {errors.retailPrice && (
+            <p className="text-xs text-red-500 mt-0.5">{errors.retailPrice.message}</p>
+          )}
         </div>
       </div>
 
-      {/* Row 2: IVA + Calcolati */}
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">IVA (%)</label>
-          <select {...register('iva')} className={selectClass}>
-            {IVA_OPTIONS.map((v) => (
-              <option key={v} value={String(v)}>{v}%</option>
-            ))}
-          </select>
-        </div>
+      {/* Calcolati (read-only) */}
+      <div className="grid grid-cols-2 gap-4">
         <ReadOnlyField label="% Ricarico" value={fmtPct(ricarico)} />
         <ReadOnlyField label="% Margine" value={fmtPct(margine)} />
       </div>
 
+      {/* Fascia + Note */}
       <div className="grid grid-cols-2 gap-4">
         <Input
           label="Fascia di ricarico"
@@ -474,11 +469,15 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
               src={imagePreview}
               alt="Anteprima prodotto"
               className="w-full h-full object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
             />
           ) : (
             <span className="text-gray-300 text-xs text-center leading-tight px-1">
-              Nessuna<br />immagine
+              Nessuna
+              <br />
+              immagine
             </span>
           )}
         </div>
