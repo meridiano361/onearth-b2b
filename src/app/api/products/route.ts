@@ -24,6 +24,14 @@ const productSchema = z.object({
   nomLinea: z.string().optional().nullable(),
   misura: z.string().optional().nullable(),
   produttore: z.string().optional().nullable(),
+  gruppoMerceologico: z.string().optional().nullable(),
+  classe: z.string().optional().nullable(),
+  sottoclasse: z.string().optional().nullable(),
+  gruppoOmogeneo: z.string().optional().nullable(),
+  stagione: z.string().optional().nullable(),
+  temaColore: z.string().optional().nullable(),
+  fasciaRicarico: z.string().optional().nullable(),
+  collezione: z.string().optional().nullable(),
 });
 
 export async function GET(req: NextRequest) {
@@ -123,6 +131,14 @@ export async function POST(req: NextRequest) {
         nomLinea: data.nomLinea || null,
         misura: data.misura || null,
         produttore: data.produttore || null,
+        gruppoMerceologico: data.gruppoMerceologico || null,
+        classe: data.classe || null,
+        sottoclasse: data.sottoclasse || null,
+        gruppoOmogeneo: data.gruppoOmogeneo || null,
+        stagione: data.stagione || null,
+        temaColore: data.temaColore || null,
+        fasciaRicarico: data.fasciaRicarico || null,
+        collezione: data.collezione || null,
       },
       include: { category: true },
     });

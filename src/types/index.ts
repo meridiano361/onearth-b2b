@@ -46,6 +46,14 @@ export interface Product {
   nomLinea: string | null;
   misura: string | null;
   produttore: string | null;
+  gruppoMerceologico: string | null;
+  classe: string | null;
+  sottoclasse: string | null;
+  gruppoOmogeneo: string | null;
+  stagione: string | null;
+  temaColore: string | null;
+  fasciaRicarico: string | null;
+  collezione: string | null;
   createdAt: string;
   category?: Category | null;
 }

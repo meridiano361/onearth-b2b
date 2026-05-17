@@ -58,13 +58,21 @@ model Product {
   collectionId  String?
   isActive      Boolean  @default(true)
   stock         Int?
-  famiglia      String?
-  sottofamiglia String?
-  colore        String?
-  nomLinea      String?
-  misura        String?
-  produttore    String?
-  createdAt     DateTime @default(now())
+  famiglia           String?
+  sottofamiglia      String?
+  colore             String?
+  nomLinea           String?
+  misura             String?
+  produttore         String?
+  gruppoMerceologico String?
+  classe             String?
+  sottoclasse        String?
+  gruppoOmogeneo     String?
+  stagione           String?
+  temaColore         String?
+  fasciaRicarico     String?
+  collezione         String?
+  createdAt          DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   category   Category?   @relation(fields: [categoryId], references: [id])

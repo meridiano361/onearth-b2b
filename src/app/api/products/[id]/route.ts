@@ -23,6 +23,14 @@ const updateSchema = z.object({
   nomLinea: z.string().optional().nullable(),
   misura: z.string().optional().nullable(),
   produttore: z.string().optional().nullable(),
+  gruppoMerceologico: z.string().optional().nullable(),
+  classe: z.string().optional().nullable(),
+  sottoclasse: z.string().optional().nullable(),
+  gruppoOmogeneo: z.string().optional().nullable(),
+  stagione: z.string().optional().nullable(),
+  temaColore: z.string().optional().nullable(),
+  fasciaRicarico: z.string().optional().nullable(),
+  collezione: z.string().optional().nullable(),
 });
 
 export async function GET(
