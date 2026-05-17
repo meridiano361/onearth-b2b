@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
+import { useRef, useState, useEffect } from 'react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import toast from 'react-hot-toast';
@@ -46,6 +47,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 export default function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) {
   const isEdit = !!product;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreview, setImagePreview] = useState<string>(product?.imageUrl || '');
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
@@ -61,6 +65,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: product
@@ -84,6 +90,44 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         }
       : { isActive: true, lotSize: '1' },
   });
+
+  const watchedImageUrl = watch('imageUrl');
+  // Sync preview with the URL input field (debounced via useEffect)
+  useEffect(() => {
+    // Only update preview if it differs from the current URL (avoids resetting after onError)
+    setImagePreview((prev) => {
+      if (watchedImageUrl && watchedImageUrl !== prev) return watchedImageUrl;
+      if (!watchedImageUrl) return '';
+      return prev;
+    });
+  }, [watchedImageUrl]);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Caricamento fallito');
+      }
+
+      const { url } = await res.json();
+      setValue('imageUrl', url, { shouldDirty: true });
+      toast.success('Immagine caricata');
+    } catch (err: any) {
+      toast.error(err.message || 'Errore durante il caricamento');
+    } finally {
+      setIsUploading(false);
+      // Reset input so the same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
 
   async function onSubmit(values: FormValues) {
     try {
@@ -241,11 +285,74 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         {...register('notes')}
         placeholder="Disponibile in 6 opzioni tessuto..."
       />
-      <Input
-        label="URL Immagine"
-        {...register('imageUrl')}
-        placeholder="https://..."
-      />
+
+      {/* Immagine */}
+      <div>
+        <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
+          Immagine Prodotto
+        </label>
+        <div className="flex gap-4 items-start">
+          {/* Preview */}
+          <div className="w-24 h-24 flex-shrink-0 border border-border rounded bg-gray-50 overflow-hidden flex items-center justify-center">
+            {imagePreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={imagePreview}
+                src={imagePreview}
+                alt="Anteprima prodotto"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <span className="text-gray-300 text-xs text-center leading-tight px-1">
+                Nessuna<br />immagine
+              </span>
+            )}
+          </div>
+
+          {/* Controls */}
+          <div className="flex-1 flex flex-col gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              loading={isUploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {isUploading
+                ? 'Caricamento...'
+                : imagePreview
+                  ? 'Cambia immagine'
+                  : 'Carica immagine'}
+            </Button>
+
+            {imagePreview && (
+              <button
+                type="button"
+                onClick={() => setValue('imageUrl', '', { shouldDirty: true })}
+                className="text-xs text-red-500 hover:text-red-700 text-left"
+              >
+                Rimuovi immagine
+              </button>
+            )}
+
+            <Input
+              {...register('imageUrl')}
+              placeholder="oppure incolla un URL esterno..."
+              hint="JPG, PNG, WebP, GIF — max 5MB"
+            />
+          </div>
+        </div>
+      </div>
 
       <div className="flex items-center gap-2">
         <input

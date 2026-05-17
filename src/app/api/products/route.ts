@@ -12,7 +12,7 @@ const productSchema = z.object({
   costPrice: z.number().positive(),
   retailPrice: z.number().positive(),
   lotSize: z.number().int().positive().default(1),
-  imageUrl: z.string().url().optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   categoryId: z.string().optional().nullable(),
   collectionId: z.string().optional().nullable(),
