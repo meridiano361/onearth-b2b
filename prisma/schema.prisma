@@ -83,14 +83,74 @@ model Product {
   @@map("products")
 }
 
-model ClassificazioneValore {
+model GruppoMerceologico {
   id        String   @id @default(cuid())
-  tipo      String
-  nome      String
+  nome      String   @unique
   createdAt DateTime @default(now())
+  @@map("cls_gruppi_merceologici")
+}
 
-  @@unique([tipo, nome])
-  @@map("classificazione_valori")
+model Famiglia {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("cls_famiglie")
+}
+
+model Classe {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("cls_classi")
+}
+
+model Sottoclasse {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("cls_sottoclassi")
+}
+
+model GruppoOmogeneo {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("cls_gruppi_omogenei")
+}
+
+model Linea {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("cls_linee")
+}
+
+model Stagione {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("cls_stagioni")
+}
+
+model Collezione {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("cls_collezioni")
+}
+
+model Colore {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("cls_colori")
+}
+
+model TemaColore {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("cls_temi_colore")
 }
 
 enum Role {

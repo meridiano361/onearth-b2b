@@ -4,10 +4,23 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
-const TIPI_VALIDI = [
-  'gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo',
-  'nomLinea', 'stagione', 'collezione', 'colore', 'temaColore',
-];
+type PrismaDelegate = {
+  findMany: (args?: any) => Promise<any[]>;
+  create: (args: any) => Promise<any>;
+};
+
+const TIPO_DELEGATE: Record<string, PrismaDelegate> = {
+  gruppoMerceologico: prisma.gruppoMerceologico,
+  famiglia: prisma.famiglia,
+  classe: prisma.classe,
+  sottoclasse: prisma.sottoclasse,
+  gruppoOmogeneo: prisma.gruppoOmogeneo,
+  nomLinea: prisma.linea,
+  stagione: prisma.stagione,
+  collezione: prisma.collezione,
+  colore: prisma.colore,
+  temaColore: prisma.temaColore,
+};
 
 export async function GET(
   req: NextRequest,
@@ -17,16 +30,13 @@ export async function GET(
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!TIPI_VALIDI.includes(params.tipo)) {
-      return NextResponse.json({ error: 'Tipo non valido' }, { status: 400 });
-    }
+    const delegate = TIPO_DELEGATE[params.tipo];
+    if (!delegate) return NextResponse.json({ error: 'Tipo non valido' }, { status: 400 });
 
-    const valori = await prisma.classificazioneValore.findMany({
-      where: { tipo: params.tipo },
-      orderBy: { nome: 'asc' },
-    });
+    const valori = await delegate.findMany({ orderBy: { nome: 'asc' } });
+    const withTipo = valori.map((v) => ({ ...v, tipo: params.tipo }));
 
-    return NextResponse.json({ data: valori });
+    return NextResponse.json({ data: withTipo });
   } catch (err) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -42,17 +52,14 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    if (!TIPI_VALIDI.includes(params.tipo)) {
-      return NextResponse.json({ error: 'Tipo non valido' }, { status: 400 });
-    }
+    const delegate = TIPO_DELEGATE[params.tipo];
+    if (!delegate) return NextResponse.json({ error: 'Tipo non valido' }, { status: 400 });
 
     const { nome } = z.object({ nome: z.string().min(1) }).parse(await req.json());
 
-    const valore = await prisma.classificazioneValore.create({
-      data: { tipo: params.tipo, nome: nome.trim() },
-    });
+    const valore = await delegate.create({ data: { nome: nome.trim() } });
 
-    return NextResponse.json({ data: valore }, { status: 201 });
+    return NextResponse.json({ data: { ...valore, tipo: params.tipo } }, { status: 201 });
   } catch (err: any) {
     if (err.code === 'P2002') {
       return NextResponse.json({ error: 'Valore già esistente' }, { status: 409 });
