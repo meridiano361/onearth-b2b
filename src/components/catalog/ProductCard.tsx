@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { ShoppingBag, Check, AlertCircle, Layers } from 'lucide-react';
 import { cn, formatCurrency, isValidLotQuantity, roundToLot } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
@@ -17,6 +16,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const cartQty = getItemQuantity(product.id);
   const [localQty, setLocalQty] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const inCart = cartQty > 0;
   const hasLotWarning = cartQty > 0 && !isValidLotQuantity(cartQty, product.lotSize);
@@ -54,13 +54,13 @@ export default function ProductCard({ product }: ProductCardProps) {
         className="aspect-square relative bg-cream overflow-hidden rounded-t"
         onClick={handleCardClick}
       >
-        {product.imageUrl ? (
-          <Image
+        {product.imageUrl && !imgError ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
             src={product.imageUrl}
             alt={product.name}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-103"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={() => setImgError(true)}
           />
         ) : (
           <div className="flex items-center justify-center h-full">
