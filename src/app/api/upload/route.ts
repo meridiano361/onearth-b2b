@@ -20,11 +20,19 @@ const mimeToExt: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!supabaseUrl || !supabaseKey) {
-      console.error('[upload] Env vars mancanti:', { SUPABASE_URL: !!supabaseUrl, SUPABASE_SERVICE_ROLE_KEY: !!supabaseKey });
-      return NextResponse.json({ error: 'Configurazione storage non disponibile' }, { status: 500 });
+      console.error('[upload] Env vars mancanti. Impostare su Vercel:', {
+        'SUPABASE_URL (o NEXT_PUBLIC_SUPABASE_URL)': !!supabaseUrl,
+        'SUPABASE_SERVICE_ROLE_KEY': !!supabaseKey,
+      });
+      return NextResponse.json({
+        error: `Storage non configurato. Variabili mancanti su Vercel: ${[
+          !supabaseUrl && 'SUPABASE_URL',
+          !supabaseKey && 'SUPABASE_SERVICE_ROLE_KEY',
+        ].filter(Boolean).join(', ')}`,
+      }, { status: 500 });
     }
 
     const supabase = getSupabaseClient();
