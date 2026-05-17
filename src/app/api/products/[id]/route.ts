@@ -8,15 +8,15 @@ const updateSchema = z.object({
   code: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
-  costPrice: z.number().positive().optional(),
-  retailPrice: z.number().positive().optional(),
-  lotSize: z.number().int().positive().optional(),
+  costPrice: z.coerce.number().positive().optional(),
+  retailPrice: z.coerce.number().positive().optional(),
+  lotSize: z.coerce.number().int().positive().optional(),
   imageUrl: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   categoryId: z.string().optional().nullable(),
   collectionId: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
-  stock: z.number().int().optional().nullable(),
+  stock: z.coerce.number().int().optional().nullable(),
   famiglia: z.string().optional().nullable(),
   sottofamiglia: z.string().optional().nullable(),
   colore: z.string().optional().nullable(),
@@ -31,7 +31,7 @@ const updateSchema = z.object({
   temaColore: z.string().optional().nullable(),
   fasciaRicarico: z.string().optional().nullable(),
   collezione: z.string().optional().nullable(),
-  iva: z.number().int().min(0).max(100).optional(),
+  iva: z.coerce.number().int().min(0).max(100).optional(),
 });
 
 export async function GET(

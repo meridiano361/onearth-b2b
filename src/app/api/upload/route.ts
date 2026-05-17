@@ -20,6 +20,13 @@ const mimeToExt: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('[upload] Env vars mancanti:', { SUPABASE_URL: !!supabaseUrl, SUPABASE_SERVICE_ROLE_KEY: !!supabaseKey });
+      return NextResponse.json({ error: 'Configurazione storage non disponibile' }, { status: 500 });
+    }
+
     const supabase = getSupabaseClient();
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });

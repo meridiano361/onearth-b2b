@@ -9,15 +9,15 @@ const productSchema = z.object({
   code: z.string().min(1),
   name: z.string().min(1),
   description: z.string().optional().nullable(),
-  costPrice: z.number().positive(),
-  retailPrice: z.number().positive(),
-  lotSize: z.number().int().positive().default(1),
+  costPrice: z.coerce.number().positive(),
+  retailPrice: z.coerce.number().positive(),
+  lotSize: z.coerce.number().int().positive().default(1),
   imageUrl: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   categoryId: z.string().optional().nullable(),
   collectionId: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
-  stock: z.number().int().optional().nullable(),
+  stock: z.coerce.number().int().optional().nullable(),
   famiglia: z.string().optional().nullable(),
   sottofamiglia: z.string().optional().nullable(),
   colore: z.string().optional().nullable(),
@@ -32,7 +32,7 @@ const productSchema = z.object({
   temaColore: z.string().optional().nullable(),
   fasciaRicarico: z.string().optional().nullable(),
   collezione: z.string().optional().nullable(),
-  iva: z.number().int().min(0).max(100).default(22),
+  iva: z.coerce.number().int().min(0).max(100).default(22),
 });
 
 export async function GET(req: NextRequest) {

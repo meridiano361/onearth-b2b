@@ -219,8 +219,9 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   }
 
   async function onSubmit(values: FormValues) {
+    // zodResolver ha già validato e trasformato i valori (stringhe → numeri)
+    const v = values as unknown as z.output<typeof schema>;
     try {
-      const parsed = schema.parse(values);
       const url = isEdit ? `/api/products/${product!.id}` : '/api/products';
       const method = isEdit ? 'PATCH' : 'POST';
 
@@ -228,22 +229,22 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...parsed,
-          misura: parsed.misura || null,
-          produttore: parsed.produttore || null,
-          gruppoMerceologico: parsed.gruppoMerceologico || null,
-          famiglia: parsed.famiglia || null,
-          classe: parsed.classe || null,
-          sottoclasse: parsed.sottoclasse || null,
-          gruppoOmogeneo: parsed.gruppoOmogeneo || null,
-          nomLinea: parsed.nomLinea || null,
-          stagione: parsed.stagione || null,
-          collezione: parsed.collezione || null,
-          colore: parsed.colore || null,
-          temaColore: parsed.temaColore || null,
-          fasciaRicarico: parsed.fasciaRicarico || null,
-          notes: parsed.notes || null,
-          imageUrl: parsed.imageUrl || null,
+          ...v,
+          misura: v.misura || null,
+          produttore: v.produttore || null,
+          gruppoMerceologico: v.gruppoMerceologico || null,
+          famiglia: v.famiglia || null,
+          classe: v.classe || null,
+          sottoclasse: v.sottoclasse || null,
+          gruppoOmogeneo: v.gruppoOmogeneo || null,
+          nomLinea: v.nomLinea || null,
+          stagione: v.stagione || null,
+          collezione: v.collezione || null,
+          colore: v.colore || null,
+          temaColore: v.temaColore || null,
+          fasciaRicarico: v.fasciaRicarico || null,
+          notes: v.notes || null,
+          imageUrl: v.imageUrl || null,
         }),
       });
 
