@@ -39,8 +39,9 @@ export default function OrderPDFExport({ order }: Props) {
       const { OrderPDFDocument } = docModule;
       const customerName = session?.user?.companyName;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const blob = await pdf(
-        React.createElement(OrderPDFDocument, { order, grouping, customerName })
+        React.createElement(OrderPDFDocument, { order, grouping, customerName }) as any
       ).toBlob();
 
       const suffix = grouping !== 'all' ? `-per-${grouping}` : '';
