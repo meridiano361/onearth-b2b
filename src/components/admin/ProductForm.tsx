@@ -3,40 +3,56 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import toast from 'react-hot-toast';
-import type { Product } from '@/types';
+import type { Product, ClassificazioneValore } from '@/types';
 
-const schema = z.object({
-  // Anagrafica
-  code: z.string().min(1, 'Codice obbligatorio'),
-  name: z.string().min(1, 'Descrizione obbligatoria'),
-  misura: z.string().optional(),
-  produttore: z.string().optional(),
-  // Classificazione
-  gruppoMerceologico: z.string().optional(),
-  famiglia: z.string().optional(),
-  classe: z.string().optional(),
-  sottoclasse: z.string().optional(),
-  gruppoOmogeneo: z.string().optional(),
-  nomLinea: z.string().optional(),
-  stagione: z.string().optional(),
-  collezione: z.string().optional(),
-  colore: z.string().optional(),
-  temaColore: z.string().optional(),
-  // Prezzi e logistica
-  lotSize: z.string().optional().transform((v) => (v ? parseInt(v) : 1)),
-  costPrice: z.string().min(1, 'Obbligatorio').transform(Number),
-  retailPrice: z.string().min(1, 'Obbligatorio').transform(Number),
-  fasciaRicarico: z.string().optional(),
-  notes: z.string().optional(),
-  // Foto
-  imageUrl: z.string().optional(),
-  // Stato
-  isActive: z.boolean().default(true),
-});
+const IVA_OPTIONS = [0, 4, 5, 10, 22];
+
+const schema = z
+  .object({
+    // Anagrafica
+    code: z.string().min(1, 'Codice obbligatorio'),
+    name: z.string().min(1, 'Descrizione obbligatoria'),
+    misura: z.string().optional(),
+    produttore: z.string().optional(),
+    // Classificazione
+    gruppoMerceologico: z.string().optional(),
+    famiglia: z.string().optional(),
+    classe: z.string().optional(),
+    sottoclasse: z.string().optional(),
+    gruppoOmogeneo: z.string().optional(),
+    nomLinea: z.string().optional(),
+    stagione: z.string().optional(),
+    collezione: z.string().optional(),
+    colore: z.string().optional(),
+    temaColore: z.string().optional(),
+    // Prezzi e logistica
+    lotSize: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 1)),
+    costPrice: z.string().min(1, 'Obbligatorio').transform(Number),
+    retailPrice: z.string().min(1, 'Obbligatorio').transform(Number),
+    iva: z.string().default('22').transform(Number),
+    fasciaRicarico: z.string().optional(),
+    notes: z.string().optional(),
+    // Foto
+    imageUrl: z.string().optional(),
+    // Stato
+    isActive: z.boolean().default(true),
+  })
+  .refine(
+    (d) => {
+      if (!d.costPrice || !d.retailPrice) return true;
+      const minRetail = d.costPrice * (1 + d.iva / 100);
+      return d.retailPrice >= minRetail - 0.001;
+    },
+    {
+      message: 'Prezzo vendita i.i. inferiore al costo × (1 + IVA%)',
+      path: ['retailPrice'],
+    }
+  );
 
 type FormValues = z.input<typeof schema>;
 
@@ -54,11 +70,82 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-gray-500 mb-1">{label}</p>
+      <div className="h-9 bg-gray-50 border border-dashed border-border rounded px-3 flex items-center text-sm font-semibold text-accent">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function ClassSelect({
+  label,
+  name,
+  value,
+  onChange,
+  options,
+  currentValue,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { id: string; nome: string }[];
+  currentValue?: string | null;
+}) {
+  const extraOption =
+    currentValue && currentValue.trim() !== '' && !options.some((o) => o.nome === currentValue)
+      ? currentValue
+      : null;
+
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent"
+      >
+        <option value="">—</option>
+        {extraOption && (
+          <option value={extraOption}>{extraOption}</option>
+        )}
+        {options.map((o) => (
+          <option key={o.id} value={o.nome}>
+            {o.nome}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export default function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) {
   const isEdit = !!product;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string>(product?.imageUrl || '');
   const [isUploading, setIsUploading] = useState(false);
+
+  const { data: classData } = useQuery({
+    queryKey: ['classificazione-all'],
+    queryFn: async () => {
+      const res = await fetch('/api/classificazione');
+      if (!res.ok) throw new Error('Failed');
+      return res.json() as Promise<{ data: ClassificazioneValore[] }>;
+    },
+  });
+
+  const classMap = useMemo(() => {
+    const map: Record<string, { id: string; nome: string }[]> = {};
+    for (const v of classData?.data || []) {
+      if (!map[v.tipo]) map[v.tipo] = [];
+      map[v.tipo].push({ id: v.id, nome: v.nome });
+    }
+    return map;
+  }, [classData]);
 
   const {
     register,
@@ -67,6 +154,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
+    resolver: zodResolver(schema),
     defaultValues: product
       ? {
           code: product.code,
@@ -86,15 +174,21 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           lotSize: String(product.lotSize),
           costPrice: String(product.costPrice),
           retailPrice: String(product.retailPrice),
+          iva: String(product.iva ?? 22),
           fasciaRicarico: product.fasciaRicarico || '',
           notes: product.notes || '',
           imageUrl: product.imageUrl || '',
           isActive: product.isActive,
         }
-      : { isActive: true, lotSize: '1' },
+      : { isActive: true, lotSize: '1', iva: '22' },
   });
 
   const watchedImageUrl = watch('imageUrl');
+  const watchedCost = watch('costPrice');
+  const watchedRetail = watch('retailPrice');
+  const watchedIva = watch('iva');
+
+  // Sync image preview
   useEffect(() => {
     setImagePreview((prev) => {
       if (watchedImageUrl && watchedImageUrl !== prev) return watchedImageUrl;
@@ -103,21 +197,29 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     });
   }, [watchedImageUrl]);
 
+  // Calculated fields
+  const costNum = parseFloat(String(watchedCost || 0)) || 0;
+  const retailNum = parseFloat(String(watchedRetail || 0)) || 0;
+  const ivaNum = parseInt(String(watchedIva || 22), 10) || 22;
+  const ivaFactor = 1 + ivaNum / 100;
+  const pvn = ivaFactor > 0 ? retailNum / ivaFactor : 0;
+  const ricarico = costNum > 0 ? ((pvn - costNum) / costNum) * 100 : null;
+  const margine = pvn > 0 ? ((pvn - costNum) / pvn) * 100 : null;
+  const fmtPct = (v: number | null) =>
+    v === null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setIsUploading(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
-
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Caricamento fallito');
       }
-
       const { url } = await res.json();
       setValue('imageUrl', url, { shouldDirty: true });
       toast.success('Immagine caricata');
@@ -170,6 +272,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     }
   }
 
+  const selectClass = 'w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent';
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
@@ -190,123 +294,178 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Misure"
-          {...register('misura')}
-          placeholder="es. 40x40 cm"
-        />
-        <Input
-          label="Produttore"
-          {...register('produttore')}
-          placeholder="Nome del produttore"
-        />
+        <Input label="Misure" {...register('misura')} placeholder="es. 40x40 cm" />
+        <Input label="Produttore" {...register('produttore')} placeholder="Nome del produttore" />
       </div>
 
-      {/* ── Classificazione Prodotto ── */}
-      <SectionLabel>Classificazione Prodotto</SectionLabel>
+      {/* ── Classificazione ── */}
+      <SectionLabel>Classificazione</SectionLabel>
       <div className="grid grid-cols-2 gap-4">
-        <Input
+        <ClassSelect
           label="Gruppo merceologico"
-          {...register('gruppoMerceologico')}
-          placeholder="es. Tessili casa"
+          name="gruppoMerceologico"
+          value={watch('gruppoMerceologico') || ''}
+          onChange={(v) => setValue('gruppoMerceologico', v)}
+          options={classMap['gruppoMerceologico'] || []}
+          currentValue={product?.gruppoMerceologico}
         />
-        <Input
+        <ClassSelect
           label="Famiglia"
-          {...register('famiglia')}
-          placeholder="es. Prodotti tessili"
+          name="famiglia"
+          value={watch('famiglia') || ''}
+          onChange={(v) => setValue('famiglia', v)}
+          options={classMap['famiglia'] || []}
+          currentValue={product?.famiglia}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <Input
+        <ClassSelect
           label="Classe"
-          {...register('classe')}
-          placeholder="es. Tavola"
+          name="classe"
+          value={watch('classe') || ''}
+          onChange={(v) => setValue('classe', v)}
+          options={classMap['classe'] || []}
+          currentValue={product?.classe}
         />
-        <Input
+        <ClassSelect
           label="Sottoclasse"
-          {...register('sottoclasse')}
-          placeholder="es. Tovaglie"
+          name="sottoclasse"
+          value={watch('sottoclasse') || ''}
+          onChange={(v) => setValue('sottoclasse', v)}
+          options={classMap['sottoclasse'] || []}
+          currentValue={product?.sottoclasse}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <Input
+        <ClassSelect
           label="Gruppo omogeneo"
-          {...register('gruppoOmogeneo')}
-          placeholder="es. Tovaglie stampate"
+          name="gruppoOmogeneo"
+          value={watch('gruppoOmogeneo') || ''}
+          onChange={(v) => setValue('gruppoOmogeneo', v)}
+          options={classMap['gruppoOmogeneo'] || []}
+          currentValue={product?.gruppoOmogeneo}
         />
-        <Input
+        <ClassSelect
           label="Linea"
-          {...register('nomLinea')}
-          placeholder="es. GEOMETRIC, WAVES"
+          name="nomLinea"
+          value={watch('nomLinea') || ''}
+          onChange={(v) => setValue('nomLinea', v)}
+          options={classMap['nomLinea'] || []}
+          currentValue={product?.nomLinea}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <Input
+        <ClassSelect
           label="Stagione"
-          {...register('stagione')}
-          placeholder="es. PE25, AI25"
+          name="stagione"
+          value={watch('stagione') || ''}
+          onChange={(v) => setValue('stagione', v)}
+          options={classMap['stagione'] || []}
+          currentValue={product?.stagione}
         />
-        <Input
+        <ClassSelect
           label="Collezione"
-          {...register('collezione')}
-          placeholder="es. Spring Collection 2025"
+          name="collezione"
+          value={watch('collezione') || ''}
+          onChange={(v) => setValue('collezione', v)}
+          options={classMap['collezione'] || []}
+          currentValue={product?.collezione}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <Input
+        <ClassSelect
           label="Colore"
-          {...register('colore')}
-          placeholder="es. blu/bianco, naturale"
+          name="colore"
+          value={watch('colore') || ''}
+          onChange={(v) => setValue('colore', v)}
+          options={classMap['colore'] || []}
+          currentValue={product?.colore}
         />
-        <Input
+        <ClassSelect
           label="Tema colore"
-          {...register('temaColore')}
-          placeholder="es. Neutri, Vivaci"
+          name="temaColore"
+          value={watch('temaColore') || ''}
+          onChange={(v) => setValue('temaColore', v)}
+          options={classMap['temaColore'] || []}
+          currentValue={product?.temaColore}
         />
       </div>
 
       {/* ── Prezzi e Logistica ── */}
       <SectionLabel>Prezzi e Logistica</SectionLabel>
+
+      {/* Row 1: Confezione + Prezzi */}
       <div className="grid grid-cols-3 gap-4">
         <Input
           label="Confezione"
           type="number"
           min="1"
+          step="1"
           {...register('lotSize')}
           placeholder="1"
         />
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Prezzo costo i.e. (€) *</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              {...register('costPrice')}
+              className="w-full h-9 border border-border rounded pl-7 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              placeholder="0.00"
+            />
+          </div>
+          {errors.costPrice && <p className="text-xs text-red-500 mt-0.5">{errors.costPrice.message}</p>}
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Prezzo vendita i.i. (€) *</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              {...register('retailPrice')}
+              className="w-full h-9 border border-border rounded pl-7 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              placeholder="0.00"
+            />
+          </div>
+          {errors.retailPrice && <p className="text-xs text-red-500 mt-0.5">{errors.retailPrice.message}</p>}
+        </div>
+      </div>
+
+      {/* Row 2: IVA + Calcolati */}
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">IVA (%)</label>
+          <select {...register('iva')} className={selectClass}>
+            {IVA_OPTIONS.map((v) => (
+              <option key={v} value={String(v)}>{v}%</option>
+            ))}
+          </select>
+        </div>
+        <ReadOnlyField label="% Ricarico" value={fmtPct(ricarico)} />
+        <ReadOnlyField label="% Margine" value={fmtPct(margine)} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Prezzo costo i.e. (€) *"
-          type="number"
-          step="0.01"
-          {...register('costPrice')}
-          error={errors.costPrice?.message}
-          placeholder="0.00"
+          label="Fascia di ricarico"
+          {...register('fasciaRicarico')}
+          placeholder="es. Bassa, Media, Alta"
         />
         <Input
-          label="Prezzo vendita i.i. (€) *"
-          type="number"
-          step="0.01"
-          {...register('retailPrice')}
-          error={errors.retailPrice?.message}
-          placeholder="0.00"
+          label="Note"
+          {...register('notes')}
+          placeholder="Note aggiuntive..."
         />
       </div>
-      <Input
-        label="Fascia di ricarico"
-        {...register('fasciaRicarico')}
-        placeholder="es. Bassa, Media, Alta"
-      />
-      <Input
-        label="Note"
-        {...register('notes')}
-        placeholder="Note aggiuntive sul prodotto..."
-      />
 
       {/* ── Foto ── */}
       <SectionLabel>Foto</SectionLabel>
       <div className="flex gap-4 items-start">
-        {/* Preview */}
         <div className="w-24 h-24 flex-shrink-0 border border-border rounded bg-gray-50 overflow-hidden flex items-center justify-center">
           {imagePreview ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -315,9 +474,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
               src={imagePreview}
               alt="Anteprima prodotto"
               className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           ) : (
             <span className="text-gray-300 text-xs text-center leading-tight px-1">
@@ -326,7 +483,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           )}
         </div>
 
-        {/* Controls */}
         <div className="flex-1 flex flex-col gap-2">
           <input
             ref={fileInputRef}
@@ -342,13 +498,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
             loading={isUploading}
             onClick={() => fileInputRef.current?.click()}
           >
-            {isUploading
-              ? 'Caricamento...'
-              : imagePreview
-                ? 'Cambia immagine'
-                : 'Carica immagine'}
+            {isUploading ? 'Caricamento...' : imagePreview ? 'Cambia immagine' : 'Carica immagine'}
           </Button>
-
           {imagePreview && (
             <button
               type="button"
@@ -358,7 +509,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
               Rimuovi immagine
             </button>
           )}
-
           <Input
             {...register('imageUrl')}
             placeholder="oppure incolla un URL esterno..."

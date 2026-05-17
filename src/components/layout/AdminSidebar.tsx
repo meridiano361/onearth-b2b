@@ -8,7 +8,7 @@ import {
   Package,
   Users,
   ShoppingCart,
-  Tag,
+  Layers,
   LogOut,
   X,
 } from 'lucide-react';
@@ -20,7 +20,7 @@ const navItems = [
   { href: '/admin/orders', label: 'Ordini', icon: ShoppingCart },
   { href: '/admin/products', label: 'Prodotti', icon: Package },
   { href: '/admin/customers', label: 'Clienti', icon: Users },
-  { href: '/admin/categories', label: 'Categorie', icon: Tag },
+  { href: '/admin/classificazione', label: 'Classificazione', icon: Layers },
 ];
 
 interface AdminSidebarProps {

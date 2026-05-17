@@ -72,6 +72,7 @@ model Product {
   temaColore         String?
   fasciaRicarico     String?
   collezione         String?
+  iva                Int      @default(22)
   createdAt          DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -80,6 +81,16 @@ model Product {
   orderItems OrderItem[]
 
   @@map("products")
+}
+
+model ClassificazioneValore {
+  id        String   @id @default(cuid())
+  tipo      String
+  nome      String
+  createdAt DateTime @default(now())
+
+  @@unique([tipo, nome])
+  @@map("classificazione_valori")
 }
 
 enum Role {

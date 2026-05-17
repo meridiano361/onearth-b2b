@@ -380,11 +380,12 @@ export default function AdminProductsPage() {
                 />
               </th>
               <th>Codice</th>
-              <th>Nome</th>
-              <th>Gruppo / Famiglia</th>
-              <th>Costo</th>
-              <th>Vendita</th>
-              <th>LOT</th>
+              <th>Descrizione</th>
+              <th>Produttore</th>
+              <th>Costo i.e.</th>
+              <th>Vendita i.i.</th>
+              <th>IVA</th>
+              <th>% Ric.</th>
               <th>Stato</th>
               <th className="w-20"></th>
             </tr>
@@ -392,18 +393,25 @@ export default function AdminProductsPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={9} className="py-12 text-center">
+                <td colSpan={10} className="py-12 text-center">
                   <LoadingSpinner className="mx-auto" />
                 </td>
               </tr>
             ) : products.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-12 text-center text-gray-400 text-sm">
+                <td colSpan={10} className="py-12 text-center text-gray-400 text-sm">
                   Nessun prodotto trovato
                 </td>
               </tr>
             ) : (
-              products.map((product) => (
+              products.map((product) => {
+                const ivaFactor = 1 + (product.iva ?? 22) / 100;
+                const pvn = product.retailPrice / ivaFactor;
+                const ricarico =
+                  product.costPrice > 0
+                    ? ((pvn - product.costPrice) / product.costPrice) * 100
+                    : null;
+                return (
                 <tr key={product.id} className={selectedIds.has(product.id) ? 'bg-accent/5' : undefined}>
                   <td>
                     <input
@@ -417,33 +425,21 @@ export default function AdminProductsPage() {
                     <span className="font-mono text-xs text-gray-500">{product.code}</span>
                   </td>
                   <td>
-                    <div>
-                      <p className="font-medium text-primary text-xs">{product.name}</p>
-                      {product.produttore && (
-                        <p className="text-2xs text-gray-400 truncate max-w-[180px]">{product.produttore}</p>
-                      )}
-                    </div>
+                    <p className="font-medium text-primary text-xs">{product.name}</p>
                   </td>
                   <td>
-                    <div>
-                      {product.gruppoMerceologico && (
-                        <p className="text-xs text-gray-600">{product.gruppoMerceologico}</p>
-                      )}
-                      {product.famiglia && (
-                        <p className="text-2xs text-gray-400">{product.famiglia}</p>
-                      )}
-                      {!product.gruppoMerceologico && !product.famiglia && (
-                        <span className="text-gray-300 text-xs">—</span>
-                      )}
-                    </div>
+                    <span className="text-xs text-gray-500">{product.produttore || '—'}</span>
                   </td>
                   <td className="font-medium text-xs">{formatCurrency(product.costPrice)}</td>
                   <td className="text-xs text-gray-500">{formatCurrency(product.retailPrice)}</td>
+                  <td className="text-xs text-center text-gray-500">{product.iva ?? 22}%</td>
                   <td className="text-xs text-center">
-                    {product.lotSize > 1 ? (
-                      <Badge variant="accent" size="xs">{product.lotSize}</Badge>
+                    {ricarico !== null ? (
+                      <span className={ricarico >= 0 ? 'text-green-600' : 'text-red-500'}>
+                        {ricarico >= 0 ? '+' : ''}{ricarico.toFixed(1)}%
+                      </span>
                     ) : (
-                      <span className="text-gray-300">1</span>
+                      <span className="text-gray-300">—</span>
                     )}
                   </td>
                   <td>
@@ -477,7 +473,8 @@ export default function AdminProductsPage() {
                     </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

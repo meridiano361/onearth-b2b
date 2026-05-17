@@ -54,8 +54,16 @@ export interface Product {
   temaColore: string | null;
   fasciaRicarico: string | null;
   collezione: string | null;
+  iva: number;
   createdAt: string;
   category?: Category | null;
+}
+
+export interface ClassificazioneValore {
+  id: string;
+  tipo: string;
+  nome: string;
+  createdAt: string;
 }
 
 export interface Customer {

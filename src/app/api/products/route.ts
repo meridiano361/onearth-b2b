@@ -32,6 +32,7 @@ const productSchema = z.object({
   temaColore: z.string().optional().nullable(),
   fasciaRicarico: z.string().optional().nullable(),
   collezione: z.string().optional().nullable(),
+  iva: z.number().int().min(0).max(100).default(22),
 });
 
 export async function GET(req: NextRequest) {
@@ -139,6 +140,7 @@ export async function POST(req: NextRequest) {
         temaColore: data.temaColore || null,
         fasciaRicarico: data.fasciaRicarico || null,
         collezione: data.collezione || null,
+        iva: data.iva ?? 22,
       },
       include: { category: true },
     });
