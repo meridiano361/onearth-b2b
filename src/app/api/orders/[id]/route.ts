@@ -144,3 +144,24 @@ export async function PATCH(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    await prisma.order.delete({ where: { id: params.id } });
+
+    return NextResponse.json({ message: 'Ordine eliminato' });
+  } catch (err: any) {
+    if (err.code === 'P2025') {
+      return NextResponse.json({ error: 'Ordine non trovato' }, { status: 404 });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

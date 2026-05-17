@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { formatCurrency, formatDate, getOrderStatusLabel } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { Order } from '@/types';
@@ -27,9 +27,11 @@ const STATUS_STYLE: Record<string, { badge: string; label: string }> = {
 
 const STATUS_OPTIONS = STATUS_FILTERS.slice(1).map((f) => f.value);
 
-function OrderRow({ order, onStatusChange }: { order: Order; onStatusChange: () => void }) {
+function OrderRow({ order, onStatusChange, onDelete }: { order: Order; onStatusChange: () => void; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const style = STATUS_STYLE[order.status] ?? { badge: 'bg-gray-100 text-gray-500', label: order.status };
 
@@ -48,6 +50,21 @@ function OrderRow({ order, onStatusChange }: { order: Order; onStatusChange: () 
       toast.error('Impossibile aggiornare lo stato');
     } finally {
       setIsUpdating(false);
+    }
+  }
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed');
+      toast.success('Ordine eliminato');
+      onDelete();
+    } catch {
+      toast.error('Impossibile eliminare l\'ordine');
+      setConfirmDelete(false);
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -121,6 +138,31 @@ function OrderRow({ order, onStatusChange }: { order: Order; onStatusChange: () 
                 onClick={(e) => { e.stopPropagation(); handleExport('pdf'); }}
                 className="text-2xs px-2 py-1 border border-border rounded hover:bg-cream transition-colors text-gray-500"
               >PDF</button>
+              {!confirmDelete ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+                  title="Elimina ordine"
+                  className="text-2xs px-2 py-1 border border-border rounded hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors text-gray-400"
+                >
+                  <Trash2 size={11} />
+                </button>
+              ) : (
+                <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="text-2xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50"
+                  >
+                    {isDeleting ? '...' : 'Conferma'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="text-2xs px-2 py-1 border border-border rounded hover:bg-cream transition-colors text-gray-500"
+                  >
+                    Annulla
+                  </button>
+                </span>
+              )}
             </div>
             {expanded ? <ChevronUp size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
           </div>
@@ -336,6 +378,7 @@ export default function AdminOrdersPage() {
               key={order.id}
               order={order}
               onStatusChange={() => queryClient.invalidateQueries({ queryKey: ['admin-all-orders'] })}
+              onDelete={() => queryClient.invalidateQueries({ queryKey: ['admin-all-orders'] })}
             />
           ))}
         </div>
