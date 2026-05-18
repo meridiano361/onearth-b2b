@@ -1,183 +1,93 @@
 'use client';
 
 import { useMemo } from 'react';
-import { ChevronDown, ChevronRight, RotateCcw, Globe } from 'lucide-react';
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
-import type { Category, Product } from '@/types';
+import { RotateCcw, Globe } from 'lucide-react';
+import type { Product } from '@/types';
 
 interface CatalogFiltersProps {
-  categories: Category[];
   products: Product[];
-  selectedCategoryId: string | null;
-  onCategoryChange: (id: string | null) => void;
+  selectedGruppoMerceologico: string | null;
+  onGruppoMerceologicoChange: (v: string | null) => void;
   selectedFamiglia: string | null;
   onFamigliaChange: (v: string | null) => void;
-  selectedSottofamiglia: string | null;
-  onSottofamigliaChange: (v: string | null) => void;
-  selectedColore: string | null;
-  onColoreChange: (v: string | null) => void;
+  selectedClasse: string | null;
+  onClasseChange: (v: string | null) => void;
+  selectedSottoclasse: string | null;
+  onSottoclasseChange: (v: string | null) => void;
+  selectedGruppoOmogeneo: string | null;
+  onGruppoOmogeneoChange: (v: string | null) => void;
   selectedNomLinea: string | null;
   onNomLineaChange: (v: string | null) => void;
+  selectedColore: string | null;
+  onColoreChange: (v: string | null) => void;
+  selectedCollezione: string | null;
+  onCollezioneChange: (v: string | null) => void;
+  selectedProduttore: string | null;
+  onProduttoreChange: (v: string | null) => void;
   hasActiveFilters: boolean;
   onResetAll: () => void;
 }
 
-interface CategoryNodeProps {
-  category: Category;
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-  level?: number;
+function opts(products: Product[], field: keyof Product): string[] {
+  return [...new Set(products.map((p) => p[field]).filter(Boolean) as string[])].sort();
 }
 
-function CategoryNode({ category, selectedId, onSelect, level = 0 }: CategoryNodeProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const hasChildren = category.children && category.children.length > 0;
-  const isSelected = selectedId === category.id;
-
-  return (
-    <div>
-      <button
-        onClick={() => {
-          onSelect(isSelected ? null : category.id);
-          if (hasChildren) setIsExpanded(true);
-        }}
-        className={cn(
-          'flex items-center gap-2 w-full text-left px-3 py-1.5 rounded text-xs transition-all duration-100',
-          level > 0 && 'pl-7',
-          isSelected
-            ? 'bg-cream text-primary font-medium'
-            : 'text-gray-600 hover:bg-cream/60 hover:text-primary'
-        )}
-      >
-        {hasChildren ? (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
-            className="text-gray-400 hover:text-gray-600 -ml-1 flex-shrink-0"
-          >
-            {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-          </button>
-        ) : (
-          <div className="w-3 h-3 flex-shrink-0" />
-        )}
-        <span className="truncate">{category.name}</span>
-      </button>
-
-      {hasChildren && isExpanded && (
-        <div>
-          {category.children!.map((child) => (
-            <CategoryNode key={child.id} category={child} selectedId={selectedId} onSelect={onSelect} level={level + 1} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FilterSection({ title, children, count }: { title: string; children: React.ReactNode; count?: number }) {
-  const [open, setOpen] = useState(true);
-  return (
-    <div className="mb-4">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center justify-between w-full mb-2 group"
-      >
-        <span className="label-luxury text-gray-500 group-hover:text-primary transition-colors">{title}</span>
-        <div className="flex items-center gap-1.5">
-          {count != null && count > 0 && (
-            <span className="text-2xs bg-accent/20 text-accent font-semibold px-1.5 py-0.5 rounded-full">{count}</span>
-          )}
-          <ChevronDown size={12} className={cn('text-gray-400 transition-transform', open ? '' : '-rotate-90')} />
-        </div>
-      </button>
-      {open && children}
-    </div>
-  );
-}
-
-function FilterPill({
+function FilterSelect({
   label,
-  selected,
-  onClick,
+  value,
+  options,
+  onChange,
 }: {
   label: string;
-  selected: boolean;
-  onClick: () => void;
+  value: string | null;
+  options: string[];
+  onChange: (v: string | null) => void;
 }) {
+  if (options.length === 0) return null;
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'flex items-center w-full text-left px-3 py-1.5 rounded text-xs transition-all duration-100',
-        selected
-          ? 'bg-cream text-primary font-medium'
-          : 'text-gray-600 hover:bg-cream/60 hover:text-primary'
-      )}
-    >
-      <span className="truncate">{label}</span>
-    </button>
+    <div className="mb-3">
+      <label className="block text-2xs text-gray-400 uppercase tracking-wider mb-1">{label}</label>
+      <select
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value || null)}
+        className="w-full text-xs border border-border rounded px-2 py-1.5 text-primary bg-white focus:outline-none focus:border-accent transition-colors appearance-none cursor-pointer"
+      >
+        <option value="">Tutti</option>
+        {options.map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+      </select>
+    </div>
   );
 }
 
 export default function CatalogFilters({
-  categories,
   products,
-  selectedCategoryId,
-  onCategoryChange,
-  selectedFamiglia,
-  onFamigliaChange,
-  selectedSottofamiglia,
-  onSottofamigliaChange,
-  selectedColore,
-  onColoreChange,
-  selectedNomLinea,
-  onNomLineaChange,
-  hasActiveFilters,
-  onResetAll,
+  selectedGruppoMerceologico, onGruppoMerceologicoChange,
+  selectedFamiglia,           onFamigliaChange,
+  selectedClasse,             onClasseChange,
+  selectedSottoclasse,        onSottoclasseChange,
+  selectedGruppoOmogeneo,     onGruppoOmogeneoChange,
+  selectedNomLinea,           onNomLineaChange,
+  selectedColore,             onColoreChange,
+  selectedCollezione,         onCollezioneChange,
+  selectedProduttore,         onProduttoreChange,
+  hasActiveFilters,           onResetAll,
 }: CatalogFiltersProps) {
-  // Build category tree
-  const tree = useMemo(() => {
-    const map = new Map<string, Category>();
-    categories.forEach((c) => map.set(c.id, { ...c, children: [] }));
-    const roots: Category[] = [];
-    map.forEach((cat) => {
-      if (cat.parentId && map.has(cat.parentId)) {
-        map.get(cat.parentId)!.children!.push(cat);
-      } else if (!cat.parentId) {
-        roots.push(cat);
-      }
-    });
-    return roots;
-  }, [categories]);
-
-  // Derive unique filter options from all products (not filtered)
-  const famiglieOptions = useMemo(
-    () => [...new Set(products.map((p) => p.famiglia).filter(Boolean) as string[])].sort(),
-    [products]
-  );
-
-  // Sottofamiglie: filtered by selected famiglia if set
-  const sottofamiglieOptions = useMemo(() => {
-    const source = selectedFamiglia
-      ? products.filter((p) => p.famiglia === selectedFamiglia)
-      : products;
-    return [...new Set(source.map((p) => p.sottofamiglia).filter(Boolean) as string[])].sort();
-  }, [products, selectedFamiglia]);
-
-  const coloriOptions = useMemo(
-    () => [...new Set(products.map((p) => p.colore).filter(Boolean) as string[])].sort(),
-    [products]
-  );
-
-  const nomLineaOptions = useMemo(
-    () => [...new Set(products.map((p) => p.nomLinea).filter(Boolean) as string[])].sort(),
-    [products]
-  );
+  const gruppoMerceologicoOpts = useMemo(() => opts(products, 'gruppoMerceologico'), [products]);
+  const famigliaOpts           = useMemo(() => opts(products, 'famiglia'),           [products]);
+  const classeOpts             = useMemo(() => opts(products, 'classe'),             [products]);
+  const sottoclasseOpts        = useMemo(() => opts(products, 'sottoclasse'),        [products]);
+  const gruppoOmogeneoOpts     = useMemo(() => opts(products, 'gruppoOmogeneo'),     [products]);
+  const nomLineaOpts           = useMemo(() => opts(products, 'nomLinea'),           [products]);
+  const coloreOpts             = useMemo(() => opts(products, 'colore'),             [products]);
+  const collezioneOpts         = useMemo(() => opts(products, 'collezione'),         [products]);
+  const produttoreOpts         = useMemo(() => opts(products, 'produttore'),         [products]);
 
   return (
     <div className="w-56 flex-shrink-0 border-r border-border bg-white flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-4">
+
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <span className="label-luxury">Filtri</span>
@@ -192,91 +102,20 @@ export default function CatalogFilters({
           )}
         </div>
 
-        {/* Category */}
-        <FilterSection title="Categoria">
-          <button
-            onClick={() => onCategoryChange(null)}
-            className={cn(
-              'flex items-center gap-2 w-full text-left px-3 py-1.5 rounded text-xs transition-all duration-100 mb-0.5',
-              !selectedCategoryId ? 'bg-cream text-primary font-medium' : 'text-gray-600 hover:bg-cream/60 hover:text-primary'
-            )}
-          >
-            <div className="w-3 h-3 flex-shrink-0" />
-            Tutti i Prodotti
-          </button>
-          {tree.map((cat) => (
-            <CategoryNode key={cat.id} category={cat} selectedId={selectedCategoryId} onSelect={onCategoryChange} />
-          ))}
-        </FilterSection>
-
-        {/* Famiglia */}
-        {famiglieOptions.length > 0 && (
-          <FilterSection title="Famiglia" count={selectedFamiglia ? 1 : 0}>
-            {famiglieOptions.map((f) => (
-              <FilterPill
-                key={f}
-                label={f}
-                selected={selectedFamiglia === f}
-                onClick={() => {
-                  if (selectedFamiglia === f) {
-                    onFamigliaChange(null);
-                  } else {
-                    onFamigliaChange(f);
-                    onSottofamigliaChange(null); // reset sottofamiglia when famiglia changes
-                  }
-                }}
-              />
-            ))}
-          </FilterSection>
-        )}
-
-        {/* Sottofamiglia — only shown when famiglia is selected or has values */}
-        {sottofamiglieOptions.length > 0 && (
-          <FilterSection title="Sottofamiglia" count={selectedSottofamiglia ? 1 : 0}>
-            {sottofamiglieOptions.map((s) => (
-              <FilterPill
-                key={s}
-                label={s}
-                selected={selectedSottofamiglia === s}
-                onClick={() => onSottofamigliaChange(selectedSottofamiglia === s ? null : s)}
-              />
-            ))}
-          </FilterSection>
-        )}
-
-        {/* Nome Linea */}
-        {nomLineaOptions.length > 0 && (
-          <FilterSection title="Linea" count={selectedNomLinea ? 1 : 0}>
-            {nomLineaOptions.map((l) => (
-              <FilterPill
-                key={l}
-                label={l}
-                selected={selectedNomLinea === l}
-                onClick={() => onNomLineaChange(selectedNomLinea === l ? null : l)}
-              />
-            ))}
-          </FilterSection>
-        )}
-
-        {/* Colore */}
-        {coloriOptions.length > 0 && (
-          <FilterSection title="Colore" count={selectedColore ? 1 : 0}>
-            {coloriOptions.map((c) => (
-              <FilterPill
-                key={c}
-                label={c}
-                selected={selectedColore === c}
-                onClick={() => onColoreChange(selectedColore === c ? null : c)}
-              />
-            ))}
-          </FilterSection>
-        )}
+        <FilterSelect label="Gruppo merceologico" value={selectedGruppoMerceologico} options={gruppoMerceologicoOpts} onChange={onGruppoMerceologicoChange} />
+        <FilterSelect label="Famiglia"             value={selectedFamiglia}           options={famigliaOpts}           onChange={onFamigliaChange} />
+        <FilterSelect label="Classe"               value={selectedClasse}             options={classeOpts}             onChange={onClasseChange} />
+        <FilterSelect label="Sottoclasse"          value={selectedSottoclasse}        options={sottoclasseOpts}        onChange={onSottoclasseChange} />
+        <FilterSelect label="Gruppo omogeneo"      value={selectedGruppoOmogeneo}     options={gruppoOmogeneoOpts}     onChange={onGruppoOmogeneoChange} />
+        <FilterSelect label="Linea"                value={selectedNomLinea}           options={nomLineaOpts}           onChange={onNomLineaChange} />
+        <FilterSelect label="Colore"               value={selectedColore}             options={coloreOpts}             onChange={onColoreChange} />
+        <FilterSelect label="Collezione"           value={selectedCollezione}         options={collezioneOpts}         onChange={onCollezioneChange} />
+        <FilterSelect label="Produttore"           value={selectedProduttore}         options={produttoreOpts}         onChange={onProduttoreChange} />
 
       </div>
 
       {/* ── Footer links ─────────────────────────────────── */}
       <div className="flex-shrink-0 border-t border-border/60 px-3 py-3 space-y-2">
-        {/* Spotify widget */}
         <a
           href="https://open.spotify.com/show/3MjWJeGlQFAy2D2D2awo4t"
           target="_blank"
@@ -291,7 +130,6 @@ export default function CatalogFilters({
           </p>
         </a>
 
-        {/* ON EARTH link */}
         <a
           href="https://www.on-earth.it"
           target="_blank"

@@ -8,22 +8,40 @@ import { Search, SlidersHorizontal, X, Package } from 'lucide-react';
 import { debounce } from '@/lib/utils';
 import CatalogFilters from './CatalogFilters';
 import ProductGrid from './ProductGrid';
-import type { Product, Category } from '@/types';
+import type { Product } from '@/types';
+
+type Filters = {
+  gruppoMerceologico: string | null;
+  famiglia:           string | null;
+  classe:             string | null;
+  sottoclasse:        string | null;
+  gruppoOmogeneo:     string | null;
+  nomLinea:           string | null;
+  colore:             string | null;
+  collezione:         string | null;
+  produttore:         string | null;
+};
+
+const EMPTY_FILTERS: Filters = {
+  gruppoMerceologico: null,
+  famiglia:           null,
+  classe:             null,
+  sottoclasse:        null,
+  gruppoOmogeneo:     null,
+  nomLinea:           null,
+  colore:             null,
+  collezione:         null,
+  produttore:         null,
+};
 
 export default function CatalogView() {
   const { data: session } = useSession();
   const isCustomer = session?.user?.role === 'CUSTOMER';
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch]               = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
-
-  // New filter states
-  const [selectedFamiglia, setSelectedFamiglia] = useState<string | null>(null);
-  const [selectedSottofamiglia, setSelectedSottofamiglia] = useState<string | null>(null);
-  const [selectedColore, setSelectedColore] = useState<string | null>(null);
-  const [selectedNomLinea, setSelectedNomLinea] = useState<string | null>(null);
+  const [showFilters, setShowFilters]     = useState(false);
+  const [filters, setFilters]             = useState<Filters>(EMPTY_FILTERS);
 
   const debouncedSetSearch = useCallback(
     debounce((val: string) => setDebouncedSearch(val), 250),
@@ -35,57 +53,31 @@ export default function CatalogView() {
     debouncedSetSearch(e.target.value);
   }
 
-  function handleResetAll() {
-    setSelectedCategoryId(null);
-    setSelectedFamiglia(null);
-    setSelectedSottofamiglia(null);
-    setSelectedColore(null);
-    setSelectedNomLinea(null);
+  function setFilter(key: keyof Filters, value: string | null) {
+    setFilters((prev) => ({ ...prev, [key]: value }));
   }
 
-  const hasActiveFilters = !!(
-    selectedCategoryId ||
-    selectedFamiglia ||
-    selectedSottofamiglia ||
-    selectedColore ||
-    selectedNomLinea
-  );
+  function handleResetAll() {
+    setFilters(EMPTY_FILTERS);
+  }
+
+  const hasActiveFilters = Object.values(filters).some(Boolean);
+
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   const { data: productsData, isLoading: productsLoading } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
       const res = await fetch('/api/products?active=true&limit=500');
       if (!res.ok) throw new Error('Failed to fetch products');
-      const json = await res.json();
-      return json.data as Product[];
+      return (await res.json()).data as Product[];
     },
   });
 
-  const { data: categoriesData } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const res = await fetch('/api/categories');
-      if (!res.ok) throw new Error('Failed to fetch categories');
-      const json = await res.json();
-      return json.data as Category[];
-    },
-  });
-
-  const products = productsData || [];
-  const categories = categoriesData || [];
-
-  function getDescendantIds(categoryId: string, cats: Category[]): string[] {
-    const children = cats.filter((c) => c.parentId === categoryId);
-    return [categoryId, ...children.flatMap((c) => getDescendantIds(c.id, cats))];
-  }
+  const products = productsData ?? [];
 
   const filteredProducts = useMemo(() => {
     let result = products;
-
-    if (selectedCategoryId) {
-      const ids = getDescendantIds(selectedCategoryId, categories);
-      result = result.filter((p) => p.categoryId && ids.includes(p.categoryId));
-    }
 
     if (debouncedSearch.trim()) {
       const q = debouncedSearch.toLowerCase();
@@ -102,50 +94,46 @@ export default function CatalogView() {
       );
     }
 
-    if (selectedFamiglia) {
-      result = result.filter((p) => p.famiglia === selectedFamiglia);
-    }
-
-    if (selectedSottofamiglia) {
-      result = result.filter((p) => p.sottofamiglia === selectedSottofamiglia);
-    }
-
-    if (selectedColore) {
-      result = result.filter((p) => p.colore === selectedColore);
-    }
-
-    if (selectedNomLinea) {
-      result = result.filter((p) => p.nomLinea === selectedNomLinea);
-    }
+    const { gruppoMerceologico, famiglia, classe, sottoclasse, gruppoOmogeneo, nomLinea, colore, collezione, produttore } = filters;
+    if (gruppoMerceologico) result = result.filter((p) => p.gruppoMerceologico === gruppoMerceologico);
+    if (famiglia)           result = result.filter((p) => p.famiglia           === famiglia);
+    if (classe)             result = result.filter((p) => p.classe             === classe);
+    if (sottoclasse)        result = result.filter((p) => p.sottoclasse        === sottoclasse);
+    if (gruppoOmogeneo)     result = result.filter((p) => p.gruppoOmogeneo     === gruppoOmogeneo);
+    if (nomLinea)           result = result.filter((p) => p.nomLinea           === nomLinea);
+    if (colore)             result = result.filter((p) => p.colore             === colore);
+    if (collezione)         result = result.filter((p) => p.collezione         === collezione);
+    if (produttore)         result = result.filter((p) => p.produttore         === produttore);
 
     return result;
-  }, [products, selectedCategoryId, debouncedSearch, categories, selectedFamiglia, selectedSottofamiglia, selectedColore, selectedNomLinea]);
+  }, [products, debouncedSearch, filters]);
 
   const filterProps = {
-    categories,
     products,
-    selectedCategoryId,
-    onCategoryChange: setSelectedCategoryId,
-    selectedFamiglia,
-    onFamigliaChange: setSelectedFamiglia,
-    selectedSottofamiglia,
-    onSottofamigliaChange: setSelectedSottofamiglia,
-    selectedColore,
-    onColoreChange: setSelectedColore,
-    selectedNomLinea,
-    onNomLineaChange: setSelectedNomLinea,
+    selectedGruppoMerceologico: filters.gruppoMerceologico, onGruppoMerceologicoChange: (v: string | null) => setFilter('gruppoMerceologico', v),
+    selectedFamiglia:           filters.famiglia,           onFamigliaChange:           (v: string | null) => setFilter('famiglia', v),
+    selectedClasse:             filters.classe,             onClasseChange:             (v: string | null) => setFilter('classe', v),
+    selectedSottoclasse:        filters.sottoclasse,        onSottoclasseChange:        (v: string | null) => setFilter('sottoclasse', v),
+    selectedGruppoOmogeneo:     filters.gruppoOmogeneo,     onGruppoOmogeneoChange:     (v: string | null) => setFilter('gruppoOmogeneo', v),
+    selectedNomLinea:           filters.nomLinea,           onNomLineaChange:           (v: string | null) => setFilter('nomLinea', v),
+    selectedColore:             filters.colore,             onColoreChange:             (v: string | null) => setFilter('colore', v),
+    selectedCollezione:         filters.collezione,         onCollezioneChange:         (v: string | null) => setFilter('collezione', v),
+    selectedProduttore:         filters.produttore,         onProduttoreChange:         (v: string | null) => setFilter('produttore', v),
     hasActiveFilters,
     onResetAll: handleResetAll,
   };
 
-  // Active filter count for the mobile button badge
-  const activeFilterCount = [
-    selectedCategoryId,
-    selectedFamiglia,
-    selectedSottofamiglia,
-    selectedColore,
-    selectedNomLinea,
-  ].filter(Boolean).length;
+  const CHIP_LABELS: { key: keyof Filters; label: string }[] = [
+    { key: 'gruppoMerceologico', label: 'Gruppo merceologico' },
+    { key: 'famiglia',           label: 'Famiglia' },
+    { key: 'classe',             label: 'Classe' },
+    { key: 'sottoclasse',        label: 'Sottoclasse' },
+    { key: 'gruppoOmogeneo',     label: 'Gruppo omogeneo' },
+    { key: 'nomLinea',           label: 'Linea' },
+    { key: 'colore',             label: 'Colore' },
+    { key: 'collezione',         label: 'Collezione' },
+    { key: 'produttore',         label: 'Produttore' },
+  ];
 
   return (
     <div className="flex h-full">
@@ -157,10 +145,7 @@ export default function CatalogView() {
       {/* Mobile filters drawer */}
       {showFilters && (
         <div className="md:hidden fixed inset-0 z-40">
-          <div
-            className="absolute inset-0 bg-primary/30"
-            onClick={() => setShowFilters(false)}
-          />
+          <div className="absolute inset-0 bg-primary/30" onClick={() => setShowFilters(false)} />
           <div className="absolute left-0 top-0 bottom-0 w-64 sm:w-72 bg-white shadow-luxury-xl overflow-y-auto">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <span className="text-sm font-medium">Filtri</span>
@@ -168,11 +153,7 @@ export default function CatalogView() {
                 <X size={16} />
               </button>
             </div>
-            <CatalogFilters
-              {...filterProps}
-              onCategoryChange={(id) => { setSelectedCategoryId(id); setShowFilters(false); }}
-              onFamigliaChange={(v) => { setSelectedFamiglia(v); setSelectedSottofamiglia(null); }}
-            />
+            <CatalogFilters {...filterProps} />
           </div>
         </div>
       )}
@@ -183,7 +164,6 @@ export default function CatalogView() {
         {/* ── Customer homepage section ─────────────────────── */}
         {isCustomer && (
           <div className="border-b border-border bg-cream/30 px-4 sm:px-6 py-5">
-            {/* Welcome row + orders CTA */}
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="label-luxury text-accent text-2xs uppercase tracking-widest">Benvenuto</p>
@@ -197,7 +177,6 @@ export default function CatalogView() {
                 I miei Ordini
               </Link>
             </div>
-
           </div>
         )}
 
@@ -243,10 +222,7 @@ export default function CatalogView() {
               {productsLoading ? 'Caricamento...' : `${filteredProducts.length} prodotti`}
             </span>
             {hasActiveFilters && (
-              <button
-                onClick={handleResetAll}
-                className="text-xs text-accent hover:text-primary transition-colors font-medium"
-              >
+              <button onClick={handleResetAll} className="text-xs text-accent hover:text-primary transition-colors font-medium">
                 Azzera filtri
               </button>
             )}
@@ -256,29 +232,15 @@ export default function CatalogView() {
         {/* Active filter chips — desktop */}
         {hasActiveFilters && (
           <div className="hidden md:flex flex-wrap gap-1.5 px-6 py-2 border-b border-border/50 bg-cream/30">
-            {selectedFamiglia && (
-              <span className="inline-flex items-center gap-1 text-2xs bg-white border border-border rounded-full px-2.5 py-1 text-primary">
-                {selectedFamiglia}
-                <button onClick={() => setSelectedFamiglia(null)} className="text-gray-400 hover:text-primary ml-0.5"><X size={10} /></button>
-              </span>
-            )}
-            {selectedSottofamiglia && (
-              <span className="inline-flex items-center gap-1 text-2xs bg-white border border-border rounded-full px-2.5 py-1 text-primary">
-                {selectedSottofamiglia}
-                <button onClick={() => setSelectedSottofamiglia(null)} className="text-gray-400 hover:text-primary ml-0.5"><X size={10} /></button>
-              </span>
-            )}
-            {selectedColore && (
-              <span className="inline-flex items-center gap-1 text-2xs bg-white border border-border rounded-full px-2.5 py-1 text-primary">
-                {selectedColore}
-                <button onClick={() => setSelectedColore(null)} className="text-gray-400 hover:text-primary ml-0.5"><X size={10} /></button>
-              </span>
-            )}
-            {selectedNomLinea && (
-              <span className="inline-flex items-center gap-1 text-2xs bg-white border border-border rounded-full px-2.5 py-1 text-primary">
-                {selectedNomLinea}
-                <button onClick={() => setSelectedNomLinea(null)} className="text-gray-400 hover:text-primary ml-0.5"><X size={10} /></button>
-              </span>
+            {CHIP_LABELS.map(({ key, label }) =>
+              filters[key] ? (
+                <span key={key} className="inline-flex items-center gap-1 text-2xs bg-white border border-border rounded-full px-2.5 py-1 text-primary">
+                  <span className="text-gray-400">{label}:</span> {filters[key]}
+                  <button onClick={() => setFilter(key, null)} className="text-gray-400 hover:text-primary ml-0.5">
+                    <X size={10} />
+                  </button>
+                </span>
+              ) : null
             )}
           </div>
         )}
