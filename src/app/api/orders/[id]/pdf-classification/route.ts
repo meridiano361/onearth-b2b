@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
+import sharp from 'sharp';
 import { OrderClassificationPDF } from '@/components/orders/OrderClassificationPDF';
 import type { EnrichedItem } from '@/components/orders/OrderClassificationPDF';
 
@@ -20,30 +21,46 @@ const GROUP_LABELS: Record<string, string> = {
   temaColore: 'Tema colore',
 };
 
-// react-pdf supports JPEG, PNG and GIF only (not WebP/AVIF)
-const SUPPORTED_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif']);
-
+/**
+ * Fetches an image from any URL and converts it to a JPEG base64 data URI.
+ * Uses sharp to handle WebP, AVIF, HEIC, PNG, GIF → JPEG.
+ * react-pdf only supports JPEG, PNG, GIF — JPEG is the safest target.
+ */
 async function fetchImageAsBase64(url: string): Promise<string | null> {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(url, { signal: controller.signal });
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    const res = await fetch(url, {
+      signal: controller.signal,
+      cache: 'no-store',
+      headers: { Accept: 'image/*' },
+    });
     clearTimeout(timer);
-    if (!res.ok) return null;
 
-    // Strip charset/boundary parameters: "image/jpeg; charset=utf-8" → "image/jpeg"
-    const rawCt = res.headers.get('content-type') ?? '';
-    const mimeType = rawCt.split(';')[0].trim().toLowerCase();
+    if (!res.ok) {
+      console.warn(`[pdf-img] HTTP ${res.status} for ${url}`);
+      return null;
+    }
 
-    // If the server returns an unsupported format, skip rather than corrupt the PDF
-    if (!SUPPORTED_MIME.has(mimeType) && mimeType !== '') return null;
+    const rawBuffer = Buffer.from(await res.arrayBuffer());
+    if (rawBuffer.length === 0) {
+      console.warn(`[pdf-img] empty buffer for ${url}`);
+      return null;
+    }
 
-    const ct = SUPPORTED_MIME.has(mimeType) ? mimeType : 'image/jpeg';
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length === 0) return null;
+    console.log(`[pdf-img] fetched ${url} — ${rawBuffer.length} bytes, converting to JPEG`);
 
-    return `data:${ct};base64,${buf.toString('base64')}`;
-  } catch {
+    // Convert to JPEG — handles WebP, AVIF, HEIC, PNG, GIF, JPEG alike
+    const jpegBuffer = await sharp(rawBuffer)
+      .jpeg({ quality: 82 })
+      .toBuffer();
+
+    const base64 = jpegBuffer.toString('base64');
+    console.log(`[pdf-img] JPEG ready — ${base64.length} base64 chars`);
+
+    return `data:image/jpeg;base64,${base64}`;
+  } catch (err: any) {
+    console.error(`[pdf-img] error for ${url}:`, err?.message ?? err);
     return null;
   }
 }
@@ -65,9 +82,7 @@ export async function GET(
       where: { id: params.id },
       include: {
         customer: { select: { id: true, companyName: true } },
-        items: {
-          include: { product: true },
-        },
+        items: { include: { product: true } },
       },
     });
 
@@ -77,15 +92,25 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Keep only items that still have a linked product
     const validItems = order.items.filter((it) => it.product != null);
 
-    // Pre-fetch all product images as base64 data URIs in parallel
+    console.log(
+      `[pdf] order ${params.id} — ${validItems.length} items, ` +
+      `${validItems.filter(it => it.product!.imageUrl).length} with imageUrl`
+    );
+
+    // Fetch all images in parallel (converted to JPEG via sharp)
     const imageData = await Promise.all(
       validItems.map((it) =>
-        it.product!.imageUrl ? fetchImageAsBase64(it.product!.imageUrl) : Promise.resolve(null)
+        it.product!.imageUrl
+          ? fetchImageAsBase64(it.product!.imageUrl)
+          : Promise.resolve(null)
       )
     );
+
+    const withImages  = imageData.filter(Boolean).length;
+    const withoutImages = imageData.length - withImages;
+    console.log(`[pdf] images resolved: ${withImages} OK, ${withoutImages} failed/null`);
 
     const enrichedItems: EnrichedItem[] = validItems.map((it, i) => ({
       id: it.id,
@@ -113,16 +138,13 @@ export async function GET(
       updatedAt: order.updatedAt.toISOString(),
     };
 
-    const customerName = order.customer?.companyName ?? '';
-    const groupByLabel = GROUP_LABELS[groupBy];
-
     const pdfBuffer = await renderToBuffer(
       React.createElement(OrderClassificationPDF, {
         order: serializedOrder as any,
         items: enrichedItems,
         groupBy,
-        groupByLabel,
-        customerName,
+        groupByLabel: GROUP_LABELS[groupBy],
+        customerName: order.customer?.companyName ?? '',
       }) as any
     );
 

@@ -10,7 +10,7 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
   experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'prisma', 'bcryptjs', '@react-pdf/renderer'],
+    serverComponentsExternalPackages: ['@prisma/client', 'prisma', 'bcryptjs', '@react-pdf/renderer', 'sharp'],
   },
 };
 
