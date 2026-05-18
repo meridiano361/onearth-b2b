@@ -20,6 +20,9 @@ const GROUP_LABELS: Record<string, string> = {
   temaColore: 'Tema colore',
 };
 
+// react-pdf supports JPEG, PNG and GIF only (not WebP/AVIF)
+const SUPPORTED_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif']);
+
 async function fetchImageAsBase64(url: string): Promise<string | null> {
   try {
     const controller = new AbortController();
@@ -27,9 +30,19 @@ async function fetchImageAsBase64(url: string): Promise<string | null> {
     const res = await fetch(url, { signal: controller.signal });
     clearTimeout(timer);
     if (!res.ok) return null;
-    const buf = await res.arrayBuffer();
-    const ct = res.headers.get('content-type') || 'image/jpeg';
-    return `data:${ct};base64,${Buffer.from(buf).toString('base64')}`;
+
+    // Strip charset/boundary parameters: "image/jpeg; charset=utf-8" → "image/jpeg"
+    const rawCt = res.headers.get('content-type') ?? '';
+    const mimeType = rawCt.split(';')[0].trim().toLowerCase();
+
+    // If the server returns an unsupported format, skip rather than corrupt the PDF
+    if (!SUPPORTED_MIME.has(mimeType) && mimeType !== '') return null;
+
+    const ct = SUPPORTED_MIME.has(mimeType) ? mimeType : 'image/jpeg';
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length === 0) return null;
+
+    return `data:${ct};base64,${buf.toString('base64')}`;
   } catch {
     return null;
   }
@@ -64,26 +77,30 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Pre-fetch all product images in parallel
-    const imageUrls = order.items.map((it) => it.product?.imageUrl ?? null);
+    // Keep only items that still have a linked product
+    const validItems = order.items.filter((it) => it.product != null);
+
+    // Pre-fetch all product images as base64 data URIs in parallel
     const imageData = await Promise.all(
-      imageUrls.map((url) => (url ? fetchImageAsBase64(url) : Promise.resolve(null)))
+      validItems.map((it) =>
+        it.product!.imageUrl ? fetchImageAsBase64(it.product!.imageUrl) : Promise.resolve(null)
+      )
     );
 
-    const enrichedItems: EnrichedItem[] = order.items.map((it, i) => ({
+    const enrichedItems: EnrichedItem[] = validItems.map((it, i) => ({
       id: it.id,
       quantity: it.quantity,
       unitPrice: Number(it.unitPrice),
       subtotal: Number(it.subtotal),
-      imageData: imageData[i],
+      imageData: imageData[i] ?? null,
       product: {
-        id: it.product.id,
-        code: it.product.code,
-        name: it.product.name,
-        imageUrl: it.product.imageUrl,
-        misura: it.product.misura,
-        produttore: it.product.produttore,
         ...(it.product as any),
+        id: it.product!.id,
+        code: it.product!.code,
+        name: it.product!.name,
+        imageUrl: it.product!.imageUrl,
+        misura: it.product!.misura,
+        produttore: it.product!.produttore,
       },
     }));
 
