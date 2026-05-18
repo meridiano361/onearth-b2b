@@ -36,7 +36,8 @@ const EMPTY_FILTERS: Filters = {
 
 export default function CatalogView() {
   const { data: session } = useSession();
-  const isCustomer = session?.user?.role === 'CUSTOMER';
+  const isCustomer   = session?.user?.role === 'CUSTOMER';
+  const companyName  = session?.user?.companyName ?? '';
 
   const [search, setSearch]               = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -166,8 +167,10 @@ export default function CatalogView() {
           <div className="border-b border-border bg-cream/30 px-4 sm:px-6 py-5">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="label-luxury text-accent text-2xs uppercase tracking-widest">Benvenuto</p>
-                <h2 className="font-display text-xl text-primary font-light tracking-wide">CASA 2027</h2>
+                <p className="label-luxury text-accent text-2xs uppercase tracking-widest">ON EARTH B2B</p>
+                <h2 className="font-display text-xl text-primary font-light tracking-wide">
+                  Ciao{companyName ? `, ${companyName}` : ''}
+                </h2>
               </div>
               <Link
                 href="/catalog/orders"

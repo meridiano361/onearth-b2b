@@ -14,7 +14,7 @@ export default function CustomerHome() {
         {/* Section 1 — Welcome */}
         <section>
           <h1 className="text-2xl font-bold text-primary tracking-tight">
-            Benvenuto, {companyName}
+            Ciao{companyName ? `, ${companyName}` : ''}!
           </h1>
           <p className="text-xs uppercase tracking-widest text-gray-400 mt-1">CASA 2027</p>
 
