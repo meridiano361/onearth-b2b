@@ -11,7 +11,9 @@ export default withAuth(
       return NextResponse.redirect(new URL('/catalog', req.url));
     }
 
-    return NextResponse.next();
+    const response = NextResponse.next();
+    response.headers.set('x-pathname', pathname);
+    return response;
   },
   {
     callbacks: {

@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Pencil, ScanEye, Trash2 } from 'lucide-react';
+import { Copy, Pencil, ScanEye, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatCurrency, formatDate, getOrderStatusLabel, getOrderStatusColor } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -12,8 +13,10 @@ import type { Order } from '@/types';
 
 export default function CustomerOrdersView() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   const { data: orders, isLoading } = useQuery<Order[]>({
     queryKey: ['my-orders'],
@@ -38,6 +41,34 @@ export default function CustomerOrdersView() {
     } finally {
       setDeletingId(null);
       setConfirmingId(null);
+    }
+  }
+
+  async function handleDuplicate(order: Order) {
+    setDuplicatingId(order.id);
+    try {
+      const items = (order.items ?? []).map((i: any) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+      }));
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items }),
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error ?? 'Errore');
+      }
+      const { data: newOrder } = await res.json();
+      toast.success('Ordine duplicato con successo');
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      router.push(`/catalog/orders/${newOrder.id}/preview`);
+    } catch (e: any) {
+      toast.error(e.message ?? 'Impossibile duplicare l\'ordine');
+    } finally {
+      setDuplicatingId(null);
     }
   }
 
@@ -131,6 +162,20 @@ export default function CustomerOrdersView() {
                     order={order}
                     onExported={() => queryClient.invalidateQueries({ queryKey: ['my-orders'] })}
                   />
+
+                  {/* Duplica — solo per ordini esportati */}
+                  {isExported && (
+                    <button
+                      onClick={() => handleDuplicate(order)}
+                      disabled={duplicatingId === order.id}
+                      className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors disabled:opacity-50"
+                    >
+                      <Copy size={11} />
+                      <span className="hidden sm:inline">
+                        {duplicatingId === order.id ? 'Duplicando...' : 'Duplica ordine'}
+                      </span>
+                    </button>
+                  )}
 
                   {/* Elimina */}
                   {!isExported && (
