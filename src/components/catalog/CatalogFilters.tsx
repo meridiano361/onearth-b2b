@@ -50,7 +50,7 @@ function FilterSelect({
       <select
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value || null)}
-        className="w-full text-xs border border-border rounded px-2 py-1.5 text-primary bg-white focus:outline-none focus:border-accent transition-colors appearance-none cursor-pointer"
+        className="w-full text-xs border border-border rounded px-2 py-1.5 text-primary bg-white focus:outline-none focus:border-accent transition-colors cursor-pointer"
       >
         <option value="">Tutti</option>
         {options.map((o) => (

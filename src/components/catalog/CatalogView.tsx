@@ -36,8 +36,7 @@ const EMPTY_FILTERS: Filters = {
 
 export default function CatalogView() {
   const { data: session } = useSession();
-  const isCustomer   = session?.user?.role === 'CUSTOMER';
-  const companyName  = session?.user?.companyName ?? '';
+  const isCustomer = session?.user?.role === 'CUSTOMER';
 
   const [search, setSearch]               = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -162,24 +161,16 @@ export default function CatalogView() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
 
-        {/* ── Customer homepage section ─────────────────────── */}
+        {/* ── Customer orders shortcut ─────────────────────── */}
         {isCustomer && (
-          <div className="border-b border-border bg-cream/30 px-4 sm:px-6 py-5">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="label-luxury text-accent text-2xs uppercase tracking-widest">ON EARTH B2B</p>
-                <h2 className="font-display text-xl text-primary font-light tracking-wide">
-                  Ciao{companyName ? `, ${companyName}` : ''}
-                </h2>
-              </div>
-              <Link
-                href="/catalog/orders"
-                className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded hover:bg-primary/90 transition-colors flex-shrink-0"
-              >
-                <Package size={15} />
-                I miei Ordini
-              </Link>
-            </div>
+          <div className="border-b border-border bg-cream/30 px-4 sm:px-6 py-3 flex justify-end">
+            <Link
+              href="/catalog/orders"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded hover:bg-primary/90 transition-colors"
+            >
+              <Package size={15} />
+              I miei Ordini
+            </Link>
           </div>
         )}
 
