@@ -13,5 +13,5 @@ export default async function RootPage() {
     redirect('/admin');
   }
 
-  redirect('/home');
+  redirect('/catalog');
 }

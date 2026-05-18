@@ -2,13 +2,18 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import Link from 'next/link';
+import { Search, SlidersHorizontal, X, Package } from 'lucide-react';
 import { debounce } from '@/lib/utils';
 import CatalogFilters from './CatalogFilters';
 import ProductGrid from './ProductGrid';
 import type { Product, Category } from '@/types';
 
 export default function CatalogView() {
+  const { data: session } = useSession();
+  const isCustomer = session?.user?.role === 'CUSTOMER';
+
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -193,6 +198,48 @@ export default function CatalogView() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
+
+        {/* ── Customer homepage section ─────────────────────── */}
+        {isCustomer && (
+          <div className="border-b border-border bg-cream/30 px-4 sm:px-6 py-5 space-y-4">
+            {/* Welcome row + orders CTA */}
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="label-luxury text-accent text-2xs uppercase tracking-widest">Benvenuto</p>
+                <h2 className="font-display text-xl text-primary font-light tracking-wide">CASA 2027</h2>
+              </div>
+              <Link
+                href="/catalog/orders"
+                className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded hover:bg-primary/90 transition-colors flex-shrink-0"
+              >
+                <Package size={15} />
+                I miei Ordini
+              </Link>
+            </div>
+
+            {/* ON EARTH banner */}
+            <a
+              href="https://www.on-earth.it"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full bg-primary text-white text-center py-3 rounded hover:bg-primary/90 transition-colors"
+            >
+              <span className="text-sm font-medium tracking-wide">Scopri ON EARTH → www.on-earth.it</span>
+            </a>
+
+            {/* Spotify podcast */}
+            <iframe
+              src="https://open.spotify.com/embed/show/3MjWJeGlQFAy2D2D2awo4t"
+              width="100%"
+              height="152"
+              frameBorder="0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+              className="rounded"
+            />
+          </div>
+        )}
+
         {/* Top bar */}
         <div className="sticky top-0 z-10 bg-background border-b border-border px-4 sm:px-6 py-3 flex items-center gap-2 sm:gap-3">
           {/* Mobile filter button */}

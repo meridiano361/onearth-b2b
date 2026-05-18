@@ -1,10 +1,8 @@
 import { Metadata } from 'next';
-import OrdersView from '@/components/orders/OrdersView';
+import CustomerOrdersView from '@/components/orders/CustomerOrdersView';
 
-export const metadata: Metadata = {
-  title: 'My Orders',
-};
+export const metadata: Metadata = { title: 'I miei Ordini — ON EARTH B2B' };
 
 export default function OrdersPage() {
-  return <OrdersView />;
+  return <CustomerOrdersView />;
 }
