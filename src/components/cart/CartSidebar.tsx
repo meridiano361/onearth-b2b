@@ -14,7 +14,7 @@ import type { Category } from '@/types';
 export default function CartSidebar() {
   const { data: session } = useSession();
   const router = useRouter();
-  const { items, clearCart, getTotalItems, hasLotWarnings, notes, setNotes } = useCartStore();
+  const { items, clearCart, getTotalItems, hasLotWarnings } = useCartStore();
   const [isConfirming, setIsConfirming] = useState(false);
 
   const totalItems = getTotalItems();
@@ -40,7 +40,6 @@ export default function CartSidebar() {
           quantity: i.quantity,
           unitPrice: i.product.costPrice,
         })),
-        notes,
       };
 
       const res = await fetch('/api/orders', {
@@ -119,17 +118,7 @@ export default function CartSidebar() {
               </div>
             ))}
 
-            {/* Notes */}
-            <div className="px-4 py-3 border-t border-border/50">
-              <label className="label-luxury mb-1.5 block">Note Ordine</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Aggiungi note, istruzioni speciali..."
-                rows={2}
-                className="w-full text-xs border border-border rounded px-3 py-2 resize-none focus:outline-none focus:border-accent bg-white placeholder-gray-300"
-              />
-            </div>
+
           </div>
         )}
       </div>
