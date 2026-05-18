@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 
 const STATUS_FILTERS = [
   { value: '', label: 'Tutti' },
-  { value: 'MERCE_DA_ORDINARE',       label: 'Da ordinare' },
+  { value: 'MERCE_DA_ORDINARE',       label: 'Da esportare' },
   { value: 'MERCE_ORDINATA',          label: 'Ordinata' },
   { value: 'MERCE_PARZIALMENTE_PRONTA', label: 'Parz. pronta' },
   { value: 'MERCE_PRONTA_DA_AVVISARE', label: 'Pronta → da avvisare' },
@@ -18,7 +18,7 @@ const STATUS_FILTERS = [
 ];
 
 const STATUS_STYLE: Record<string, { badge: string; label: string }> = {
-  MERCE_DA_ORDINARE:        { badge: 'bg-gray-100 text-gray-600',   label: 'Da ordinare' },
+  MERCE_DA_ORDINARE:        { badge: 'bg-gray-100 text-gray-600',   label: 'Da esportare' },
   MERCE_ORDINATA:           { badge: 'bg-blue-50 text-blue-700',    label: 'Ordinata' },
   MERCE_PARZIALMENTE_PRONTA:{ badge: 'bg-amber-50 text-amber-700',  label: 'Parz. pronta' },
   MERCE_PRONTA_DA_AVVISARE: { badge: 'bg-green-50 text-green-700',  label: 'Pronta - da avvisare' },
