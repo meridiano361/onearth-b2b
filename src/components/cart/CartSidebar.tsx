@@ -1,68 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ShoppingCart, Trash2, AlertTriangle, Send } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import CartItem from './CartItem';
 import CartSummary from './CartSummary';
-import { useSession } from 'next-auth/react';
-import toast from 'react-hot-toast';
-import { cn, formatCurrency } from '@/lib/utils';
-import type { Category } from '@/types';
 
 export default function CartSidebar() {
-  const { data: session } = useSession();
-  const router = useRouter();
   const { items, clearCart, getTotalItems, hasLotWarnings } = useCartStore();
-  const [isConfirming, setIsConfirming] = useState(false);
 
   const totalItems = getTotalItems();
   const hasWarnings = hasLotWarnings();
   const isEmpty = items.length === 0;
-
-  // Group items by macro-category
-  const grouped = items.reduce<Record<string, typeof items>>((acc, item) => {
-    const catName = item.product.category?.name || 'Other';
-    if (!acc[catName]) acc[catName] = [];
-    acc[catName].push(item);
-    return acc;
-  }, {});
-
-  async function handleConfirmOrder() {
-    if (isEmpty) return;
-    setIsConfirming(true);
-    try {
-      const payload = {
-        customerId: session?.user?.id,
-        items: items.map((i) => ({
-          productId: i.productId,
-          quantity: i.quantity,
-          unitPrice: i.product.costPrice,
-        })),
-      };
-
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to confirm order');
-      }
-
-      const { data: order } = await res.json();
-      clearCart();
-      toast.success('Ordine confermato con successo!');
-      router.push(`/orders?highlight=${order.id}`);
-    } catch (err: any) {
-      toast.error(err.message || 'Impossibile confermare l\'ordine');
-    } finally {
-      setIsConfirming(false);
-    }
-  }
 
   return (
     <div className="flex flex-col h-full">
@@ -107,15 +56,8 @@ export default function CartSidebar() {
               </div>
             )}
 
-            {Object.entries(grouped).map(([category, categoryItems]) => (
-              <div key={category}>
-                <div className="px-4 pt-3 pb-1.5">
-                  <p className="label-luxury text-gray-400">{category}</p>
-                </div>
-                {categoryItems.map((item) => (
-                  <CartItem key={item.productId} item={item} />
-                ))}
-              </div>
+            {items.map((item) => (
+              <CartItem key={item.productId} item={item} />
             ))}
 
 
@@ -129,27 +71,19 @@ export default function CartSidebar() {
           <CartSummary />
 
           <div className="px-4 pb-4 flex-shrink-0">
-            <button
-              onClick={handleConfirmOrder}
-              disabled={isConfirming || hasWarnings}
-              className={cn(
-                'w-full py-2.5 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2',
-                hasWarnings
-                  ? 'bg-amber-100 text-amber-700 cursor-not-allowed'
-                  : 'bg-primary text-background hover:bg-warm-darker disabled:opacity-60'
-              )}
-            >
-              {isConfirming ? (
-                <>In elaborazione...</>
-              ) : hasWarnings ? (
-                <>Correggi prima i lotti</>
-              ) : (
-                <>
-                  <Send size={12} />
-                  Visualizza Ordine
-                </>
-              )}
-            </button>
+            {hasWarnings ? (
+              <div className="w-full py-2.5 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
+                Correggi prima i lotti
+              </div>
+            ) : (
+              <Link
+                href="/catalog/orders"
+                className="w-full py-2.5 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker"
+              >
+                <Send size={12} />
+                Visualizza Ordine
+              </Link>
+            )}
           </div>
         </>
       )}
