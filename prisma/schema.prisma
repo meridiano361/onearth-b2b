@@ -169,6 +169,27 @@ model TemaColore {
   @@map("cls_temi_colore")
 }
 
+model Produttore {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("lkp_produttori")
+}
+
+model Misura {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("lkp_misure")
+}
+
+model FasciaRicarico {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("lkp_fasce_ricarico")
+}
+
 model AccessRequest {
   id               String   @id @default(cuid())
   organizzazione   String

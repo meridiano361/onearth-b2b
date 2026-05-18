@@ -3,12 +3,13 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRef, useState, useEffect, useMemo } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import ManagedSelect from '@/components/admin/ManagedSelect';
 import toast from 'react-hot-toast';
-import type { Product, ClassificazioneValore } from '@/types';
+import type { Product } from '@/types';
 
 const IVA_OPTIONS = [0, 4, 5, 10, 22];
 
@@ -111,51 +112,13 @@ function CascadeSelect({
   );
 }
 
-function FlatSelect({
-  label,
-  value,
-  onChange,
-  options,
-  currentValue,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { id: string; nome: string }[];
-  currentValue?: string | null;
-}) {
-  const extraOption =
-    currentValue && currentValue.trim() !== '' && !options.some((o) => o.nome === currentValue)
-      ? currentValue
-      : null;
-
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent"
-      >
-        <option value="">—</option>
-        {extraOption && <option value={extraOption}>{extraOption}</option>}
-        {options.map((o) => (
-          <option key={o.id} value={o.nome}>
-            {o.nome}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
 export default function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) {
   const isEdit = !!product;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string>(product?.imageUrl || '');
   const [isUploading, setIsUploading] = useState(false);
 
-  // IDs for cascade filtering (not stored in form - form stores names)
+  // IDs for cascade filtering
   const [gmId, setGmId] = useState('');
   const [famId, setFamId] = useState('');
   const [clsId, setClsId] = useState('');
@@ -164,51 +127,47 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   // ── Hierarchy queries ─────────────────────────────────────────
   const { data: gmData } = useQuery({
     queryKey: ['cls', 'gruppoMerceologico'],
-    queryFn: () => fetch('/api/classificazione/gruppoMerceologico').then((r) => r.json()) as Promise<{ data: { id: string; nome: string }[] }>,
+    queryFn: () =>
+      fetch('/api/classificazione/gruppoMerceologico').then((r) => r.json()) as Promise<{
+        data: { id: string; nome: string }[];
+      }>,
   });
 
   const { data: famData } = useQuery({
     queryKey: ['cls', 'famiglia', gmId],
-    queryFn: () => fetch(`/api/classificazione/famiglia?parentId=${gmId}`).then((r) => r.json()) as Promise<{ data: { id: string; nome: string }[] }>,
+    queryFn: () =>
+      fetch(`/api/classificazione/famiglia?parentId=${gmId}`).then((r) => r.json()) as Promise<{
+        data: { id: string; nome: string }[];
+      }>,
     enabled: !!gmId,
   });
 
   const { data: clsData } = useQuery({
     queryKey: ['cls', 'classe', famId],
-    queryFn: () => fetch(`/api/classificazione/classe?parentId=${famId}`).then((r) => r.json()) as Promise<{ data: { id: string; nome: string }[] }>,
+    queryFn: () =>
+      fetch(`/api/classificazione/classe?parentId=${famId}`).then((r) => r.json()) as Promise<{
+        data: { id: string; nome: string }[];
+      }>,
     enabled: !!famId,
   });
 
   const { data: scData } = useQuery({
     queryKey: ['cls', 'sottoclasse', clsId],
-    queryFn: () => fetch(`/api/classificazione/sottoclasse?parentId=${clsId}`).then((r) => r.json()) as Promise<{ data: { id: string; nome: string }[] }>,
+    queryFn: () =>
+      fetch(`/api/classificazione/sottoclasse?parentId=${clsId}`).then((r) => r.json()) as Promise<{
+        data: { id: string; nome: string }[];
+      }>,
     enabled: !!clsId,
   });
 
   const { data: goData } = useQuery({
     queryKey: ['cls', 'gruppoOmogeneo', scId],
-    queryFn: () => fetch(`/api/classificazione/gruppoOmogeneo?parentId=${scId}`).then((r) => r.json()) as Promise<{ data: { id: string; nome: string }[] }>,
+    queryFn: () =>
+      fetch(`/api/classificazione/gruppoOmogeneo?parentId=${scId}`).then((r) => r.json()) as Promise<{
+        data: { id: string; nome: string }[];
+      }>,
     enabled: !!scId,
   });
-
-  // ── Flat classification queries ───────────────────────────────
-  const { data: classData } = useQuery({
-    queryKey: ['classificazione-all'],
-    queryFn: async () => {
-      const res = await fetch('/api/classificazione');
-      if (!res.ok) throw new Error('Failed');
-      return res.json() as Promise<{ data: ClassificazioneValore[] }>;
-    },
-  });
-
-  const classMap = useMemo(() => {
-    const map: Record<string, { id: string; nome: string }[]> = {};
-    for (const v of classData?.data || []) {
-      if (!map[v.tipo]) map[v.tipo] = [];
-      map[v.tipo].push({ id: v.id, nome: v.nome });
-    }
-    return map;
-  }, [classData]);
 
   const {
     register,
@@ -414,8 +373,18 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <Input label="Misure" {...register('misura')} placeholder="es. 40x40 cm" />
-        <Input label="Produttore" {...register('produttore')} placeholder="Nome del produttore" />
+        <ManagedSelect
+          entita="misura"
+          label="Misure"
+          value={watch('misura') || ''}
+          onChange={(v) => setValue('misura', v)}
+        />
+        <ManagedSelect
+          entita="produttore"
+          label="Produttore"
+          value={watch('produttore') || ''}
+          onChange={(v) => setValue('produttore', v)}
+        />
       </div>
 
       {/* ── Classificazione gerarchica ── */}
@@ -459,44 +428,39 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           options={goData?.data || []}
           disabled={!scId}
         />
-        <FlatSelect
+        <ManagedSelect
+          entita="linea"
           label="Linea"
           value={watch('nomLinea') || ''}
           onChange={(v) => setValue('nomLinea', v)}
-          options={classMap['nomLinea'] || []}
-          currentValue={product?.nomLinea}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <FlatSelect
+        <ManagedSelect
+          entita="stagione"
           label="Stagione"
           value={watch('stagione') || ''}
           onChange={(v) => setValue('stagione', v)}
-          options={classMap['stagione'] || []}
-          currentValue={product?.stagione}
         />
-        <FlatSelect
+        <ManagedSelect
+          entita="collezione"
           label="Collezione"
           value={watch('collezione') || ''}
           onChange={(v) => setValue('collezione', v)}
-          options={classMap['collezione'] || []}
-          currentValue={product?.collezione}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <FlatSelect
+        <ManagedSelect
+          entita="colore"
           label="Colore"
           value={watch('colore') || ''}
           onChange={(v) => setValue('colore', v)}
-          options={classMap['colore'] || []}
-          currentValue={product?.colore}
         />
-        <FlatSelect
+        <ManagedSelect
+          entita="temaColore"
           label="Tema colore"
           value={watch('temaColore') || ''}
           onChange={(v) => setValue('temaColore', v)}
-          options={classMap['temaColore'] || []}
-          currentValue={product?.temaColore}
         />
       </div>
 
@@ -571,10 +535,11 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Input
+        <ManagedSelect
+          entita="fasciaRicarico"
           label="Fascia di ricarico"
-          {...register('fasciaRicarico')}
-          placeholder="es. Bassa, Media, Alta"
+          value={watch('fasciaRicarico') || ''}
+          onChange={(v) => setValue('fasciaRicarico', v)}
         />
         <Input
           label="Note"
