@@ -62,10 +62,10 @@ export default function MobileNav() {
 
           {/* I miei Ordini */}
           <Link
-            href="/orders"
+            href="/catalog/orders"
             className={cn(
               'flex-1 flex flex-col items-center justify-center gap-0.5 py-3 text-xs transition-colors',
-              pathname.startsWith('/orders') ? 'text-primary font-semibold' : 'text-gray-400'
+              (pathname.startsWith('/catalog/orders') || pathname.startsWith('/orders')) ? 'text-primary font-semibold' : 'text-gray-400'
             )}
           >
             <Package size={20} />

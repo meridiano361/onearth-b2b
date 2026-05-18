@@ -67,6 +67,7 @@ export function getOrderStatusLabel(status: string): string {
     MERCE_PARZIALMENTE_PRONTA: 'Parz. pronta',
     MERCE_PRONTA_DA_AVVISARE: 'Pronta - da avvisare',
     MERCE_PRONTA_AVVISATO: 'Pronta - avvisato',
+    ESPORTATO: 'Esportato',
   };
   return labels[status] || status;
 }
@@ -78,6 +79,7 @@ export function getOrderStatusColor(status: string): string {
     MERCE_PARZIALMENTE_PRONTA: 'bg-amber-50 text-amber-700',
     MERCE_PRONTA_DA_AVVISARE: 'bg-green-50 text-green-700',
     MERCE_PRONTA_AVVISATO: 'bg-green-100 text-green-800',
+    ESPORTATO: 'bg-purple-50 text-purple-700',
   };
   return colors[status] || 'bg-gray-100 text-gray-600';
 }

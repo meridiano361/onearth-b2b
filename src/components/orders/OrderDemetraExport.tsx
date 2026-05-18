@@ -3,11 +3,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Database, ChevronDown } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Order } from '@/types';
 import toast from 'react-hot-toast';
 
 interface Props {
   order: Order;
+  onExported?: () => void;
 }
 
 function download(data: string | ArrayBuffer, filename: string, mime: string) {
@@ -22,7 +24,16 @@ function download(data: string | ArrayBuffer, filename: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function OrderDemetraExport({ order }: Props) {
+async function markExported(orderId: string) {
+  await fetch(`/api/orders/${orderId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'ESPORTATO' }),
+  });
+}
+
+export default function OrderDemetraExport({ order, onExported }: Props) {
+  const queryClient = useQueryClient();
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const shortId = order.id.slice(0, 8);
@@ -42,7 +53,7 @@ export default function OrderDemetraExport({ order }: Props) {
     setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
   }
 
-  function handleCSV(e: React.MouseEvent) {
+  async function handleCSV(e: React.MouseEvent) {
     e.stopPropagation();
     setPos(null);
     const lines = [
@@ -52,6 +63,9 @@ export default function OrderDemetraExport({ order }: Props) {
     // UTF-8 BOM so Italian Excel opens it correctly
     download('﻿' + lines.join('\r\n'), `ordine-demetra-${shortId}.csv`, 'text/csv;charset=utf-8;');
     toast.success('CSV Demetra pronto');
+    await markExported(order.id);
+    queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+    onExported?.();
   }
 
   async function handleXLSX(e: React.MouseEvent) {
@@ -74,6 +88,9 @@ export default function OrderDemetraExport({ order }: Props) {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       );
       toast.success('Excel Demetra pronto');
+      await markExported(order.id);
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      onExported?.();
     } catch {
       toast.error('Errore nella generazione');
     }

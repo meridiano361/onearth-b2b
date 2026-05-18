@@ -3,11 +3,11 @@
 import { useState, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { ArrowLeft, FileText, CheckCircle, Minus, Plus } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle, Minus, Plus, X, Database, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import type { Order, OrderItem } from '@/types';
+import type { Order, OrderItem, Product } from '@/types';
 
 // ── Grouping options ───────────────────────────────────────────
 const GROUPINGS = [
@@ -31,12 +31,14 @@ function ProductCard({
   effectiveSubtotal,
   isSaving,
   onQtyChange,
+  onRemove,
 }: {
   item: OrderItem;
   effectiveQty: number;
   effectiveSubtotal: number;
   isSaving: boolean;
   onQtyChange: (id: string, qty: number) => void;
+  onRemove: (id: string) => void;
 }) {
   const product = item.product!;
   const lotSize = product.lotSize || 1;
@@ -60,6 +62,14 @@ function ProductCard({
             </span>
           </div>
         )}
+        {/* Remove button */}
+        <button
+          onClick={() => onRemove(item.id)}
+          className="absolute top-2 left-2 bg-white/80 rounded p-1 text-gray-500 hover:text-red-500 transition-colors"
+          title="Rimuovi"
+        >
+          <X size={12} />
+        </button>
         {/* Qty badge */}
         <div className="absolute top-2 right-2 bg-primary/90 text-white text-2xs font-bold px-1.5 py-0.5 leading-tight">
           ×{effectiveQty}
@@ -106,6 +116,154 @@ function ProductCard({
   );
 }
 
+// ── Add Products Modal ─────────────────────────────────────────
+function AddProductsModal({
+  orderId,
+  onClose,
+  onAdded,
+}: {
+  orderId: string;
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+
+  // Debounce search input
+  const debounceRef = useRef<NodeJS.Timeout>();
+  function handleSearchChange(val: string) {
+    setSearch(val);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(val), 300);
+  }
+
+  const { data: products, isLoading } = useQuery<Product[]>({
+    queryKey: ['products-for-order', debouncedSearch],
+    queryFn: async () => {
+      const params = new URLSearchParams({ active: 'true', limit: '200' });
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      const res = await fetch(`/api/products?${params}`);
+      if (!res.ok) throw new Error();
+      return (await res.json()).data as Product[];
+    },
+    staleTime: 30_000,
+  });
+
+  async function handleAdd(product: Product) {
+    const qty = quantities[product.id] ?? product.lotSize ?? 1;
+    setAddingId(product.id);
+    try {
+      const res = await fetch(`/api/orders/${orderId}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: product.id, quantity: qty }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(`${product.code} aggiunto`);
+      onAdded();
+    } catch {
+      toast.error('Impossibile aggiungere il prodotto');
+    } finally {
+      setAddingId(null);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 bg-white w-full sm:max-w-lg sm:rounded-lg shadow-xl max-h-[85vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+          <p className="text-sm font-semibold text-primary">Aggiungi prodotti</p>
+          <button onClick={onClose} className="text-gray-400 hover:text-primary p-1 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-4 py-3 border-b border-border flex-shrink-0">
+          <div className="flex items-center gap-2 border border-border rounded px-3 py-2">
+            <Search size={13} className="text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Cerca per codice o nome..."
+              className="flex-1 text-xs outline-none bg-transparent text-primary placeholder-gray-400"
+            />
+          </div>
+        </div>
+
+        {/* Product list */}
+        <div className="flex-1 overflow-y-auto">
+          {isLoading && (
+            <div className="flex items-center justify-center py-10">
+              <LoadingSpinner text="Caricamento..." />
+            </div>
+          )}
+          {!isLoading && (products ?? []).length === 0 && (
+            <p className="text-center text-sm text-gray-400 py-10">Nessun prodotto trovato.</p>
+          )}
+          {(products ?? []).map((product) => {
+            const qty = quantities[product.id] ?? product.lotSize ?? 1;
+            const isAdding = addingId === product.id;
+            return (
+              <div
+                key={product.id}
+                className="flex items-center gap-3 px-4 py-3 border-b border-border/50 hover:bg-cream/50 transition-colors"
+              >
+                {/* Thumbnail */}
+                <div className="w-10 h-10 flex-shrink-0 bg-[#C8C0B5] overflow-hidden rounded">
+                  {product.imageUrl ? (
+                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-2xs font-mono text-white/80">{product.code.slice(0, 4)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-2xs font-mono text-gray-400 truncate">{product.code}</p>
+                  <p className="text-xs text-primary truncate font-medium">{product.name}</p>
+                  <p className="text-2xs text-gray-400">{formatCurrency(product.costPrice)}</p>
+                </div>
+
+                {/* Qty + Add */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <input
+                    type="number"
+                    min={product.lotSize ?? 1}
+                    step={product.lotSize ?? 1}
+                    value={qty}
+                    onChange={(e) =>
+                      setQuantities((prev) => ({
+                        ...prev,
+                        [product.id]: Math.max(1, parseInt(e.target.value) || 1),
+                      }))
+                    }
+                    className="w-14 text-xs text-center border border-border rounded px-1.5 py-1 text-primary"
+                  />
+                  <button
+                    onClick={() => handleAdd(product)}
+                    disabled={isAdding}
+                    className="text-xs bg-primary text-white px-2.5 py-1.5 rounded hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  >
+                    {isAdding ? '...' : 'Aggiungi'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main view ──────────────────────────────────────────────────
 export default function OrderPreviewView({ id }: { id: string }) {
   const queryClient = useQueryClient();
@@ -113,6 +271,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
   const [qtyOverrides, setQtyOverrides] = useState<QtyMap>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [addProductsOpen, setAddProductsOpen] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
 
   const { data: order, isLoading, error } = useQuery<Order>({
@@ -181,6 +340,23 @@ export default function OrderPreviewView({ id }: { id: string }) {
     }
   }
 
+  async function handleRemove(itemId: string) {
+    try {
+      const res = await fetch(`/api/orders/${id}/items/${itemId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      setQtyOverrides((prev) => {
+        const n = { ...prev };
+        delete n[itemId];
+        return n;
+      });
+      toast.success('Prodotto rimosso');
+    } catch {
+      toast.error('Impossibile rimuovere il prodotto');
+    }
+  }
+
   async function handleExportPDF() {
     setExporting(true);
     try {
@@ -204,6 +380,36 @@ export default function OrderPreviewView({ id }: { id: string }) {
     }
   }
 
+  async function handleExportCSV() {
+    const csvItems = (order?.items ?? []).filter((it) => it.product != null);
+    const csv =
+      'Codice;Quantità\r\n' +
+      csvItems
+        .map((it) => {
+          const qty = qtyOverrides[it.id] ?? it.quantity;
+          return `${it.product?.code};${qty}`;
+        })
+        .join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ordine-demetra-${id.slice(0, 8)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('CSV pronto');
+    // Mark as ESPORTATO
+    await fetch(`/api/orders/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'ESPORTATO' }),
+    });
+    queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+    queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
+  }
+
   const currentGroupLabel = GROUPINGS.find((g) => g.value === groupBy)?.label ?? '';
 
   // ── Loading / error states ─────────────────────────────────
@@ -212,7 +418,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center px-4">
         <p className="text-sm text-gray-500">Ordine non trovato.</p>
-        <Link href="/orders" className="mt-3 text-sm text-accent hover:underline">
+        <Link href="/catalog/orders" className="mt-3 text-sm text-accent hover:underline">
           ← Torna agli ordini
         </Link>
       </div>
@@ -223,12 +429,23 @@ export default function OrderPreviewView({ id }: { id: string }) {
   return (
     <div className="flex flex-col min-h-full">
 
+      {addProductsOpen && (
+        <AddProductsModal
+          orderId={id}
+          onClose={() => setAddProductsOpen(false)}
+          onAdded={() => {
+            queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
+            queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+          }}
+        />
+      )}
+
       {/* ── Page header ──────────────────────────────────── */}
       <div className="sticky top-0 z-20 bg-white border-b border-border">
         <div className="px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
-              href="/orders"
+              href="/catalog/orders"
               className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-primary hover:bg-cream rounded transition-colors"
             >
               <ArrowLeft size={16} />
@@ -307,6 +524,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
                   effectiveSubtotal={item.effectiveSubtotal}
                   isSaving={savingId === item.id}
                   onQtyChange={handleQtyChange}
+                  onRemove={handleRemove}
                 />
               ))}
             </div>
@@ -325,10 +543,6 @@ export default function OrderPreviewView({ id }: { id: string }) {
       </div>
 
       {/* ── Fixed footer ──────────────────────────────────── */}
-      {/*
-        On mobile: bottom-16 (64 px) to clear the fixed MobileNav (≈60 px tall).
-        On desktop lg+: bottom-0, right-80/xl:right-[340px] to clear the CartSidebar.
-      */}
       <div className="
         fixed bottom-16 left-0 right-0 z-20
         lg:bottom-0 lg:right-80 xl:right-[340px]
@@ -337,7 +551,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
         <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           {/* Back */}
           <Link
-            href="/orders"
+            href="/catalog/orders"
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary transition-colors flex-shrink-0"
           >
             <ArrowLeft size={14} />
@@ -346,6 +560,25 @@ export default function OrderPreviewView({ id }: { id: string }) {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
+            {/* Add products */}
+            <button
+              onClick={() => setAddProductsOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded hover:bg-cream transition-colors text-gray-600 hover:text-primary flex-shrink-0"
+            >
+              <Plus size={12} />
+              <span className="hidden sm:inline">Aggiungi prodotti</span>
+            </button>
+
+            {/* CSV export */}
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded hover:bg-cream transition-colors text-gray-600 hover:text-primary flex-shrink-0"
+            >
+              <Database size={12} />
+              <span className="hidden sm:inline">CSV</span>
+            </button>
+
+            {/* PDF export */}
             <button
               onClick={handleExportPDF}
               disabled={exporting}

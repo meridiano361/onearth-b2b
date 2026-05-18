@@ -11,6 +11,7 @@ const updateSchema = z.object({
     'MERCE_PARZIALMENTE_PRONTA',
     'MERCE_PRONTA_DA_AVVISARE',
     'MERCE_PRONTA_AVVISATO',
+    'ESPORTATO',
   ]).optional(),
   notes: z.string().optional().nullable(),
 });
@@ -88,12 +89,47 @@ export async function PATCH(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
     const data = updateSchema.parse(body);
+
+    // Customers can only mark their own orders as ESPORTATO
+    if (session.user.role === 'CUSTOMER') {
+      if (data.status !== 'ESPORTATO') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      const orderCheck = await prisma.order.findUnique({
+        where: { id: params.id },
+        select: { customerId: true },
+      });
+      if (!orderCheck || orderCheck.customerId !== session.user.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      const updated = await prisma.order.update({
+        where: { id: params.id },
+        data: { status: 'ESPORTATO' },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              companyName: true,
+              customerCode: true,
+              email: true,
+              createdAt: true,
+            },
+          },
+          items: {
+            include: {
+              product: { include: { category: true } },
+            },
+          },
+        },
+      });
+      return NextResponse.json({ data: serializeOrder(updated) });
+    }
+
+    // Admin path below
 
     const updateData: any = { ...data };
 
@@ -151,8 +187,20 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (session.user.role === 'CUSTOMER') {
+      const order = await prisma.order.findUnique({
+        where: { id: params.id },
+        select: { customerId: true, status: true },
+      });
+      if (!order) return NextResponse.json({ error: 'Ordine non trovato' }, { status: 404 });
+      if (order.customerId !== session.user.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      if (order.status === 'ESPORTATO') {
+        return NextResponse.json({ error: 'Non puoi eliminare un ordine esportato' }, { status: 403 });
+      }
     }
 
     await prisma.order.delete({ where: { id: params.id } });

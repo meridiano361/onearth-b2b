@@ -4,7 +4,8 @@ export type OrderStatus =
   | 'MERCE_ORDINATA'
   | 'MERCE_PARZIALMENTE_PRONTA'
   | 'MERCE_PRONTA_DA_AVVISARE'
-  | 'MERCE_PRONTA_AVVISATO';
+  | 'MERCE_PRONTA_AVVISATO'
+  | 'ESPORTATO';
 
 export interface Collection {
   id: string;
