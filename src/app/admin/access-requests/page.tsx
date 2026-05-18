@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { Check } from 'lucide-react';
+import { Check, UserPlus, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
 
 interface AccessRequest {
   id: string;
@@ -17,8 +20,18 @@ interface AccessRequest {
   createdAt: string;
 }
 
+interface CreatedAccount {
+  companyName: string;
+  email: string;
+  customerCode: string;
+  password: string;
+}
+
 export default function AccessRequestsPage() {
   const queryClient = useQueryClient();
+  const [creatingId, setCreatingId] = useState<string | null>(null);
+  const [markingId, setMarkingId]   = useState<string | null>(null);
+  const [createdAccount, setCreatedAccount] = useState<CreatedAccount | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['access-requests'],
@@ -33,7 +46,28 @@ export default function AccessRequestsPage() {
   const pending = requests.filter((r) => r.status === 'pending');
   const handled = requests.filter((r) => r.status !== 'pending');
 
+  async function handleCreateAccount(req: AccessRequest) {
+    setCreatingId(req.id);
+    try {
+      const res = await fetch(`/api/access-requests/${req.id}/create-account`, {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Errore');
+      }
+      const { data } = await res.json();
+      setCreatedAccount(data);
+      await queryClient.invalidateQueries({ queryKey: ['access-requests'] });
+    } catch (err: any) {
+      toast.error(err.message || 'Impossibile creare l\'account');
+    } finally {
+      setCreatingId(null);
+    }
+  }
+
   async function markHandled(id: string) {
+    setMarkingId(id);
     try {
       const res = await fetch(`/api/access-requests/${id}`, {
         method: 'PATCH',
@@ -45,6 +79,8 @@ export default function AccessRequestsPage() {
       toast.success('Richiesta segnata come gestita');
     } catch {
       toast.error('Impossibile aggiornare la richiesta');
+    } finally {
+      setMarkingId(null);
     }
   }
 
@@ -61,7 +97,7 @@ export default function AccessRequestsPage() {
               <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsabile</th>
               <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
               <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stato</th>
-              <th className="py-3 px-4 w-24" />
+              <th className="py-3 px-4 w-48" />
             </tr>
           </thead>
           <tbody>
@@ -74,9 +110,7 @@ export default function AccessRequestsPage() {
                 <td className="py-3 px-4 text-gray-600">{r.puntoVendita}</td>
                 <td className="py-3 px-4 text-gray-600">{r.nomeResponsabile}</td>
                 <td className="py-3 px-4">
-                  <a href={`mailto:${r.email}`} className="text-accent hover:underline">
-                    {r.email}
-                  </a>
+                  <a href={`mailto:${r.email}`} className="text-accent hover:underline">{r.email}</a>
                 </td>
                 <td className="py-3 px-4">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-2xs font-medium ${
@@ -89,13 +123,25 @@ export default function AccessRequestsPage() {
                 </td>
                 <td className="py-3 px-4 text-right">
                   {r.status === 'pending' && (
-                    <button
-                      onClick={() => markHandled(r.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-2xs font-medium text-green-700 border border-green-200 rounded hover:bg-green-50 transition-colors"
-                    >
-                      <Check size={11} />
-                      Gestita
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleCreateAccount(r)}
+                        disabled={creatingId === r.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-2xs font-medium bg-primary text-white rounded hover:bg-primary/90 transition-colors disabled:opacity-50"
+                      >
+                        <UserPlus size={11} />
+                        {creatingId === r.id ? 'Creando…' : 'Crea account'}
+                      </button>
+                      <button
+                        onClick={() => markHandled(r.id)}
+                        disabled={markingId === r.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-2xs font-medium text-green-700 border border-green-200 rounded hover:bg-green-50 transition-colors disabled:opacity-50"
+                        title="Segna come gestita senza creare account"
+                      >
+                        <Check size={11} />
+                        Gestita
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -139,6 +185,54 @@ export default function AccessRequestsPage() {
           )}
         </div>
       )}
+
+      {/* Account created — one-time credentials reveal */}
+      <Modal
+        isOpen={!!createdAccount}
+        onClose={() => setCreatedAccount(null)}
+        title="Account creato"
+        size="sm"
+        footer={
+          <Button onClick={() => setCreatedAccount(null)}>Ho preso nota, chiudi</Button>
+        }
+      >
+        {createdAccount && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Account creato con successo per{' '}
+              <span className="font-semibold text-primary">{createdAccount.companyName}</span>.
+            </p>
+
+            <div className="bg-cream border border-border rounded divide-y divide-border/60">
+              {[
+                { label: 'Email',            value: createdAccount.email },
+                { label: 'Codice cliente',   value: createdAccount.customerCode },
+                { label: 'Password',         value: createdAccount.password, bold: true },
+              ].map(({ label, value, bold }) => (
+                <div key={label} className="flex items-center justify-between px-4 py-2.5">
+                  <div>
+                    <p className="text-2xs text-gray-400 uppercase tracking-wider">{label}</p>
+                    <p className={`font-mono text-sm mt-0.5 ${bold ? 'font-bold text-primary' : 'text-gray-700'}`}>
+                      {value}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(value); toast.success('Copiato'); }}
+                    className="text-gray-300 hover:text-primary transition-colors ml-3"
+                    title="Copia"
+                  >
+                    <Copy size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+              Comunica queste credenziali al cliente. La password non sarà più visualizzabile.
+            </p>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -1,11 +1,14 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Copy } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import toast from 'react-hot-toast';
+import { generateDefaultPassword } from '@/lib/password';
 import type { Customer } from '@/types';
 
 const createSchema = z.object({
@@ -48,6 +51,8 @@ export default function CustomerForm({ customer, onSuccess, onCancel }: Customer
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateValues | UpdateValues>({
     defaultValues: customer
@@ -61,11 +66,18 @@ export default function CustomerForm({ customer, onSuccess, onCancel }: Customer
           country: customer.country || '',
           vatNumber: customer.vatNumber || '',
         }
-      : {
-          role: 'CUSTOMER',
-          isActive: true,
-        },
+      : { role: 'CUSTOMER', isActive: true },
   });
+
+  // Auto-sync generated password when companyName changes (create mode only)
+  const companyName = watch('companyName', '') as string;
+  const generatedPassword = generateDefaultPassword(companyName);
+
+  useEffect(() => {
+    if (!isEdit) {
+      setValue('password' as any, generatedPassword);
+    }
+  }, [generatedPassword, isEdit, setValue]);
 
   async function onSubmit(values: CreateValues | UpdateValues) {
     try {
@@ -73,14 +85,8 @@ export default function CustomerForm({ customer, onSuccess, onCancel }: Customer
       const method = isEdit ? 'PATCH' : 'POST';
 
       const body: any = { ...values };
-      // Don't send empty password on edit
-      if (isEdit && !body.newPassword) {
-        delete body.newPassword;
-      }
-      // Clean empty optional fields
-      Object.keys(body).forEach((k) => {
-        if (body[k] === '') body[k] = null;
-      });
+      if (isEdit && !body.newPassword) delete body.newPassword;
+      Object.keys(body).forEach((k) => { if (body[k] === '') body[k] = null; });
 
       const res = await fetch(url, {
         method,
@@ -100,6 +106,11 @@ export default function CustomerForm({ customer, onSuccess, onCancel }: Customer
     }
   }
 
+  function copyPassword() {
+    navigator.clipboard.writeText(generatedPassword);
+    toast.success('Password copiata');
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
@@ -109,15 +120,14 @@ export default function CustomerForm({ customer, onSuccess, onCancel }: Customer
           error={(errors as any).companyName?.message}
           placeholder="Studio Design Rossi"
         />
-        {!isEdit && (
+        {!isEdit ? (
           <Input
             label="Codice Cliente *"
             {...register('customerCode')}
             error={(errors as any).customerCode?.message}
             placeholder="ADS001"
           />
-        )}
-        {isEdit && (
+        ) : (
           <div>
             <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
               Codice Cliente
@@ -137,39 +147,53 @@ export default function CustomerForm({ customer, onSuccess, onCancel }: Customer
           error={(errors as any).email?.message}
           placeholder="acquisti@azienda.com"
         />
-        <Input
-          label={isEdit ? 'Nuova Password (lascia vuoto per mantenerla)' : 'Password *'}
-          type="password"
-          {...register(isEdit ? 'newPassword' : 'password')}
-          error={(errors as any).password?.message || (errors as any).newPassword?.message}
-          placeholder="••••••••"
-        />
+
+        {/* Create mode: show auto-generated password (read-only) */}
+        {!isEdit ? (
+          <div>
+            <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
+              Password generata automaticamente
+            </label>
+            <div className="flex items-center gap-2 px-3 py-2.5 bg-cream border border-border rounded">
+              <span className={`flex-1 font-mono text-sm ${companyName ? 'text-primary' : 'text-gray-400'}`}>
+                {companyName ? generatedPassword : 'onearth_…'}
+              </span>
+              {companyName && (
+                <button
+                  type="button"
+                  onClick={copyPassword}
+                  className="text-gray-400 hover:text-primary transition-colors flex-shrink-0"
+                  title="Copia password"
+                >
+                  <Copy size={13} />
+                </button>
+              )}
+            </div>
+            <p className="text-2xs text-gray-400 mt-1">
+              Comunica questa password al cliente prima di salvare — non sarà più visibile.
+            </p>
+            {/* Hidden field carries the value into the form payload */}
+            <input type="hidden" {...register('password' as any)} />
+          </div>
+        ) : (
+          <Input
+            label="Nuova Password (vuoto = invariata)"
+            type="password"
+            {...register('newPassword' as any)}
+            error={(errors as any).newPassword?.message}
+            placeholder="••••••••"
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <Input
-          label="Telefono"
-          {...register('phone')}
-          placeholder="+39 02 123456"
-        />
-        <Input
-          label="Città"
-          {...register('city')}
-          placeholder="Milano"
-        />
-        <Input
-          label="Paese"
-          {...register('country')}
-          placeholder="Italia"
-        />
+        <Input label="Telefono" {...register('phone')} placeholder="+39 02 123456" />
+        <Input label="Città"    {...register('city')}  placeholder="Milano" />
+        <Input label="Paese"    {...register('country')} placeholder="Italia" />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Partita IVA"
-          {...register('vatNumber')}
-          placeholder="IT12345678901"
-        />
+        <Input label="Partita IVA" {...register('vatNumber')} placeholder="IT12345678901" />
         <div>
           <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
             Ruolo
@@ -185,19 +209,12 @@ export default function CustomerForm({ customer, onSuccess, onCancel }: Customer
       </div>
 
       <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          id="isActive"
-          {...register('isActive')}
-          className="w-4 h-4 accent-accent"
-        />
+        <input type="checkbox" id="isActive" {...register('isActive')} className="w-4 h-4 accent-accent" />
         <label htmlFor="isActive" className="text-sm text-primary">Attivo (può accedere)</label>
       </div>
 
       <div className="flex justify-end gap-3 pt-2">
-        <Button variant="ghost" type="button" onClick={onCancel}>
-          Annulla
-        </Button>
+        <Button variant="ghost" type="button" onClick={onCancel}>Annulla</Button>
         <Button type="submit" loading={isSubmitting}>
           {isEdit ? 'Salva Modifiche' : 'Crea Cliente'}
         </Button>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, KeyRound, Copy } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -13,11 +13,18 @@ import CustomerForm from './CustomerForm';
 import type { Customer } from '@/types';
 import toast from 'react-hot-toast';
 
+interface ResetResult {
+  companyName: string;
+  password: string;
+}
+
 export default function AdminCustomersPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [resetting, setResetting] = useState<string | null>(null);
+  const [resetResult, setResetResult] = useState<ResetResult | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-customers', search],
@@ -44,6 +51,20 @@ export default function AdminCustomersPage() {
       toast.success(`Cliente ${customer.isActive ? 'disattivato' : 'attivato'}`);
     } catch {
       toast.error('Impossibile aggiornare il cliente');
+    }
+  }
+
+  async function handleResetPassword(customer: Customer) {
+    setResetting(customer.id);
+    try {
+      const res = await fetch(`/api/customers/${customer.id}/reset-password`, { method: 'POST' });
+      if (!res.ok) throw new Error((await res.json()).error || 'Errore');
+      const { data } = await res.json();
+      setResetResult({ companyName: customer.companyName, password: data.password });
+    } catch (err: any) {
+      toast.error(err.message || 'Impossibile resettare la password');
+    } finally {
+      setResetting(null);
     }
   }
 
@@ -153,8 +174,17 @@ export default function AdminCustomersPage() {
                       <button
                         onClick={() => setEditingCustomer(customer)}
                         className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
+                        title="Modifica"
                       >
                         <Edit2 size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleResetPassword(customer)}
+                        disabled={resetting === customer.id}
+                        className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors disabled:opacity-40"
+                        title="Reset password"
+                      >
+                        <KeyRound size={13} />
                       </button>
                       <button
                         onClick={() => handleToggleActive(customer)}
@@ -169,6 +199,7 @@ export default function AdminCustomersPage() {
                       <button
                         onClick={() => handleDelete(customer)}
                         className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
+                        title="Elimina"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -211,6 +242,50 @@ export default function AdminCustomersPage() {
             }}
             onCancel={() => setEditingCustomer(null)}
           />
+        )}
+      </Modal>
+
+      {/* Password reset — one-time reveal */}
+      <Modal
+        isOpen={!!resetResult}
+        onClose={() => setResetResult(null)}
+        title="Password resettata"
+        size="sm"
+        footer={
+          <Button onClick={() => setResetResult(null)}>Ho preso nota, chiudi</Button>
+        }
+      >
+        {resetResult && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              La password di{' '}
+              <span className="font-semibold text-primary">{resetResult.companyName}</span>{' '}
+              è stata resettata.
+            </p>
+            <div className="bg-cream border border-border rounded p-4">
+              <p className="text-2xs text-gray-500 uppercase tracking-wider mb-2">
+                Nuova password temporanea
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-base font-bold text-primary flex-1">
+                  {resetResult.password}
+                </span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(resetResult.password);
+                    toast.success('Copiata');
+                  }}
+                  className="text-gray-400 hover:text-primary transition-colors"
+                  title="Copia"
+                >
+                  <Copy size={14} />
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+              Comunica questa password al cliente. Non verrà mostrata di nuovo.
+            </p>
+          </div>
         )}
       </Modal>
     </div>
