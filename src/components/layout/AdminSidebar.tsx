@@ -11,6 +11,7 @@ import {
   Layers,
   LogOut,
   X,
+  UserPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -21,6 +22,7 @@ const navItems = [
   { href: '/admin/products', label: 'Prodotti', icon: Package },
   { href: '/admin/customers', label: 'Clienti', icon: Users },
   { href: '/admin/classificazione', label: 'Classificazione', icon: Layers },
+  { href: '/admin/access-requests', label: 'Richieste Accesso', icon: UserPlus },
 ];
 
 interface AdminSidebarProps {

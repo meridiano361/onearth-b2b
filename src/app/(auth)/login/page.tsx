@@ -1,8 +1,10 @@
 import { Metadata } from 'next';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { authOptions } from '@/lib/auth';
 import LoginForm from '@/components/auth/LoginForm';
+import RequestAccessButton from '@/components/auth/RequestAccessButton';
 import Image from 'next/image';
 
 export const metadata: Metadata = {
@@ -36,24 +38,22 @@ export default async function LoginPage() {
         />
 
         <div className="relative z-10">
-          <Image
-            src="/logo-on-earth/onearth_solo_bianco.png"
-            alt="On Earth"
-            height={40}
-            width={256}
-            className="object-contain"
-            priority
-          />
+          <Link href="/">
+            <Image
+              src="/logo-on-earth/onearth_solo_bianco.png"
+              alt="On Earth"
+              height={40}
+              width={256}
+              className="object-contain"
+              priority
+            />
+          </Link>
           <div className="mt-6 w-12 h-px bg-accent" />
         </div>
 
         <div className="relative z-10">
           <p className="text-gray-400 text-sm font-light leading-relaxed max-w-xs">
-            Anteprima Collezione B2B<br />
-            <span className="text-accent">CASA 2027</span>
-          </p>
-          <p className="mt-6 text-gray-600 text-xs tracking-wider uppercase">
-            Piattaforma Ordini Showroom
+            Collezione <span className="text-accent">CASA 2027</span>
           </p>
         </div>
       </div>
@@ -63,26 +63,27 @@ export default async function LoginPage() {
         <div className="max-w-sm w-full mx-auto">
           {/* Mobile logo */}
           <div className="lg:hidden mb-12">
-            <Image
-              src="/logo-on-earth/onearth_solo.png"
-              alt="On Earth"
-              height={32}
-              width={205}
-              className="object-contain"
-              priority
-            />
+            <Link href="/">
+              <Image
+                src="/logo-on-earth/onearth_solo.png"
+                alt="On Earth"
+                height={32}
+                width={205}
+                className="object-contain"
+                priority
+              />
+            </Link>
           </div>
 
           <div className="mb-10">
             <h2 className="text-2xl font-light text-primary tracking-tight">Bentornato</h2>
-            <p className="mt-1.5 text-sm text-gray-500">Accedi al tuo portale showroom</p>
+            <p className="mt-1.5 text-sm text-gray-500">C&apos;è un mondo da scoprire.</p>
           </div>
 
           <LoginForm />
 
           <p className="mt-8 text-center text-xs text-gray-400">
-            Hai bisogno di accesso?{' '}
-            <span className="text-accent cursor-pointer hover:underline">Contatta il tuo agente di vendita</span>
+            <RequestAccessButton />
           </p>
         </div>
       </div>

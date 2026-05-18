@@ -169,6 +169,17 @@ model TemaColore {
   @@map("cls_temi_colore")
 }
 
+model AccessRequest {
+  id               String   @id @default(cuid())
+  organizzazione   String
+  puntoVendita     String
+  nomeResponsabile String
+  email            String
+  status           String   @default("pending")
+  createdAt        DateTime @default(now())
+  @@map("access_requests")
+}
+
 enum Role {
   ADMIN
   CUSTOMER
