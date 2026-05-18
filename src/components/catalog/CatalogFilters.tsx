@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronRight, RotateCcw, Globe, Music } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { Category, Product } from '@/types';
@@ -176,8 +176,8 @@ export default function CatalogFilters({
   );
 
   return (
-    <div className="w-56 flex-shrink-0 border-r border-border bg-white overflow-y-auto h-full">
-      <div className="p-4">
+    <div className="w-56 flex-shrink-0 border-r border-border bg-white flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <span className="label-luxury">Filtri</span>
@@ -272,6 +272,28 @@ export default function CatalogFilters({
           </FilterSection>
         )}
 
+      </div>
+
+      {/* ── Footer links ─────────────────────────────────── */}
+      <div className="flex-shrink-0 border-t border-border/60 px-4 py-3 space-y-2">
+        <a
+          href="https://open.spotify.com/show/3MjWJeGlQFAy2D2D2awo4t"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-start gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors leading-snug"
+        >
+          <Music size={12} className="mt-0.5 flex-shrink-0 text-[#1DB954]" />
+          <span>Ascolta Materia, il podcast di ON EARTH</span>
+        </a>
+        <a
+          href="https://www.on-earth.it"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <Globe size={12} className="flex-shrink-0" />
+          <span>www.on-earth.it</span>
+        </a>
       </div>
     </div>
   );
