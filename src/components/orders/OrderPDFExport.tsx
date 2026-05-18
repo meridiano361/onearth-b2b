@@ -1,52 +1,47 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useState } from 'react';
 import { FileText } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import toast from 'react-hot-toast';
 import type { Order } from '@/types';
-import type { PDFGrouping } from './OrderPDFDocument';
 
 interface Props {
   order: Order;
 }
 
-const GROUPING_OPTIONS: { value: PDFGrouping; label: string }[] = [
-  { value: 'all', label: 'Nessun raggruppamento' },
+const GROUPING_OPTIONS: { value: string; label: string }[] = [
+  { value: 'gruppoMerceologico', label: 'Gruppo merceologico' },
   { value: 'famiglia', label: 'Famiglia' },
-  { value: 'sottofamiglia', label: 'Sottofamiglia' },
+  { value: 'classe', label: 'Classe' },
+  { value: 'sottoclasse', label: 'Sottoclasse' },
+  { value: 'gruppoOmogeneo', label: 'Gruppo omogeneo' },
   { value: 'nomLinea', label: 'Linea' },
+  { value: 'stagione', label: 'Stagione' },
+  { value: 'collezione', label: 'Collezione' },
   { value: 'colore', label: 'Colore' },
+  { value: 'temaColore', label: 'Tema colore' },
 ];
 
 export default function OrderPDFExport({ order }: Props) {
-  const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
-  const [grouping, setGrouping] = useState<PDFGrouping>('all');
+  const [grouping, setGrouping] = useState('collezione');
   const [generating, setGenerating] = useState(false);
 
   async function handleGenerate() {
     setGenerating(true);
     try {
-      const [pdfLib, docModule] = await Promise.all([
-        import('@react-pdf/renderer'),
-        import('./OrderPDFDocument'),
-      ]);
-
-      const { pdf } = pdfLib;
-      const { OrderPDFDocument } = docModule;
-      const customerName = session?.user?.companyName;
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const blob = await pdf(
-        React.createElement(OrderPDFDocument, { order, grouping, customerName }) as any
-      ).toBlob();
-
-      const suffix = grouping !== 'all' ? `-per-${grouping}` : '';
-      const filename = `ordine-${order.id.slice(0, 8)}${suffix}.pdf`;
-
+      const res = await fetch(
+        `/api/orders/${order.id}/pdf-classification?groupBy=${grouping}`
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Errore');
+      }
+      const blob = await res.blob();
+      const label = grouping.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const filename = `ordine-${order.id.slice(0, 8)}-per-${label}.pdf`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -55,12 +50,11 @@ export default function OrderPDFExport({ order }: Props) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-
       toast.success('PDF pronto');
       setIsOpen(false);
     } catch (err: any) {
       console.error(err);
-      toast.error('Errore nella generazione del PDF');
+      toast.error(err.message || 'Errore nella generazione del PDF');
     } finally {
       setGenerating(false);
     }
@@ -109,7 +103,7 @@ export default function OrderPDFExport({ order }: Props) {
             </label>
             <select
               value={grouping}
-              onChange={(e) => setGrouping(e.target.value as PDFGrouping)}
+              onChange={(e) => setGrouping(e.target.value)}
               disabled={generating}
               className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent bg-white transition-colors"
             >
@@ -117,15 +111,13 @@ export default function OrderPDFExport({ order }: Props) {
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-            {grouping !== 'all' && (
-              <p className="text-xs text-gray-400 mt-1.5">
-                I prodotti verranno raggruppati per{' '}
-                <span className="font-medium text-primary">
-                  {GROUPING_OPTIONS.find((o) => o.value === grouping)?.label.toLowerCase()}
-                </span>
-                , con subtotale per ogni gruppo.
-              </p>
-            )}
+            <p className="text-xs text-gray-400 mt-1.5">
+              I prodotti verranno raggruppati per{' '}
+              <span className="font-medium text-primary">
+                {GROUPING_OPTIONS.find((o) => o.value === grouping)?.label.toLowerCase()}
+              </span>
+              , con subtotale per ogni gruppo.
+            </p>
           </div>
         </div>
       </Modal>
