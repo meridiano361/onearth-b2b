@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isValidLotQuantity, roundToLot } from '@/lib/utils';
@@ -25,6 +25,10 @@ export default function QuantitySelector({
   const [inputValue, setInputValue] = useState(String(value));
   const inputRef = useRef<HTMLInputElement>(null);
   const hasWarning = value > 0 && !isValidLotQuantity(value, lotSize);
+
+  useEffect(() => {
+    setInputValue(String(value));
+  }, [value]);
 
   function decrement() {
     const step = lotSize > 1 ? lotSize : 1;
