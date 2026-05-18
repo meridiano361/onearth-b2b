@@ -27,9 +27,7 @@ export default async function B2BLayout({
         </main>
 
         {/* Cart sidebar — desktop only, hidden on /catalog/orders */}
-        <aside className="hidden lg:block w-80 xl:w-[340px] border-l border-border flex-shrink-0 bg-white overflow-y-auto">
-          <CartSidebarConditional />
-        </aside>
+        <CartSidebarConditional />
       </div>
 
       {/* Mobile bottom tab bar (Catalogo | Cart | Ordini) */}
