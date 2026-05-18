@@ -62,7 +62,7 @@ export function isValidLotQuantity(quantity: number, lotSize: number): boolean {
 
 export function getOrderStatusLabel(status: string): string {
   const labels: Record<string, string> = {
-    MERCE_DA_ORDINARE: 'Da ordinare',
+    MERCE_DA_ORDINARE: 'Da esportare',
     MERCE_ORDINATA: 'Ordinata',
     MERCE_PARZIALMENTE_PRONTA: 'Parz. pronta',
     MERCE_PRONTA_DA_AVVISARE: 'Pronta - da avvisare',

@@ -104,7 +104,7 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
         className="text-xs text-gray-400 hover:text-primary border border-border rounded px-2 py-1.5 hover:bg-cream transition-all flex items-center gap-1"
       >
         <Database size={11} />
-        <span className="hidden sm:inline">Demetra</span>
+        <span className="hidden sm:inline">Esporta in Demetra</span>
         <ChevronDown
           size={9}
           className={`transition-transform duration-150 ${pos ? 'rotate-180' : ''}`}
