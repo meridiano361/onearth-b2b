@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
-import { Package, Download, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, Download, ChevronDown, ChevronUp, ScanEye } from 'lucide-react';
 import OrderPDFExport from './OrderPDFExport';
 import OrderDemetraExport from './OrderDemetraExport';
 import { formatCurrency, formatDate, getOrderStatusLabel } from '@/lib/utils';
@@ -85,6 +86,14 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
             <Download size={11} />
             <span className="hidden sm:inline">XLSX</span>
           </button>
+          <Link
+            href={`/catalog/orders/${order.id}/preview`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs text-gray-400 hover:text-primary border border-border rounded px-2 py-1.5 hover:bg-cream transition-all flex items-center gap-1"
+          >
+            <ScanEye size={11} />
+            <span className="hidden sm:inline">Anteprima</span>
+          </Link>
           <OrderPDFExport order={order} />
           <OrderDemetraExport order={order} />
           {isExpanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
