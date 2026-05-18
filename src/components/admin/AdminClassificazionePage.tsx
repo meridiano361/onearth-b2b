@@ -21,48 +21,84 @@ const TIPI = [
   { tipo: 'temaColore', label: 'Tema colore' },
 ];
 
+// For hierarchy levels: specifies the parent tipo and the FK field name to send on POST
+const PARENT_CONFIG: Record<string, { parentTipo: string; parentLabel: string; parentField: string }> = {
+  famiglia: { parentTipo: 'gruppoMerceologico', parentLabel: 'Gruppo merceologico', parentField: 'gruppoMerceologicoId' },
+  classe: { parentTipo: 'famiglia', parentLabel: 'Famiglia', parentField: 'famigliaId' },
+  sottoclasse: { parentTipo: 'classe', parentLabel: 'Classe', parentField: 'classeId' },
+  gruppoOmogeneo: { parentTipo: 'sottoclasse', parentLabel: 'Sottoclasse', parentField: 'sottoclasseId' },
+};
+
 interface ValoreItem {
   id: string;
   nome: string;
   createdAt: string;
 }
 
-function ClassificazioneTab({ tipo, label }: { tipo: string; label: string }) {
+function ClassificazioneTab({ tipo }: { tipo: string }) {
   const queryClient = useQueryClient();
+  const [selectedParentId, setSelectedParentId] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [newNome, setNewNome] = useState('');
+  const [newParentId, setNewParentId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNome, setEditNome] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const parentConfig = PARENT_CONFIG[tipo];
+
+  // Load parent options for hierarchy child types
+  const { data: parentData } = useQuery({
+    queryKey: ['cls-admin', parentConfig?.parentTipo],
+    queryFn: () =>
+      fetch(`/api/classificazione/${parentConfig!.parentTipo}`).then((r) => r.json()) as Promise<{ data: ValoreItem[] }>,
+    enabled: !!parentConfig,
+  });
+
+  const parentOptions = parentData?.data || [];
+
+  // Load items — for hierarchy children, require a parent to be selected
   const { data, isLoading } = useQuery({
-    queryKey: ['classificazione', tipo],
+    queryKey: ['cls-admin', tipo, selectedParentId],
     queryFn: async () => {
-      const res = await fetch(`/api/classificazione/${tipo}`);
+      const url = selectedParentId
+        ? `/api/classificazione/${tipo}?parentId=${selectedParentId}`
+        : `/api/classificazione/${tipo}`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Failed');
       return res.json();
     },
+    enabled: !parentConfig || !!selectedParentId,
   });
 
   const items: ValoreItem[] = data?.data || [];
 
   async function handleAdd() {
-    if (!newNome.trim()) return;
+    const name = newNome.trim();
+    if (!name) return;
+    if (parentConfig && !newParentId) {
+      toast.error(`Seleziona ${parentConfig.parentLabel}`);
+      return;
+    }
     setIsSubmitting(true);
     try {
+      const body: Record<string, string> = { nome: name };
+      if (parentConfig) body[parentConfig.parentField] = newParentId;
+
       const res = await fetch(`/api/classificazione/${tipo}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: newNome.trim() }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Failed');
       }
       setNewNome('');
+      setNewParentId('');
       setIsAdding(false);
-      await queryClient.invalidateQueries({ queryKey: ['classificazione', tipo] });
+      await queryClient.invalidateQueries({ queryKey: ['cls-admin', tipo] });
       await queryClient.invalidateQueries({ queryKey: ['classificazione-all'] });
       toast.success('Valore aggiunto');
     } catch (err: any) {
@@ -85,7 +121,7 @@ function ClassificazioneTab({ tipo, label }: { tipo: string; label: string }) {
         throw new Error(err.error || 'Failed');
       }
       setEditingId(null);
-      await queryClient.invalidateQueries({ queryKey: ['classificazione', tipo] });
+      await queryClient.invalidateQueries({ queryKey: ['cls-admin', tipo] });
       await queryClient.invalidateQueries({ queryKey: ['classificazione-all'] });
       toast.success('Valore aggiornato');
     } catch (err: any) {
@@ -98,7 +134,7 @@ function ClassificazioneTab({ tipo, label }: { tipo: string; label: string }) {
       const res = await fetch(`/api/classificazione/${tipo}/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed');
       setDeletingId(null);
-      await queryClient.invalidateQueries({ queryKey: ['classificazione', tipo] });
+      await queryClient.invalidateQueries({ queryKey: ['cls-admin', tipo] });
       await queryClient.invalidateQueries({ queryKey: ['classificazione-all'] });
       toast.success('Valore eliminato');
     } catch {
@@ -108,42 +144,85 @@ function ClassificazioneTab({ tipo, label }: { tipo: string; label: string }) {
 
   return (
     <div>
+      {/* Parent filter for hierarchy child types */}
+      {parentConfig && (
+        <div className="mb-4 flex items-center gap-3">
+          <label className="text-xs font-medium text-gray-500 whitespace-nowrap">
+            Filtra per {parentConfig.parentLabel}:
+          </label>
+          <select
+            value={selectedParentId}
+            onChange={(e) => { setSelectedParentId(e.target.value); setIsAdding(false); }}
+            className="h-8 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent flex-1 max-w-xs"
+          >
+            <option value="">— seleziona —</option>
+            {parentOptions.map((p) => (
+              <option key={p.id} value={p.id}>{p.nome}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <p className="text-xs text-gray-400">{items.length} valor{items.length === 1 ? 'e' : 'i'}</p>
-        {!isAdding && (
-          <Button size="sm" icon={<Plus size={12} />} onClick={() => { setIsAdding(true); setNewNome(''); }}>
+        <p className="text-xs text-gray-400">
+          {!parentConfig || selectedParentId
+            ? `${items.length} valor${items.length === 1 ? 'e' : 'i'}`
+            : 'Seleziona un elemento per visualizzare'}
+        </p>
+        {(!parentConfig || selectedParentId) && !isAdding && (
+          <Button size="sm" icon={<Plus size={12} />} onClick={() => { setIsAdding(true); setNewNome(''); setNewParentId(selectedParentId); }}>
             Aggiungi
           </Button>
         )}
       </div>
 
+      {/* Add form */}
       {isAdding && (
-        <div className="flex items-center gap-2 mb-3 p-3 bg-cream rounded border border-border">
-          <input
-            autoFocus
-            value={newNome}
-            onChange={(e) => setNewNome(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setIsAdding(false); setNewNome(''); } }}
-            placeholder={`Nuovo valore...`}
-            className="flex-1 text-sm border border-border rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent bg-white"
-          />
-          <button
-            onClick={handleAdd}
-            disabled={isSubmitting}
-            className="p-1.5 text-green-600 hover:text-green-700 disabled:opacity-50"
-          >
-            <Check size={15} />
-          </button>
-          <button
-            onClick={() => { setIsAdding(false); setNewNome(''); }}
-            className="p-1.5 text-gray-400 hover:text-gray-600"
-          >
-            <X size={15} />
-          </button>
+        <div className="flex flex-col gap-2 mb-3 p-3 bg-cream rounded border border-border">
+          {parentConfig && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500 whitespace-nowrap w-28">{parentConfig.parentLabel}:</label>
+              <select
+                value={newParentId}
+                onChange={(e) => setNewParentId(e.target.value)}
+                className="flex-1 text-sm border border-border rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent bg-white"
+              >
+                <option value="">— seleziona —</option>
+                {parentOptions.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <input
+              autoFocus
+              value={newNome}
+              onChange={(e) => setNewNome(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setIsAdding(false); setNewNome(''); } }}
+              placeholder="Nuovo valore..."
+              className="flex-1 text-sm border border-border rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent bg-white"
+            />
+            <button
+              onClick={handleAdd}
+              disabled={isSubmitting}
+              className="p-1.5 text-green-600 hover:text-green-700 disabled:opacity-50"
+            >
+              <Check size={15} />
+            </button>
+            <button
+              onClick={() => { setIsAdding(false); setNewNome(''); }}
+              className="p-1.5 text-gray-400 hover:text-gray-600"
+            >
+              <X size={15} />
+            </button>
+          </div>
         </div>
       )}
 
-      {isLoading ? (
+      {/* List */}
+      {parentConfig && !selectedParentId ? null : isLoading ? (
         <div className="py-12 text-center"><LoadingSpinner className="mx-auto" /></div>
       ) : items.length === 0 ? (
         <p className="text-center text-gray-400 text-sm py-12">
@@ -254,9 +333,9 @@ export default function AdminClassificazionePage() {
       </div>
 
       {/* Tab content */}
-      {TIPI.map(({ tipo, label }) =>
+      {TIPI.map(({ tipo }) =>
         activeTab === tipo ? (
-          <ClassificazioneTab key={tipo} tipo={tipo} label={label} />
+          <ClassificazioneTab key={tipo} tipo={tipo} />
         ) : null
       )}
     </div>

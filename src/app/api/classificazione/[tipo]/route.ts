@@ -22,6 +22,14 @@ const TIPO_DELEGATE: Record<string, PrismaDelegate> = {
   temaColore: prisma.temaColore,
 };
 
+// FK field name that links each level to its parent
+const PARENT_FIELD: Record<string, string> = {
+  famiglia: 'gruppoMerceologicoId',
+  classe: 'famigliaId',
+  sottoclasse: 'classeId',
+  gruppoOmogeneo: 'sottoclasseId',
+};
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { tipo: string } }
@@ -33,7 +41,12 @@ export async function GET(
     const delegate = TIPO_DELEGATE[params.tipo];
     if (!delegate) return NextResponse.json({ error: 'Tipo non valido' }, { status: 400 });
 
-    const valori = await delegate.findMany({ orderBy: { nome: 'asc' } });
+    const parentId = req.nextUrl.searchParams.get('parentId');
+    const parentField = PARENT_FIELD[params.tipo];
+
+    const where = parentId && parentField ? { [parentField]: parentId } : undefined;
+
+    const valori = await delegate.findMany({ where, orderBy: { nome: 'asc' } });
     const withTipo = valori.map((v) => ({ ...v, tipo: params.tipo }));
 
     return NextResponse.json({ data: withTipo });
@@ -55,9 +68,20 @@ export async function POST(
     const delegate = TIPO_DELEGATE[params.tipo];
     if (!delegate) return NextResponse.json({ error: 'Tipo non valido' }, { status: 400 });
 
-    const { nome } = z.object({ nome: z.string().min(1) }).parse(await req.json());
+    const body = await req.json();
+    const { nome } = z.object({ nome: z.string().min(1) }).parse(body);
 
-    const valore = await delegate.create({ data: { nome: nome.trim() } });
+    const parentField = PARENT_FIELD[params.tipo];
+    const parentId = parentField ? body[parentField] : undefined;
+
+    if (parentField && !parentId) {
+      return NextResponse.json({ error: `Campo ${parentField} obbligatorio` }, { status: 400 });
+    }
+
+    const data: Record<string, string> = { nome: nome.trim() };
+    if (parentField && parentId) data[parentField] = parentId;
+
+    const valore = await delegate.create({ data });
 
     return NextResponse.json({ data: { ...valore, tipo: params.tipo } }, { status: 201 });
   } catch (err: any) {

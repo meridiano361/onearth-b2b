@@ -84,37 +84,53 @@ model Product {
 }
 
 model GruppoMerceologico {
-  id        String   @id @default(cuid())
-  nome      String   @unique
-  createdAt DateTime @default(now())
+  id        String     @id @default(cuid())
+  nome      String     @unique
+  createdAt DateTime   @default(now())
+  famiglie  Famiglia[]
   @@map("cls_gruppi_merceologici")
 }
 
 model Famiglia {
-  id        String   @id @default(cuid())
-  nome      String   @unique
-  createdAt DateTime @default(now())
+  id                   String             @id @default(cuid())
+  nome                 String
+  gruppoMerceologicoId String
+  createdAt            DateTime           @default(now())
+  gruppoMerceologico   GruppoMerceologico @relation(fields: [gruppoMerceologicoId], references: [id], onDelete: Cascade)
+  classi               Classe[]
+  @@unique([nome, gruppoMerceologicoId])
   @@map("cls_famiglie")
 }
 
 model Classe {
-  id        String   @id @default(cuid())
-  nome      String   @unique
-  createdAt DateTime @default(now())
+  id          String        @id @default(cuid())
+  nome        String
+  famigliaId  String
+  createdAt   DateTime      @default(now())
+  famiglia    Famiglia      @relation(fields: [famigliaId], references: [id], onDelete: Cascade)
+  sottoclassi Sottoclasse[]
+  @@unique([nome, famigliaId])
   @@map("cls_classi")
 }
 
 model Sottoclasse {
-  id        String   @id @default(cuid())
-  nome      String   @unique
-  createdAt DateTime @default(now())
+  id             String           @id @default(cuid())
+  nome           String
+  classeId       String
+  createdAt      DateTime         @default(now())
+  classe         Classe           @relation(fields: [classeId], references: [id], onDelete: Cascade)
+  gruppiOmogenei GruppoOmogeneo[]
+  @@unique([nome, classeId])
   @@map("cls_sottoclassi")
 }
 
 model GruppoOmogeneo {
-  id        String   @id @default(cuid())
-  nome      String   @unique
-  createdAt DateTime @default(now())
+  id            String      @id @default(cuid())
+  nome          String
+  sottoclasseId String
+  createdAt     DateTime    @default(now())
+  sottoclasse   Sottoclasse @relation(fields: [sottoclasseId], references: [id], onDelete: Cascade)
+  @@unique([nome, sottoclasseId])
   @@map("cls_gruppi_omogenei")
 }
 
