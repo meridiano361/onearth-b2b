@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, Trash2, AlertTriangle, Send, Download } from 'lucide-react';
+import { ShoppingCart, Trash2, AlertTriangle, Send } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import CartItem from './CartItem';
 import CartSummary from './CartSummary';
@@ -16,7 +16,6 @@ export default function CartSidebar() {
   const router = useRouter();
   const { items, clearCart, getTotalItems, hasLotWarnings, notes, setNotes } = useCartStore();
   const [isConfirming, setIsConfirming] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
 
   const totalItems = getTotalItems();
   const hasWarnings = hasLotWarnings();
@@ -63,46 +62,6 @@ export default function CartSidebar() {
       toast.error(err.message || 'Impossibile confermare l\'ordine');
     } finally {
       setIsConfirming(false);
-    }
-  }
-
-  async function handleExportExcel() {
-    if (isEmpty) return;
-    setIsExporting(true);
-    try {
-      const payload = {
-        items: items.map((i) => ({
-          productId: i.productId,
-          productCode: i.product.code,
-          productName: i.product.name,
-          quantity: i.quantity,
-          unitPrice: i.product.costPrice,
-          categoryName: i.product.category?.name,
-        })),
-        customerCode: session?.user?.customerCode,
-        companyName: session?.user?.companyName,
-      };
-
-      const res = await fetch('/api/export/excel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) throw new Error('Export failed');
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `order-${session?.user?.customerCode}-${new Date().toISOString().slice(0, 10)}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('Excel esportato');
-    } catch {
-      toast.error('Esportazione fallita');
-    } finally {
-      setIsExporting(false);
     }
   }
 
@@ -180,16 +139,7 @@ export default function CartSidebar() {
         <>
           <CartSummary />
 
-          <div className="px-4 pb-4 space-y-2 flex-shrink-0">
-            <button
-              onClick={handleExportExcel}
-              disabled={isExporting}
-              className="w-full py-2 text-xs font-medium border border-border rounded hover:bg-cream transition-colors flex items-center justify-center gap-2 text-gray-600 disabled:opacity-50"
-            >
-              <Download size={12} />
-              Esporta Excel
-            </button>
-
+          <div className="px-4 pb-4 flex-shrink-0">
             <button
               onClick={handleConfirmOrder}
               disabled={isConfirming || hasWarnings}
@@ -207,7 +157,7 @@ export default function CartSidebar() {
               ) : (
                 <>
                   <Send size={12} />
-                  Conferma Ordine
+                  Visualizza Ordine
                 </>
               )}
             </button>

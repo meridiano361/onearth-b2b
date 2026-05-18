@@ -26,7 +26,7 @@ export default function CartSummary() {
           <span className="font-medium text-primary">Valore Ordine</span>
           <span className="font-semibold text-primary">{formatCurrency(totalValue)}</span>
         </div>
-        <p className="text-2xs text-gray-400">(Prezzi di costo, franco fabbrica)</p>
+        <p className="text-2xs text-gray-400">(Prezzi di costo i.e.)</p>
       </div>
     </div>
   );

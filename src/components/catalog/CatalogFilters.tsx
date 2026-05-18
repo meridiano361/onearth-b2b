@@ -11,9 +11,6 @@ interface CatalogFiltersProps {
   products: Product[];
   selectedCategoryId: string | null;
   onCategoryChange: (id: string | null) => void;
-  priceRange: [number, number];
-  onPriceRangeChange: (range: [number, number]) => void;
-  maxPrice: number;
   selectedFamiglia: string | null;
   onFamigliaChange: (v: string | null) => void;
   selectedSottofamiglia: string | null;
@@ -128,9 +125,6 @@ export default function CatalogFilters({
   products,
   selectedCategoryId,
   onCategoryChange,
-  priceRange,
-  onPriceRangeChange,
-  maxPrice,
   selectedFamiglia,
   onFamigliaChange,
   selectedSottofamiglia,
@@ -278,26 +272,6 @@ export default function CatalogFilters({
           </FilterSection>
         )}
 
-        {/* Price range */}
-        <FilterSection title="Prezzo Costo Max">
-          <div className="px-1">
-            <input
-              type="range"
-              min={0}
-              max={maxPrice}
-              step={50}
-              value={priceRange[1]}
-              onChange={(e) => onPriceRangeChange([priceRange[0], Number(e.target.value)])}
-              className="w-full accent-accent h-1 cursor-pointer"
-            />
-            <div className="flex justify-between mt-1.5">
-              <span className="text-2xs text-gray-400">€0</span>
-              <span className="text-2xs text-primary font-medium">
-                ≤ €{priceRange[1].toLocaleString('it-IT')}
-              </span>
-            </div>
-          </div>
-        </FilterSection>
       </div>
     </div>
   );

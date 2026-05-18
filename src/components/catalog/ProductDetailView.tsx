@@ -179,7 +179,7 @@ export default function ProductDetailView({ id }: Props) {
                 ) : (
                   <>
                     <ShoppingBag size={14} />
-                    Aggiungi all&apos;Ordine
+                    Aggiungi
                   </>
                 )}
               </button>

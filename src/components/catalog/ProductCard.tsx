@@ -151,7 +151,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             ) : (
               <span className="flex items-center justify-center gap-1.5">
                 <ShoppingBag size={12} />
-                Aggiungi all&apos;Ordine
+                Aggiungi
               </span>
             )}
           </button>

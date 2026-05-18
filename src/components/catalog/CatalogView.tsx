@@ -17,7 +17,6 @@ export default function CatalogView() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 99999]);
   const [showFilters, setShowFilters] = useState(false);
 
   // New filter states
@@ -42,7 +41,6 @@ export default function CatalogView() {
     setSelectedSottofamiglia(null);
     setSelectedColore(null);
     setSelectedNomLinea(null);
-    setPriceRange([0, maxPrice]);
   }
 
   const hasActiveFilters = !!(
@@ -50,8 +48,7 @@ export default function CatalogView() {
     selectedFamiglia ||
     selectedSottofamiglia ||
     selectedColore ||
-    selectedNomLinea ||
-    priceRange[1] < 99999
+    selectedNomLinea
   );
 
   const { data: productsData, isLoading: productsLoading } = useQuery({
@@ -81,17 +78,6 @@ export default function CatalogView() {
     const children = cats.filter((c) => c.parentId === categoryId);
     return [categoryId, ...children.flatMap((c) => getDescendantIds(c.id, cats))];
   }
-
-  const maxPrice = useMemo(() => {
-    if (products.length === 0) return 10000;
-    return Math.ceil(Math.max(...products.map((p) => p.costPrice)) / 100) * 100;
-  }, [products]);
-
-  useMemo(() => {
-    if (priceRange[1] === 99999 && maxPrice < 99999) {
-      setPriceRange([0, maxPrice]);
-    }
-  }, [maxPrice]);
 
   const filteredProducts = useMemo(() => {
     let result = products;
@@ -132,19 +118,14 @@ export default function CatalogView() {
       result = result.filter((p) => p.nomLinea === selectedNomLinea);
     }
 
-    result = result.filter((p) => p.costPrice <= priceRange[1] && p.costPrice >= priceRange[0]);
-
     return result;
-  }, [products, selectedCategoryId, debouncedSearch, priceRange, categories, selectedFamiglia, selectedSottofamiglia, selectedColore, selectedNomLinea]);
+  }, [products, selectedCategoryId, debouncedSearch, categories, selectedFamiglia, selectedSottofamiglia, selectedColore, selectedNomLinea]);
 
   const filterProps = {
     categories,
     products,
     selectedCategoryId,
     onCategoryChange: setSelectedCategoryId,
-    priceRange,
-    onPriceRangeChange: setPriceRange,
-    maxPrice,
     selectedFamiglia,
     onFamigliaChange: setSelectedFamiglia,
     selectedSottofamiglia,
