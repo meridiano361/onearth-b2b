@@ -71,6 +71,7 @@ model Product {
   stagione           String?
   temaColore         String?
   fasciaRicarico     String?
+  fasciaSconto       Decimal? @db.Decimal(5, 2)
   collezione         String?
   tranche            String?
   iva                Int      @default(22)

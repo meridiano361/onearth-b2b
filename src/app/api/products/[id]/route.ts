@@ -31,6 +31,7 @@ const updateSchema = z.object({
   stagione: z.string().optional().nullable(),
   temaColore: z.string().optional().nullable(),
   fasciaRicarico: z.string().optional().nullable(),
+  fasciaSconto: z.coerce.number().min(0).max(100).optional().nullable(),
   collezione: z.string().optional().nullable(),
   tranche: z.string().optional().nullable(),
   iva: z.coerce.number().int().min(0).max(100).optional(),

@@ -28,10 +28,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'SUPER_ADMIN') {
+  if (!session || !isAdminRole(session.user.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  await prisma.organization.delete({ where: { id: params.id } });
+  await prisma.$transaction([
+    prisma.order.updateMany({ where: { organizationId: params.id }, data: { organizationId: null } }),
+    prisma.organization.delete({ where: { id: params.id } }),
+  ]);
   return NextResponse.json({ ok: true });
 }

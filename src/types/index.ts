@@ -58,6 +58,7 @@ export interface Product {
   stagione: string | null;
   temaColore: string | null;
   fasciaRicarico: string | null;
+  fasciaSconto: number | null;
   collezione: string | null;
   tranche: string | null;
   iva: number;

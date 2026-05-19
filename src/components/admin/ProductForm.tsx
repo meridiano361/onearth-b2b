@@ -34,6 +34,7 @@ const schema = z
     costPrice: z.string().min(1, 'Obbligatorio').transform(Number),
     retailPrice: z.string().min(1, 'Obbligatorio').transform(Number),
     fasciaRicarico: z.string().optional(),
+    fasciaSconto: z.string().optional(),
     tranche: z.string().optional(),
     notes: z.string().optional(),
     imageUrl: z.string().optional(),
@@ -175,6 +176,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     handleSubmit,
     setValue,
     watch,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -199,6 +201,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           costPrice: String(product.costPrice),
           retailPrice: String(product.retailPrice),
           fasciaRicarico: product.fasciaRicarico || '',
+          fasciaSconto: product.fasciaSconto != null ? String(product.fasciaSconto) : '',
           tranche: product.tranche || '',
           notes: product.notes || '',
           imageUrl: product.imageUrl || '',
@@ -280,12 +283,17 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const costNum = parseFloat(String(watchedCost || 0)) || 0;
   const retailNum = parseFloat(String(watchedRetail || 0)) || 0;
   const ivaNum = parseInt(String(watchedIva || 22), 10) || 0;
-  const pvn = retailNum / (1 + ivaNum / 100);
-  const ricarico = costNum > 0 ? ((pvn - costNum) / costNum) * 100 : null;
+  const pvn = retailNum > 0 ? retailNum / (1 + ivaNum / 100) : 0;
+  const ricarico = costNum > 0 && pvn > 0 ? ((pvn - costNum) / costNum) * 100 : null;
   const margine = pvn > 0 ? ((pvn - costNum) / pvn) * 100 : null;
-  const fasciaSconto = pvn > 0 && costNum > 0 ? (1 - costNum / pvn) * 100 : null;
   const fmtPct = (v: number | null) =>
     v === null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+
+  // Pre-computed register objects so we can override onChange
+  const costPriceReg = register('costPrice');
+  const retailPriceReg = register('retailPrice');
+  const ivaReg = register('iva');
+  const fasciaScReg = register('fasciaSconto');
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -334,6 +342,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           colore: v.colore || null,
           temaColore: v.temaColore || null,
           fasciaRicarico: v.fasciaRicarico || null,
+          fasciaSconto: v.fasciaSconto ? parseFloat(v.fasciaSconto) || null : null,
           tranche: v.tranche || null,
           notes: v.notes || null,
           imageUrl: v.imageUrl || null,
@@ -481,7 +490,19 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         />
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">IVA (%)</label>
-          <select {...register('iva')} className={selectClass}>
+          <select
+            {...ivaReg}
+            onChange={(e) => {
+              ivaReg.onChange(e);
+              const newIva = parseInt(e.target.value, 10) || 0;
+              const sconto = parseFloat(String(getValues('fasciaSconto') || ''));
+              if (!isNaN(sconto) && retailNum > 0) {
+                const newPvn = retailNum / (1 + newIva / 100);
+                setValue('costPrice', Math.max(0, newPvn * (1 - sconto / 100)).toFixed(2));
+              }
+            }}
+            className={selectClass}
+          >
             {IVA_OPTIONS.map((v) => (
               <option key={v} value={String(v)}>
                 {v}%
@@ -502,7 +523,16 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
               type="number"
               step="0.01"
               min="0"
-              {...register('costPrice')}
+              {...costPriceReg}
+              onChange={(e) => {
+                costPriceReg.onChange(e);
+                const cost = parseFloat(e.target.value);
+                if (!isNaN(cost) && pvn > 0) {
+                  setValue('fasciaSconto', ((1 - cost / pvn) * 100).toFixed(2));
+                } else if (!e.target.value) {
+                  setValue('fasciaSconto', '');
+                }
+              }}
               className={priceInputClass}
               placeholder="0.00"
             />
@@ -521,7 +551,16 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
               type="number"
               step="0.01"
               min="0"
-              {...register('retailPrice')}
+              {...retailPriceReg}
+              onChange={(e) => {
+                retailPriceReg.onChange(e);
+                const newRetail = parseFloat(e.target.value);
+                const sconto = parseFloat(String(getValues('fasciaSconto') || ''));
+                if (!isNaN(sconto) && !isNaN(newRetail) && newRetail > 0) {
+                  const newPvn = newRetail / (1 + ivaNum / 100);
+                  setValue('costPrice', Math.max(0, newPvn * (1 - sconto / 100)).toFixed(2));
+                }
+              }}
               className={priceInputClass}
               placeholder="0.00"
             />
@@ -544,7 +583,28 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           value={watch('fasciaRicarico') || ''}
           onChange={(v) => setValue('fasciaRicarico', v)}
         />
-        <ReadOnlyField label="Fascia di sconto" value={fmtPct(fasciaSconto)} />
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Fascia di sconto (%)</label>
+          <div className="relative">
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              {...fasciaScReg}
+              onChange={(e) => {
+                fasciaScReg.onChange(e);
+                const sconto = parseFloat(e.target.value);
+                if (!isNaN(sconto) && pvn > 0) {
+                  setValue('costPrice', Math.max(0, pvn * (1 - sconto / 100)).toFixed(2));
+                }
+              }}
+              className="w-full h-9 border border-border rounded pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              placeholder="es. 48"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
