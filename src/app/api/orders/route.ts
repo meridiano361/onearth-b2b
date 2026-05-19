@@ -72,8 +72,14 @@ export async function GET(req: NextRequest) {
 
     if (!isAdminRole(session.user.role)) {
       if (session.user.role === 'OPERATOR') {
-        // Operators see orders for their selected canale
-        where.canaleId = session.user.canaleId;
+        if (!session.user.canaleId) {
+          // Operator hasn't selected a canale yet — return nothing
+          return NextResponse.json({ data: [], total: 0, page: 1, pageSize: limit, totalPages: 0 });
+        }
+        where.OR = [
+          { canaleId: session.user.canaleId },
+          { operatorId: session.user.id },
+        ];
       } else {
         // CUSTOMER (legacy) or any other non-admin role: filter by customerId
         where.customerId = session.user.id;
