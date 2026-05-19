@@ -37,7 +37,7 @@ export const authOptions: NextAuthOptions = {
         return {
           id: customer.id,
           email: customer.email,
-          role: customer.role as 'ADMIN' | 'CUSTOMER',
+          role: customer.role as import('@/types').Role,
           companyName: customer.companyName,
           customerCode: customer.customerCode,
         };

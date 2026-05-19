@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { isAdminRole } from '@/lib/roles';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
-    if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Accesso negato' }, { status: 403 });
+    if (!isAdminRole(session.user.role)) return NextResponse.json({ error: 'Accesso negato' }, { status: 403 });
 
     // Crea client inline con fallback sui nomi delle variabili
     const supabaseUrl =

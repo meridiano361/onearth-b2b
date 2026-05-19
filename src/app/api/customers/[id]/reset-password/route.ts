@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { generateDefaultPassword } from '@/lib/password';
@@ -11,7 +12,7 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'ADMIN') {
+    if (!session || !isAdminRole(session.user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

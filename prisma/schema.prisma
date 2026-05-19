@@ -202,7 +202,10 @@ model AccessRequest {
 }
 
 enum Role {
+  SUPER_ADMIN
   ADMIN
+  COMMERCIALE
+  MAGAZZINO
   CUSTOMER
 }
 
@@ -234,6 +237,7 @@ enum OrderStatus {
   MERCE_PRONTA_DA_AVVISARE
   MERCE_PRONTA_AVVISATO
   ESPORTATO
+  ANNULLATO
 }
 
 model Order {

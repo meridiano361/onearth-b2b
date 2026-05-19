@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { signOut } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import {
   LayoutDashboard,
   Package,
@@ -10,19 +10,29 @@ import {
   ShoppingCart,
   Layers,
   LogOut,
+  Settings,
   X,
   UserPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
-const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/admin/orders', label: 'Ordini', icon: ShoppingCart },
-  { href: '/admin/products', label: 'Prodotti', icon: Package },
-  { href: '/admin/customers', label: 'Clienti', icon: Users },
-  { href: '/admin/classificazione', label: 'Classificazione', icon: Layers },
-  { href: '/admin/access-requests', label: 'Richieste Accesso', icon: UserPlus },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  exact?: boolean;
+  roles?: string[]; // undefined = all admin roles
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { href: '/admin',                  label: 'Dashboard',          icon: LayoutDashboard, exact: true },
+  { href: '/admin/orders',           label: 'Ordini',             icon: ShoppingCart,    roles: ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE'] },
+  { href: '/admin/products',         label: 'Prodotti',           icon: Package,         roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO', 'COMMERCIALE'] },
+  { href: '/admin/customers',        label: 'Clienti',            icon: Users,           roles: ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE'] },
+  { href: '/admin/classificazione',  label: 'Classificazione',    icon: Layers,          roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO'] },
+  { href: '/admin/access-requests',  label: 'Richieste Accesso',  icon: UserPlus,        roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { href: '/admin/impostazioni',     label: 'Impostazioni',       icon: Settings,        roles: ['SUPER_ADMIN'] },
 ];
 
 interface AdminSidebarProps {
@@ -31,6 +41,12 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ onClose }: AdminSidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = session?.user?.role ?? '';
+
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.roles || item.roles.includes(role)
+  );
 
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href;
@@ -52,7 +68,6 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
           />
           <p className="text-2xs text-gray-600 uppercase tracking-widest">Amministrazione</p>
         </div>
-        {/* Close button — mobile only */}
         {onClose && (
           <button
             onClick={onClose}
@@ -65,7 +80,7 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {navItems.map(({ href, label, icon: Icon, exact }) => (
+        {visibleItems.map(({ href, label, icon: Icon, exact }) => (
           <Link
             key={href}
             href={href}
@@ -83,8 +98,11 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="px-3 py-4 border-t border-white/10">
+      {/* Footer: role badge + logout */}
+      <div className="px-3 py-4 border-t border-white/10 space-y-1">
+        {role && role !== 'CUSTOMER' && (
+          <p className="px-3 text-2xs text-gray-600 uppercase tracking-widest mb-2">{role.replace('_', ' ')}</p>
+        )}
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           className="flex items-center gap-3 px-3 py-2.5 w-full rounded text-xs text-gray-500 hover:text-white hover:bg-white/5 transition-all duration-150"

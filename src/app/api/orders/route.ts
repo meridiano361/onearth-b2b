@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -70,7 +71,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (status) where.status = status;
-    if (customerId && session.user.role === 'ADMIN') where.customerId = customerId;
+    if (customerId && isAdminRole(session.user.role)) where.customerId = customerId;
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
 
     // Use the session user's ID (customers can only create for themselves)
     const effectiveCustomerId =
-      session.user.role === 'ADMIN' && data.customerId
+      isAdminRole(session.user.role) && data.customerId
         ? data.customerId
         : session.user.id;
 

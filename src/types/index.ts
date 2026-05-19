@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'CUSTOMER';
+export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'COMMERCIALE' | 'MAGAZZINO' | 'CUSTOMER';
 export type OrderStatus =
   | 'MERCE_DA_ORDINARE'
   | 'MERCE_ORDINATA'
@@ -173,6 +173,7 @@ declare module 'next-auth' {
     role: Role;
     companyName: string;
     customerCode: string;
+    isActive?: boolean;
   }
 }
 

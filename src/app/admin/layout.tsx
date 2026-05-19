@@ -11,7 +11,8 @@ export default async function AdminLayout({
   const session = await getServerSession(authOptions);
 
   if (!session) redirect('/login');
-  if (session.user.role !== 'ADMIN') redirect('/catalog');
+  const { isAdminRole } = await import('@/lib/roles');
+  if (!isAdminRole(session.user.role)) redirect('/catalog');
 
   return <AdminLayoutWrapper>{children}</AdminLayoutWrapper>;
 }
