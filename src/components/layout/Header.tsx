@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
-import { LogOut } from 'lucide-react';
+import { LogOut, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
@@ -43,7 +43,7 @@ export default function Header({ session }: HeaderProps) {
           href="/catalog"
           className={cn(
             'text-xs px-3 py-1.5 rounded transition-colors',
-            pathname === '/catalog' || (pathname.startsWith('/catalog') && !pathname.startsWith('/catalog/orders'))
+            pathname === '/catalog' || (pathname.startsWith('/catalog') && !pathname.startsWith('/catalog/orders') && !pathname.startsWith('/catalog/assistenza'))
               ? 'text-primary font-semibold bg-cream'
               : 'text-gray-400 hover:text-primary hover:bg-cream'
           )}
@@ -60,6 +60,18 @@ export default function Header({ session }: HeaderProps) {
           )}
         >
           I miei Ordini
+        </Link>
+        <Link
+          href="/catalog/assistenza"
+          className={cn(
+            'text-xs px-3 py-1.5 rounded transition-colors flex items-center gap-1',
+            pathname.startsWith('/catalog/assistenza')
+              ? 'text-primary font-semibold bg-cream'
+              : 'text-gray-400 hover:text-primary hover:bg-cream'
+          )}
+        >
+          <HelpCircle size={12} />
+          Assistenza
         </Link>
       </nav>
 

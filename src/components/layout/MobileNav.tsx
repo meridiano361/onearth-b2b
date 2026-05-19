@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, Package, ShoppingCart, X } from 'lucide-react';
+import { LayoutGrid, Package, ShoppingCart, HelpCircle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import CartSidebar from '@/components/cart/CartSidebar';
@@ -69,7 +69,19 @@ export default function MobileNav() {
             )}
           >
             <Package size={20} />
-            <span className="text-2xs tracking-wide">I miei Ordini</span>
+            <span className="text-2xs tracking-wide">Ordini</span>
+          </Link>
+
+          {/* Assistenza */}
+          <Link
+            href="/catalog/assistenza"
+            className={cn(
+              'flex-1 flex flex-col items-center justify-center gap-0.5 py-3 text-xs transition-colors',
+              pathname.startsWith('/catalog/assistenza') ? 'text-primary font-semibold' : 'text-gray-400'
+            )}
+          >
+            <HelpCircle size={20} />
+            <span className="text-2xs tracking-wide">Assistenza</span>
           </Link>
         </div>
       </nav>
