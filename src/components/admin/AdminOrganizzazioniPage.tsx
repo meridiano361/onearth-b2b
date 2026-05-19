@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, ChevronDown, ChevronRight, Edit2, Trash2,
   ToggleLeft, ToggleRight, KeyRound, Store, Globe, Radio, Package,
-  Users, MapPin, Copy,
+  Users, MapPin, Copy, CheckSquare, Square, Loader2,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -18,29 +18,59 @@ import type { Organization, Operator, Canale, CanaleTipo } from '@/types';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const TIPO_LABELS: Record<CanaleTipo, string> = {
-  BOTTEGA: 'Bottega',
-  TENDONE: 'Tendone',
-  ONLINE: 'Online',
-  ALTRO: 'Altro',
+  BOTTEGA: 'Bottega', TENDONE: 'Tendone', ONLINE: 'Online', ALTRO: 'Altro',
 };
 
 const TIPO_ICONS: Record<CanaleTipo, React.ReactNode> = {
-  BOTTEGA: <Store size={12} />,
-  TENDONE: <Radio size={12} />,
-  ONLINE: <Globe size={12} />,
-  ALTRO: <Package size={12} />,
+  BOTTEGA: <Store size={12} />, TENDONE: <Radio size={12} />,
+  ONLINE: <Globe size={12} />, ALTRO: <Package size={12} />,
 };
 
 function generateDefaultPassword(orgNome: string): string {
-  const slug = orgNome
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z]/g, '');
+  const slug = orgNome.toLowerCase().normalize('NFD')
+    .replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '');
   return 'onearth_' + slug.substring(0, 5);
 }
 
-// ─── Modals ───────────────────────────────────────────────────────────────────
+// ─── EditOrgModal ─────────────────────────────────────────────────────────────
+
+function EditOrgModal({ org, onClose, onSave }: { org: Organization; onClose: () => void; onSave: () => void }) {
+  const [nome, setNome] = useState(org.nome);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    if (!nome.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/organizations/${org.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: nome.trim() }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
+      toast.success('Organizzazione aggiornata');
+      onSave();
+    } catch (e: any) {
+      toast.error(e.message || 'Operazione fallita');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal isOpen onClose={onClose} title="Modifica organizzazione" size="sm">
+      <div className="space-y-4">
+        <Input label="Nome organizzazione *" value={nome} onChange={(e) => setNome(e.target.value)} />
+        <div className="flex justify-end gap-3 pt-1">
+          <Button variant="ghost" onClick={onClose}>Annulla</Button>
+          <Button onClick={handleSave} loading={saving}>Salva modifiche</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ─── OperatorModal ────────────────────────────────────────────────────────────
 
 interface OperatorFormData {
   nome: string; cognome: string; email: string; telefono: string;
@@ -56,12 +86,9 @@ function OperatorModal({
   const isEdit = !!operator;
   const defaultPwd = generateDefaultPassword(orgNome);
   const [form, setForm] = useState<OperatorFormData>({
-    nome: operator?.nome || '',
-    cognome: operator?.cognome || '',
-    email: operator?.email || '',
-    telefono: operator?.telefono || '',
-    password: isEdit ? '' : defaultPwd,
-    attivo: operator?.attivo ?? true,
+    nome: operator?.nome || '', cognome: operator?.cognome || '',
+    email: operator?.email || '', telefono: operator?.telefono || '',
+    password: isEdit ? '' : defaultPwd, attivo: operator?.attivo ?? true,
   });
   const [saving, setSaving] = useState(false);
 
@@ -76,7 +103,6 @@ function OperatorModal({
       const body: any = { nome: form.nome, cognome: form.cognome, email: form.email, telefono: form.telefono || null, attivo: form.attivo };
       if (isEdit) { if (form.password) body.newPassword = form.password; }
       else body.password = form.password;
-
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
       toast.success(isEdit ? 'Operatore aggiornato' : 'Operatore creato');
@@ -101,15 +127,8 @@ function OperatorModal({
           <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
             {isEdit ? 'Nuova Password (vuoto = invariata)' : 'Password *'}
           </label>
-          <div className="flex gap-2">
-            <Input
-              value={form.password}
-              onChange={set('password')}
-              type="text"
-              placeholder={isEdit ? '••••••••' : defaultPwd}
-              className="flex-1"
-            />
-          </div>
+          <Input value={form.password} onChange={set('password')} type="text"
+            placeholder={isEdit ? '••••••••' : defaultPwd} />
         </div>
         <div className="flex items-center gap-2">
           <input type="checkbox" id="op-attivo" checked={form.attivo} onChange={set('attivo')} className="w-4 h-4 accent-accent" />
@@ -124,9 +143,9 @@ function OperatorModal({
   );
 }
 
-function CanaleModal({
-  isOpen, onClose, onSave, canale, orgId,
-}: {
+// ─── CanaleModal ──────────────────────────────────────────────────────────────
+
+function CanaleModal({ isOpen, onClose, onSave, canale, orgId }: {
   isOpen: boolean; onClose: () => void; onSave: () => void;
   canale?: Canale; orgId: string;
 }) {
@@ -161,11 +180,8 @@ function CanaleModal({
         <Input label="Nome *" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Bottega Centro" />
         <div>
           <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">Tipo</label>
-          <select
-            value={tipo}
-            onChange={(e) => setTipo(e.target.value as CanaleTipo)}
-            className="w-full px-4 py-2.5 bg-white border border-border rounded text-sm focus:outline-none focus:border-accent"
-          >
+          <select value={tipo} onChange={(e) => setTipo(e.target.value as CanaleTipo)}
+            className="w-full px-4 py-2.5 bg-white border border-border rounded text-sm focus:outline-none focus:border-accent">
             {(Object.keys(TIPO_LABELS) as CanaleTipo[]).map((t) => (
               <option key={t} value={t}>{TIPO_LABELS[t]}</option>
             ))}
@@ -188,7 +204,13 @@ export default function AdminOrganizzazioniPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [opModal, setOpModal] = useState<{ orgId: string; orgNome: string; operator?: Operator } | null>(null);
   const [canaleModal, setCanaleModal] = useState<{ orgId: string; canale?: Canale } | null>(null);
+  const [editOrgModal, setEditOrgModal] = useState<Organization | null>(null);
   const [resetResult, setResetResult] = useState<{ name: string; password: string } | null>(null);
+
+  // ── Bulk selection ────────────────────────────────────────────────────────
+  const [selectedOpIds, setSelectedOpIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkResetResults, setBulkResetResults] = useState<{ name: string; password: string }[] | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-organizations'],
@@ -201,32 +223,50 @@ export default function AdminOrganizzazioniPage() {
 
   const orgs: Organization[] = data?.data || [];
 
-  function refresh() {
-    queryClient.invalidateQueries({ queryKey: ['admin-organizations'] });
+  // Build opId → { op, orgNome } map for bulk operations
+  const opMap = new Map<string, { op: Operator; orgNome: string }>();
+  for (const org of orgs) {
+    for (const op of org.operatori || []) {
+      opMap.set(op.id, { op, orgNome: org.nome });
+    }
   }
 
+  const allOpIds = Array.from(opMap.keys());
+  const selectedCount = selectedOpIds.size;
+
+  function refresh() { queryClient.invalidateQueries({ queryKey: ['admin-organizations'] }); }
+
   function toggleExpand(id: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+    setExpanded((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  function toggleOpSelect(id: string) {
+    setSelectedOpIds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  function toggleSelectAllInOrg(ops: Operator[]) {
+    const ids = ops.map((o) => o.id);
+    const allSelected = ids.every((id) => selectedOpIds.has(id));
+    setSelectedOpIds((prev) => {
+      const n = new Set(prev);
+      if (allSelected) ids.forEach((id) => n.delete(id));
+      else ids.forEach((id) => n.add(id));
+      return n;
     });
   }
+
+  // ── Single-operator actions ───────────────────────────────────────────────
 
   async function handleToggleOperator(op: Operator) {
     try {
       const res = await fetch(`/api/operatori/${op.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ attivo: !op.attivo }),
       });
       if (!res.ok) throw new Error('Failed');
       refresh();
       toast.success(`Operatore ${op.attivo ? 'disattivato' : 'attivato'}`);
-    } catch {
-      toast.error('Errore');
-    }
+    } catch { toast.error('Errore'); }
   }
 
   async function handleDeleteOperator(op: Operator) {
@@ -234,26 +274,19 @@ export default function AdminOrganizzazioniPage() {
     try {
       const res = await fetch(`/api/operatori/${op.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error((await res.json()).error || 'Errore');
+      setSelectedOpIds((prev) => { const n = new Set(prev); n.delete(op.id); return n; });
       refresh();
       toast.success('Operatore eliminato');
-    } catch (e: any) {
-      toast.error(e.message || 'Errore');
-    }
+    } catch (e: any) { toast.error(e.message || 'Errore'); }
   }
 
   function handleResetPassword(op: Operator, orgNome: string) {
     const password = generateDefaultPassword(orgNome);
-    // Apply immediately and show it
     fetch(`/api/operatori/${op.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ newPassword: password }),
     })
-      .then((r) => r.json())
-      .then(() => {
-        setResetResult({ name: `${op.nome} ${op.cognome}`, password });
-        refresh();
-      })
+      .then(() => { setResetResult({ name: `${op.nome} ${op.cognome}`, password }); refresh(); })
       .catch(() => toast.error('Errore nel reset password'));
   }
 
@@ -264,9 +297,68 @@ export default function AdminOrganizzazioniPage() {
       if (!res.ok) throw new Error((await res.json()).error || 'Errore');
       refresh();
       toast.success('Canale eliminato');
-    } catch (e: any) {
-      toast.error(e.message || 'Errore');
-    }
+    } catch (e: any) { toast.error(e.message || 'Errore'); }
+  }
+
+  // ── Bulk actions ──────────────────────────────────────────────────────────
+
+  async function handleBulkSetActive(attivo: boolean) {
+    if (!selectedCount) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedOpIds).map((id) =>
+          fetch(`/api/operatori/${id}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ attivo }),
+          })
+        )
+      );
+      toast.success(`${selectedCount} operator${selectedCount !== 1 ? 'i' : 'e'} ${attivo ? 'attivati' : 'disattivati'}`);
+      refresh();
+    } catch { toast.error('Errore durante l\'operazione'); }
+    finally { setBulkLoading(false); }
+  }
+
+  async function handleBulkResetPassword() {
+    if (!selectedCount) return;
+    setBulkLoading(true);
+    try {
+      const results: { name: string; password: string }[] = [];
+      await Promise.all(
+        Array.from(selectedOpIds).map(async (id) => {
+          const entry = opMap.get(id);
+          if (!entry) return;
+          const password = generateDefaultPassword(entry.orgNome);
+          await fetch(`/api/operatori/${id}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newPassword: password }),
+          });
+          results.push({ name: `${entry.op.nome} ${entry.op.cognome}`, password });
+        })
+      );
+      results.sort((a, b) => a.name.localeCompare(b.name, 'it'));
+      setBulkResetResults(results);
+      refresh();
+    } catch { toast.error('Errore durante il reset password'); }
+    finally { setBulkLoading(false); }
+  }
+
+  async function handleBulkDelete() {
+    if (!selectedCount) return;
+    if (!confirm(`Eliminare definitivamente ${selectedCount} operatore${selectedCount !== 1 ? 'i' : ''}? Questa azione non può essere annullata.`)) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedOpIds).map((id) =>
+          fetch(`/api/operatori/${id}`, { method: 'DELETE' })
+        )
+      );
+      toast.success(`${selectedCount} operatore${selectedCount !== 1 ? 'i' : 'e'} eliminati`);
+      setSelectedOpIds(new Set());
+      refresh();
+    } catch { toast.error('Errore durante l\'eliminazione'); }
+    finally { setBulkLoading(false); }
   }
 
   const totalOrgs = orgs.length;
@@ -285,6 +377,52 @@ export default function AdminOrganizzazioniPage() {
         </div>
       </div>
 
+      {/* ── Bulk action bar ─────────────────────────────────────────────────── */}
+      {selectedCount > 0 && (
+        <div className="sticky top-0 z-30 mb-4 bg-primary text-white rounded-lg px-4 py-3 flex flex-wrap items-center gap-3 shadow-lg">
+          <span className="text-sm font-semibold flex-shrink-0">
+            {selectedCount} selezionat{selectedCount !== 1 ? 'i' : 'o'}
+          </span>
+          <div className="flex flex-wrap items-center gap-2 flex-1">
+            <button
+              onClick={() => handleBulkSetActive(true)}
+              disabled={bulkLoading}
+              className="text-xs px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50"
+            >
+              Attiva selezionati
+            </button>
+            <button
+              onClick={() => handleBulkSetActive(false)}
+              disabled={bulkLoading}
+              className="text-xs px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50"
+            >
+              Disattiva selezionati
+            </button>
+            <button
+              onClick={handleBulkResetPassword}
+              disabled={bulkLoading}
+              className="text-xs px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50"
+            >
+              Reset password selezionati
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkLoading}
+              className="text-xs px-3 py-1.5 bg-red-500/80 hover:bg-red-500 rounded transition-colors disabled:opacity-50"
+            >
+              Elimina selezionati
+            </button>
+            {bulkLoading && <Loader2 size={14} className="animate-spin opacity-70" />}
+          </div>
+          <button
+            onClick={() => setSelectedOpIds(new Set())}
+            className="text-xs underline opacity-70 hover:opacity-100 transition-opacity flex-shrink-0"
+          >
+            Deseleziona tutti
+          </button>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex justify-center py-16"><LoadingSpinner /></div>
       ) : orgs.length === 0 ? (
@@ -295,27 +433,41 @@ export default function AdminOrganizzazioniPage() {
             const isOpen = expanded.has(org.id);
             const ops = org.operatori || [];
             const canali = org.canali || [];
+            const orgOpsSelected = ops.filter((o) => selectedOpIds.has(o.id)).length;
+            const allOrgOpsSelected = ops.length > 0 && orgOpsSelected === ops.length;
 
             return (
               <div key={org.id} className="bg-white border border-border rounded-lg overflow-hidden">
                 {/* Org row */}
-                <button
-                  onClick={() => toggleExpand(org.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-cream transition-colors text-left"
-                >
-                  <span className="text-gray-400 flex-shrink-0">
-                    {isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                  </span>
-                  <span className="flex-1 font-medium text-primary text-sm">{org.nome}</span>
-                  <span className="flex items-center gap-1.5 text-xs text-gray-400 mr-4">
-                    <Users size={12} />
-                    {ops.length} operatori
-                  </span>
-                  <span className="flex items-center gap-1.5 text-xs text-gray-400 mr-2">
-                    <Store size={12} />
-                    {canali.length} canali
-                  </span>
-                </button>
+                <div className="flex items-center gap-3 px-4 py-3 hover:bg-cream/30 transition-colors">
+                  {/* Expand toggle */}
+                  <button
+                    onClick={() => toggleExpand(org.id)}
+                    className="flex-1 flex items-center gap-3 text-left min-w-0"
+                  >
+                    <span className="text-gray-400 flex-shrink-0">
+                      {isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                    </span>
+                    <span className="flex-1 font-medium text-primary text-sm truncate">{org.nome}</span>
+                    <span className="flex items-center gap-1.5 text-xs text-gray-400 mr-2 flex-shrink-0">
+                      <Users size={12} />
+                      {ops.length} operatori
+                    </span>
+                    <span className="flex items-center gap-1.5 text-xs text-gray-400 flex-shrink-0">
+                      <Store size={12} />
+                      {canali.length} canali
+                    </span>
+                  </button>
+                  {/* Modifica org */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditOrgModal(org); }}
+                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary px-2 py-1 rounded hover:bg-cream transition-colors flex-shrink-0"
+                    title="Modifica organizzazione"
+                  >
+                    <Edit2 size={12} />
+                    <span className="hidden sm:inline">Modifica</span>
+                  </button>
+                </div>
 
                 {/* Expanded content */}
                 {isOpen && (
@@ -324,12 +476,8 @@ export default function AdminOrganizzazioniPage() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Operatori</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          icon={<Plus size={12} />}
-                          onClick={() => setOpModal({ orgId: org.id, orgNome: org.nome })}
-                        >
+                        <Button variant="ghost" size="sm" icon={<Plus size={12} />}
+                          onClick={() => setOpModal({ orgId: org.id, orgNome: org.nome })}>
                           Aggiungi
                         </Button>
                       </div>
@@ -340,6 +488,19 @@ export default function AdminOrganizzazioniPage() {
                           <table className="w-full text-xs">
                             <thead className="bg-cream">
                               <tr>
+                                {/* Select all for this org */}
+                                <th className="px-3 py-2 w-8">
+                                  <button
+                                    onClick={() => toggleSelectAllInOrg(ops)}
+                                    className="text-gray-400 hover:text-primary transition-colors"
+                                    title={allOrgOpsSelected ? 'Deseleziona tutti' : 'Seleziona tutti'}
+                                  >
+                                    {allOrgOpsSelected
+                                      ? <CheckSquare size={13} className="text-accent" />
+                                      : <Square size={13} />
+                                    }
+                                  </button>
+                                </th>
                                 <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Nome</th>
                                 <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Email</th>
                                 <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Stato</th>
@@ -347,54 +508,56 @@ export default function AdminOrganizzazioniPage() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
-                              {ops.map((op) => (
-                                <tr key={op.id} className="hover:bg-cream/50">
-                                  <td className="px-3 py-2">
-                                    <span className="font-medium text-primary">{op.nome} {op.cognome}</span>
-                                  </td>
-                                  <td className="px-3 py-2 text-gray-500">{op.email}</td>
-                                  <td className="px-3 py-2">
-                                    <Badge variant={op.attivo ? 'success' : 'default'} size="xs">
-                                      {op.attivo ? 'Attivo' : 'Inattivo'}
-                                    </Badge>
-                                  </td>
-                                  <td className="px-3 py-2">
-                                    <div className="flex items-center gap-1 justify-end">
+                              {ops.map((op) => {
+                                const isSelected = selectedOpIds.has(op.id);
+                                return (
+                                  <tr key={op.id} className={`hover:bg-cream/50 ${isSelected ? 'bg-accent/5' : ''}`}>
+                                    <td className="px-3 py-2">
                                       <button
-                                        onClick={() => setOpModal({ orgId: org.id, orgNome: org.nome, operator: op })}
-                                        className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
-                                        title="Modifica"
+                                        onClick={() => toggleOpSelect(op.id)}
+                                        className="text-gray-400 hover:text-primary transition-colors"
                                       >
-                                        <Edit2 size={12} />
-                                      </button>
-                                      <button
-                                        onClick={() => handleResetPassword(op, org.nome)}
-                                        className="p-1 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors"
-                                        title="Reset password"
-                                      >
-                                        <KeyRound size={12} />
-                                      </button>
-                                      <button
-                                        onClick={() => handleToggleOperator(op)}
-                                        className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
-                                        title={op.attivo ? 'Disattiva' : 'Attiva'}
-                                      >
-                                        {op.attivo
-                                          ? <ToggleRight size={14} className="text-green-500" />
-                                          : <ToggleLeft size={14} />
+                                        {isSelected
+                                          ? <CheckSquare size={13} className="text-accent" />
+                                          : <Square size={13} />
                                         }
                                       </button>
-                                      <button
-                                        onClick={() => handleDeleteOperator(op)}
-                                        className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
-                                        title="Elimina"
-                                      >
-                                        <Trash2 size={12} />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
+                                    </td>
+                                    <td className="px-3 py-2">
+                                      <span className="font-medium text-primary">{op.nome} {op.cognome}</span>
+                                    </td>
+                                    <td className="px-3 py-2 text-gray-500">{op.email}</td>
+                                    <td className="px-3 py-2">
+                                      <Badge variant={op.attivo ? 'success' : 'default'} size="xs">
+                                        {op.attivo ? 'Attivo' : 'Inattivo'}
+                                      </Badge>
+                                    </td>
+                                    <td className="px-3 py-2">
+                                      <div className="flex items-center gap-1 justify-end">
+                                        <button onClick={() => setOpModal({ orgId: org.id, orgNome: org.nome, operator: op })}
+                                          className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica">
+                                          <Edit2 size={12} />
+                                        </button>
+                                        <button onClick={() => handleResetPassword(op, org.nome)}
+                                          className="p-1 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Reset password">
+                                          <KeyRound size={12} />
+                                        </button>
+                                        <button onClick={() => handleToggleOperator(op)}
+                                          className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
+                                          title={op.attivo ? 'Disattiva' : 'Attiva'}>
+                                          {op.attivo
+                                            ? <ToggleRight size={14} className="text-green-500" />
+                                            : <ToggleLeft size={14} />}
+                                        </button>
+                                        <button onClick={() => handleDeleteOperator(op)}
+                                          className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina">
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>
@@ -405,12 +568,8 @@ export default function AdminOrganizzazioniPage() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Canali / Punti Vendita</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          icon={<Plus size={12} />}
-                          onClick={() => setCanaleModal({ orgId: org.id })}
-                        >
+                        <Button variant="ghost" size="sm" icon={<Plus size={12} />}
+                          onClick={() => setCanaleModal({ orgId: org.id })}>
                           Aggiungi canale
                         </Button>
                       </div>
@@ -419,10 +578,8 @@ export default function AdminOrganizzazioniPage() {
                       ) : (
                         <div className="flex flex-wrap gap-2">
                           {canali.map((c) => (
-                            <div
-                              key={c.id}
-                              className="flex items-center gap-2 bg-white border border-border rounded px-3 py-2 text-xs group"
-                            >
+                            <div key={c.id}
+                              className="flex items-center gap-2 bg-white border border-border rounded px-3 py-2 text-xs group">
                               <span className="text-gray-400">{TIPO_ICONS[c.tipo]}</span>
                               <span className="font-medium text-primary">{c.nome}</span>
                               {c.citta && (
@@ -432,18 +589,12 @@ export default function AdminOrganizzazioniPage() {
                               )}
                               <Badge variant="default" size="xs">{TIPO_LABELS[c.tipo]}</Badge>
                               <div className="flex gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={() => setCanaleModal({ orgId: org.id, canale: c })}
-                                  className="p-0.5 text-gray-400 hover:text-primary rounded transition-colors"
-                                  title="Modifica"
-                                >
+                                <button onClick={() => setCanaleModal({ orgId: org.id, canale: c })}
+                                  className="p-0.5 text-gray-400 hover:text-primary rounded transition-colors" title="Modifica">
                                   <Edit2 size={11} />
                                 </button>
-                                <button
-                                  onClick={() => handleDeleteCanale(c)}
-                                  className="p-0.5 text-gray-400 hover:text-red-500 rounded transition-colors"
-                                  title="Elimina"
-                                >
+                                <button onClick={() => handleDeleteCanale(c)}
+                                  className="p-0.5 text-gray-400 hover:text-red-500 rounded transition-colors" title="Elimina">
                                   <Trash2 size={11} />
                                 </button>
                               </div>
@@ -460,37 +611,33 @@ export default function AdminOrganizzazioniPage() {
         </div>
       )}
 
-      {/* Operator modal */}
+      {/* ── Modals ────────────────────────────────────────────────────────────── */}
+
+      {editOrgModal && (
+        <EditOrgModal
+          org={editOrgModal}
+          onClose={() => setEditOrgModal(null)}
+          onSave={() => { setEditOrgModal(null); refresh(); }}
+        />
+      )}
+
       {opModal && (
-        <OperatorModal
-          isOpen
-          onClose={() => setOpModal(null)}
+        <OperatorModal isOpen onClose={() => setOpModal(null)}
           onSave={() => { setOpModal(null); refresh(); }}
-          operator={opModal.operator}
-          orgId={opModal.orgId}
-          orgNome={opModal.orgNome}
+          operator={opModal.operator} orgId={opModal.orgId} orgNome={opModal.orgNome}
         />
       )}
 
-      {/* Canale modal */}
       {canaleModal && (
-        <CanaleModal
-          isOpen
-          onClose={() => setCanaleModal(null)}
+        <CanaleModal isOpen onClose={() => setCanaleModal(null)}
           onSave={() => { setCanaleModal(null); refresh(); }}
-          canale={canaleModal.canale}
-          orgId={canaleModal.orgId}
+          canale={canaleModal.canale} orgId={canaleModal.orgId}
         />
       )}
 
-      {/* Password reset reveal */}
-      <Modal
-        isOpen={!!resetResult}
-        onClose={() => setResetResult(null)}
-        title="Password resettata"
-        size="sm"
-        footer={<Button onClick={() => setResetResult(null)}>Ho preso nota, chiudi</Button>}
-      >
+      {/* Single password reset */}
+      <Modal isOpen={!!resetResult} onClose={() => setResetResult(null)} title="Password resettata" size="sm"
+        footer={<Button onClick={() => setResetResult(null)}>Ho preso nota, chiudi</Button>}>
         {resetResult && (
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
@@ -500,16 +647,43 @@ export default function AdminOrganizzazioniPage() {
               <p className="text-2xs text-gray-500 uppercase tracking-wider mb-2">Nuova password</p>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-base font-bold text-primary flex-1">{resetResult.password}</span>
-                <button
-                  onClick={() => { navigator.clipboard.writeText(resetResult.password); toast.success('Copiata'); }}
-                  className="text-gray-400 hover:text-primary transition-colors"
-                >
+                <button onClick={() => { navigator.clipboard.writeText(resetResult.password); toast.success('Copiata'); }}
+                  className="text-gray-400 hover:text-primary transition-colors">
                   <Copy size={14} />
                 </button>
               </div>
             </div>
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-              Comunica questa password all'operatore. Non verrà mostrata di nuovo.
+              Comunica questa password all&apos;operatore. Non verrà mostrata di nuovo.
+            </p>
+          </div>
+        )}
+      </Modal>
+
+      {/* Bulk password reset riepilogo */}
+      <Modal isOpen={!!bulkResetResults} onClose={() => setBulkResetResults(null)} title="Password resettate" size="md"
+        footer={<Button onClick={() => setBulkResetResults(null)}>Ho preso nota, chiudi</Button>}>
+        {bulkResetResults && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Password resettate per <span className="font-semibold text-primary">{bulkResetResults.length} operatori</span>.
+            </p>
+            <div className="bg-cream border border-border rounded divide-y divide-border max-h-72 overflow-y-auto">
+              {bulkResetResults.map((r) => (
+                <div key={r.name} className="flex items-center justify-between px-4 py-2.5 gap-3">
+                  <span className="text-sm text-primary truncate">{r.name}</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="font-mono text-sm font-bold text-primary">{r.password}</span>
+                    <button onClick={() => { navigator.clipboard.writeText(r.password); toast.success('Copiata'); }}
+                      className="text-gray-400 hover:text-primary transition-colors">
+                      <Copy size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+              Comunica le password ai rispettivi operatori. Non verranno mostrate di nuovo.
             </p>
           </div>
         )}
