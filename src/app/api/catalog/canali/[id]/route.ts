@@ -10,6 +10,7 @@ const updateSchema = z.object({
   nome: z.string().min(1).optional(),
   tipo: z.enum(CANAL_TIPI).optional(),
   citta: z.string().optional().nullable(),
+  indirizzo: z.string().optional().nullable(),
 });
 
 function serialize(c: any) {
@@ -23,7 +24,7 @@ async function resolveCanale(id: string, orgId: string) {
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'OPERATOR' || !session.user.organizationId) {
+  if (!session || !session.user.organizationId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -39,6 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.nome !== undefined && { nome: data.nome.trim() }),
       ...(data.tipo !== undefined && { tipo: data.tipo }),
       ...(data.citta !== undefined && { citta: data.citta?.trim() || null }),
+      ...(data.indirizzo !== undefined && { indirizzo: data.indirizzo?.trim() || null }),
     },
   });
 
@@ -47,7 +49,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'OPERATOR' || !session.user.organizationId) {
+  if (!session || !session.user.organizationId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

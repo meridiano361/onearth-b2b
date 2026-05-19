@@ -10,6 +10,7 @@ const createSchema = z.object({
   nome: z.string().min(1),
   tipo: z.enum(CANAL_TIPI).default('BOTTEGA'),
   citta: z.string().optional().nullable(),
+  indirizzo: z.string().optional().nullable(),
 });
 
 function serialize(c: any) {
@@ -18,9 +19,7 @@ function serialize(c: any) {
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'OPERATOR') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   if (!session.user.organizationId) {
     return NextResponse.json({ data: [] });
@@ -36,12 +35,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'OPERATOR') {
+  if (!session || !session.user.organizationId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  if (!session.user.organizationId) {
-    return NextResponse.json({ error: 'Organization not found' }, { status: 400 });
   }
 
   const body = await req.json();
@@ -52,6 +47,7 @@ export async function POST(req: NextRequest) {
       nome: data.nome.trim(),
       tipo: data.tipo,
       citta: data.citta?.trim() || null,
+      indirizzo: data.indirizzo?.trim() || null,
       organizationId: session.user.organizationId,
     },
   });

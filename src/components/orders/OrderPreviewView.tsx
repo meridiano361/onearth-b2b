@@ -4,24 +4,18 @@ import { useState, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { ArrowLeft, FileText, CheckCircle, Minus, Plus, X, Database, Search, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { Order, OrderItem, Product } from '@/types';
 
 // ── Grouping options ───────────────────────────────────────────
-const GROUPINGS = [
-  { value: 'nomLinea',          label: 'Linea' },
-  { value: 'collezione',        label: 'Collezione' },
-  { value: 'colore',            label: 'Colore' },
-  { value: 'temaColore',        label: 'Tema colore' },
-  { value: 'classe',            label: 'Classe' },
-  { value: 'sottoclasse',       label: 'Sottoclasse' },
-  { value: 'famiglia',          label: 'Famiglia' },
-  { value: 'gruppoOmogeneo',    label: 'Gruppo omogeneo' },
-  { value: 'stagione',          label: 'Stagione' },
-  { value: 'tranche',           label: 'Tranche' },
-];
+const GROUPING_KEYS = [
+  'nomLinea', 'collezione', 'colore', 'temaColore',
+  'classe', 'sottoclasse', 'famiglia', 'gruppoOmogeneo',
+  'stagione', 'tranche',
+] as const;
 
 type QtyMap = Record<string, number>;
 
@@ -33,6 +27,9 @@ function ProductCard({
   isSaving,
   onQtyChange,
   onRemove,
+  removeLabel,
+  decreaseLabel,
+  increaseLabel,
 }: {
   item: OrderItem;
   effectiveQty: number;
@@ -40,6 +37,9 @@ function ProductCard({
   isSaving: boolean;
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
+  removeLabel: string;
+  decreaseLabel: string;
+  increaseLabel: string;
 }) {
   const product = item.product!;
   const lotSize = product.lotSize || 1;
@@ -67,7 +67,7 @@ function ProductCard({
         <button
           onClick={() => onRemove(item.id)}
           className="absolute top-2 left-2 bg-white/80 rounded p-1 text-gray-500 hover:text-red-500 transition-colors"
-          title="Rimuovi"
+          title={removeLabel}
         >
           <X size={12} />
         </button>
@@ -96,7 +96,7 @@ function ProductCard({
               onClick={() => onQtyChange(item.id, effectiveQty - lotSize)}
               disabled={isSaving || effectiveQty <= lotSize}
               className="px-2 py-1 hover:bg-cream border-r border-border disabled:opacity-30 transition-colors"
-              aria-label="Diminuisci"
+              aria-label={decreaseLabel}
             >
               <Minus size={9} />
             </button>
@@ -105,7 +105,7 @@ function ProductCard({
               onClick={() => onQtyChange(item.id, effectiveQty + lotSize)}
               disabled={isSaving}
               className="px-2 py-1 hover:bg-cream border-l border-border disabled:opacity-30 transition-colors"
-              aria-label="Aumenta"
+              aria-label={increaseLabel}
             >
               <Plus size={9} />
             </button>
@@ -122,10 +122,20 @@ function AddProductsModal({
   orderId,
   onClose,
   onAdded,
+  addProductsLabel,
+  searchPlaceholder,
+  loadingLabel,
+  noProductsLabel,
+  addLabel,
 }: {
   orderId: string;
   onClose: () => void;
   onAdded: () => void;
+  addProductsLabel: string;
+  searchPlaceholder: string;
+  loadingLabel: string;
+  noProductsLabel: string;
+  addLabel: string;
 }) {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -162,10 +172,10 @@ function AddProductsModal({
         body: JSON.stringify({ productId: product.id, quantity: qty }),
       });
       if (!res.ok) throw new Error();
-      toast.success(`${product.code} aggiunto`);
+      toast.success(`${product.code} ✓`);
       onAdded();
     } catch {
-      toast.error('Impossibile aggiungere il prodotto');
+      toast.error(addLabel + ' — errore');
     } finally {
       setAddingId(null);
     }
@@ -177,7 +187,7 @@ function AddProductsModal({
       <div className="relative z-10 bg-white w-full sm:max-w-lg sm:rounded-lg shadow-xl max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-          <p className="text-sm font-semibold text-primary">Aggiungi prodotti</p>
+          <p className="text-sm font-semibold text-primary">{addProductsLabel}</p>
           <button onClick={onClose} className="text-gray-400 hover:text-primary p-1 transition-colors">
             <X size={16} />
           </button>
@@ -191,7 +201,7 @@ function AddProductsModal({
               type="text"
               value={search}
               onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Cerca per codice o nome..."
+              placeholder={searchPlaceholder}
               className="flex-1 text-xs outline-none bg-transparent text-primary placeholder-gray-400"
             />
           </div>
@@ -201,11 +211,11 @@ function AddProductsModal({
         <div className="flex-1 overflow-y-auto">
           {isLoading && (
             <div className="flex items-center justify-center py-10">
-              <LoadingSpinner text="Caricamento..." />
+              <LoadingSpinner text={loadingLabel} />
             </div>
           )}
           {!isLoading && (products ?? []).length === 0 && (
-            <p className="text-center text-sm text-gray-400 py-10">Nessun prodotto trovato.</p>
+            <p className="text-center text-sm text-gray-400 py-10">{noProductsLabel}</p>
           )}
           {(products ?? []).map((product) => {
             const qty = quantities[product.id] ?? product.lotSize ?? 1;
@@ -253,7 +263,7 @@ function AddProductsModal({
                     disabled={isAdding}
                     className="text-xs bg-primary text-white px-2.5 py-1.5 rounded hover:bg-primary/90 transition-colors disabled:opacity-50"
                   >
-                    {isAdding ? '...' : 'Aggiungi'}
+                    {isAdding ? '...' : addLabel}
                   </button>
                 </div>
               </div>
@@ -268,6 +278,11 @@ function AddProductsModal({
 // ── Main view ──────────────────────────────────────────────────
 export default function OrderPreviewView({ id }: { id: string }) {
   const queryClient = useQueryClient();
+  const t = useTranslations('preview');
+  const tg = useTranslations('groupings');
+
+  const GROUPINGS = GROUPING_KEYS.map((k) => ({ value: k, label: tg(k) }));
+
   const [groupBy, setGroupBy] = useState('collezione');
   const [qtyOverrides, setQtyOverrides] = useState<QtyMap>({});
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -298,10 +313,11 @@ export default function OrderPreviewView({ id }: { id: string }) {
   );
 
   // Groups computed client-side from current groupBy
+  const unclassifiedLabel = t('unclassified');
   const groups = useMemo(() => {
     const map = new Map<string, typeof items>();
     for (const item of items) {
-      const key = (item.product as any)?.[groupBy] || 'Non classificato';
+      const key = (item.product as any)?.[groupBy] || unclassifiedLabel;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(item);
     }
@@ -336,7 +352,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
         delete next[itemId];
         return next;
       });
-      toast.error('Impossibile aggiornare la quantità');
+      toast.error(t('updateQtyError'));
     } finally {
       setSavingId(null);
     }
@@ -353,9 +369,9 @@ export default function OrderPreviewView({ id }: { id: string }) {
         delete n[itemId];
         return n;
       });
-      toast.success('Prodotto rimosso');
+      toast.success(t('removeSuccess'));
     } catch {
-      toast.error('Impossibile rimuovere il prodotto');
+      toast.error(t('removeError'));
     }
   }
 
@@ -374,9 +390,9 @@ export default function OrderPreviewView({ id }: { id: string }) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('PDF pronto');
+      toast.success(t('pdfReady'));
     } catch {
-      toast.error('Errore generazione PDF');
+      toast.error(t('pdfError'));
     } finally {
       setExporting(false);
     }
@@ -412,11 +428,11 @@ export default function OrderPreviewView({ id }: { id: string }) {
         body: JSON.stringify({ status: 'ESPORTATO' }),
       });
       if (!res.ok) throw new Error();
-      toast.success('Ordine esportato in Demetra');
+      toast.success(t('exportSuccess'));
       queryClient.invalidateQueries({ queryKey: ['my-orders'] });
       queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
     } catch {
-      toast.error('Errore durante l\'esportazione');
+      toast.error(t('exportError'));
     } finally {
       setExportingDemetra(false);
     }
@@ -425,13 +441,13 @@ export default function OrderPreviewView({ id }: { id: string }) {
   const currentGroupLabel = GROUPINGS.find((g) => g.value === groupBy)?.label ?? '';
 
   // ── Loading / error states ─────────────────────────────────
-  if (isLoading) return <LoadingSpinner fullPage text="Caricamento ordine..." />;
+  if (isLoading) return <LoadingSpinner fullPage text={t('loadingOrder')} />;
   if (error || !order) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-        <p className="text-sm text-gray-500">Ordine non trovato.</p>
+        <p className="text-sm text-gray-500">{t('notFound')}</p>
         <Link href="/catalog/orders" className="mt-3 text-sm text-accent hover:underline">
-          ← Torna agli ordini
+          ← {t('backToOrders')}
         </Link>
       </div>
     );
@@ -445,6 +461,11 @@ export default function OrderPreviewView({ id }: { id: string }) {
         <AddProductsModal
           orderId={id}
           onClose={() => setAddProductsOpen(false)}
+          addProductsLabel={t('addProducts')}
+          searchPlaceholder={t('searchPlaceholder')}
+          loadingLabel={t('loading')}
+          noProductsLabel={t('noProducts')}
+          addLabel={t('add')}
           onAdded={() => {
             queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
             queryClient.invalidateQueries({ queryKey: ['my-orders'] });
@@ -464,7 +485,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
             </Link>
             <div>
               <p className="text-2xs font-medium tracking-widest uppercase text-gray-400 leading-none">
-                Anteprima ordine
+                {t('title')}
               </p>
               <p className="text-sm font-semibold text-primary tracking-wide">
                 #{order.id.slice(0, 8).toUpperCase()}
@@ -507,7 +528,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
       {/* ── Content ───────────────────────────────────────── */}
       <div className="flex-1 px-4 sm:px-6 py-6 pb-32 lg:pb-24">
         {groups.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-16">Nessun prodotto nell&apos;ordine.</p>
+          <p className="text-sm text-gray-400 text-center py-16">{t('noItems')}</p>
         )}
 
         {groups.map((group) => (
@@ -517,11 +538,11 @@ export default function OrderPreviewView({ id }: { id: string }) {
               <div>
                 <p className="text-xs font-bold tracking-[0.12em] uppercase">{group.name}</p>
                 <p className="text-2xs text-gray-400 mt-0.5">
-                  {group.items.length} articol{group.items.length === 1 ? 'o' : 'i'}
+                  {group.items.length} {group.items.length === 1 ? t('articleSingular') : t('articlePlural')}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-2xs text-gray-400">Subtotale</p>
+                <p className="text-2xs text-gray-400">{t('subtotal')}</p>
                 <p className="text-sm font-bold">{formatCurrency(group.subtotal)}</p>
               </div>
             </div>
@@ -537,6 +558,9 @@ export default function OrderPreviewView({ id }: { id: string }) {
                   isSaving={savingId === item.id}
                   onQtyChange={handleQtyChange}
                   onRemove={handleRemove}
+                  removeLabel={t('remove')}
+                  decreaseLabel={t('decrease')}
+                  increaseLabel={t('increase')}
                 />
               ))}
             </div>
@@ -544,7 +568,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
             {/* Group subtotal line */}
             <div className="flex justify-end items-center gap-3 mt-4 pt-3 border-t border-border/50 text-xs">
               <span className="text-gray-400 uppercase tracking-widest">
-                Subtotale {group.name}
+                {t('subtotal')} {group.name}
               </span>
               <span className="font-semibold text-primary text-sm">
                 {formatCurrency(group.subtotal)}
@@ -567,7 +591,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary transition-colors flex-shrink-0"
           >
             <ArrowLeft size={14} />
-            <span className="hidden sm:inline">Torna all&apos;ordine</span>
+            <span className="hidden sm:inline">{t('back')}</span>
           </Link>
 
           {/* Actions */}
@@ -578,7 +602,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
               className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded hover:bg-cream transition-colors text-gray-600 hover:text-primary flex-shrink-0"
             >
               <Plus size={12} />
-              <span className="hidden sm:inline">Aggiungi prodotti</span>
+              <span className="hidden sm:inline">{t('addProducts')}</span>
             </button>
 
             {/* PDF export */}
@@ -589,7 +613,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
             >
               <FileText size={12} />
               <span className="hidden sm:inline">
-                {exporting ? 'Generando…' : `PDF · ${currentGroupLabel}`}
+                {exporting ? t('generating') : `PDF · ${currentGroupLabel}`}
               </span>
               <span className="sm:hidden">PDF</span>
             </button>
@@ -598,7 +622,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
             {order.status === 'ESPORTATO' ? (
               <div className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs bg-green-100 text-green-700 rounded flex-shrink-0 cursor-default">
                 <CheckCircle size={12} />
-                <span className="hidden sm:inline">Già esportato</span>
+                <span className="hidden sm:inline">{t('alreadyExported')}</span>
               </div>
             ) : (
               <button
@@ -612,7 +636,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
                   <Database size={12} />
                 )}
                 <span className="hidden sm:inline">
-                  {exportingDemetra ? 'Esportando…' : 'Esporta in Demetra'}
+                  {exportingDemetra ? t('exportingDemetra') : t('exportDemetra')}
                 </span>
                 <span className="sm:hidden">Demetra</span>
               </button>
@@ -621,7 +645,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
 
           {/* Total */}
           <div className="text-right flex-shrink-0">
-            <p className="text-2xs text-gray-400 uppercase tracking-widest hidden sm:block">Totale</p>
+            <p className="text-2xs text-gray-400 uppercase tracking-widest hidden sm:block">{t('total')}</p>
             <p className="text-base font-bold text-primary">{formatCurrency(grandTotal)}</p>
           </div>
         </div>

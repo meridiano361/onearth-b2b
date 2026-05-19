@@ -2,10 +2,13 @@
 
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
+import { FileDown } from 'lucide-react';
 
 export default function CustomerHome() {
   const { data: session } = useSession();
   const companyName = session?.user?.companyName ?? '';
+  const t = useTranslations('home');
 
   return (
     <div className="min-h-screen bg-cream">
@@ -14,7 +17,7 @@ export default function CustomerHome() {
         {/* Section 1 — Welcome */}
         <section>
           <h1 className="text-2xl font-bold text-primary tracking-tight">
-            Ciao{companyName ? `, ${companyName}` : ''}!
+            {t('greeting')}{companyName ? `, ${companyName}` : ''}!
           </h1>
           <p className="text-xs uppercase tracking-widest text-gray-400 mt-1">CASA 2027</p>
 
@@ -23,20 +26,52 @@ export default function CustomerHome() {
               href="/catalog"
               className="flex-1 flex items-center justify-center py-4 text-sm font-semibold bg-primary text-white rounded border border-primary hover:bg-primary/90 transition-colors"
             >
-              Vai al Catalogo
+              {t('goCatalog')}
             </Link>
             <Link
               href="/catalog/orders"
               className="flex-1 flex items-center justify-center py-4 text-sm font-semibold bg-white text-primary rounded border border-primary hover:bg-cream transition-colors"
             >
-              I miei Ordini
+              {t('myOrders')}
             </Link>
           </div>
         </section>
 
-        {/* Section 2 — Scopri ON EARTH */}
+        {/* Section 2 — Condizioni Commerciali */}
+        <section className="bg-white border border-border rounded-lg p-5">
+          <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">{t('termsTitle')}</p>
+          <p className="text-sm text-gray-600">
+            {t('termsText')}{' '}
+            <a
+              href="mailto:e.mazzolari@meridiano361.it"
+              className="text-accent hover:underline font-medium"
+            >
+              {t('termsLink')}
+            </a>
+          </p>
+        </section>
+
+        {/* Section 3 — Tempistiche di Ordine */}
+        <section className="bg-white border border-border rounded-lg p-5">
+          <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">{t('timingTitle')}</p>
+          <p className="text-sm text-gray-600">{t('timingText')}</p>
+        </section>
+
+        {/* Section 4 — Catalogo PDF */}
+        <section className="bg-white border border-border rounded-lg p-5">
+          <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">{t('catalogTitle')}</p>
+          <a
+            href="#"
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-primary text-white rounded hover:bg-primary/90 transition-colors"
+          >
+            <FileDown size={15} />
+            {t('catalogButton')}
+          </a>
+        </section>
+
+        {/* Section 5 — Scopri ON EARTH */}
         <section>
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">Scopri ON EARTH</p>
+          <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">{t('discoverTitle')}</p>
           <Link
             href="https://www.on-earth.it"
             target="_blank"
@@ -47,9 +82,9 @@ export default function CustomerHome() {
           </Link>
         </section>
 
-        {/* Section 3 — Il nostro Podcast */}
+        {/* Section 6 — Il nostro Podcast */}
         <section>
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">Il nostro Podcast</p>
+          <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">{t('podcastTitle')}</p>
           <iframe
             src="https://open.spotify.com/embed/show/3MjWJeGlQFAy2D2D2awo4t"
             width="100%"
@@ -60,10 +95,10 @@ export default function CustomerHome() {
           />
         </section>
 
-        {/* Section 4 — Novità */}
+        {/* Section 7 — Novità */}
         <section>
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">Novità</p>
-          <p className="text-sm text-gray-400">Presto nuove collezioni in arrivo.</p>
+          <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">{t('news')}</p>
+          <p className="text-sm text-gray-400">{t('newsPlaceholder')}</p>
         </section>
 
       </div>

@@ -290,6 +290,7 @@ model Canale {
   nome           String
   tipo           CanaleTipo @default(BOTTEGA)
   citta          String?
+  indirizzo      String?
   organizationId String
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
