@@ -43,10 +43,12 @@ export default async function LoginPage() {
             <Image
               src="/logo-on-earth/onearth_solo_bianco.png"
               alt="On Earth"
-              height={40}
-              width={256}
+              width={400}
+              height={63}
               className="object-contain"
               priority
+              quality={90}
+              sizes="400px"
             />
           </Link>
           <div className="mt-6 w-12 h-px bg-accent" />
@@ -68,10 +70,12 @@ export default async function LoginPage() {
               <Image
                 src="/logo-on-earth/onearth_solo.png"
                 alt="On Earth"
-                height={32}
-                width={205}
+                width={310}
+                height={49}
                 className="object-contain"
                 priority
+                quality={90}
+                sizes="310px"
               />
             </Link>
           </div>
