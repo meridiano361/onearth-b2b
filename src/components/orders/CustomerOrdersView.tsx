@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Copy, Pencil, ScanEye, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { formatCurrency, formatDate, getOrderStatusLabel, getOrderStatusColor } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -14,6 +15,7 @@ import type { Order } from '@/types';
 export default function CustomerOrdersView() {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const t = useTranslations('orders');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
@@ -34,10 +36,10 @@ export default function CustomerOrdersView() {
         const body = await res.json();
         throw new Error(body.error ?? 'Errore');
       }
-      toast.success('Ordine eliminato');
+      toast.success(t('deleteSuccess'));
       queryClient.invalidateQueries({ queryKey: ['my-orders'] });
     } catch (e: any) {
-      toast.error(e.message ?? 'Impossibile eliminare l\'ordine');
+      toast.error(e.message ?? 'Errore');
     } finally {
       setDeletingId(null);
       setConfirmingId(null);
@@ -62,17 +64,17 @@ export default function CustomerOrdersView() {
         throw new Error(body.error ?? 'Errore');
       }
       const { data: newOrder } = await res.json();
-      toast.success('Ordine duplicato con successo');
+      toast.success(t('duplicateSuccess'));
       queryClient.invalidateQueries({ queryKey: ['my-orders'] });
       router.push(`/catalog/orders/${newOrder.id}/preview`);
     } catch (e: any) {
-      toast.error(e.message ?? 'Impossibile duplicare l\'ordine');
+      toast.error(e.message ?? 'Errore');
     } finally {
       setDuplicatingId(null);
     }
   }
 
-  if (isLoading) return <LoadingSpinner fullPage text="Caricamento ordini..." />;
+  if (isLoading) return <LoadingSpinner fullPage text={t('loading')} />;
 
   const list = orders ?? [];
 
@@ -81,19 +83,19 @@ export default function CustomerOrdersView() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-primary tracking-tight">I miei Ordini</h1>
+          <h1 className="text-xl font-bold text-primary tracking-tight">{t('title')}</h1>
           <p className="text-xs text-gray-400 mt-0.5">
             {list.length === 0
-              ? 'Nessun ordine trovato'
-              : `${list.length} ordine${list.length !== 1 ? 'i' : ''}`}
+              ? t('noOrdersFound')
+              : `${list.length} ${list.length === 1 ? t('orderSingular') : t('orderPlural')}`}
           </p>
         </div>
 
         {list.length === 0 && (
           <div className="text-center py-20">
-            <p className="text-sm text-gray-400">Non hai ancora nessun ordine.</p>
+            <p className="text-sm text-gray-400">{t('noOrders')}</p>
             <Link href="/catalog" className="mt-3 inline-block text-sm text-accent hover:underline">
-              Vai al catalogo →
+              {t('goCatalog')}
             </Link>
           </div>
         )}
@@ -128,9 +130,9 @@ export default function CustomerOrdersView() {
 
                 {/* Middle: stats */}
                 <p className="text-xs text-gray-500">
-                  {(order.items?.length ?? 0)} articoli
+                  {t('articles', { count: order.items?.length ?? 0 })}
                   {' · '}
-                  {order.totalItems} pezzi
+                  {order.totalItems} {t('pieces')}
                   {' · '}
                   {formatCurrency(order.totalValue)}
                 </p>
@@ -144,7 +146,7 @@ export default function CustomerOrdersView() {
                       className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
                     >
                       <Pencil size={11} />
-                      <span className="hidden sm:inline">Modifica</span>
+                      <span className="hidden sm:inline">{t('edit')}</span>
                     </Link>
                   )}
 
@@ -154,7 +156,7 @@ export default function CustomerOrdersView() {
                     className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
                   >
                     <ScanEye size={11} />
-                    <span className="hidden sm:inline">Anteprima</span>
+                    <span className="hidden sm:inline">{t('preview')}</span>
                   </Link>
 
                   {/* Esporta (Demetra) */}
@@ -172,7 +174,7 @@ export default function CustomerOrdersView() {
                     >
                       <Copy size={11} />
                       <span className="hidden sm:inline">
-                        {duplicatingId === order.id ? 'Duplicando...' : 'Duplica ordine'}
+                        {duplicatingId === order.id ? t('duplicating') : t('duplicateOrder')}
                       </span>
                     </button>
                   )}
@@ -182,21 +184,21 @@ export default function CustomerOrdersView() {
                     isConfirming ? (
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs text-gray-500">
-                          Sei sicuro? L&apos;ordine verrà eliminato definitivamente.
+                          {t('deleteConfirm')}
                         </span>
                         <button
                           onClick={() => handleDelete(order.id)}
                           disabled={isDeleting}
                           className="text-xs bg-red-500 text-white px-2 py-1.5 rounded hover:bg-red-600 transition-colors disabled:opacity-50"
                         >
-                          {isDeleting ? 'Eliminando...' : 'Sì, elimina'}
+                          {isDeleting ? t('deleting') : t('deleteYes')}
                         </button>
                         <button
                           onClick={() => setConfirmingId(null)}
                           disabled={isDeleting}
                           className="text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:bg-cream transition-colors"
                         >
-                          Annulla
+                          {t('cancel')}
                         </button>
                       </div>
                     ) : (
@@ -205,7 +207,7 @@ export default function CustomerOrdersView() {
                         className="flex items-center gap-1 text-xs border border-red-200 rounded px-2 py-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <Trash2 size={11} />
-                        <span className="hidden sm:inline">Elimina</span>
+                        <span className="hidden sm:inline">{t('delete')}</span>
                       </button>
                     )
                   )}

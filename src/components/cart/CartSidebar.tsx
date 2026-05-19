@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { useCartStore } from '@/store/cartStore';
 import CartItem from './CartItem';
@@ -12,6 +13,7 @@ export default function CartSidebar() {
   const router = useRouter();
   const { items, collectionId, notes, clearCart, getTotalItems, hasLotWarnings } = useCartStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const t = useTranslations('cart');
 
   const totalItems = getTotalItems();
   const hasWarnings = hasLotWarnings();
@@ -35,12 +37,12 @@ export default function CartSidebar() {
         }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? 'Errore nella creazione ordine');
+      if (!res.ok) throw new Error(body.error ?? t('errorCreate'));
       clearCart();
       toast.success('Ordine creato con successo');
       router.push(`/catalog/orders/${body.data.id}/preview`);
     } catch (e: any) {
-      toast.error(e.message ?? 'Impossibile creare l\'ordine');
+      toast.error(e.message ?? t('errorCreate'));
     } finally {
       setIsSubmitting(false);
     }
@@ -52,7 +54,7 @@ export default function CartSidebar() {
       <div className="px-4 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <ShoppingCart size={15} className="text-gray-500" />
-          <span className="text-xs font-medium text-primary tracking-wide">Ordine Corrente</span>
+          <span className="text-xs font-medium text-primary tracking-wide">{t('title')}</span>
           {totalItems > 0 && (
             <span className="bg-primary text-background text-2xs font-medium px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
               {totalItems}
@@ -62,10 +64,10 @@ export default function CartSidebar() {
         {!isEmpty && (
           <button
             onClick={() => {
-              if (confirm('Svuotare l\'intero ordine?')) clearCart();
+              if (confirm(t('clearConfirm'))) clearCart();
             }}
             className="text-gray-300 hover:text-gray-600 transition-colors"
-            title="Svuota carrello"
+            title={t('clearTooltip')}
           >
             <Trash2 size={13} />
           </button>
@@ -77,23 +79,21 @@ export default function CartSidebar() {
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center h-full py-12 px-4 text-center">
             <ShoppingCart size={32} className="text-gray-200 mb-3" />
-            <p className="text-sm text-gray-400 font-light">Il tuo ordine è vuoto</p>
-            <p className="text-2xs text-gray-300 mt-1">Clicca su qualsiasi prodotto per aggiungerlo</p>
+            <p className="text-sm text-gray-400 font-light">{t('emptyTitle')}</p>
+            <p className="text-2xs text-gray-300 mt-1">{t('emptyHint')}</p>
           </div>
         ) : (
           <div>
             {hasWarnings && (
               <div className="mx-4 mt-3 mb-0 flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded">
                 <AlertTriangle size={13} className="text-amber-500 flex-shrink-0" />
-                <p className="text-2xs text-amber-700">Alcune quantità non corrispondono ai lotti richiesti</p>
+                <p className="text-2xs text-amber-700">{t('lotWarning')}</p>
               </div>
             )}
 
             {items.map((item) => (
               <CartItem key={item.productId} item={item} />
             ))}
-
-
           </div>
         )}
       </div>
@@ -106,7 +106,7 @@ export default function CartSidebar() {
           <div className="px-4 pb-4 flex-shrink-0">
             {hasWarnings ? (
               <div className="w-full py-2.5 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
-                Correggi prima i lotti
+                {t('fixLots')}
               </div>
             ) : (
               <button
@@ -117,12 +117,12 @@ export default function CartSidebar() {
                 {isSubmitting ? (
                   <>
                     <Loader2 size={12} className="animate-spin" />
-                    Invio in corso...
+                    {t('creating')}
                   </>
                 ) : (
                   <>
                     <Send size={12} />
-                    Crea Ordine
+                    {t('createOrder')}
                   </>
                 )}
               </button>

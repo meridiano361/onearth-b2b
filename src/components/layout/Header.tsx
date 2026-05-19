@@ -5,8 +5,10 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
 import { LogOut, HelpCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import LanguageSelector from '@/components/layout/LanguageSelector';
 
 interface HeaderProps {
   session: Session;
@@ -14,6 +16,7 @@ interface HeaderProps {
 
 export default function Header({ session }: HeaderProps) {
   const pathname = usePathname();
+  const t = useTranslations('nav');
 
   return (
     <header className="h-14 bg-white border-b border-border flex items-center px-4 sm:px-6 gap-3 sm:gap-6 flex-shrink-0 z-10">
@@ -48,7 +51,7 @@ export default function Header({ session }: HeaderProps) {
               : 'text-gray-400 hover:text-primary hover:bg-cream'
           )}
         >
-          Catalogo
+          {t('catalog')}
         </Link>
         <Link
           href="/catalog/orders"
@@ -59,7 +62,7 @@ export default function Header({ session }: HeaderProps) {
               : 'text-gray-400 hover:text-primary hover:bg-cream'
           )}
         >
-          I miei Ordini
+          {t('orders')}
         </Link>
         <Link
           href="/catalog/assistenza"
@@ -71,12 +74,15 @@ export default function Header({ session }: HeaderProps) {
           )}
         >
           <HelpCircle size={12} />
-          Assistenza
+          {t('assistance')}
         </Link>
       </nav>
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Language selector */}
+      <LanguageSelector />
 
       {/* User info */}
       <div className="flex items-center gap-3">
@@ -92,10 +98,10 @@ export default function Header({ session }: HeaderProps) {
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary transition-colors px-2 py-2 rounded hover:bg-cream"
-          title="Esci"
+          title={t('logout')}
         >
           <LogOut size={14} />
-          <span className="hidden sm:inline">Esci</span>
+          <span className="hidden sm:inline">{t('logout')}</span>
         </button>
       </div>
     </header>

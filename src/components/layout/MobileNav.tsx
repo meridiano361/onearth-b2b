@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutGrid, Package, ShoppingCart, HelpCircle, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import CartSidebar from '@/components/cart/CartSidebar';
@@ -13,6 +14,8 @@ export default function MobileNav() {
   const pathname = usePathname();
   const { getTotalItems } = useCartStore();
   const totalItems = getTotalItems();
+  const tn = useTranslations('nav');
+  const tc = useTranslations('cart');
 
   return (
     <>
@@ -31,7 +34,7 @@ export default function MobileNav() {
             )}
           >
             <LayoutGrid size={20} />
-            <span className="text-2xs tracking-wide">Catalogo</span>
+            <span className="text-2xs tracking-wide">{tn('catalog')}</span>
           </Link>
 
           {/* Cart — center prominent tab */}
@@ -56,7 +59,7 @@ export default function MobileNav() {
               'text-2xs tracking-wide',
               totalItems > 0 ? 'text-primary font-semibold' : 'text-gray-400'
             )}>
-              Ordine
+              {tn('orderTab')}
             </span>
           </button>
 
@@ -69,7 +72,7 @@ export default function MobileNav() {
             )}
           >
             <Package size={20} />
-            <span className="text-2xs tracking-wide">Ordini</span>
+            <span className="text-2xs tracking-wide">{tn('ordersShort')}</span>
           </Link>
 
           {/* Assistenza */}
@@ -81,7 +84,7 @@ export default function MobileNav() {
             )}
           >
             <HelpCircle size={20} />
-            <span className="text-2xs tracking-wide">Assistenza</span>
+            <span className="text-2xs tracking-wide">{tn('assistance')}</span>
           </Link>
         </div>
       </nav>
@@ -98,7 +101,7 @@ export default function MobileNav() {
             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
             <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0 border-b border-border">
-              <span className="text-xs font-semibold text-primary uppercase tracking-widest">Il tuo Ordine</span>
+              <span className="text-xs font-semibold text-primary uppercase tracking-widest">{tn('orderDrawer')}</span>
               <button
                 onClick={() => setCartOpen(false)}
                 className="text-gray-400 hover:text-primary transition-colors p-1"

@@ -1,6 +1,7 @@
 'use client';
 
 import { X, AlertCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn, formatCurrency, isValidLotQuantity } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import QuantitySelector from '@/components/catalog/QuantitySelector';
@@ -12,6 +13,7 @@ interface CartItemProps {
 
 export default function CartItem({ item }: CartItemProps) {
   const { removeItem, updateQuantity } = useCartStore();
+  const t = useTranslations('cartItem');
   const hasLotWarning = !isValidLotQuantity(item.quantity, item.product.lotSize);
 
   return (
@@ -46,7 +48,7 @@ export default function CartItem({ item }: CartItemProps) {
             <div className="flex items-center gap-1 mt-1.5">
               <AlertCircle size={10} className="text-amber-500 flex-shrink-0" />
               <p className="text-2xs text-amber-600">
-                Multiplo di {item.product.lotSize} richiesto
+                {t('lotRequired', { lotSize: item.product.lotSize })}
               </p>
             </div>
           )}

@@ -1,20 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { X, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 
-const schema = z.object({
-  organizzazione: z.string().min(1, 'Campo obbligatorio'),
-  puntoVendita: z.string().min(1, 'Campo obbligatorio'),
-  nomeResponsabile: z.string().min(1, 'Campo obbligatorio'),
-  email: z.string().email('Email non valida'),
-});
-
-type FormValues = z.infer<typeof schema>;
+type FormValues = {
+  organizzazione: string;
+  puntoVendita: string;
+  nomeResponsabile: string;
+  email: string;
+};
 
 const inputClass =
   'w-full px-4 py-3 bg-white border border-border rounded text-sm text-primary placeholder-gray-400 transition-all duration-150 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20';
@@ -22,8 +21,20 @@ const inputClass =
 const labelClass = 'block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2';
 
 export default function RequestAccessButton() {
+  const t = useTranslations('access');
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
+
+  const schema = useMemo(
+    () =>
+      z.object({
+        organizzazione: z.string().min(1, t('required')),
+        puntoVendita: z.string().min(1, t('required')),
+        nomeResponsabile: z.string().min(1, t('required')),
+        email: z.string().email(t('emailInvalid')),
+      }),
+    [t]
+  );
 
   const {
     register,
@@ -52,7 +63,7 @@ export default function RequestAccessButton() {
       if (!res.ok) throw new Error();
       setSent(true);
     } catch {
-      toast.error('Errore durante l\'invio. Riprova.');
+      toast.error(t('errorSend'));
     }
   }
 
@@ -63,7 +74,7 @@ export default function RequestAccessButton() {
         onClick={openModal}
         className="text-accent hover:underline cursor-pointer"
       >
-        Richiedi credenziali per accesso
+        {t('requestLink')}
       </button>
 
       {open && (
@@ -90,26 +101,26 @@ export default function RequestAccessButton() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-light text-primary mb-2">Richiesta inviata!</h3>
-                <p className="text-sm text-gray-500">Sarai contattato a breve.</p>
+                <h3 className="text-lg font-light text-primary mb-2">{t('successTitle')}</h3>
+                <p className="text-sm text-gray-500">{t('successText')}</p>
                 <button
                   onClick={closeModal}
                   className="mt-6 px-6 py-2.5 bg-primary text-background text-sm font-medium rounded hover:bg-warm-darker transition-colors"
                 >
-                  Chiudi
+                  {t('close')}
                 </button>
               </div>
             ) : (
               <>
-                <h3 className="text-lg font-light text-primary mb-1">Richiedi accesso</h3>
-                <p className="text-xs text-gray-400 mb-6">Compila il form e ti contatteremo al più presto.</p>
+                <h3 className="text-lg font-light text-primary mb-1">{t('title')}</h3>
+                <p className="text-xs text-gray-400 mb-6">{t('subtitle')}</p>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   <div>
-                    <label className={labelClass}>Organizzazione</label>
+                    <label className={labelClass}>{t('orgLabel')}</label>
                     <input
                       {...register('organizzazione')}
-                      placeholder="es. Il fiore onlus"
+                      placeholder={t('orgPlaceholder')}
                       className={inputClass}
                     />
                     {errors.organizzazione && (
@@ -118,10 +129,10 @@ export default function RequestAccessButton() {
                   </div>
 
                   <div>
-                    <label className={labelClass}>Punto vendita</label>
+                    <label className={labelClass}>{t('pvLabel')}</label>
                     <input
                       {...register('puntoVendita')}
-                      placeholder="es. Piacenza"
+                      placeholder={t('pvPlaceholder')}
                       className={inputClass}
                     />
                     {errors.puntoVendita && (
@@ -130,10 +141,10 @@ export default function RequestAccessButton() {
                   </div>
 
                   <div>
-                    <label className={labelClass}>Nome e cognome responsabile</label>
+                    <label className={labelClass}>{t('respLabel')}</label>
                     <input
                       {...register('nomeResponsabile')}
-                      placeholder="es. Mario Rossi"
+                      placeholder={t('respPlaceholder')}
                       className={inputClass}
                     />
                     {errors.nomeResponsabile && (
@@ -142,11 +153,11 @@ export default function RequestAccessButton() {
                   </div>
 
                   <div>
-                    <label className={labelClass}>E-mail</label>
+                    <label className={labelClass}>{t('emailLabel')}</label>
                     <input
                       {...register('email')}
                       type="email"
-                      placeholder="es. xxx@yyy.it"
+                      placeholder={t('emailPlaceholder')}
                       className={inputClass}
                     />
                     {errors.email && (
@@ -162,10 +173,10 @@ export default function RequestAccessButton() {
                     {isSubmitting ? (
                       <>
                         <Loader2 size={16} className="animate-spin" />
-                        Invio in corso...
+                        {t('submitting')}
                       </>
                     ) : (
-                      'Invia richiesta'
+                      t('submit')
                     )}
                   </button>
                 </form>

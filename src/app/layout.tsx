@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Nunito } from 'next/font/google';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages } from 'next-intl/server';
 import ToasterWrapper from '@/components/layout/ToasterWrapper';
 import Providers from '@/components/layout/Providers';
 import './globals.css';
@@ -36,18 +38,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="it" className={nunito.variable}>
+    <html lang={locale} className={nunito.variable}>
       <body>
-        <Providers>
-          {children}
-          <ToasterWrapper />
-        </Providers>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <Providers>
+            {children}
+            <ToasterWrapper />
+          </Providers>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

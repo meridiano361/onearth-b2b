@@ -1,25 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 
-const loginSchema = z.object({
-  email: z.string().email('Inserisci un\'email valida'),
-  password: z.string().min(1, 'La password è obbligatoria'),
-});
-
-type LoginValues = z.infer<typeof loginSchema>;
+type LoginValues = { email: string; password: string };
 
 export default function LoginForm() {
   const router = useRouter();
+  const t = useTranslations('login');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const loginSchema = useMemo(
+    () =>
+      z.object({
+        email: z.string().email(t('emailError')),
+        password: z.string().min(1, t('passwordError')),
+      }),
+    [t]
+  );
 
   const {
     register,
@@ -39,12 +45,10 @@ export default function LoginForm() {
       });
 
       if (result?.error) {
-        toast.error(result.error === 'CredentialsSignin' ? 'Email o password non validi' : result.error);
+        toast.error(result.error === 'CredentialsSignin' ? t('errorInvalid') : result.error);
         return;
       }
 
-      // Hard redirect so the browser sends the fresh JWT cookie and middleware
-      // can apply the correct role-based routing (avoids stale cache).
       const response = await fetch('/api/auth/session', { cache: 'no-store' });
       const session = await response.json();
       const role = session?.user?.role ?? '';
@@ -52,7 +56,7 @@ export default function LoginForm() {
 
       window.location.href = adminRoles.includes(role) ? '/admin' : '/catalog';
     } catch {
-      toast.error('Si è verificato un errore inatteso. Riprova.');
+      toast.error(t('errorGeneric'));
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +66,7 @@ export default function LoginForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <div>
         <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
-          Indirizzo Email
+          {t('emailLabel')}
         </label>
         <input
           {...register('email')}
@@ -78,7 +82,7 @@ export default function LoginForm() {
 
       <div>
         <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
-          Password
+          {t('passwordLabel')}
         </label>
         <div className="relative">
           <input
@@ -109,10 +113,10 @@ export default function LoginForm() {
         {isLoading ? (
           <>
             <Loader2 size={16} className="animate-spin" />
-            Accesso in corso...
+            {t('loading')}
           </>
         ) : (
-          'Accedi'
+          t('submit')
         )}
       </button>
     </form>

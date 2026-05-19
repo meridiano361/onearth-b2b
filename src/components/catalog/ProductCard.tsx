@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Check, AlertCircle, Layers } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn, formatCurrency, isValidLotQuantity } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import QuantitySelector from './QuantitySelector';
@@ -14,6 +15,7 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { getItemQuantity, updateQuantity, addItem } = useCartStore();
+  const t = useTranslations('product');
   const cartQty = getItemQuantity(product.id);
   const [localQty, setLocalQty] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
@@ -96,13 +98,13 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Prices */}
         <div className="flex items-end justify-between mb-3">
           <div>
-            <p className="text-2xs text-gray-400 uppercase tracking-wide">Costo</p>
+            <p className="text-2xs text-gray-400 uppercase tracking-wide">{t('cost')}</p>
             <p className="text-sm font-semibold text-primary">
               {formatCurrency(product.costPrice)}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-2xs text-gray-400 uppercase tracking-wide">Vendita</p>
+            <p className="text-2xs text-gray-400 uppercase tracking-wide">{t('sale')}</p>
             <p className="text-xs text-gray-500">
               {formatCurrency(product.retailPrice)}
             </p>
@@ -121,7 +123,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <div className="flex items-center gap-1 mb-2 p-1.5 bg-amber-50 rounded border border-amber-200">
             <AlertCircle size={11} className="text-amber-500 flex-shrink-0" />
             <p className="text-2xs text-amber-700">
-              Adatta la quantità al multiplo di {product.lotSize}
+              {t('adjustLot', { lotSize: product.lotSize })}
             </p>
           </div>
         )}
@@ -146,12 +148,12 @@ export default function ProductCard({ product }: ProductCardProps) {
           >
             {justAdded ? (
               <span className="flex items-center justify-center gap-1.5">
-                <Check size={12} /> Aggiunto
+                <Check size={12} /> {t('added')}
               </span>
             ) : (
               <span className="flex items-center justify-center gap-1.5">
                 <ShoppingBag size={12} />
-                Aggiungi
+                {t('add')}
               </span>
             )}
           </button>

@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import LoginForm from '@/components/auth/LoginForm';
@@ -19,6 +20,8 @@ export default async function LoginPage() {
   if (session) {
     redirect(isAdminRole(session.user.role) ? '/admin' : '/catalog');
   }
+
+  const t = await getTranslations('login');
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -81,7 +84,7 @@ export default async function LoginPage() {
           </div>
 
           <div className="mb-10">
-            <h2 className="text-2xl font-light text-primary tracking-tight">C&apos;è un mondo da scoprire.</h2>
+            <h2 className="text-2xl font-light text-primary tracking-tight">{t('claim')}</h2>
           </div>
 
           <LoginForm />
