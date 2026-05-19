@@ -77,8 +77,7 @@ export default async function LoginPage() {
           </div>
 
           <div className="mb-10">
-            <h2 className="text-2xl font-light text-primary tracking-tight">Bentornato</h2>
-            <p className="mt-1.5 text-sm text-gray-500">C&apos;è un mondo da scoprire.</p>
+            <h2 className="text-2xl font-light text-primary tracking-tight">C&apos;è un mondo da scoprire.</h2>
           </div>
 
           <LoginForm />
