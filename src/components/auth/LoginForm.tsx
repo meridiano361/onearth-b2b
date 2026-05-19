@@ -46,8 +46,10 @@ export default function LoginForm() {
       // Get session to determine redirect
       const response = await fetch('/api/auth/session');
       const session = await response.json();
+      const role = session?.user?.role ?? '';
+      const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE', 'MAGAZZINO'];
 
-      if (session?.user?.role === 'ADMIN') {
+      if (adminRoles.includes(role)) {
         router.push('/admin');
       } else {
         router.push('/catalog');
