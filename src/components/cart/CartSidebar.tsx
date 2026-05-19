@@ -1,17 +1,50 @@
 'use client';
 
-import Link from 'next/link';
-import { ShoppingCart, Trash2, AlertTriangle, Send } from 'lucide-react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useCartStore } from '@/store/cartStore';
 import CartItem from './CartItem';
 import CartSummary from './CartSummary';
 
 export default function CartSidebar() {
-  const { items, clearCart, getTotalItems, hasLotWarnings } = useCartStore();
+  const router = useRouter();
+  const { items, collectionId, notes, clearCart, getTotalItems, hasLotWarnings } = useCartStore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const totalItems = getTotalItems();
   const hasWarnings = hasLotWarnings();
   const isEmpty = items.length === 0;
+
+  async function handleCreateOrder() {
+    if (isSubmitting || isEmpty) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          collectionId: collectionId || null,
+          notes: notes || null,
+          items: items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            unitPrice: i.product.costPrice,
+          })),
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? 'Errore nella creazione ordine');
+      clearCart();
+      toast.success('Ordine creato con successo');
+      router.push(`/catalog/orders/${body.data.id}/preview`);
+    } catch (e: any) {
+      toast.error(e.message ?? 'Impossibile creare l\'ordine');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -76,13 +109,23 @@ export default function CartSidebar() {
                 Correggi prima i lotti
               </div>
             ) : (
-              <Link
-                href="/catalog/orders"
-                className="w-full py-2.5 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker"
+              <button
+                onClick={handleCreateOrder}
+                disabled={isSubmitting}
+                className="w-full py-2.5 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Send size={12} />
-                Crea Ordine
-              </Link>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" />
+                    Invio in corso...
+                  </>
+                ) : (
+                  <>
+                    <Send size={12} />
+                    Crea Ordine
+                  </>
+                )}
+              </button>
             )}
           </div>
         </>
