@@ -324,7 +324,7 @@ async function main() {
       if (seenEmails.has(op.email)) {
         // Multiple operators share the same email — append name to distinguish
         const { nome, cognome } = splitName(op.fullName);
-        const existing = await prisma.operator.findUnique({ where: { email: op.email } });
+        const existing = await prisma.operator.findFirst({ where: { email: op.email } });
         if (existing) {
           console.log(`  [skip-dup] ${op.email} already exists for another operator in this org`);
           continue;
@@ -333,7 +333,7 @@ async function main() {
       seenEmails.add(op.email);
 
       const { nome, cognome } = splitName(op.fullName);
-      const existing = await prisma.operator.findUnique({ where: { email: op.email } });
+      const existing = await prisma.operator.findFirst({ where: { email: op.email } });
       if (existing) {
         skipped.push(`${op.email} (already exists)`);
         continue;

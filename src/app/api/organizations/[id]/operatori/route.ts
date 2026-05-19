@@ -24,9 +24,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const body = await req.json();
   const data = createSchema.parse(body);
 
-  const existing = await prisma.operator.findUnique({ where: { email: data.email.toLowerCase() } });
-  if (existing) return NextResponse.json({ error: 'Email già in uso' }, { status: 409 });
-
   const passwordHash = await bcrypt.hash(data.password, 12);
   const operator = await prisma.operator.create({
     data: {

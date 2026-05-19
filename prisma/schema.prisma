@@ -266,7 +266,7 @@ model Operator {
   id             String   @id @default(cuid())
   nome           String
   cognome        String
-  email          String   @unique
+  email          String
   telefono       String?
   passwordHash   String
   organizationId String

@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
         const email = credentials.email.toLowerCase().trim();
 
         // Try operator first
-        const operator = await prisma.operator.findUnique({
+        const operator = await prisma.operator.findFirst({
           where: { email },
           include: { organization: true },
         });
