@@ -281,6 +281,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const pvn = retailNum / (1 + ivaNum / 100);
   const ricarico = costNum > 0 ? ((pvn - costNum) / costNum) * 100 : null;
   const margine = pvn > 0 ? ((pvn - costNum) / pvn) * 100 : null;
+  const fasciaSconto = pvn > 0 && costNum > 0 ? (1 - costNum / pvn) * 100 : null;
   const fmtPct = (v: number | null) =>
     v === null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
 
@@ -373,11 +374,10 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <ManagedSelect
-          entita="misura"
+        <Input
           label="Misure"
-          value={watch('misura') || ''}
-          onChange={(v) => setValue('misura', v)}
+          {...register('misura')}
+          placeholder="es. 30x40 cm"
         />
         <ManagedSelect
           entita="produttore"
@@ -541,6 +541,9 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           value={watch('fasciaRicarico') || ''}
           onChange={(v) => setValue('fasciaRicarico', v)}
         />
+        <ReadOnlyField label="Fascia di sconto" value={fmtPct(fasciaSconto)} />
+      </div>
+      <div>
         <Input
           label="Note"
           {...register('notes')}
