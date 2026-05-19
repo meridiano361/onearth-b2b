@@ -3,7 +3,7 @@
 import { getTranslations } from 'next-intl/server';
 import {
   LogIn, BookOpen, ShoppingBag, Package, Eye, Download,
-  Globe, HelpCircle, MessageCircle,
+  Globe, HelpCircle, Smartphone,
 } from 'lucide-react';
 
 export async function generateMetadata() {
@@ -146,33 +146,74 @@ export default async function AssistenzaPage() {
           </div>
         ))}
 
+        {/* Scarica l'app */}
+        <div className="bg-white border border-border rounded-lg p-5 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-accent"><Smartphone size={16} /></span>
+            <h2 className="text-sm font-semibold text-primary tracking-wide">Scarica l&apos;app sul tuo dispositivo</h2>
+          </div>
+          <div className="space-y-5">
+            {[
+              {
+                label: 'iPhone / iPad (Safari)',
+                steps: [
+                  'Apri app.b2b.on-earth.it in Safari',
+                  'Tocca l\'icona di condivisione (quadrato con freccia in su) in basso',
+                  'Scorri e tocca "Aggiungi a schermata Home"',
+                  'Tocca "Aggiungi" in alto a destra',
+                  'L\'app apparirà come icona sulla tua schermata home',
+                ],
+              },
+              {
+                label: 'Android (Chrome)',
+                steps: [
+                  'Apri app.b2b.on-earth.it in Chrome',
+                  'Tocca i tre puntini in alto a destra',
+                  'Tocca "Aggiungi a schermata Home" o "Installa app"',
+                  'Tocca "Aggiungi"',
+                  'L\'app apparirà come icona sulla tua schermata home',
+                ],
+              },
+              {
+                label: 'Mac / PC (Chrome o Edge)',
+                steps: [
+                  'Apri app.b2b.on-earth.it',
+                  'Clicca sull\'icona di installazione nella barra degli indirizzi',
+                  'Clicca "Installa"',
+                  'L\'app si aprirà come applicazione desktop',
+                ],
+              },
+            ].map((platform) => (
+              <div key={platform.label}>
+                <p className="text-xs font-semibold text-primary mb-2">{platform.label}</p>
+                <ol className="space-y-1 ml-1">
+                  {platform.steps.map((step, i) => (
+                    <li key={i} className="flex gap-2 text-sm text-gray-600">
+                      <span className="text-accent font-medium flex-shrink-0 w-4">{i + 1}.</span>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Assistenza */}
         <div className="bg-white border border-border rounded-lg p-5 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-accent"><HelpCircle size={16} /></span>
             <h2 className="text-sm font-semibold text-primary tracking-wide">{t('s8Title')}</h2>
           </div>
-          <ul className="space-y-2">
-            <li className="flex gap-2 text-sm text-gray-600">
-              <span className="text-accent mt-1 flex-shrink-0">·</span>
-              <span>
-                {t('s8i1')}{' '}
-                <a
-                  href="mailto:e.mazzolari@meridiano361.it"
-                  className="text-accent hover:underline font-medium"
-                >
-                  assistenzatecnicaapp2b2@onearth.it
-                </a>
-              </span>
-            </li>
-            <li className="flex gap-2 text-sm text-gray-600">
-              <span className="text-accent mt-1 flex-shrink-0">·</span>
-              <span className="flex items-center gap-1.5">
-                <MessageCircle size={13} className="text-green-500 flex-shrink-0" />
-                {t('s8i2')}
-              </span>
-            </li>
-          </ul>
+          <p className="text-sm text-gray-600">
+            Per problemi tecnici{' '}
+            <a
+              href="mailto:e.mazzolari@meridiano361.it"
+              className="text-accent hover:underline font-medium"
+            >
+              scrivici
+            </a>
+          </p>
         </div>
       </div>
     </div>

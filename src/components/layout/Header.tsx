@@ -98,11 +98,11 @@ export default function Header({ session }: HeaderProps) {
       {/* User info */}
       <div className="flex items-center gap-3">
         <div className="text-right hidden sm:block">
-          <p className="text-xs font-medium text-primary truncate max-w-[140px]">
+          <p className="text-xs font-medium text-primary truncate max-w-[160px]">
             {session.user.companyName}
           </p>
-          <p className="text-2xs text-gray-400 uppercase tracking-wide">
-            {session.user.customerCode}
+          <p className="text-2xs text-gray-400 truncate max-w-[160px]">
+            {session.user.email}
           </p>
         </div>
 
