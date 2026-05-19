@@ -13,6 +13,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed-classificazione": "tsx scripts/seed-classificazione.ts",
     "db:seed-organizations": "tsx prisma/seed-organizations.ts",
+    "db:seed-passwords": "node scripts/seed-operator-passwords.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
