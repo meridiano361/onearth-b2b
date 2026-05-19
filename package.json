@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed-classificazione": "tsx scripts/seed-classificazione.ts",
+    "db:seed-organizations": "tsx prisma/seed-organizations.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

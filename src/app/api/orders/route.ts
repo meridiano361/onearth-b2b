@@ -13,6 +13,8 @@ const orderItemSchema = z.object({
 
 const createOrderSchema = z.object({
   customerId: z.string().optional(),
+  organizationId: z.string().optional(),
+  canaleId: z.string().optional(),
   collectionId: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   items: z.array(orderItemSchema).min(1),
@@ -41,11 +43,13 @@ function serializeOrder(order: any) {
         : undefined,
     })),
     customer: order.customer
-      ? {
-          ...order.customer,
-          createdAt: order.customer.createdAt?.toISOString(),
-          updatedAt: order.customer.updatedAt?.toISOString(),
-        }
+      ? { ...order.customer, createdAt: order.customer.createdAt?.toISOString(), updatedAt: order.customer.updatedAt?.toISOString() }
+      : undefined,
+    organization: order.organization
+      ? { ...order.organization, createdAt: order.organization.createdAt?.toISOString() }
+      : undefined,
+    canale: order.canale
+      ? { ...order.canale, createdAt: order.canale.createdAt?.toISOString(), updatedAt: order.canale.updatedAt?.toISOString() }
       : undefined,
   };
 }
@@ -59,38 +63,38 @@ export async function GET(req: NextRequest) {
     const myOrders = searchParams.get('my') === 'true';
     const status = searchParams.get('status');
     const customerId = searchParams.get('customerId');
+    const organizationId = searchParams.get('organizationId');
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const skip = (page - 1) * limit;
 
     const where: any = {};
 
-    // Customers can only see their own orders
-    if (session.user.role === 'CUSTOMER' || myOrders) {
+    if (session.user.role === 'OPERATOR') {
+      // Operators see orders for their selected canale
+      where.canaleId = session.user.canaleId;
+    } else if (session.user.role === 'CUSTOMER' || myOrders) {
       where.customerId = session.user.id;
     }
 
     if (status) where.status = status;
-    if (customerId && isAdminRole(session.user.role)) where.customerId = customerId;
+    if (isAdminRole(session.user.role)) {
+      if (customerId) where.customerId = customerId;
+      if (organizationId) where.organizationId = organizationId;
+    }
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
         where,
         include: {
           customer: {
-            select: {
-              id: true,
-              companyName: true,
-              customerCode: true,
-              email: true,
-              createdAt: true,
-            },
+            select: { id: true, companyName: true, customerCode: true, email: true, createdAt: true },
           },
+          organization: { select: { id: true, nome: true, createdAt: true } },
+          canale: { select: { id: true, nome: true, tipo: true, citta: true, organizationId: true, createdAt: true, updatedAt: true } },
           items: {
             include: {
-              product: {
-                include: { category: true },
-              },
+              product: { include: { category: true } },
             },
           },
         },
@@ -122,12 +126,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createOrderSchema.parse(body);
 
-    // Use the session user's ID (customers can only create for themselves)
-    const effectiveCustomerId =
-      isAdminRole(session.user.role) && data.customerId
-        ? data.customerId
-        : session.user.id;
-
     // Validate and price items
     const productIds = data.items.map((i) => i.productId);
     const products = await prisma.product.findMany({
@@ -135,7 +133,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (products.length !== productIds.length) {
-      return NextResponse.json({ error: 'One or more products not found or inactive' }, { status: 400 });
+      return NextResponse.json({ error: 'Uno o più prodotti non trovati o non attivi' }, { status: 400 });
     }
 
     const productMap = new Map(products.map((p) => [p.id, p]));
@@ -148,59 +146,50 @@ export async function POST(req: NextRequest) {
       const subtotal = unitPrice * item.quantity;
       totalValue += subtotal;
       totalItems += item.quantity;
-      return {
-        productId: item.productId,
-        quantity: item.quantity,
-        unitPrice,
-        subtotal,
-      };
+      return { productId: item.productId, quantity: item.quantity, unitPrice, subtotal };
     });
+
+    // Determine ownership
+    let orderData: any = {
+      collectionId: data.collectionId || null,
+      status: 'MERCE_DA_ORDINARE',
+      totalValue,
+      totalItems,
+      notes: data.notes || null,
+      confirmedAt: new Date(),
+      items: { create: orderItems },
+    };
+
+    if (session.user.role === 'OPERATOR') {
+      orderData.organizationId = session.user.organizationId;
+      orderData.canaleId = session.user.canaleId;
+      orderData.operatorId = session.user.id;
+    } else if (isAdminRole(session.user.role)) {
+      if (data.customerId) orderData.customerId = data.customerId;
+      if (data.organizationId) orderData.organizationId = data.organizationId;
+      if (data.canaleId) orderData.canaleId = data.canaleId;
+    } else {
+      // CUSTOMER (legacy)
+      orderData.customerId = session.user.id;
+    }
 
     const order = await prisma.order.create({
-      data: {
-        customerId: effectiveCustomerId,
-        collectionId: data.collectionId || null,
-        status: 'MERCE_DA_ORDINARE',
-        totalValue,
-        totalItems,
-        notes: data.notes || null,
-        confirmedAt: new Date(),
-        items: {
-          create: orderItems,
-        },
-      },
+      data: orderData,
       include: {
-        customer: {
-          select: {
-            id: true,
-            companyName: true,
-            customerCode: true,
-            email: true,
-            createdAt: true,
-          },
-        },
-        items: {
-          include: {
-            product: {
-              include: { category: true },
-            },
-          },
-        },
+        customer: { select: { id: true, companyName: true, customerCode: true, email: true, createdAt: true } },
+        organization: { select: { id: true, nome: true, createdAt: true } },
+        canale: { select: { id: true, nome: true, tipo: true, citta: true, organizationId: true, createdAt: true, updatedAt: true } },
+        items: { include: { product: { include: { category: true } } } },
       },
     });
-
-    // Simulate email notification
-    console.log(
-      `[EMAIL] New order ${order.id} from ${order.customer?.companyName} — ${order.totalItems} items, €${Number(order.totalValue).toFixed(2)}`
-    );
 
     return NextResponse.json({ data: serializeOrder(order) }, { status: 201 });
   } catch (err: any) {
     if (err.name === 'ZodError') {
-      return NextResponse.json({ error: 'Invalid data', details: err.errors }, { status: 400 });
+      return NextResponse.json({ error: 'Dati non validi', details: err.errors }, { status: 400 });
     }
     if (err.code === 'P2002') {
-      return NextResponse.json({ error: 'Duplicate order item' }, { status: 409 });
+      return NextResponse.json({ error: 'Prodotto duplicato nell\'ordine' }, { status: 409 });
     }
     console.error('POST /api/orders error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

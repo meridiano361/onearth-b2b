@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
-import AdminCustomersPage from '@/components/admin/AdminCustomersPage';
+import AdminOrganizzazioniPage from '@/components/admin/AdminOrganizzazioniPage';
 
-export const metadata: Metadata = { title: 'Customers — Admin' };
+export const metadata: Metadata = { title: 'Clienti — Admin ON EARTH' };
 
 export default function CustomersPage() {
-  return <AdminCustomersPage />;
+  return <AdminOrganizzazioniPage />;
 }

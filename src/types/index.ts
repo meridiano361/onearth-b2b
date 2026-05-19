@@ -1,11 +1,15 @@
 export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'COMMERCIALE' | 'MAGAZZINO' | 'CUSTOMER';
+export type AppRole = Role | 'OPERATOR';
+export type CanaleTipo = 'BOTTEGA' | 'TENDONE' | 'ONLINE' | 'ALTRO';
+
 export type OrderStatus =
   | 'MERCE_DA_ORDINARE'
   | 'MERCE_ORDINATA'
   | 'MERCE_PARZIALMENTE_PRONTA'
   | 'MERCE_PRONTA_DA_AVVISARE'
   | 'MERCE_PRONTA_AVVISATO'
-  | 'ESPORTATO';
+  | 'ESPORTATO'
+  | 'ANNULLATO';
 
 export interface Collection {
   id: string;
@@ -82,6 +86,42 @@ export interface Customer {
   createdAt: string;
 }
 
+// ─── New client hierarchy ─────────────────────────────────────────────────────
+
+export interface Organization {
+  id: string;
+  nome: string;
+  createdAt: string;
+  _count?: { operatori: number; canali: number; ordini: number };
+  operatori?: Operator[];
+  canali?: Canale[];
+}
+
+export interface Operator {
+  id: string;
+  nome: string;
+  cognome: string;
+  email: string;
+  telefono: string | null;
+  organizationId: string;
+  attivo: boolean;
+  createdAt: string;
+  organization?: { nome: string };
+}
+
+export interface Canale {
+  id: string;
+  nome: string;
+  tipo: CanaleTipo;
+  citta: string | null;
+  organizationId: string;
+  createdAt: string;
+  organization?: { nome: string };
+  _count?: { ordini: number };
+}
+
+// ─── Orders ───────────────────────────────────────────────────────────────────
+
 export interface OrderItem {
   id: string;
   orderId: string;
@@ -95,7 +135,10 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
-  customerId: string;
+  customerId: string | null;
+  organizationId: string | null;
+  canaleId: string | null;
+  operatorId: string | null;
   collectionId: string | null;
   status: OrderStatus;
   totalValue: number;
@@ -104,10 +147,13 @@ export interface Order {
   createdAt: string;
   confirmedAt: string | null;
   customer?: Customer;
+  organization?: Organization;
+  canale?: Canale;
   items?: OrderItem[];
 }
 
-// Cart types
+// ─── Cart ─────────────────────────────────────────────────────────────────────
+
 export interface CartItem {
   productId: string;
   product: Product;
@@ -121,7 +167,8 @@ export interface CartState {
   notes: string;
 }
 
-// API response types
+// ─── API response types ───────────────────────────────────────────────────────
+
 export interface ApiResponse<T> {
   data?: T;
   error?: string;
@@ -136,7 +183,8 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-// Import types
+// ─── Import types ─────────────────────────────────────────────────────────────
+
 export interface ImportRow {
   code: string;
   name: string;
@@ -155,33 +203,44 @@ export interface ImportResult {
   total: number;
 }
 
-// Session extension
+// ─── Session extensions ───────────────────────────────────────────────────────
+
 declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
       email: string;
-      role: Role;
+      role: AppRole;
       companyName: string;
       customerCode: string;
+      // Operator-specific fields
+      organizationId?: string;
+      canaleId?: string;
+      canaleName?: string;
     };
   }
 
   interface User {
     id: string;
     email: string;
-    role: Role;
+    role: AppRole;
     companyName: string;
     customerCode: string;
     isActive?: boolean;
+    organizationId?: string;
+    canaleId?: string;
+    canaleName?: string;
   }
 }
 
 declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
-    role: Role;
+    role: AppRole;
     companyName: string;
     customerCode: string;
+    organizationId?: string;
+    canaleId?: string;
+    canaleName?: string;
   }
 }

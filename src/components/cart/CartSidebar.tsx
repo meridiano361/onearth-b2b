@@ -81,7 +81,7 @@ export default function CartSidebar() {
                 className="w-full py-2.5 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker"
               >
                 <Send size={12} />
-                Visualizza Ordine
+                Crea Ordine
               </Link>
             )}
           </div>

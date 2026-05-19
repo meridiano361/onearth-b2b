@@ -2,6 +2,7 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import type { AppRole } from '@/types';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -13,31 +14,45 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('Email and password are required');
+          throw new Error('Email e password obbligatorie');
         }
 
-        const customer = await prisma.customer.findUnique({
-          where: { email: credentials.email.toLowerCase().trim() },
+        const email = credentials.email.toLowerCase().trim();
+
+        // Try operator first
+        const operator = await prisma.operator.findUnique({
+          where: { email },
+          include: { organization: true },
         });
 
-        if (!customer) {
-          throw new Error('Invalid email or password');
+        if (operator) {
+          if (!operator.attivo) {
+            throw new Error('Account disabilitato. Contatta il supporto.');
+          }
+          const valid = await bcrypt.compare(credentials.password, operator.passwordHash);
+          if (!valid) throw new Error('Email o password non validi');
+          return {
+            id: operator.id,
+            email: operator.email,
+            role: 'OPERATOR' as AppRole,
+            companyName: operator.organization.nome,
+            customerCode: '',
+            organizationId: operator.organizationId,
+          };
         }
 
-        if (!customer.isActive) {
-          throw new Error('Account is disabled. Please contact support.');
-        }
+        // Fall back to admin Customer model
+        const customer = await prisma.customer.findUnique({ where: { email } });
+        if (!customer) throw new Error('Email o password non validi');
+        if (!customer.isActive) throw new Error('Account disabilitato. Contatta il supporto.');
 
-        const isValid = await bcrypt.compare(credentials.password, customer.passwordHash);
-
-        if (!isValid) {
-          throw new Error('Invalid email or password');
-        }
+        const valid = await bcrypt.compare(credentials.password, customer.passwordHash);
+        if (!valid) throw new Error('Email o password non validi');
 
         return {
           id: customer.id,
           email: customer.email,
-          role: customer.role as import('@/types').Role,
+          role: customer.role as AppRole,
           companyName: customer.companyName,
           customerCode: customer.customerCode,
         };
@@ -45,21 +60,30 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.companyName = user.companyName;
         token.customerCode = user.customerCode;
+        if (user.organizationId) token.organizationId = user.organizationId;
+      }
+      // Allow session.update({ canaleId, canaleName }) from client
+      if (trigger === 'update' && session) {
+        if (session.canaleId !== undefined) token.canaleId = session.canaleId;
+        if (session.canaleName !== undefined) token.canaleName = session.canaleName;
       }
       return token;
     },
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id as string;
-        session.user.role = token.role as 'ADMIN' | 'CUSTOMER';
+        session.user.role = token.role as AppRole;
         session.user.companyName = token.companyName as string;
         session.user.customerCode = token.customerCode as string;
+        if (token.organizationId) session.user.organizationId = token.organizationId as string;
+        if (token.canaleId) session.user.canaleId = token.canaleId as string;
+        if (token.canaleName) session.user.canaleName = token.canaleName as string;
       }
       return session;
     },
@@ -70,7 +94,7 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 24 * 60 * 60, // 24 hours
+    maxAge: 24 * 60 * 60,
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

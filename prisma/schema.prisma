@@ -201,6 +201,8 @@ model AccessRequest {
   @@map("access_requests")
 }
 
+// ─── Admin staff (unchanged) ──────────────────────────────────────────────────
+
 enum Role {
   SUPER_ADMIN
   ADMIN
@@ -230,6 +232,62 @@ model Customer {
   @@map("customers")
 }
 
+// ─── Client hierarchy ─────────────────────────────────────────────────────────
+
+enum CanaleTipo {
+  BOTTEGA
+  TENDONE
+  ONLINE
+  ALTRO
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+
+  operatori Operator[]
+  canali    Canale[]
+  ordini    Order[]
+
+  @@map("organizations")
+}
+
+model Operator {
+  id             String   @id @default(cuid())
+  nome           String
+  cognome        String
+  email          String   @unique
+  telefono       String?
+  passwordHash   String
+  organizationId String
+  attivo         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ordini       Order[]
+
+  @@map("operators")
+}
+
+model Canale {
+  id             String     @id @default(cuid())
+  nome           String
+  tipo           CanaleTipo @default(BOTTEGA)
+  citta          String?
+  organizationId String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ordini       Order[]
+
+  @@map("canali")
+}
+
+// ─── Orders ───────────────────────────────────────────────────────────────────
+
 enum OrderStatus {
   MERCE_DA_ORDINARE
   MERCE_ORDINATA
@@ -241,20 +299,26 @@ enum OrderStatus {
 }
 
 model Order {
-  id           String      @id @default(cuid())
-  customerId   String
-  collectionId String?
-  status       OrderStatus @default(MERCE_DA_ORDINARE)
-  totalValue   Decimal     @db.Decimal(10, 2) @default(0)
-  totalItems   Int         @default(0)
-  notes        String?
-  createdAt    DateTime    @default(now())
-  confirmedAt  DateTime?
-  updatedAt    DateTime    @updatedAt
+  id             String      @id @default(cuid())
+  customerId     String?
+  organizationId String?
+  canaleId       String?
+  operatorId     String?
+  collectionId   String?
+  status         OrderStatus @default(MERCE_DA_ORDINARE)
+  totalValue     Decimal     @db.Decimal(10, 2) @default(0)
+  totalItems     Int         @default(0)
+  notes          String?
+  createdAt      DateTime    @default(now())
+  confirmedAt    DateTime?
+  updatedAt      DateTime    @updatedAt
 
-  customer   Customer    @relation(fields: [customerId], references: [id])
-  collection Collection? @relation(fields: [collectionId], references: [id])
-  items      OrderItem[]
+  customer     Customer?     @relation(fields: [customerId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  canale       Canale?       @relation(fields: [canaleId], references: [id])
+  operator     Operator?     @relation(fields: [operatorId], references: [id])
+  collection   Collection?   @relation(fields: [collectionId], references: [id])
+  items        OrderItem[]
 
   @@map("orders")
 }

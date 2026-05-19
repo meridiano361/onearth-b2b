@@ -8,15 +8,34 @@ export default withAuth(
     const pathname = req.nextUrl.pathname;
     const role = token?.role as string ?? '';
 
+    // Admin area guards
     if (pathname.startsWith('/admin')) {
-      // Not an admin role → back to catalog
       if (!isAdminRole(role)) {
         return NextResponse.redirect(new URL('/catalog', req.url));
       }
-      // Admin role but not allowed on this specific route → dashboard
       if (!canVisit(role, pathname)) {
         return NextResponse.redirect(new URL('/admin', req.url));
       }
+    }
+
+    // Channel selection page: only operators need it
+    if (pathname === '/seleziona-canale') {
+      if (isAdminRole(role)) {
+        return NextResponse.redirect(new URL('/admin', req.url));
+      }
+      // If operator already has a canale selected, skip this page
+      if (role === 'OPERATOR' && token?.canaleId) {
+        return NextResponse.redirect(new URL('/catalog', req.url));
+      }
+    }
+
+    // Operators without a selected canale must go through channel selection first
+    if (
+      role === 'OPERATOR' &&
+      !token?.canaleId &&
+      (pathname.startsWith('/catalog') || pathname.startsWith('/orders'))
+    ) {
+      return NextResponse.redirect(new URL('/seleziona-canale', req.url));
     }
 
     const response = NextResponse.next();
@@ -38,5 +57,6 @@ export const config = {
     '/catalog/:path*',
     '/orders/:path*',
     '/admin/:path*',
+    '/seleziona-canale',
   ],
 };

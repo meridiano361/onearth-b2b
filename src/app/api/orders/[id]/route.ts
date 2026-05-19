@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -72,9 +73,13 @@ export async function GET(
 
     if (!order) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    // Customers can only view their own orders
-    if (session.user.role === 'CUSTOMER' && order.customerId !== session.user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!isAdminRole(session.user.role)) {
+      if (session.user.role === 'OPERATOR' && order.canaleId !== session.user.canaleId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      if (session.user.role === 'CUSTOMER' && order.customerId !== session.user.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
     }
 
     return NextResponse.json({ data: serializeOrder(order) });
@@ -94,36 +99,30 @@ export async function PATCH(
     const body = await req.json();
     const data = updateSchema.parse(body);
 
-    // Customers can only mark their own orders as ESPORTATO
-    if (session.user.role === 'CUSTOMER') {
+    // Operators/customers can only mark their own orders as ESPORTATO
+    if (session.user.role === 'OPERATOR' || session.user.role === 'CUSTOMER') {
       if (data.status !== 'ESPORTATO') {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       const orderCheck = await prisma.order.findUnique({
         where: { id: params.id },
-        select: { customerId: true },
+        select: { customerId: true, canaleId: true },
       });
-      if (!orderCheck || orderCheck.customerId !== session.user.id) {
+      if (!orderCheck) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      if (session.user.role === 'OPERATOR' && orderCheck.canaleId !== session.user.canaleId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      if (session.user.role === 'CUSTOMER' && orderCheck.customerId !== session.user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       const updated = await prisma.order.update({
         where: { id: params.id },
         data: { status: 'ESPORTATO' },
         include: {
-          customer: {
-            select: {
-              id: true,
-              companyName: true,
-              customerCode: true,
-              email: true,
-              createdAt: true,
-            },
-          },
-          items: {
-            include: {
-              product: { include: { category: true } },
-            },
-          },
+          customer: { select: { id: true, companyName: true, customerCode: true, email: true, createdAt: true } },
+          organization: { select: { id: true, nome: true, createdAt: true } },
+          canale: { select: { id: true, nome: true, tipo: true, citta: true, organizationId: true, createdAt: true, updatedAt: true } },
+          items: { include: { product: { include: { category: true } } } },
         },
       });
       return NextResponse.json({ data: serializeOrder(updated) });
@@ -189,13 +188,16 @@ export async function DELETE(
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (session.user.role === 'CUSTOMER') {
+    if (!isAdminRole(session.user.role)) {
       const order = await prisma.order.findUnique({
         where: { id: params.id },
-        select: { customerId: true, status: true },
+        select: { customerId: true, canaleId: true, status: true },
       });
       if (!order) return NextResponse.json({ error: 'Ordine non trovato' }, { status: 404 });
-      if (order.customerId !== session.user.id) {
+      if (session.user.role === 'OPERATOR' && order.canaleId !== session.user.canaleId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      if (session.user.role === 'CUSTOMER' && order.customerId !== session.user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       if (order.status === 'ESPORTATO') {
