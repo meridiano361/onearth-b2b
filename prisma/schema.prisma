@@ -81,6 +81,7 @@ model Product {
   category   Category?   @relation(fields: [categoryId], references: [id])
   collection Collection? @relation(fields: [collectionId], references: [id])
   orderItems OrderItem[]
+  favorites  Favorite[]
 
   @@map("products")
 }
@@ -281,6 +282,7 @@ model Operator {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   ordini       Order[]
+  favorites    Favorite[]
 
   @@map("operators")
 }
@@ -291,6 +293,7 @@ model Canale {
   tipo           CanaleTipo @default(BOTTEGA)
   citta          String?
   indirizzo      String?
+  budget         Float?
   organizationId String
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
@@ -336,6 +339,19 @@ model Order {
   items        OrderItem[]
 
   @@map("orders")
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  operatorId String
+  productId  String
+  createdAt  DateTime @default(now())
+
+  operator Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([operatorId, productId])
+  @@map("favorites")
 }
 
 model OrderItem {

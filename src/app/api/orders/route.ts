@@ -14,7 +14,7 @@ const orderItemSchema = z.object({
 const createOrderSchema = z.object({
   customerId: z.string().optional(),
   organizationId: z.string().optional(),
-  canaleId: z.string().optional(),
+  canaleId: z.string().optional().nullable(),
   collectionId: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   items: z.array(orderItemSchema).min(1),
@@ -49,7 +49,7 @@ function serializeOrder(order: any) {
       ? { ...order.organization, createdAt: order.organization.createdAt?.toISOString() }
       : undefined,
     canale: order.canale
-      ? { ...order.canale, createdAt: order.canale.createdAt?.toISOString(), updatedAt: order.canale.updatedAt?.toISOString() }
+      ? { ...order.canale, budget: order.canale.budget != null ? Number(order.canale.budget) : null, createdAt: order.canale.createdAt?.toISOString(), updatedAt: order.canale.updatedAt?.toISOString() }
       : undefined,
   };
 }
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
             select: { id: true, companyName: true, customerCode: true, email: true, createdAt: true },
           },
           organization: { select: { id: true, nome: true, createdAt: true } },
-          canale: { select: { id: true, nome: true, tipo: true, citta: true, organizationId: true, createdAt: true, updatedAt: true } },
+          canale: { select: { id: true, nome: true, tipo: true, citta: true, budget: true, organizationId: true, createdAt: true, updatedAt: true } },
           items: {
             include: {
               product: { include: { category: true } },
@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
 
     if (session.user.role === 'OPERATOR') {
       orderData.organizationId = session.user.organizationId;
-      orderData.canaleId = session.user.canaleId;
+      orderData.canaleId = data.canaleId || session.user.canaleId || null;
       orderData.operatorId = session.user.id;
     } else if (isAdminRole(session.user.role)) {
       if (data.customerId) orderData.customerId = data.customerId;
@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
       include: {
         customer: { select: { id: true, companyName: true, customerCode: true, email: true, createdAt: true } },
         organization: { select: { id: true, nome: true, createdAt: true } },
-        canale: { select: { id: true, nome: true, tipo: true, citta: true, organizationId: true, createdAt: true, updatedAt: true } },
+        canale: { select: { id: true, nome: true, tipo: true, citta: true, budget: true, organizationId: true, createdAt: true, updatedAt: true } },
         items: { include: { product: { include: { category: true } } } },
       },
     });

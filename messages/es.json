@@ -7,7 +7,10 @@
     "assistance": "Ayuda",
     "logout": "Cerrar sesión",
     "orderTab": "Pedido",
-    "orderDrawer": "Tu Pedido"
+    "orderDrawer": "Tu Pedido",
+    "home": "Inicio",
+    "favorites": "Favoritos",
+    "menu": "Menú"
   },
   "cart": {
     "title": "Pedido Actual",
@@ -60,13 +63,25 @@
     "deleteSuccess": "Canal eliminado",
     "loading": "Cargando canales...",
     "addressLabel": "Dirección",
-    "addressPlaceholder": "ej. Calle Mayor 1"
+    "addressPlaceholder": "ej. Calle Mayor 1",
+    "budgetLabel": "Presupuesto de compra (€)",
+    "budgetPlaceholder": "ej. 5000"
   },
   "cartSummary": {
     "lines": "Líneas",
     "totalPieces": "Piezas totales",
     "orderValue": "Valor del Pedido",
-    "costPrices": "Precios de coste s.i."
+    "costPrices": "Precios de coste s.i.",
+    "costOrder": "Coste pedido",
+    "potentialSales": "Ventas potenciales",
+    "potentialGain": "Ganancia potencial",
+    "avgMargin": "Margen medio",
+    "budgetChannel": "Presupuesto canal",
+    "budgetUsed": "Usados",
+    "budgetRemaining": "Quedan",
+    "budgetWarning": "Estás por alcanzar el presupuesto",
+    "budgetExceeded": "Presupuesto superado en {amount}",
+    "suggestions": "También te puede interesar"
   },
   "cartItem": {
     "lotRequired": "Múltiplo de {lotSize} requerido"
@@ -195,6 +210,7 @@
     "greeting": "Hola",
     "goCatalog": "Ver catálogo",
     "myOrders": "Mis Pedidos",
+    "spotlight": "Descubrir la colección",
     "discoverTitle": "Descubrir ON EARTH",
     "podcastTitle": "Nuestro Podcast",
     "news": "Novedades",
@@ -238,6 +254,13 @@
     "unclassified": "Sin clasificar",
     "articleSingular": "artículo",
     "articlePlural": "artículos"
+  },
+  "favorites": {
+    "title": "Mis Favoritos",
+    "subtitle": "Colección",
+    "loading": "Cargando...",
+    "noFavorites": "Ningún producto favorito",
+    "noFavoritesHint": "Toca el corazón de un producto para añadirlo a favoritos"
   },
   "groupings": {
     "nomLinea": "Línea",

@@ -21,10 +21,14 @@ export async function GET(req: NextRequest) {
   const canali = await prisma.canale.findMany({
     where: { organizationId: orgId },
     orderBy: { nome: 'asc' },
-    select: { id: true, nome: true, tipo: true, citta: true, organizationId: true, createdAt: true },
+    select: { id: true, nome: true, tipo: true, citta: true, budget: true, organizationId: true, createdAt: true },
   });
 
   return NextResponse.json({
-    data: canali.map((c) => ({ ...c, createdAt: c.createdAt.toISOString() })),
+    data: canali.map((c) => ({
+      ...c,
+      budget: c.budget != null ? Number(c.budget) : null,
+      createdAt: c.createdAt.toISOString(),
+    })),
   });
 }

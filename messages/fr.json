@@ -7,7 +7,10 @@
     "assistance": "Aide",
     "logout": "Déconnexion",
     "orderTab": "Commande",
-    "orderDrawer": "Votre Commande"
+    "orderDrawer": "Votre Commande",
+    "home": "Accueil",
+    "favorites": "Favoris",
+    "menu": "Menu"
   },
   "cart": {
     "title": "Commande en cours",
@@ -60,13 +63,25 @@
     "deleteSuccess": "Canal supprimé",
     "loading": "Chargement des canaux...",
     "addressLabel": "Adresse",
-    "addressPlaceholder": "ex. 1 rue de Paris"
+    "addressPlaceholder": "ex. 1 rue de Paris",
+    "budgetLabel": "Budget achat (€)",
+    "budgetPlaceholder": "ex. 5000"
   },
   "cartSummary": {
     "lines": "Lignes",
     "totalPieces": "Pièces totales",
     "orderValue": "Valeur de la commande",
-    "costPrices": "Prix de revient h.t."
+    "costPrices": "Prix de revient h.t.",
+    "costOrder": "Coût commande",
+    "potentialSales": "Ventes potentielles",
+    "potentialGain": "Gain potentiel",
+    "avgMargin": "Marge moy.",
+    "budgetChannel": "Budget canal",
+    "budgetUsed": "Utilisé",
+    "budgetRemaining": "Restant",
+    "budgetWarning": "Vous approchez du budget",
+    "budgetExceeded": "Budget dépassé de {amount}",
+    "suggestions": "Vous aimerez peut-être"
   },
   "cartItem": {
     "lotRequired": "Multiple de {lotSize} requis"
@@ -195,6 +210,7 @@
     "greeting": "Bonjour",
     "goCatalog": "Voir le catalogue",
     "myOrders": "Mes Commandes",
+    "spotlight": "Découvrir la collection",
     "discoverTitle": "Découvrir ON EARTH",
     "podcastTitle": "Notre Podcast",
     "news": "Nouveautés",
@@ -238,6 +254,13 @@
     "unclassified": "Non classifié",
     "articleSingular": "article",
     "articlePlural": "articles"
+  },
+  "favorites": {
+    "title": "Mes Favoris",
+    "subtitle": "Collection",
+    "loading": "Chargement...",
+    "noFavorites": "Aucun produit favori",
+    "noFavoritesHint": "Appuyez sur le cœur d'un produit pour l'ajouter aux favoris"
   },
   "groupings": {
     "nomLinea": "Ligne",

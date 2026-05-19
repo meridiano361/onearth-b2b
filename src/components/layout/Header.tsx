@@ -43,10 +43,10 @@ export default function Header({ session }: HeaderProps) {
       {/* Nav links — desktop */}
       <nav className="hidden md:flex items-center gap-1">
         <Link
-          href="/catalog"
+          href="/catalog/products"
           className={cn(
             'text-xs px-3 py-1.5 rounded transition-colors',
-            pathname === '/catalog' || (pathname.startsWith('/catalog') && !pathname.startsWith('/catalog/orders') && !pathname.startsWith('/catalog/assistenza'))
+            pathname.startsWith('/catalog/products')
               ? 'text-primary font-semibold bg-cream'
               : 'text-gray-400 hover:text-primary hover:bg-cream'
           )}

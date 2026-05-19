@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, Check, AlertCircle, Layers } from 'lucide-react';
+import { ShoppingBag, Check, AlertCircle, Layers, Heart } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn, formatCurrency, isValidLotQuantity } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
+import { useFavorites } from '@/hooks/useFavorites';
 import QuantitySelector from './QuantitySelector';
 import type { Product } from '@/types';
 
@@ -15,6 +16,7 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { getItemQuantity, updateQuantity, addItem } = useCartStore();
+  const { isFavorited, toggle: toggleFavorite } = useFavorites();
   const t = useTranslations('product');
   const cartQty = getItemQuantity(product.id);
   const [localQty, setLocalQty] = useState(0);
@@ -65,6 +67,20 @@ export default function ProductCard({ product }: ProductCardProps) {
               </span>
             </div>
           )}
+
+          {/* Heart / favorite */}
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(product.id); }}
+            className={cn(
+              'absolute top-2 left-2 bg-white/80 backdrop-blur-sm rounded-full p-1.5 transition-opacity',
+              isFavorited(product.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            )}
+          >
+            <Heart
+              size={11}
+              className={isFavorited(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}
+            />
+          </button>
 
           {/* In-cart overlay */}
           {inCart && (

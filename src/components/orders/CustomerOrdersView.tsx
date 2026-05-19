@@ -4,10 +4,26 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Copy, Pencil, ScanEye, Trash2 } from 'lucide-react';
+import { Copy, Pencil, ScanEye, Trash2, TrendingUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { formatCurrency, formatDate, getOrderStatusLabel, getOrderStatusColor } from '@/lib/utils';
+
+function orderProjections(order: Order) {
+  let venditeII = 0;
+  let venditeIE = 0;
+  for (const item of order.items ?? []) {
+    if (!item.product) continue;
+    const retail = Number(item.product.retailPrice);
+    const iva    = item.product.iva ?? 22;
+    venditeII += retail * item.quantity;
+    venditeIE += (retail * item.quantity) / (1 + iva / 100);
+  }
+  const cost     = Number(order.totalValue);
+  const guadagno = venditeIE - cost;
+  const margine  = venditeIE > 0 ? (guadagno / venditeIE) * 100 : 0;
+  return { venditeII, guadagno, margine };
+}
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import OrderDemetraExport from '@/components/orders/OrderDemetraExport';
 import type { Order } from '@/types';
@@ -133,14 +149,53 @@ export default function CustomerOrdersView() {
                   {t('articles', { count: order.items?.length ?? 0 })}
                   {' · '}
                   {order.totalItems} {t('pieces')}
-                  {' · '}
-                  {formatCurrency(order.totalValue)}
                 </p>
                 {order.canale && (
                   <p className="text-2xs text-gray-400 -mt-1">
-                    {order.canale.nome}{order.canale.citta ? ` · ${order.canale.citta}` : ''}
+                    {order.canale.tipo}{order.canale.citta ? ` · ${order.canale.citta}` : ''}
                   </p>
                 )}
+
+                {/* Projections */}
+                {(() => {
+                  const { venditeII, guadagno, margine } = orderProjections(order);
+                  const budget = order.canale?.budget;
+                  const cost = Number(order.totalValue);
+                  const budgetPct = budget && budget > 0 ? (cost / budget) * 100 : 0;
+                  return (
+                    <div className="bg-cream/60 rounded p-2.5 space-y-1">
+                      <div className="flex items-center gap-1 mb-1">
+                        <TrendingUp size={10} className="text-gray-400" />
+                        <span className="text-2xs text-gray-400 uppercase tracking-wide">Proiezioni</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-2xs">
+                        <span className="text-gray-400">Costo</span>
+                        <span className="font-medium text-primary text-right">{formatCurrency(cost)}</span>
+                        <span className="text-gray-400">Vendite pot. (i.i.)</span>
+                        <span className="font-medium text-primary text-right">{formatCurrency(venditeII)}</span>
+                        <span className="text-gray-400">Guadagno</span>
+                        <span className={`font-medium text-right ${guadagno >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatCurrency(guadagno)}</span>
+                        <span className="text-gray-400">Margine</span>
+                        <span className="font-medium text-primary text-right">{margine.toFixed(1)}%</span>
+                      </div>
+                      {budget != null && (
+                        <>
+                          <div className="h-px bg-border/40 my-1" />
+                          <div className="flex justify-between text-2xs text-gray-400">
+                            <span>Budget canale: <span className="text-primary">{formatCurrency(budget)}</span></span>
+                            <span className={budgetPct > 100 ? 'text-red-500 font-medium' : ''}>{budgetPct.toFixed(0)}%</span>
+                          </div>
+                          <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${budgetPct > 100 ? 'bg-red-400' : budgetPct > 90 ? 'bg-orange-400' : 'bg-emerald-400'}`}
+                              style={{ width: `${Math.min(budgetPct, 100)}%` }}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Bottom: action buttons */}
                 <div className="flex items-center gap-2 flex-wrap">

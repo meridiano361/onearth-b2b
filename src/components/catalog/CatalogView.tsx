@@ -4,8 +4,10 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { Search, SlidersHorizontal, X, Package } from 'lucide-react';
-import { debounce } from '@/lib/utils';
+import { Search, SlidersHorizontal, X, Package, Heart } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { cn, debounce } from '@/lib/utils';
+import { useFavorites } from '@/hooks/useFavorites';
 import CatalogFilters from './CatalogFilters';
 import ProductGrid from './ProductGrid';
 import type { Product } from '@/types';
@@ -44,6 +46,9 @@ export default function CatalogView() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showFilters, setShowFilters]     = useState(false);
   const [filters, setFilters]             = useState<Filters>(EMPTY_FILTERS);
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const { favoriteIds } = useFavorites();
+  const tn = useTranslations('nav');
 
   const debouncedSetSearch = useCallback(
     debounce((val: string) => setDebouncedSearch(val), 250),
@@ -107,9 +112,10 @@ export default function CatalogView() {
     if (collezione)         result = result.filter((p) => p.collezione         === collezione);
     if (produttore)         result = result.filter((p) => p.produttore         === produttore);
     if (tranche)            result = result.filter((p) => p.tranche            === tranche);
+    if (onlyFavorites)      result = result.filter((p) => favoriteIds.has(p.id));
 
     return result;
-  }, [products, debouncedSearch, filters]);
+  }, [products, debouncedSearch, filters, onlyFavorites, favoriteIds]);
 
   const filterProps = {
     products,
@@ -214,6 +220,20 @@ export default function CatalogView() {
               </button>
             )}
           </div>
+
+          {/* Favorites toggle */}
+          <button
+            onClick={() => setOnlyFavorites((v) => !v)}
+            className={cn(
+              'flex items-center gap-1.5 text-xs font-medium border rounded px-2.5 py-2 transition-colors flex-shrink-0',
+              onlyFavorites
+                ? 'bg-red-50 border-red-300 text-red-600'
+                : 'text-gray-600 border-border hover:bg-cream'
+            )}
+          >
+            <Heart size={13} className={onlyFavorites ? 'fill-red-500 text-red-500' : ''} />
+            <span className="hidden sm:inline">{tn('favorites')}</span>
+          </button>
 
           {/* Results count + reset */}
           <div className="hidden sm:flex items-center gap-3 flex-shrink-0">

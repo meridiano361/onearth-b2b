@@ -117,6 +117,7 @@ export interface Canale {
   tipo: CanaleTipo;
   citta: string | null;
   indirizzo: string | null;
+  budget: number | null;
   organizationId: string;
   createdAt: string;
   organization?: { nome: string };

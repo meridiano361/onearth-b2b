@@ -7,7 +7,10 @@
     "assistance": "Assistenza",
     "logout": "Esci",
     "orderTab": "Ordine",
-    "orderDrawer": "Il tuo Ordine"
+    "orderDrawer": "Il tuo Ordine",
+    "home": "Home",
+    "favorites": "Preferiti",
+    "menu": "Menu"
   },
   "cart": {
     "title": "Ordine Corrente",
@@ -60,13 +63,25 @@
     "deleteSuccess": "Canale eliminato",
     "loading": "Caricamento canali...",
     "addressLabel": "Indirizzo",
-    "addressPlaceholder": "es. Via Roma 1"
+    "addressPlaceholder": "es. Via Roma 1",
+    "budgetLabel": "Budget acquisto (€)",
+    "budgetPlaceholder": "es. 5000"
   },
   "cartSummary": {
     "lines": "Righe",
     "totalPieces": "Pezzi totali",
     "orderValue": "Valore Ordine",
-    "costPrices": "Prezzi di costo i.e."
+    "costPrices": "Prezzi di costo i.e.",
+    "costOrder": "Costo ordine",
+    "potentialSales": "Vendite potenziali",
+    "potentialGain": "Guadagno potenziale",
+    "avgMargin": "Margine medio",
+    "budgetChannel": "Budget canale",
+    "budgetUsed": "Usati",
+    "budgetRemaining": "Rimangono",
+    "budgetWarning": "Stai per raggiungere il budget",
+    "budgetExceeded": "Budget superato di {amount}",
+    "suggestions": "Potrebbe interessarti"
   },
   "cartItem": {
     "lotRequired": "Multiplo di {lotSize} richiesto"
@@ -195,6 +210,7 @@
     "greeting": "Ciao",
     "goCatalog": "Vai al Catalogo",
     "myOrders": "I miei Ordini",
+    "spotlight": "Scopri la collezione",
     "discoverTitle": "Scopri ON EARTH",
     "podcastTitle": "Il nostro Podcast",
     "news": "Novità",
@@ -206,6 +222,13 @@
     "timingText": "Gli ordini vengono processati entro 5 giorni lavorativi dalla ricezione. Le consegne seguono il calendario delle tranche stagionali.",
     "catalogTitle": "Catalogo PDF",
     "catalogButton": "Scarica il catalogo PDF"
+  },
+  "favorites": {
+    "title": "I miei Preferiti",
+    "subtitle": "Collezione",
+    "loading": "Caricamento...",
+    "noFavorites": "Nessun prodotto nei preferiti",
+    "noFavoritesHint": "Tocca il cuore su un prodotto per aggiungerlo ai preferiti"
   },
   "preview": {
     "title": "Anteprima ordine",

@@ -1,10 +1,10 @@
 import { Metadata } from 'next';
-import CatalogView from '@/components/catalog/CatalogView';
+import CustomerHome from '@/components/catalog/CustomerHome';
 
 export const metadata: Metadata = {
-  title: 'Catalog — CASA 2027',
+  title: 'Home — ON EARTH B2B',
 };
 
-export default function CatalogPage() {
-  return <CatalogView />;
+export default function CatalogHomePage() {
+  return <CustomerHome />;
 }
