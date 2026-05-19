@@ -7,7 +7,7 @@ import CartSidebar from '@/components/cart/CartSidebar';
 import MobileNav from '@/components/layout/MobileNav';
 
 // Paths where the cart sidebar should not be shown
-const SIDEBAR_HIDDEN_PATHS = ['/catalog/orders', '/orders'];
+const SIDEBAR_HIDDEN_PATHS = ['/catalog/orders', '/orders', '/catalog/canali'];
 
 export default async function B2BLayout({
   children,

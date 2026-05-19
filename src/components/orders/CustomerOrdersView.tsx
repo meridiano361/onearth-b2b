@@ -128,7 +128,7 @@ export default function CustomerOrdersView() {
                   </span>
                 </div>
 
-                {/* Middle: stats */}
+                {/* Middle: stats + canale */}
                 <p className="text-xs text-gray-500">
                   {t('articles', { count: order.items?.length ?? 0 })}
                   {' · '}
@@ -136,6 +136,11 @@ export default function CustomerOrdersView() {
                   {' · '}
                   {formatCurrency(order.totalValue)}
                 </p>
+                {order.canale && (
+                  <p className="text-2xs text-gray-400 -mt-1">
+                    {order.canale.nome}{order.canale.citta ? ` · ${order.canale.citta}` : ''}
+                  </p>
+                )}
 
                 {/* Bottom: action buttons */}
                 <div className="flex items-center gap-2 flex-wrap">

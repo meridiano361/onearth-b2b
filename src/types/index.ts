@@ -1,6 +1,6 @@
 export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'COMMERCIALE' | 'MAGAZZINO' | 'CUSTOMER';
 export type AppRole = Role | 'OPERATOR';
-export type CanaleTipo = 'BOTTEGA' | 'TENDONE' | 'ONLINE' | 'ALTRO';
+export type CanaleTipo = 'BOTTEGA' | 'EMPORIO' | 'DISTRETTO' | 'STORE' | 'OUTLET' | 'TENDONE' | 'FIERA' | 'ONLINE' | 'ALTRO';
 
 export type OrderStatus =
   | 'MERCE_DA_ORDINARE'

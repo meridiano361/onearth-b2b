@@ -29,14 +29,7 @@ export default withAuth(
       }
     }
 
-    // Operators without a selected canale must go through channel selection first
-    if (
-      role === 'OPERATOR' &&
-      !token?.canaleId &&
-      (pathname.startsWith('/catalog') || pathname.startsWith('/orders'))
-    ) {
-      return NextResponse.redirect(new URL('/seleziona-canale', req.url));
-    }
+    // Operators can access catalog without pre-selecting a canale (selection happens at order creation)
 
     const response = NextResponse.next();
     response.headers.set('x-pathname', pathname);

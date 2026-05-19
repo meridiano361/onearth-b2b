@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 const updateSchema = z.object({
   nome: z.string().min(1).optional(),
-  tipo: z.enum(['BOTTEGA', 'TENDONE', 'ONLINE', 'ALTRO']).optional(),
+  tipo: z.enum(['BOTTEGA', 'EMPORIO', 'DISTRETTO', 'STORE', 'OUTLET', 'TENDONE', 'FIERA', 'ONLINE', 'ALTRO']).optional(),
   citta: z.string().optional().nullable(),
 });
 

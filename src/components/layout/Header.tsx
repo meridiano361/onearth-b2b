@@ -65,6 +65,17 @@ export default function Header({ session }: HeaderProps) {
           {t('orders')}
         </Link>
         <Link
+          href="/catalog/canali"
+          className={cn(
+            'text-xs px-3 py-1.5 rounded transition-colors',
+            pathname.startsWith('/catalog/canali')
+              ? 'text-primary font-semibold bg-cream'
+              : 'text-gray-400 hover:text-primary hover:bg-cream'
+          )}
+        >
+          {t('channels')}
+        </Link>
+        <Link
           href="/catalog/assistenza"
           className={cn(
             'text-xs px-3 py-1.5 rounded transition-colors flex items-center gap-1',

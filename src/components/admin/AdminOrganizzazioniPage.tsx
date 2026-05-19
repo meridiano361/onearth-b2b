@@ -6,6 +6,7 @@ import {
   Plus, ChevronDown, ChevronRight, Edit2, Trash2,
   ToggleLeft, ToggleRight, KeyRound, Store, Globe, Radio, Package,
   Users, MapPin, Copy, CheckSquare, Square, Loader2,
+  ShoppingBag, Building, ShoppingCart, Tag, Landmark,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -18,12 +19,17 @@ import type { Organization, Operator, Canale, CanaleTipo } from '@/types';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const TIPO_LABELS: Record<CanaleTipo, string> = {
-  BOTTEGA: 'Bottega', TENDONE: 'Tendone', ONLINE: 'Online', ALTRO: 'Altro',
+  BOTTEGA: 'Bottega', EMPORIO: 'Emporio', DISTRETTO: 'Distretto',
+  STORE: 'Store', OUTLET: 'Outlet', TENDONE: 'Tendone',
+  FIERA: 'Fiera', ONLINE: 'Online', ALTRO: 'Altro',
 };
 
 const TIPO_ICONS: Record<CanaleTipo, React.ReactNode> = {
-  BOTTEGA: <Store size={12} />, TENDONE: <Radio size={12} />,
-  ONLINE: <Globe size={12} />, ALTRO: <Package size={12} />,
+  BOTTEGA: <Store size={12} />, EMPORIO: <ShoppingBag size={12} />,
+  DISTRETTO: <Building size={12} />, STORE: <ShoppingCart size={12} />,
+  OUTLET: <Tag size={12} />, TENDONE: <Radio size={12} />,
+  FIERA: <Landmark size={12} />, ONLINE: <Globe size={12} />,
+  ALTRO: <Package size={12} />,
 };
 
 function generateDefaultPassword(orgNome: string): string {

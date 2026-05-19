@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 const createSchema = z.object({
   nome: z.string().min(1),
-  tipo: z.enum(['BOTTEGA', 'TENDONE', 'ONLINE', 'ALTRO']).default('BOTTEGA'),
+  tipo: z.enum(['BOTTEGA', 'EMPORIO', 'DISTRETTO', 'STORE', 'OUTLET', 'TENDONE', 'FIERA', 'ONLINE', 'ALTRO']).default('BOTTEGA'),
   citta: z.string().optional().nullable(),
 });
 

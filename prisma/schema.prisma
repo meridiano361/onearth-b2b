@@ -245,7 +245,12 @@ model Customer {
 
 enum CanaleTipo {
   BOTTEGA
+  EMPORIO
+  DISTRETTO
+  STORE
+  OUTLET
   TENDONE
+  FIERA
   ONLINE
   ALTRO
 }

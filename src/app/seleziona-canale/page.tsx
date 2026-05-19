@@ -3,21 +3,31 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Store, Radio, Globe, Package, LogOut, CheckCircle2 } from 'lucide-react';
+import { Store, Radio, Globe, Package, LogOut, CheckCircle2, ShoppingBag, Building, ShoppingCart, Tag, Landmark } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import type { Canale, CanaleTipo } from '@/types';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 const TIPO_ICONS: Record<CanaleTipo, React.ReactNode> = {
   BOTTEGA: <Store size={20} />,
+  EMPORIO: <ShoppingBag size={20} />,
+  DISTRETTO: <Building size={20} />,
+  STORE: <ShoppingCart size={20} />,
+  OUTLET: <Tag size={20} />,
   TENDONE: <Radio size={20} />,
+  FIERA: <Landmark size={20} />,
   ONLINE: <Globe size={20} />,
   ALTRO: <Package size={20} />,
 };
 
 const TIPO_LABELS: Record<CanaleTipo, string> = {
   BOTTEGA: 'Bottega',
+  EMPORIO: 'Emporio',
+  DISTRETTO: 'Distretto',
+  STORE: 'Store',
+  OUTLET: 'Outlet',
   TENDONE: 'Tendone',
+  FIERA: 'Fiera',
   ONLINE: 'Online',
   ALTRO: 'Altro',
 };
