@@ -70,11 +70,14 @@ export async function GET(req: NextRequest) {
 
     const where: any = {};
 
-    if (session.user.role === 'OPERATOR') {
-      // Operators see orders for their selected canale
-      where.canaleId = session.user.canaleId;
-    } else if (session.user.role === 'CUSTOMER' || myOrders) {
-      where.customerId = session.user.id;
+    if (!isAdminRole(session.user.role)) {
+      if (session.user.role === 'OPERATOR') {
+        // Operators see orders for their selected canale
+        where.canaleId = session.user.canaleId;
+      } else {
+        // CUSTOMER (legacy) or any other non-admin role: filter by customerId
+        where.customerId = session.user.id;
+      }
     }
 
     if (status) where.status = status;

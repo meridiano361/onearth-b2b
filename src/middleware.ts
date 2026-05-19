@@ -56,6 +56,7 @@ export const config = {
   matcher: [
     '/catalog/:path*',
     '/orders/:path*',
+    '/admin',
     '/admin/:path*',
     '/seleziona-canale',
   ],

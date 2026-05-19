@@ -43,19 +43,14 @@ export default function LoginForm() {
         return;
       }
 
-      // Get session to determine redirect
-      const response = await fetch('/api/auth/session');
+      // Hard redirect so the browser sends the fresh JWT cookie and middleware
+      // can apply the correct role-based routing (avoids stale cache).
+      const response = await fetch('/api/auth/session', { cache: 'no-store' });
       const session = await response.json();
       const role = session?.user?.role ?? '';
       const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE', 'MAGAZZINO'];
 
-      if (adminRoles.includes(role)) {
-        router.push('/admin');
-      } else {
-        router.push('/catalog');
-      }
-
-      router.refresh();
+      window.location.href = adminRoles.includes(role) ? '/admin' : '/catalog';
     } catch {
       toast.error('Si è verificato un errore inatteso. Riprova.');
     } finally {
