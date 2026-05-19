@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { authOptions } from '@/lib/auth';
+import { isAdminRole } from '@/lib/roles';
 import LoginForm from '@/components/auth/LoginForm';
 import RequestAccessButton from '@/components/auth/RequestAccessButton';
 import Image from 'next/image';
@@ -16,7 +17,7 @@ export default async function LoginPage() {
   const session = await getServerSession(authOptions);
 
   if (session) {
-    redirect(session.user.role === 'ADMIN' ? '/admin' : '/catalog');
+    redirect(isAdminRole(session.user.role) ? '/admin' : '/catalog');
   }
 
   return (
