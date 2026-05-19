@@ -25,10 +25,7 @@ export const authOptions: NextAuthOptions = {
           include: { organization: true },
         });
 
-        if (operator) {
-          if (!operator.attivo) {
-            throw new Error('Account disabilitato. Contatta il supporto.');
-          }
+        if (operator && operator.attivo) {
           const valid = await bcrypt.compare(credentials.password, operator.passwordHash);
           if (!valid) throw new Error('Email o password non validi');
           return {
@@ -41,9 +38,12 @@ export const authOptions: NextAuthOptions = {
           };
         }
 
-        // Fall back to admin Customer model
+        // Fall back to Customer model (also covers inactive-operator case)
         const customer = await prisma.customer.findUnique({ where: { email } });
-        if (!customer) throw new Error('Email o password non validi');
+        if (!customer) {
+          if (operator && !operator.attivo) throw new Error('Account disabilitato. Contatta il supporto.');
+          throw new Error('Email o password non validi');
+        }
         if (!customer.isActive) throw new Error('Account disabilitato. Contatta il supporto.');
 
         const valid = await bcrypt.compare(credentials.password, customer.passwordHash);
