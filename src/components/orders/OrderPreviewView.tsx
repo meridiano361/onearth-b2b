@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { ArrowLeft, FileText, CheckCircle, Minus, Plus, X, Database, Search } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle, Minus, Plus, X, Database, Search, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -271,6 +271,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
   const [qtyOverrides, setQtyOverrides] = useState<QtyMap>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [exportingDemetra, setExportingDemetra] = useState(false);
   const [addProductsOpen, setAddProductsOpen] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
 
@@ -380,34 +381,43 @@ export default function OrderPreviewView({ id }: { id: string }) {
     }
   }
 
-  async function handleExportCSV() {
-    const csvItems = (order?.items ?? []).filter((it) => it.product != null);
-    const csv =
-      'Codice;Quantità\r\n' +
-      csvItems
-        .map((it) => {
-          const qty = qtyOverrides[it.id] ?? it.quantity;
-          return `${it.product?.code};${qty}`;
-        })
-        .join('\r\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ordine-demetra-${id.slice(0, 8)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success('CSV pronto');
-    // Mark as ESPORTATO
-    await fetch(`/api/orders/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'ESPORTATO' }),
-    });
-    queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-    queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
+  async function handleExportDemetra() {
+    if (exportingDemetra) return;
+    setExportingDemetra(true);
+    try {
+      const csvItems = (order?.items ?? []).filter((it) => it.product != null);
+      const csv =
+        'Codice;Quantità\r\n' +
+        csvItems
+          .map((it) => {
+            const qty = qtyOverrides[it.id] ?? it.quantity;
+            return `${it.product?.code};${qty}`;
+          })
+          .join('\r\n');
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ordine-demetra-${id.slice(0, 8)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      // Mark as ESPORTATO
+      const res = await fetch(`/api/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ESPORTATO' }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Ordine esportato in Demetra');
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
+    } catch {
+      toast.error('Errore durante l\'esportazione');
+    } finally {
+      setExportingDemetra(false);
+    }
   }
 
   const currentGroupLabel = GROUPINGS.find((g) => g.value === groupBy)?.label ?? '';
@@ -569,15 +579,6 @@ export default function OrderPreviewView({ id }: { id: string }) {
               <span className="hidden sm:inline">Aggiungi prodotti</span>
             </button>
 
-            {/* CSV export */}
-            <button
-              onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded hover:bg-cream transition-colors text-gray-600 hover:text-primary flex-shrink-0"
-            >
-              <Database size={12} />
-              <span className="hidden sm:inline">CSV</span>
-            </button>
-
             {/* PDF export */}
             <button
               onClick={handleExportPDF}
@@ -591,16 +592,29 @@ export default function OrderPreviewView({ id }: { id: string }) {
               <span className="sm:hidden">PDF</span>
             </button>
 
-            <button
-              onClick={() => {
-                toast.success('Ordine già confermato!');
-              }}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors flex-shrink-0"
-            >
-              <CheckCircle size={12} />
-              <span className="hidden sm:inline">Conferma Ordine</span>
-              <span className="sm:hidden">Conferma</span>
-            </button>
+            {/* Esporta in Demetra — primary CTA */}
+            {order.status === 'ESPORTATO' ? (
+              <div className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs bg-green-100 text-green-700 rounded flex-shrink-0 cursor-default">
+                <CheckCircle size={12} />
+                <span className="hidden sm:inline">Già esportato</span>
+              </div>
+            ) : (
+              <button
+                onClick={handleExportDemetra}
+                disabled={exportingDemetra || items.length === 0}
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+              >
+                {exportingDemetra ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <Database size={12} />
+                )}
+                <span className="hidden sm:inline">
+                  {exportingDemetra ? 'Esportando…' : 'Esporta in Demetra'}
+                </span>
+                <span className="sm:hidden">Demetra</span>
+              </button>
+            )}
           </div>
 
           {/* Total */}
