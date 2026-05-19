@@ -47,6 +47,7 @@ export default function AdminProductsPage() {
   const [filterFamiglia, setFilterFamiglia] = useState('');
   const [filterClasse, setFilterClasse] = useState('');
   const [filterProduttore, setFilterProduttore] = useState('');
+  const [filterTranche, setFilterTranche] = useState('');
   const [filterActive, setFilterActive] = useState<ActiveFilter>('all');
 
   // Bulk selection
@@ -79,6 +80,7 @@ export default function AdminProductsPage() {
   const famigliaOptions = useMemo(() => uniqueSorted(allProducts, 'famiglia'), [allProducts]);
   const classeOptions = useMemo(() => uniqueSorted(allProducts, 'classe'), [allProducts]);
   const produttoreOptions = useMemo(() => uniqueSorted(allProducts, 'produttore'), [allProducts]);
+  const trancheOptions = useMemo(() => uniqueSorted(allProducts, 'tranche'), [allProducts]);
 
   // Client-side filtering
   const products = useMemo(() => {
@@ -95,13 +97,14 @@ export default function AdminProductsPage() {
       if (filterFamiglia && p.famiglia !== filterFamiglia) return false;
       if (filterClasse && p.classe !== filterClasse) return false;
       if (filterProduttore && p.produttore !== filterProduttore) return false;
+      if (filterTranche && p.tranche !== filterTranche) return false;
       if (filterActive === 'active' && !p.isActive) return false;
       if (filterActive === 'inactive' && p.isActive) return false;
       return true;
     });
-  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterProduttore, filterActive]);
+  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterProduttore, filterTranche, filterActive]);
 
-  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterProduttore || filterActive !== 'all';
+  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterProduttore || filterTranche || filterActive !== 'all';
 
   function resetFilters() {
     setSearch('');
@@ -109,6 +112,7 @@ export default function AdminProductsPage() {
     setFilterFamiglia('');
     setFilterClasse('');
     setFilterProduttore('');
+    setFilterTranche('');
     setFilterActive('all');
   }
 
@@ -296,6 +300,16 @@ export default function AdminProductsPage() {
           >
             <option value="">Produttore</option>
             {produttoreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+
+          {/* Tranche */}
+          <select
+            value={filterTranche}
+            onChange={(e) => setFilterTranche(e.target.value)}
+            className={selectClass}
+          >
+            <option value="">Tranche</option>
+            {trancheOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
 
           {/* Attivo toggle */}

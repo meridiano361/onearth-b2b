@@ -33,6 +33,7 @@ const productSchema = z.object({
   temaColore: z.string().optional().nullable(),
   fasciaRicarico: z.string().optional().nullable(),
   collezione: z.string().optional().nullable(),
+  tranche: z.string().optional().nullable(),
   iva: z.coerce.number().int().min(0).max(100).default(22),
 });
 

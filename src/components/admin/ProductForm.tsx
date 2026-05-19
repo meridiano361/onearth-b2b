@@ -34,6 +34,7 @@ const schema = z
     costPrice: z.string().min(1, 'Obbligatorio').transform(Number),
     retailPrice: z.string().min(1, 'Obbligatorio').transform(Number),
     fasciaRicarico: z.string().optional(),
+    tranche: z.string().optional(),
     notes: z.string().optional(),
     imageUrl: z.string().optional(),
     isActive: z.boolean().default(true),
@@ -198,6 +199,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           costPrice: String(product.costPrice),
           retailPrice: String(product.retailPrice),
           fasciaRicarico: product.fasciaRicarico || '',
+          tranche: product.tranche || '',
           notes: product.notes || '',
           imageUrl: product.imageUrl || '',
           isActive: product.isActive,
@@ -332,6 +334,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           colore: v.colore || null,
           temaColore: v.temaColore || null,
           fasciaRicarico: v.fasciaRicarico || null,
+          tranche: v.tranche || null,
           notes: v.notes || null,
           imageUrl: v.imageUrl || null,
         }),
@@ -542,6 +545,16 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           onChange={(v) => setValue('fasciaRicarico', v)}
         />
         <ReadOnlyField label="Fascia di sconto" value={fmtPct(fasciaSconto)} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <ManagedSelect
+          entita="tranche"
+          label="Tranche"
+          value={watch('tranche') || ''}
+          onChange={(v) => setValue('tranche', v)}
+        />
+        <div />
       </div>
       <div>
         <Input

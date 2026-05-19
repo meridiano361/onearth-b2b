@@ -24,6 +24,8 @@ interface CatalogFiltersProps {
   onCollezioneChange: (v: string | null) => void;
   selectedProduttore: string | null;
   onProduttoreChange: (v: string | null) => void;
+  selectedTranche: string | null;
+  onTrancheChange: (v: string | null) => void;
   hasActiveFilters: boolean;
   onResetAll: () => void;
 }
@@ -72,6 +74,7 @@ export default function CatalogFilters({
   selectedColore,             onColoreChange,
   selectedCollezione,         onCollezioneChange,
   selectedProduttore,         onProduttoreChange,
+  selectedTranche,            onTrancheChange,
   hasActiveFilters,           onResetAll,
 }: CatalogFiltersProps) {
   const gruppoMerceologicoOpts = useMemo(() => opts(products, 'gruppoMerceologico'), [products]);
@@ -83,6 +86,7 @@ export default function CatalogFilters({
   const coloreOpts             = useMemo(() => opts(products, 'colore'),             [products]);
   const collezioneOpts         = useMemo(() => opts(products, 'collezione'),         [products]);
   const produttoreOpts         = useMemo(() => opts(products, 'produttore'),         [products]);
+  const trancheOpts            = useMemo(() => opts(products, 'tranche'),            [products]);
 
   return (
     <div className="w-56 flex-shrink-0 border-r border-border bg-white flex flex-col h-full">
@@ -110,7 +114,8 @@ export default function CatalogFilters({
         <FilterSelect label="Linea"                value={selectedNomLinea}           options={nomLineaOpts}           onChange={onNomLineaChange} />
         <FilterSelect label="Colore"               value={selectedColore}             options={coloreOpts}             onChange={onColoreChange} />
         <FilterSelect label="Collezione"           value={selectedCollezione}         options={collezioneOpts}         onChange={onCollezioneChange} />
-        <FilterSelect label="Produttore"           value={selectedProduttore}         options={produttoreOpts}         onChange={onProduttoreChange} />
+        <FilterSelect label="Produttore"             value={selectedProduttore}         options={produttoreOpts}         onChange={onProduttoreChange} />
+        <FilterSelect label="Tranche"               value={selectedTranche}            options={trancheOpts}            onChange={onTrancheChange} />
 
       </div>
 

@@ -20,6 +20,7 @@ const GROUPINGS = [
   { value: 'famiglia',          label: 'Famiglia' },
   { value: 'gruppoOmogeneo',    label: 'Gruppo omogeneo' },
   { value: 'stagione',          label: 'Stagione' },
+  { value: 'tranche',           label: 'Tranche' },
 ];
 
 type QtyMap = Record<string, number>;
@@ -387,11 +388,12 @@ export default function OrderPreviewView({ id }: { id: string }) {
     try {
       const csvItems = (order?.items ?? []).filter((it) => it.product != null);
       const csv =
-        'Codice;Quantità\r\n' +
+        'Codice;Quantità;Tranche\r\n' +
         csvItems
           .map((it) => {
             const qty = qtyOverrides[it.id] ?? it.quantity;
-            return `${it.product?.code};${qty}`;
+            const tranche = (it.product as any)?.tranche ?? '';
+            return `${it.product?.code};${qty};${tranche}`;
           })
           .join('\r\n');
       const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });

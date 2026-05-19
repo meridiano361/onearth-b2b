@@ -72,6 +72,7 @@ model Product {
   temaColore         String?
   fasciaRicarico     String?
   collezione         String?
+  tranche            String?
   iva                Int      @default(22)
   createdAt          DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -188,6 +189,13 @@ model FasciaRicarico {
   nome      String   @unique
   createdAt DateTime @default(now())
   @@map("lkp_fasce_ricarico")
+}
+
+model Tranche {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("lkp_tranche")
 }
 
 model AccessRequest {

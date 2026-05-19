@@ -20,6 +20,7 @@ type Filters = {
   colore:             string | null;
   collezione:         string | null;
   produttore:         string | null;
+  tranche:            string | null;
 };
 
 const EMPTY_FILTERS: Filters = {
@@ -32,6 +33,7 @@ const EMPTY_FILTERS: Filters = {
   colore:             null,
   collezione:         null,
   produttore:         null,
+  tranche:            null,
 };
 
 export default function CatalogView() {
@@ -94,7 +96,7 @@ export default function CatalogView() {
       );
     }
 
-    const { gruppoMerceologico, famiglia, classe, sottoclasse, gruppoOmogeneo, nomLinea, colore, collezione, produttore } = filters;
+    const { gruppoMerceologico, famiglia, classe, sottoclasse, gruppoOmogeneo, nomLinea, colore, collezione, produttore, tranche } = filters;
     if (gruppoMerceologico) result = result.filter((p) => p.gruppoMerceologico === gruppoMerceologico);
     if (famiglia)           result = result.filter((p) => p.famiglia           === famiglia);
     if (classe)             result = result.filter((p) => p.classe             === classe);
@@ -104,6 +106,7 @@ export default function CatalogView() {
     if (colore)             result = result.filter((p) => p.colore             === colore);
     if (collezione)         result = result.filter((p) => p.collezione         === collezione);
     if (produttore)         result = result.filter((p) => p.produttore         === produttore);
+    if (tranche)            result = result.filter((p) => p.tranche            === tranche);
 
     return result;
   }, [products, debouncedSearch, filters]);
@@ -119,6 +122,7 @@ export default function CatalogView() {
     selectedColore:             filters.colore,             onColoreChange:             (v: string | null) => setFilter('colore', v),
     selectedCollezione:         filters.collezione,         onCollezioneChange:         (v: string | null) => setFilter('collezione', v),
     selectedProduttore:         filters.produttore,         onProduttoreChange:         (v: string | null) => setFilter('produttore', v),
+    selectedTranche:            filters.tranche,            onTrancheChange:            (v: string | null) => setFilter('tranche', v),
     hasActiveFilters,
     onResetAll: handleResetAll,
   };
@@ -133,6 +137,7 @@ export default function CatalogView() {
     { key: 'colore',             label: 'Colore' },
     { key: 'collezione',         label: 'Collezione' },
     { key: 'produttore',         label: 'Produttore' },
+    { key: 'tranche',            label: 'Tranche' },
   ];
 
   return (

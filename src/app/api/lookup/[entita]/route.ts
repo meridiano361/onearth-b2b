@@ -19,6 +19,7 @@ const DELEGATE: Record<string, PrismaDelegate> = {
   collezione: prisma.collezione,
   colore: prisma.colore,
   temaColore: prisma.temaColore,
+  tranche: prisma.tranche,
 };
 
 export async function GET(
