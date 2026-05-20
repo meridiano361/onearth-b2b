@@ -198,7 +198,7 @@ export default function OrdersView() {
     <div className="px-4 sm:px-6 py-5 sm:py-6 max-w-4xl">
       <div className="mb-6">
         <p className="label-luxury text-accent mb-1">CASA 2027</p>
-        <h1 className="font-display text-2xl text-primary font-light tracking-wide">I miei Ordini</h1>
+        <h1 className="font-display text-2xl text-primary font-light tracking-wide">{t('title')}</h1>
         <p className="mt-1 text-sm text-gray-400">
           {orders.length > 0
             ? `${orders.length} ${orders.length === 1 ? t('orderSingular') : t('orderPlural')}`

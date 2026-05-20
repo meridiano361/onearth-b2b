@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag } from 'lucide-react';
+import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
@@ -111,7 +112,7 @@ export default function CartSidebar() {
     if (isSubmitting || isEmpty) return;
     if (isOperator) {
       if (destinazioni.length === 0) {
-        await submitOrder(undefined);
+        return; // blocked by UI — no destinations
       } else if (destinazioni.length === 1) {
         await submitOrder(destinazioni[0].id);
       } else {
@@ -251,6 +252,17 @@ export default function CartSidebar() {
                 <div className="w-full py-2.5 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
                   Non puoi creare ordini in modalità anteprima
                 </div>
+              ) : isOperator && destinazioni.length === 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-500 text-center leading-snug">{t('noDestinazioni')}</p>
+                  <Link
+                    href="/catalog/destinazioni"
+                    className="w-full py-2.5 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 border border-primary text-primary hover:bg-cream"
+                  >
+                    <MapPin size={12} />
+                    {t('goToDestinazioni')}
+                  </Link>
+                </div>
               ) : hasWarnings ? (
                 <div className="w-full py-2.5 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
                   {t('fixLots')}
@@ -273,10 +285,10 @@ export default function CartSidebar() {
         )}
       </div>
 
-      {/* Destinazione selection modal */}
+      {/* Destinazione selection modal — non-dismissible */}
       {showDestinazioneModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDestinazioneModal(false)} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
           <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 z-10">
             <h3 className="text-sm font-semibold text-primary mb-1 tracking-wide">{t('selectCanaleTitle')}</h3>
             <p className="text-xs text-gray-400 mb-4">{t('selectCanalePlaceholder')}</p>
@@ -287,26 +299,18 @@ export default function CartSidebar() {
             >
               {destinazioni.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.tipo}{d.citta ? ` — ${d.citta}` : ''}
+                  {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
                 </option>
               ))}
             </select>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDestinazioneModal(false)}
-                className="flex-1 py-2.5 text-xs font-medium rounded border border-border text-gray-500 hover:bg-cream transition-colors"
-              >
-                Annulla
-              </button>
-              <button
-                onClick={() => { setShowDestinazioneModal(false); submitOrder(selectedDestinazioneId || undefined); }}
-                disabled={isSubmitting}
-                className="flex-1 py-2.5 text-xs font-medium rounded bg-primary text-background hover:bg-warm-darker transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
-              >
-                <Send size={11} />
-                {t('selectCanaleConfirm')}
-              </button>
-            </div>
+            <button
+              onClick={() => { setShowDestinazioneModal(false); submitOrder(selectedDestinazioneId || undefined); }}
+              disabled={isSubmitting || !selectedDestinazioneId}
+              className="w-full py-2.5 text-xs font-medium rounded bg-primary text-background hover:bg-warm-darker transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
+            >
+              <Send size={11} />
+              {t('selectCanaleConfirm')}
+            </button>
           </div>
         </div>
       )}

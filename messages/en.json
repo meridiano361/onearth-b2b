@@ -1,9 +1,9 @@
 {
   "nav": {
     "catalog": "Catalogue",
-    "orders": "My Orders",
+    "orders": "Orders",
     "ordersShort": "Orders",
-    "channels": "My Destinations",
+    "channels": "Destinations",
     "assistance": "Support",
     "logout": "Sign out",
     "orderTab": "Order",
@@ -25,7 +25,9 @@
     "errorCreate": "Unable to create order",
     "selectCanaleTitle": "Select destination",
     "selectCanalePlaceholder": "Choose the point of sale for this order",
-    "selectCanaleConfirm": "Create Order"
+    "selectCanaleConfirm": "Create Order",
+    "noDestinazioni": "You need to create a destination first",
+    "goToDestinazioni": "Go to Destinations"
   },
   "channelTypes": {
     "BOTTEGA": "Bottega",
@@ -39,7 +41,7 @@
     "ALTRO": "Other"
   },
   "channels": {
-    "title": "My Destinations",
+    "title": "Destinations",
     "subtitle": "Manage your organisation's points of sale.",
     "add": "Add destination",
     "noChannels": "No destinations configured",
@@ -106,7 +108,7 @@
     "lotUnit": "pcs"
   },
   "orders": {
-    "title": "My Orders",
+    "title": "Orders",
     "noOrdersFound": "No orders found",
     "orderSingular": "order",
     "orderPlural": "orders",
@@ -244,7 +246,7 @@
   "home": {
     "greeting": "Hello",
     "goCatalog": "Go to Catalogue",
-    "myOrders": "My Orders",
+    "myOrders": "Orders",
     "spotlight": "Discover the collection",
     "collectionTitle": "Discover the CASA 2027 Collection",
     "discoverTitle": "Discover ON EARTH",

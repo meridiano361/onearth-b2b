@@ -176,8 +176,11 @@ export async function POST(req: NextRequest) {
     };
 
     if (session.user.role === 'OPERATOR') {
+      if (!data.canaleId) {
+        return NextResponse.json({ error: 'Destinazione obbligatoria' }, { status: 400 });
+      }
       orderData.organizationId = session.user.organizationId;
-      orderData.canaleId = data.canaleId || session.user.destinazioneId || null;
+      orderData.canaleId = data.canaleId;
       orderData.operatorId = session.user.id;
     } else if (isAdminRole(session.user.role)) {
       if (data.customerId) orderData.customerId = data.customerId;

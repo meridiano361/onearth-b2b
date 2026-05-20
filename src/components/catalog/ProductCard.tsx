@@ -43,7 +43,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <div
       className={cn(
-        'group bg-white border rounded transition-all duration-200 hover:shadow-luxury-lg',
+        'group bg-white border rounded transition-all duration-200 hover:shadow-luxury-lg flex flex-col h-full',
         inCart ? 'border-accent/50 shadow-luxury' : 'border-border',
         hasLotWarning && 'border-amber-300'
       )}
@@ -51,7 +51,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Clickable area: image + code + name → product detail */}
       <Link href={`/catalog/${product.id}`} className="block">
         {/* Image */}
-        <div className="aspect-square relative bg-cream overflow-hidden rounded-t">
+        <div className="h-40 relative bg-cream overflow-hidden rounded-t">
           {product.imageUrl && !imgError ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -103,14 +103,15 @@ export default function ProductCard({ product }: ProductCardProps) {
           <p className="text-2xs font-medium tracking-widest uppercase text-gray-600 mb-0.5">
             {product.code}
           </p>
-          <h3 className="text-sm font-medium text-primary leading-snug line-clamp-2">
+          <h3 className="text-sm font-medium text-primary leading-snug line-clamp-2 min-h-[3rem]">
             {product.name}
           </h3>
         </div>
       </Link>
 
       {/* Non-navigating section: prices + cart */}
-      <div className="px-3 pb-3 pt-1">
+      <div className="px-3 pb-3 pt-1 flex flex-col flex-1">
+        <div className="flex-1" />
         {/* Prices */}
         <div className="flex items-end justify-between mb-3">
           <div>

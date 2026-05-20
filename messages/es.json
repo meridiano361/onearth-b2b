@@ -1,9 +1,9 @@
 {
   "nav": {
     "catalog": "Catálogo",
-    "orders": "Mis Pedidos",
+    "orders": "Pedidos",
     "ordersShort": "Pedidos",
-    "channels": "Mis Destinos",
+    "channels": "Destinos",
     "assistance": "Ayuda",
     "logout": "Cerrar sesión",
     "orderTab": "Pedido",
@@ -25,7 +25,9 @@
     "errorCreate": "No se puede crear el pedido",
     "selectCanaleTitle": "Seleccionar destino",
     "selectCanalePlaceholder": "Elige el punto de venta para este pedido",
-    "selectCanaleConfirm": "Crear Pedido"
+    "selectCanaleConfirm": "Crear Pedido",
+    "noDestinazioni": "Primero debes crear un destino",
+    "goToDestinazioni": "Ir a Destinos"
   },
   "channelTypes": {
     "BOTTEGA": "Bottega",
@@ -39,7 +41,7 @@
     "ALTRO": "Otro"
   },
   "channels": {
-    "title": "Mis Destinos",
+    "title": "Destinos",
     "subtitle": "Gestiona los puntos de venta de tu organización.",
     "add": "Añadir destino",
     "noChannels": "Ningún destino configurado",
@@ -106,7 +108,7 @@
     "lotUnit": "uds"
   },
   "orders": {
-    "title": "Mis Pedidos",
+    "title": "Pedidos",
     "noOrdersFound": "No se encontraron pedidos",
     "orderSingular": "pedido",
     "orderPlural": "pedidos",
@@ -244,7 +246,7 @@
   "home": {
     "greeting": "Hola",
     "goCatalog": "Ver catálogo",
-    "myOrders": "Mis Pedidos",
+    "myOrders": "Pedidos",
     "spotlight": "Descubrir la colección",
     "collectionTitle": "Descubre la Colección CASA 2027",
     "discoverTitle": "Descubrir ON EARTH",
