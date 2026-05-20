@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { normalizeLookupValue } from '@/lib/normalizeClassification';
 
 type PrismaDelegate = {
   update: (args: any) => Promise<any>;
@@ -35,7 +36,7 @@ export async function PATCH(
     if (!delegate) return NextResponse.json({ error: 'Entità non valida' }, { status: 400 });
 
     const { nome } = z.object({ nome: z.string().min(1) }).parse(await req.json());
-    const record = await delegate.update({ where: { id: params.id }, data: { nome: nome.trim() } });
+    const record = await delegate.update({ where: { id: params.id }, data: { nome: normalizeLookupValue(params.entita, nome) } });
     return NextResponse.json({ data: record });
   } catch (err: any) {
     if (err.code === 'P2025') return NextResponse.json({ error: 'Non trovato' }, { status: 404 });

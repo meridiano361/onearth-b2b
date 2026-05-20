@@ -5,6 +5,7 @@ import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
+import { normalizeProductClassificationFields } from '@/lib/normalizeClassification';
 
 const productSchema = z.object({
   code: z.string().min(1),
@@ -113,7 +114,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const data = productSchema.parse(body);
+    const data = normalizeProductClassificationFields(productSchema.parse(body));
 
     const product = await prisma.product.create({
       data: {

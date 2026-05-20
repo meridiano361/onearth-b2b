@@ -66,7 +66,7 @@ async function normalizeProductFields(): Promise<{ normalized: number }> {
       gruppoMerceologico: true, famiglia: true, classe: true,
       sottoclasse: true, gruppoOmogeneo: true, nomLinea: true,
       colore: true, temaColore: true, stagione: true,
-      produttore: true, collezione: true,
+      produttore: true, collezione: true, tranche: true,
     },
   });
 
@@ -77,7 +77,7 @@ async function normalizeProductFields(): Promise<{ normalized: number }> {
 
     const capFields = [
       'gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo',
-      'colore', 'temaColore', 'stagione', 'produttore', 'collezione',
+      'colore', 'temaColore', 'stagione', 'produttore', 'collezione', 'tranche',
     ] as const;
 
     for (const f of capFields) {
@@ -123,6 +123,8 @@ async function main() {
   add(await normalizeTable('Colore', prisma.colore, capFirst));
   add(await normalizeTable('TemaColore', prisma.temaColore, capFirst));
   add(await normalizeTable('Linea', prisma.linea, upperAll));
+  add(await normalizeTable('Produttore', prisma.produttore, capFirst));
+  add(await normalizeTable('Tranche', prisma.tranche, capFirst));
 
   // Hierarchical (bottom-up to avoid FK conflicts)
   add(await normalizeTable('GruppoOmogeneo', prisma.gruppoOmogeneo, capFirst));

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { normalizeLookupValue } from '@/lib/normalizeClassification';
 
 interface Option {
   id: string;
@@ -69,7 +70,7 @@ export default function ManagedSelect({ entita, label, value, onChange }: Manage
   }
 
   async function handleAdd() {
-    const nome = newNome.trim();
+    const nome = normalizeLookupValue(entita, newNome);
     if (!nome) return;
     try {
       const res = await fetch(`/api/lookup/${entita}`, {
@@ -93,7 +94,7 @@ export default function ManagedSelect({ entita, label, value, onChange }: Manage
   }
 
   async function handleEdit(id: string, oldNome: string) {
-    const nome = editNome.trim();
+    const nome = normalizeLookupValue(entita, editNome);
     if (!nome) return;
     try {
       const res = await fetch(`/api/lookup/${entita}/${id}`, {

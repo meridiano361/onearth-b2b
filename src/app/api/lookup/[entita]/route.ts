@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { normalizeLookupValue } from '@/lib/normalizeClassification';
 
 type PrismaDelegate = {
   findMany: (args?: any) => Promise<any[]>;
@@ -54,7 +55,7 @@ export async function POST(
     if (!delegate) return NextResponse.json({ error: 'Entità non valida' }, { status: 400 });
 
     const { nome } = z.object({ nome: z.string().min(1) }).parse(await req.json());
-    const record = await delegate.create({ data: { nome: nome.trim() } });
+    const record = await delegate.create({ data: { nome: normalizeLookupValue(params.entita, nome) } });
     return NextResponse.json({ data: record }, { status: 201 });
   } catch (err: any) {
     if (err.code === 'P2002') return NextResponse.json({ error: 'Valore già esistente' }, { status: 409 });
