@@ -111,13 +111,13 @@ export default function CustomerHome() {
 
   return (
     <div className="min-h-screen bg-cream">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-10">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-10">
 
         {/* ── Top CTA ─────────────────────────────────────────── */}
-        <div className="flex justify-center pt-2">
+        <div className="flex justify-center">
           <Link
             href="/catalog/products"
-            className="px-8 py-2.5 text-sm font-semibold text-primary bg-white border border-primary/30 rounded-lg hover:bg-primary hover:text-white transition-all duration-150"
+            className="px-8 py-2.5 text-sm font-semibold bg-black text-white rounded-lg hover:bg-warm-darker transition-all duration-150"
           >
             Apri il catalogo
           </Link>
@@ -151,7 +151,7 @@ export default function CustomerHome() {
               href="/catalog/products"
               className="px-8 py-2.5 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-warm-darker transition-all duration-150"
             >
-              Inizia il tuo ordine
+              Crea un ordine
             </Link>
           </div>
         </section>
@@ -162,7 +162,7 @@ export default function CustomerHome() {
             {th('discoverTitle')}
           </p>
 
-          <div className="bg-black rounded-xl px-5 pt-5 pb-4">
+          <div className="bg-white border border-gray-200 shadow-sm rounded-xl px-5 pt-5 pb-4">
             {/* Row 1: IG + FB a sinistra | on-earth.it a destra */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -170,7 +170,7 @@ export default function CustomerHome() {
                   href="https://www.instagram.com/onearth_official/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white hover:text-gray-300 transition-colors"
+                  className="text-black hover:text-gray-600 transition-colors"
                   aria-label="Instagram"
                 >
                   <svg viewBox="0 0 24 24" fill="currentColor" className="w-[22px] h-[22px]">
@@ -181,7 +181,7 @@ export default function CustomerHome() {
                   href="https://www.facebook.com/onearthofficial/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white hover:text-gray-300 transition-colors"
+                  className="text-black hover:text-gray-600 transition-colors"
                   aria-label="Facebook"
                 >
                   <svg viewBox="0 0 24 24" fill="currentColor" className="w-[22px] h-[22px]">
@@ -193,7 +193,7 @@ export default function CustomerHome() {
                 href="https://www.on-earth.it"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-white hover:text-gray-300 transition-colors whitespace-nowrap"
+                className="flex items-center gap-2 text-sm text-black hover:text-gray-600 transition-colors whitespace-nowrap"
               >
                 <Globe size={16} />
                 on-earth.it
@@ -206,7 +206,7 @@ export default function CustomerHome() {
                 href="https://open.spotify.com/show/3MjWJeGlQFAy2D2D2awo4t"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 text-sm text-white border-2 border-white rounded-lg hover:bg-white/10 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 text-sm text-black bg-white border-2 border-black rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <Mic size={16} />
                 Podcast MATERIA
