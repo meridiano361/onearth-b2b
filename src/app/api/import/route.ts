@@ -6,38 +6,67 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
 
+function parseDecimal(v: any): number | undefined {
+  if (v === undefined || v === null || v === '') return undefined;
+  const n = typeof v === 'string' ? parseFloat(v.replace(',', '.')) : Number(v);
+  return isNaN(n) ? undefined : n;
+}
+
+function parseDecimalRequired(v: any): number {
+  const n = parseDecimal(v);
+  if (n === undefined) throw new Error('Valore numerico non valido');
+  return n;
+}
+
+function parseIntField(v: any, fallback: number): number {
+  if (v === undefined || v === null || v === '') return fallback;
+  const n = parseInt(String(v));
+  return isNaN(n) ? fallback : n;
+}
+
+function parseBool(v: any): boolean | undefined {
+  if (v === undefined || v === null || v === '') return undefined;
+  if (typeof v === 'boolean') return v;
+  const s = String(v).toLowerCase().trim();
+  if (s === '1' || s === 'true' || s === 'si' || s === 'sì' || s === 'yes') return true;
+  if (s === '0' || s === 'false' || s === 'no') return false;
+  return undefined;
+}
+
+function str(v: any): string | null {
+  if (v === undefined || v === null || v === '') return null;
+  return String(v).trim() || null;
+}
+
 const importRowSchema = z.object({
   code: z.string().min(1),
   name: z.string().min(1),
-  description: z.string().optional().nullable(),
-  category: z.string().optional().nullable(),
-  costPrice: z.union([z.number(), z.string()]).transform((v) => {
-    const n = typeof v === 'string' ? parseFloat(v.replace(',', '.')) : v;
-    if (isNaN(n)) throw new Error('Invalid cost price');
-    return n;
-  }),
-  retailPrice: z.union([z.number(), z.string()]).transform((v) => {
-    const n = typeof v === 'string' ? parseFloat(v.replace(',', '.')) : v;
-    if (isNaN(n)) throw new Error('Invalid retail price');
-    return n;
-  }),
-  lotSize: z
-    .union([z.number(), z.string()])
-    .optional()
-    .transform((v) => {
-      if (!v) return 1;
-      const n = typeof v === 'string' ? parseInt(v) : v;
-      return isNaN(n) ? 1 : n;
-    }),
-  notes: z.string().optional().nullable(),
-  imageUrl: z.string().optional().nullable(),
-  collectionId: z.string().optional().nullable(),
-  famiglia: z.string().optional().nullable(),
-  sottofamiglia: z.string().optional().nullable(),
-  colore: z.string().optional().nullable(),
-  nomLinea: z.string().optional().nullable(),
-  misura: z.string().optional().nullable(),
-  produttore: z.string().optional().nullable(),
+  description: z.any().optional(),
+  category: z.any().optional(),
+  costPrice: z.any().transform(parseDecimalRequired),
+  retailPrice: z.any().transform(parseDecimalRequired),
+  lotSize: z.any().optional(),
+  notes: z.any().optional(),
+  imageUrl: z.any().optional(),
+  collectionId: z.any().optional(),
+  famiglia: z.any().optional(),
+  sottofamiglia: z.any().optional(),
+  colore: z.any().optional(),
+  nomLinea: z.any().optional(),
+  misura: z.any().optional(),
+  produttore: z.any().optional(),
+  gruppoMerceologico: z.any().optional(),
+  classe: z.any().optional(),
+  sottoclasse: z.any().optional(),
+  gruppoOmogeneo: z.any().optional(),
+  stagione: z.any().optional(),
+  temaColore: z.any().optional(),
+  fasciaRicarico: z.any().optional(),
+  fasciaSconto: z.any().optional(),
+  collezione: z.any().optional(),
+  tranche: z.any().optional(),
+  iva: z.any().optional(),
+  isActive: z.any().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -48,46 +77,48 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { rows, collectionId } = body as {
-      rows: any[];
-      collectionId?: string;
-    };
+    const { rows, collectionId } = body as { rows: any[]; collectionId?: string };
 
     if (!rows || !Array.isArray(rows) || rows.length === 0) {
       return NextResponse.json({ error: 'No rows provided' }, { status: 400 });
     }
 
-    let success = 0;
-    const errors: Array<{ row: number; message: string; data?: any }> = [];
+    // Pre-fetch existing codes to distinguish creates vs updates
+    const allCodes = rows
+      .map((r) => (r.code ? String(r.code).toUpperCase().trim() : null))
+      .filter(Boolean) as string[];
+    const existing = await prisma.product.findMany({
+      where: { code: { in: allCodes } },
+      select: { code: true },
+    });
+    const existingCodes = new Set(existing.map((p) => p.code));
 
-    // Preload/cache categories
+    let created = 0;
+    let updated = 0;
+    const errors: Array<{ row: number; message: string; data?: any }> = [];
     const categoryCache = new Map<string, string>();
 
     for (let i = 0; i < rows.length; i++) {
       try {
         const parsed = importRowSchema.parse(rows[i]);
+        const code = parsed.code.toUpperCase().trim();
 
-        // Find or create category
+        // Category
         let categoryId: string | null = null;
-        if (parsed.category) {
-          const catKey = `${parsed.category}-${collectionId || 'global'}`;
+        const catName = str(parsed.category);
+        if (catName) {
+          const catKey = `${catName}-${collectionId || 'global'}`;
           if (categoryCache.has(catKey)) {
             categoryId = categoryCache.get(catKey)!;
           } else {
-            const slug = slugify(parsed.category);
-            const existing = await prisma.category.findFirst({
-              where: { name: parsed.category, collectionId: collectionId || null },
+            const existingCat = await prisma.category.findFirst({
+              where: { name: catName, collectionId: collectionId || null },
             });
-            if (existing) {
-              categoryId = existing.id;
+            if (existingCat) {
+              categoryId = existingCat.id;
             } else {
               const newCat = await prisma.category.create({
-                data: {
-                  name: parsed.category,
-                  slug,
-                  collectionId: collectionId || null,
-                  order: 99,
-                },
+                data: { name: catName, slug: slugify(catName), collectionId: collectionId || null, order: 99 },
               });
               categoryId = newCat.id;
             }
@@ -95,60 +126,59 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        const extraFields = {
-          famiglia: parsed.famiglia || null,
-          sottofamiglia: parsed.sottofamiglia || null,
-          colore: parsed.colore || null,
-          nomLinea: parsed.nomLinea || null,
-          misura: parsed.misura || null,
-          produttore: parsed.produttore || null,
+        const fields = {
+          name: parsed.name,
+          description: str(parsed.description),
+          costPrice: parsed.costPrice,
+          retailPrice: parsed.retailPrice,
+          lotSize: parseIntField(parsed.lotSize, 1),
+          notes: str(parsed.notes),
+          imageUrl: str(parsed.imageUrl),
+          categoryId,
+          collectionId: collectionId || null,
+          famiglia: str(parsed.famiglia),
+          sottofamiglia: str(parsed.sottofamiglia),
+          colore: str(parsed.colore),
+          nomLinea: str(parsed.nomLinea),
+          misura: str(parsed.misura),
+          produttore: str(parsed.produttore),
+          gruppoMerceologico: str(parsed.gruppoMerceologico),
+          classe: str(parsed.classe),
+          sottoclasse: str(parsed.sottoclasse),
+          gruppoOmogeneo: str(parsed.gruppoOmogeneo),
+          stagione: str(parsed.stagione),
+          temaColore: str(parsed.temaColore),
+          fasciaRicarico: str(parsed.fasciaRicarico),
+          fasciaSconto: parseDecimal(parsed.fasciaSconto) ?? null,
+          collezione: str(parsed.collezione),
+          tranche: str(parsed.tranche),
+          iva: parseIntField(parsed.iva, 22),
         };
 
+        const activeVal = parseBool(parsed.isActive);
+
+        const isNew = !existingCodes.has(code);
+
         await prisma.product.upsert({
-          where: { code: parsed.code.toUpperCase().trim() },
+          where: { code },
           update: {
-            name: parsed.name,
-            description: parsed.description || null,
-            costPrice: parsed.costPrice,
-            retailPrice: parsed.retailPrice,
-            lotSize: parsed.lotSize,
-            notes: parsed.notes || null,
-            imageUrl: parsed.imageUrl || null,
-            categoryId,
-            collectionId: collectionId || null,
-            ...extraFields,
+            ...fields,
+            ...(activeVal !== undefined ? { isActive: activeVal } : {}),
           },
           create: {
-            code: parsed.code.toUpperCase().trim(),
-            name: parsed.name,
-            description: parsed.description || null,
-            costPrice: parsed.costPrice,
-            retailPrice: parsed.retailPrice,
-            lotSize: parsed.lotSize,
-            notes: parsed.notes || null,
-            imageUrl: parsed.imageUrl || null,
-            categoryId,
-            collectionId: collectionId || null,
-            isActive: true,
-            ...extraFields,
+            code,
+            isActive: activeVal ?? true,
+            ...fields,
           },
         });
 
-        success++;
+        if (isNew) created++; else updated++;
       } catch (err: any) {
-        errors.push({
-          row: i + 1,
-          message: err.message || 'Unknown error',
-          data: rows[i],
-        });
+        errors.push({ row: i + 2, message: err.message || 'Errore sconosciuto', data: rows[i] });
       }
     }
 
-    return NextResponse.json({
-      success,
-      errors,
-      total: rows.length,
-    });
+    return NextResponse.json({ created, updated, errors });
   } catch (err) {
     console.error('Import error:', err);
     return NextResponse.json({ error: 'Import failed' }, { status: 500 });

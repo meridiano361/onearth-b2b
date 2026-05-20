@@ -30,28 +30,40 @@ interface ImportRow {
 }
 
 interface ImportResult {
-  success: number;
+  created: number;
+  updated: number;
   errors: Array<{ row: number; message: string; data?: ImportRow }>;
-  total: number;
 }
 
-// Column mapping alternatives
+// Column mapping: field → accepted header names (all lowercase, trimmed)
 const COLUMN_ALIASES: Record<string, string[]> = {
-  code: ['code', 'sku', 'product_code', 'article', 'codice', 'cod'],
-  name: ['name', 'product_name', 'nome', 'description_short', 'title'],
-  description: ['description', 'descrizione', 'desc', 'long_description'],
-  category: ['category', 'categoria', 'cat', 'group'],
-  costPrice: ['cost_price', 'cost', 'price_cost', 'prezzo_costo', 'wholesale', 'buy_price'],
-  retailPrice: ['retail_price', 'retail', 'price', 'prezzo', 'msrp', 'sell_price'],
-  lotSize: ['lot_size', 'moq', 'min_qty', 'lot', 'minimum'],
-  notes: ['notes', 'note', 'comments', 'info'],
-  imageUrl: ['image_url', 'image', 'img', 'photo_url', 'foto'],
-  famiglia: ['famiglia', 'family', 'product_family', 'macro_categoria'],
-  sottofamiglia: ['sottofamiglia', 'subfamily', 'sub_family', 'sub_categoria'],
-  colore: ['colore', 'color', 'colour', 'col'],
-  nomLinea: ['nom_linea', 'nome_linea', 'linea', 'line', 'line_name', 'nome linea'],
-  misura: ['misura', 'size', 'dimensions', 'dimension', 'taglia'],
-  produttore: ['produttore', 'manufacturer', 'brand', 'supplier', 'fornitore'],
+  code:               ['codice', 'code', 'sku', 'cod', 'product_code', 'article'],
+  name:               ['descrizione', 'nome', 'name', 'description_short', 'title'],
+  produttore:         ['produttore', 'manufacturer', 'brand', 'supplier', 'fornitore'],
+  misura:             ['misure', 'misura', 'size', 'dimensions', 'dimension', 'taglia'],
+  gruppoMerceologico: ['gruppomerceologico', 'gruppo merceologico', 'product group', 'gruppo_merceologico'],
+  famiglia:           ['famiglia', 'family', 'product_family', 'macro_categoria'],
+  classe:             ['classe', 'class'],
+  sottoclasse:        ['sottoclasse', 'subclass', 'sub_classe'],
+  gruppoOmogeneo:     ['gruppoomogeneo', 'gruppo omogeneo', 'gruppo_omogeneo'],
+  nomLinea:           ['linea', 'line', 'nomlinea', 'nom_linea', 'nome_linea', 'nome linea'],
+  stagione:           ['stagione', 'season'],
+  collezione:         ['collezione', 'collection'],
+  colore:             ['colore', 'color', 'colour', 'col'],
+  temaColore:         ['temacolore', 'tema colore', 'tema_colore'],
+  lotSize:            ['confezione', 'lotsize', 'lot_size', 'moq', 'min_qty', 'lot', 'minimum'],
+  iva:                ['iva'],
+  costPrice:          ['prezzocosto', 'prezzo costo', 'cost price', 'cost_price', 'cost', 'prezzo_costo', 'wholesale'],
+  retailPrice:        ['prezzovendita', 'prezzo vendita', 'retail price', 'retail_price', 'retail', 'prezzo', 'msrp'],
+  fasciaRicarico:     ['fasciaricarico', 'fascia ricarico', 'fascia_ricarico'],
+  fasciaSconto:       ['fasciasconto', 'fascia sconto', 'fascia_sconto'],
+  tranche:            ['tranche'],
+  notes:              ['note', 'notes', 'comments', 'info'],
+  isActive:           ['attivo', 'active', 'is_active'],
+  description:        ['description', 'desc', 'long_description'],
+  category:           ['category', 'categoria', 'cat', 'group'],
+  imageUrl:           ['image_url', 'image', 'img', 'photo_url', 'foto', 'imageurl'],
+  sottofamiglia:      ['sottofamiglia', 'subfamily', 'sub_family', 'sub_categoria'],
 };
 
 function mapColumn(headers: string[]): Record<string, string> {
@@ -180,8 +192,9 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
       setResult(data);
       setStep('done');
 
-      if (data.success > 0) {
-        toast.success(`${data.success} prodotti importati con successo`);
+      const total = data.created + data.updated;
+      if (total > 0) {
+        toast.success(`${data.created} creati, ${data.updated} aggiornati`);
         onSuccess();
       }
     } catch (err: any) {
@@ -223,15 +236,15 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
         </div>
 
         <div className="mt-6 p-4 bg-cream rounded border border-border">
-          <p className="text-xs font-medium text-primary mb-2">Colonne attese:</p>
+          <p className="text-xs font-medium text-primary mb-2">Colonne riconosciute:</p>
           <div className="flex flex-wrap gap-1.5">
-            {['code *', 'name *', 'costPrice *', 'retailPrice *', 'description', 'category', 'lotSize', 'famiglia', 'sottofamiglia', 'nomLinea', 'colore', 'misura', 'produttore', 'notes', 'imageUrl'].map((col) => (
+            {['codice *', 'descrizione *', 'prezzoCosto *', 'prezzoVendita *', 'produttore', 'misure', 'gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo', 'linea', 'stagione', 'collezione', 'colore', 'temaColore', 'confezione', 'iva', 'fasciaRicarico', 'fasciaSconto', 'tranche', 'note', 'attivo'].map((col) => (
               <span key={col} className="px-2 py-0.5 bg-white border border-border rounded text-2xs text-gray-600 font-mono">
                 {col}
               </span>
             ))}
           </div>
-          <p className="text-2xs text-gray-400 mt-2">Le colonne vengono rilevate automaticamente. Alias come "sku", "price_cost", "moq" sono riconosciuti.</p>
+          <p className="text-2xs text-gray-400 mt-2">Le intestazioni vengono rilevate automaticamente (case-insensitive). Codice esistente → aggiornamento. Nuovo codice → creazione.</p>
         </div>
       </div>
     );
@@ -240,7 +253,12 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
   // Step: Map
   if (step === 'map') {
     const requiredFields = ['code', 'name', 'costPrice', 'retailPrice'];
-    const optionalFields = ['description', 'category', 'lotSize', 'notes', 'imageUrl', 'famiglia', 'sottofamiglia', 'nomLinea', 'colore', 'misura', 'produttore'];
+    const optionalFields = [
+      'produttore', 'misura', 'gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse',
+      'gruppoOmogeneo', 'nomLinea', 'stagione', 'collezione', 'colore', 'temaColore',
+      'lotSize', 'iva', 'fasciaRicarico', 'fasciaSconto', 'tranche', 'notes', 'isActive',
+      'description', 'category', 'imageUrl', 'sottofamiglia',
+    ];
     const allFields = [...requiredFields, ...optionalFields];
 
     return (
@@ -355,10 +373,11 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
 
   // Step: Done
   if (step === 'done' && result) {
+    const totalDone = result.created + result.updated;
     return (
       <div>
-        <div className="flex items-center gap-3 mb-6">
-          {result.success > 0 ? (
+        <div className="flex items-center gap-3 mb-4">
+          {totalDone > 0 ? (
             <CheckCircle size={24} className="text-green-500" />
           ) : (
             <AlertCircle size={24} className="text-red-500" />
@@ -366,7 +385,7 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
           <div>
             <p className="font-medium text-primary">Importazione completata</p>
             <p className="text-sm text-gray-500">
-              {result.success} di {result.total} prodotti importati con successo
+              {result.created} prodotti creati · {result.updated} aggiornati · {result.errors.length} errori
             </p>
           </div>
         </div>
@@ -388,7 +407,7 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
         )}
 
         <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={reset}>Importa un Altro File</Button>
+          <Button variant="secondary" onClick={reset}>Importa un altro file</Button>
           <Button onClick={onSuccess}>Fine</Button>
         </div>
       </div>

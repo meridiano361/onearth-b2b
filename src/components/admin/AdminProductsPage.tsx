@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw } from 'lucide-react';
+import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -10,6 +10,7 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ProductImport from './ProductImport';
+import BulkImageUpload from './BulkImageUpload';
 import ProductForm from './ProductForm';
 import type { Product } from '@/types';
 import toast from 'react-hot-toast';
@@ -38,6 +39,7 @@ export default function AdminProductsPage() {
 
   // Modals / edit state
   const [showImport, setShowImport] = useState(false);
+  const [showBulkImages, setShowBulkImages] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -237,7 +239,14 @@ export default function AdminProductsPage() {
             icon={<Upload size={13} />}
             onClick={() => setShowImport(true)}
           >
-            <span className="hidden sm:inline">Importa</span>
+            <span className="hidden sm:inline">Importa da Excel</span>
+          </Button>
+          <Button
+            variant="secondary"
+            icon={<ImagePlus size={13} />}
+            onClick={() => setShowBulkImages(true)}
+          >
+            <span className="hidden sm:inline">Carica foto in blocco</span>
           </Button>
           <Button
             icon={<Plus size={13} />}
@@ -494,16 +503,31 @@ export default function AdminProductsPage() {
         </table>
       </div>
 
-      {/* Import Modal */}
+      {/* Import Excel Modal */}
       <Modal
         isOpen={showImport}
         onClose={() => setShowImport(false)}
-        title="Importa Prodotti"
+        title="Importa prodotti da Excel"
         size="xl"
       >
         <ProductImport
           onSuccess={() => {
             setShowImport(false);
+            queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+          }}
+        />
+      </Modal>
+
+      {/* Bulk Image Upload Modal */}
+      <Modal
+        isOpen={showBulkImages}
+        onClose={() => setShowBulkImages(false)}
+        title="Carica foto in blocco"
+        size="lg"
+      >
+        <BulkImageUpload
+          onSuccess={() => {
+            setShowBulkImages(false);
             queryClient.invalidateQueries({ queryKey: ['admin-products'] });
           }}
         />
