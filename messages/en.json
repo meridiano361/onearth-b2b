@@ -88,7 +88,7 @@
   },
   "product": {
     "cost": "Cost",
-    "sale": "PVP",
+    "sale": "Retail",
     "add": "Add",
     "added": "Added",
     "adjustLot": "Adjust quantity to a multiple of {lotSize}"
