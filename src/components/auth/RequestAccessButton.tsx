@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Loader2, ChevronDown } from 'lucide-react';
+import { X, Loader2, ChevronDown, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 
@@ -22,14 +22,85 @@ type FormValues = {
 const inputClass =
   'w-full px-4 py-3 bg-white border border-border rounded text-sm text-primary placeholder-gray-400 transition-all duration-150 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20';
 
-const selectClass =
-  'w-full px-4 py-3 bg-white border border-border rounded text-sm text-primary appearance-none transition-all duration-150 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 pr-10';
-
 const labelClass = 'block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2';
 
 function capitalize(s: string) {
   if (!s) return s;
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function OrgDropdown({
+  value,
+  onChange,
+  orgs,
+  placeholder,
+  error,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  orgs: OrgOption[];
+  placeholder: string;
+  error?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const selectedLabel =
+    value === 'new'
+      ? '+ Nuova organizzazione'
+      : orgs.find((o) => o.nome === value)?.nome ?? '';
+
+  const triggerClass = [
+    'w-full px-4 py-3 bg-white border rounded text-sm text-left appearance-none',
+    'transition-all duration-150 focus:outline-none flex items-center justify-between',
+    error ? 'border-red-400' : open ? 'border-accent ring-1 ring-accent/20' : 'border-border',
+    value === 'new' ? 'font-bold text-primary' : selectedLabel ? 'text-primary' : 'text-gray-400',
+  ].join(' ');
+
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen((o) => !o)} className={triggerClass}>
+        <span className="truncate">{selectedLabel || placeholder}</span>
+        <ChevronDown
+          size={14}
+          className={`flex-shrink-0 ml-2 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-border rounded shadow-lg max-h-64 overflow-y-auto">
+          {orgs.map((org) => (
+            <button
+              key={org.id}
+              type="button"
+              onClick={() => { onChange(org.nome); setOpen(false); }}
+              className="w-full text-left px-4 py-2.5 text-sm text-primary hover:bg-cream transition-colors flex items-center justify-between"
+            >
+              <span>{org.nome}</span>
+              {value === org.nome && <Check size={12} className="text-accent flex-shrink-0" />}
+            </button>
+          ))}
+          <div className="h-px bg-border mx-3 my-1" />
+          <button
+            type="button"
+            onClick={() => { onChange('new'); setOpen(false); }}
+            className="w-full text-left px-4 py-2.5 text-sm font-bold text-primary hover:bg-cream transition-colors flex items-center justify-between"
+          >
+            <span>+ Nuova organizzazione</span>
+            {value === 'new' && <Check size={12} className="text-accent flex-shrink-0" />}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function RequestAccessButton() {
@@ -153,19 +224,19 @@ export default function RequestAccessButton() {
                 <h3 className="text-lg font-light text-primary mb-6">{t('title')}</h3>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                  {/* Organizzazione select */}
+                  {/* Hidden input to register orgId with react-hook-form */}
+                  <input type="hidden" {...register('orgId')} />
+
+                  {/* Organizzazione custom dropdown */}
                   <div>
                     <label className={labelClass}>{t('orgSelectLabel')}</label>
-                    <div className="relative">
-                      <select {...register('orgId')} className={selectClass} defaultValue="">
-                        <option value="" disabled>{t('orgSelectPlaceholder')}</option>
-                        {orgs.map((o) => (
-                          <option key={o.id} value={o.nome}>{o.nome}</option>
-                        ))}
-                        <option value="new">{t('newOrgOption')}</option>
-                      </select>
-                      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
+                    <OrgDropdown
+                      value={orgId ?? ''}
+                      onChange={(val) => setValue('orgId', val, { shouldValidate: true })}
+                      orgs={orgs}
+                      placeholder={t('orgSelectPlaceholder')}
+                      error={errors.orgId?.message}
+                    />
                     {errors.orgId && (
                       <p className="mt-1 text-xs text-red-500">{errors.orgId.message}</p>
                     )}
@@ -181,6 +252,7 @@ export default function RequestAccessButton() {
                         })}
                         placeholder={t('newOrgPlaceholder')}
                         className={inputClass}
+                        autoFocus
                       />
                       {errors.organizzazioneNuova && (
                         <p className="mt-1 text-xs text-red-500">{errors.organizzazioneNuova.message}</p>
