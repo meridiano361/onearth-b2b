@@ -77,7 +77,7 @@ export async function GET(
     if (!order) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     if (!isAdminRole(session.user.role)) {
-      if (session.user.role === 'OPERATOR' && order.canaleId !== session.user.destinazioneId) {
+      if (session.user.role === 'OPERATOR' && order.organizationId !== session.user.organizationId) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       if (session.user.role === 'CUSTOMER' && order.customerId !== session.user.id) {
@@ -109,10 +109,10 @@ export async function PATCH(
       }
       const orderCheck = await prisma.order.findUnique({
         where: { id: params.id },
-        select: { customerId: true, canaleId: true },
+        select: { customerId: true, organizationId: true },
       });
       if (!orderCheck) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-      if (session.user.role === 'OPERATOR' && orderCheck.canaleId !== session.user.destinazioneId) {
+      if (session.user.role === 'OPERATOR' && orderCheck.organizationId !== session.user.organizationId) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       if (session.user.role === 'CUSTOMER' && orderCheck.customerId !== session.user.id) {
@@ -194,10 +194,10 @@ export async function DELETE(
     if (!isAdminRole(session.user.role)) {
       const order = await prisma.order.findUnique({
         where: { id: params.id },
-        select: { customerId: true, canaleId: true, status: true },
+        select: { customerId: true, organizationId: true, status: true },
       });
       if (!order) return NextResponse.json({ error: 'Ordine non trovato' }, { status: 404 });
-      if (session.user.role === 'OPERATOR' && order.canaleId !== session.user.destinazioneId) {
+      if (session.user.role === 'OPERATOR' && order.organizationId !== session.user.organizationId) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       if (session.user.role === 'CUSTOMER' && order.customerId !== session.user.id) {

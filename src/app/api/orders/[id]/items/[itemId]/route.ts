@@ -16,10 +16,13 @@ export async function PATCH(
 
     const order = await prisma.order.findUnique({
       where: { id: params.id },
-      select: { customerId: true },
+      select: { customerId: true, organizationId: true },
     });
     if (!order) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+    if (session.user.role === 'OPERATOR' && order.organizationId !== session.user.organizationId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     if (session.user.role === 'CUSTOMER' && order.customerId !== session.user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -68,10 +71,13 @@ export async function DELETE(
 
     const order = await prisma.order.findUnique({
       where: { id: params.id },
-      select: { customerId: true },
+      select: { customerId: true, organizationId: true },
     });
     if (!order) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+    if (session.user.role === 'OPERATOR' && order.organizationId !== session.user.organizationId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     if (session.user.role === 'CUSTOMER' && order.customerId !== session.user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

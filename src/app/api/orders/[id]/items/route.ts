@@ -19,11 +19,18 @@ export async function POST(
 
     const order = await prisma.order.findUnique({
       where: { id: params.id },
-      select: { customerId: true, status: true },
+      select: { customerId: true, organizationId: true, status: true },
     });
     if (!order) return NextResponse.json({ error: 'Ordine non trovato' }, { status: 404 });
 
-    if (session.user.role === 'CUSTOMER') {
+    if (session.user.role === 'OPERATOR') {
+      if (order.organizationId !== session.user.organizationId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      if (order.status === 'ESPORTATO') {
+        return NextResponse.json({ error: 'Non puoi modificare un ordine esportato' }, { status: 403 });
+      }
+    } else if (session.user.role === 'CUSTOMER') {
       if (order.customerId !== session.user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
