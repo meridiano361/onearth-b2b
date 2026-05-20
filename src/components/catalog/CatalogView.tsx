@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { Search, SlidersHorizontal, X, Package, Heart } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Package, Heart, FileDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn, debounce } from '@/lib/utils';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -172,18 +172,19 @@ export default function CatalogView() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
 
-        {/* ── Customer orders shortcut ─────────────────────── */}
-        {isCustomer && (
-          <div className="border-b border-border bg-cream/30 px-4 sm:px-6 py-3 flex justify-end">
-            <Link
-              href="/catalog/orders"
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded hover:bg-primary/90 transition-colors"
-            >
-              <Package size={15} />
-              I miei Ordini
-            </Link>
-          </div>
-        )}
+        {/* ── Catalog PDF download ─────────────────────────── */}
+        <div className="border-b border-border bg-cream/30 px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
+          <span className="text-2xs uppercase tracking-widest text-gray-400 font-medium hidden sm:block">CASA 2027</span>
+          <a
+            href="/catalogo.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary transition-colors ml-auto"
+          >
+            <FileDown size={13} />
+            Scarica catalogo PDF
+          </a>
+        </div>
 
         {/* Top bar */}
         <div className="sticky top-0 z-10 bg-background border-b border-border px-4 sm:px-6 py-3 flex items-center gap-2 sm:gap-3">

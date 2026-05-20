@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
-import { LogOut, HelpCircle } from 'lucide-react';
+import { LogOut, HelpCircle, Heart } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -52,6 +52,18 @@ export default function Header({ session }: HeaderProps) {
           )}
         >
           {t('catalog')}
+        </Link>
+        <Link
+          href="/catalog/preferiti"
+          className={cn(
+            'text-xs px-3 py-1.5 rounded transition-colors flex items-center gap-1',
+            pathname.startsWith('/catalog/preferiti')
+              ? 'text-primary font-semibold bg-cream'
+              : 'text-gray-400 hover:text-primary hover:bg-cream'
+          )}
+        >
+          <Heart size={12} />
+          {t('favorites')}
         </Link>
         <Link
           href="/catalog/orders"
