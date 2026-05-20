@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import ProductCard from './ProductCard';
 import type { Product } from '@/types';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -11,10 +12,12 @@ interface ProductGridProps {
 }
 
 export default function ProductGrid({ products, isLoading }: ProductGridProps) {
+  const t = useTranslations('catalog');
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <LoadingSpinner size="lg" text="Caricamento collezione..." />
+        <LoadingSpinner size="lg" text={t('loadingCollection')} />
       </div>
     );
   }
@@ -25,8 +28,8 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
         <div className="w-16 h-16 rounded-full bg-cream flex items-center justify-center mb-4">
           <Package size={24} className="text-gray-300" />
         </div>
-        <h3 className="font-display text-lg text-primary font-light">Nessun prodotto trovato</h3>
-        <p className="mt-1 text-sm text-gray-400">Prova a modificare i filtri</p>
+        <h3 className="font-display text-lg text-primary font-light">{t('noProductsFound')}</h3>
+        <p className="mt-1 text-sm text-gray-400">{t('tryModifyFilters')}</p>
       </div>
     );
   }

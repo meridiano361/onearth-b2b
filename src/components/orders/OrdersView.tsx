@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Package, Download, ChevronDown, ChevronUp, ScanEye } from 'lucide-react';
 import OrderPDFExport from './OrderPDFExport';
 import OrderDemetraExport from './OrderDemetraExport';
@@ -16,6 +17,7 @@ import toast from 'react-hot-toast';
 function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boolean }) {
   const [isExpanded, setIsExpanded] = useState(isHighlighted);
   const [isExporting, setIsExporting] = useState(false);
+  const t = useTranslations('orders');
 
   const statusColors: Record<string, string> = {
     MERCE_DA_ORDINARE:        'default',
@@ -41,9 +43,9 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
       a.download = `order-${order.id.slice(0, 8)}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Excel esportato');
+      toast.success(t('excelExported'));
     } catch {
-      toast.error('Esportazione fallita');
+      toast.error(t('excelError'));
     } finally {
       setIsExporting(false);
     }
@@ -72,7 +74,7 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-600">
             <span>{formatDate(order.createdAt, 'datetime')}</span>
             <span className="text-gray-300 hidden sm:inline">·</span>
-            <span className="hidden sm:inline">{order.totalItems} pezzi, {order.items?.length || 0} righe</span>
+            <span className="hidden sm:inline">{t('itemsCount', { count: order.totalItems, rows: order.items?.length || 0 })}</span>
             <span className="font-semibold text-primary">{formatCurrency(order.totalValue)}</span>
           </div>
         </div>
@@ -92,7 +94,7 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
             className="text-xs text-gray-400 hover:text-primary border border-border rounded px-2 py-1.5 hover:bg-cream transition-all flex items-center gap-1"
           >
             <ScanEye size={11} />
-            <span className="hidden sm:inline">Anteprima</span>
+            <span className="hidden sm:inline">{t('preview')}</span>
           </Link>
           <OrderPDFExport order={order} />
           <OrderDemetraExport order={order} />
@@ -114,12 +116,12 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
             <table className="w-full text-xs min-w-[400px]">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Codice</th>
-                  <th className="text-left pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Prodotto</th>
-                  <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Qtà ord.</th>
-                  <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-green-600">Merce pronta</th>
-                  <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Unità</th>
-                  <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">Totale</th>
+                  <th className="text-left pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">{t('tableCode')}</th>
+                  <th className="text-left pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">{t('tableProduct')}</th>
+                  <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">{t('tableQty')}</th>
+                  <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-green-600">{t('tableMercePronta')}</th>
+                  <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">{t('tableUnit')}</th>
+                  <th className="text-right pb-2 text-2xs font-medium tracking-widest uppercase text-gray-400">{t('tableTotal')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -139,7 +141,7 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
               <tfoot>
                 <tr>
                   <td colSpan={5} className="pt-3 text-right text-2xs font-medium uppercase tracking-wide text-gray-500">
-                    Totale Ordine
+                    {t('orderTotal')}
                   </td>
                   <td className="pt-3 text-right font-semibold text-primary">
                     {formatCurrency(order.totalValue)}
@@ -164,7 +166,7 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
               </div>
             ))}
             <div className="flex justify-between items-center pt-1 border-t border-border">
-              <span className="text-2xs font-medium uppercase tracking-wide text-gray-500">Totale Ordine</span>
+              <span className="text-2xs font-medium uppercase tracking-wide text-gray-500">{t('orderTotal')}</span>
               <span className="font-semibold text-primary text-sm">{formatCurrency(order.totalValue)}</span>
             </div>
           </div>
@@ -177,6 +179,7 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
 export default function OrdersView() {
   const searchParams = useSearchParams();
   const highlight = searchParams.get('highlight');
+  const t = useTranslations('orders');
 
   const { data, isLoading } = useQuery({
     queryKey: ['my-orders'],
@@ -197,19 +200,21 @@ export default function OrdersView() {
         <p className="label-luxury text-accent mb-1">CASA 2027</p>
         <h1 className="font-display text-2xl text-primary font-light tracking-wide">I miei Ordini</h1>
         <p className="mt-1 text-sm text-gray-400">
-          {orders.length > 0 ? `${orders.length} ordine${orders.length !== 1 ? 'i' : ''} effettuato${orders.length !== 1 ? 'i' : ''}` : 'Nessun ordine ancora'}
+          {orders.length > 0
+            ? `${orders.length} ${orders.length === 1 ? t('orderSingular') : t('orderPlural')}`
+            : t('noOrders')}
         </p>
       </div>
 
       {isLoading ? (
-        <LoadingSpinner fullPage text="Caricamento ordini..." />
+        <LoadingSpinner fullPage text={t('loading')} />
       ) : orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-16 h-16 rounded-full bg-cream flex items-center justify-center mb-4">
             <Package size={24} className="text-gray-300" />
           </div>
-          <h3 className="font-display text-lg text-primary font-light">Nessun ordine ancora</h3>
-          <p className="mt-1 text-sm text-gray-400">Inizia a costruire il tuo ordine dal catalogo</p>
+          <h3 className="font-display text-lg text-primary font-light">{t('noOrders')}</h3>
+          <p className="mt-1 text-sm text-gray-400">{t('noOrdersHint')}</p>
         </div>
       ) : (
         <div>

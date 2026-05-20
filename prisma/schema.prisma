@@ -203,8 +203,11 @@ model Tranche {
 model AccessRequest {
   id               String   @id @default(cuid())
   organizzazione   String
-  puntoVendita     String
-  nomeResponsabile String
+  puntoVendita     String?
+  nomeResponsabile String?
+  nome             String?
+  cognome          String?
+  telefono         String?
   email            String
   status           String   @default("pending")
   createdAt        DateTime @default(now())

@@ -99,7 +99,7 @@ export default function CustomerHome() {
         {/* ── Section 2 — Scopri la collezione ───────────────── */}
         <section>
           <p className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide mb-4">
-            Scopri la Collezione CASA 2027
+            {th('collectionTitle')}
           </p>
           {isLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -118,7 +118,7 @@ export default function CustomerHome() {
 
         {/* ── Section 3 — Scopri ON EARTH ────────────────────── */}
         <section className="border-t border-border/50 pt-6 pb-4">
-          <p className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide mb-5">Scopri ON EARTH</p>
+          <p className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide mb-5">{th('discoverTitle')}</p>
 
           {/* Row 1: sito, Instagram, Facebook — centrati */}
           <div className="flex justify-center gap-6 mb-4">

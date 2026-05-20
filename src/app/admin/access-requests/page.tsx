@@ -13,8 +13,11 @@ import Button from '@/components/ui/Button';
 interface AccessRequest {
   id: string;
   organizzazione: string;
-  puntoVendita: string;
-  nomeResponsabile: string;
+  puntoVendita?: string | null;
+  nomeResponsabile?: string | null;
+  nome?: string | null;
+  cognome?: string | null;
+  telefono?: string | null;
   email: string;
   status: string;
   createdAt: string;
@@ -93,8 +96,8 @@ export default function AccessRequestsPage() {
             <tr className="border-b border-border bg-cream">
               <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
               <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organizzazione</th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punto vendita</th>
               <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsabile</th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefono</th>
               <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
               <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stato</th>
               <th className="py-3 px-4 w-48" />
@@ -107,8 +110,10 @@ export default function AccessRequestsPage() {
                   {format(new Date(r.createdAt), 'd MMM yyyy', { locale: it })}
                 </td>
                 <td className="py-3 px-4 font-medium text-primary">{r.organizzazione}</td>
-                <td className="py-3 px-4 text-gray-600">{r.puntoVendita}</td>
-                <td className="py-3 px-4 text-gray-600">{r.nomeResponsabile}</td>
+                <td className="py-3 px-4 text-gray-600">
+                  {r.nome && r.cognome ? `${r.nome} ${r.cognome}` : r.nomeResponsabile || '—'}
+                </td>
+                <td className="py-3 px-4 text-gray-600">{r.telefono || '—'}</td>
                 <td className="py-3 px-4">
                   <a href={`mailto:${r.email}`} className="text-accent hover:underline">{r.email}</a>
                 </td>

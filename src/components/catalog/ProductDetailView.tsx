@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ShoppingBag, Check } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { formatCurrency, isValidLotQuantity } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -14,29 +15,32 @@ interface Props {
   id: string;
 }
 
-const CLASS_FIELDS: { key: keyof Product; label: string }[] = [
-  { key: 'gruppoMerceologico', label: 'Gruppo merceologico' },
-  { key: 'famiglia', label: 'Famiglia' },
-  { key: 'classe', label: 'Classe' },
-  { key: 'sottoclasse', label: 'Sottoclasse' },
-  { key: 'gruppoOmogeneo', label: 'Gruppo omogeneo' },
-  { key: 'nomLinea', label: 'Linea' },
-  { key: 'stagione', label: 'Stagione' },
-  { key: 'collezione', label: 'Collezione' },
-  { key: 'colore', label: 'Colore' },
-  { key: 'temaColore', label: 'Tema colore' },
-];
-
-const DETAIL_FIELDS: { key: keyof Product; label: string }[] = [
-  { key: 'produttore', label: 'Produttore' },
-  { key: 'misura', label: 'Misure' },
-  { key: 'lotSize', label: 'Confezione' },
-];
-
 export default function ProductDetailView({ id }: Props) {
   const router = useRouter();
   const { getItemQuantity, updateQuantity, addItem } = useCartStore();
   const [justAdded, setJustAdded] = useState(false);
+  const tp = useTranslations('product');
+  const tf = useTranslations('filters');
+  const tg = useTranslations('groupings');
+
+  const classFields: { key: keyof Product; label: string }[] = [
+    { key: 'gruppoMerceologico', label: tf('gruppoMerceologico') },
+    { key: 'famiglia',           label: tf('famiglia') },
+    { key: 'classe',             label: tf('classe') },
+    { key: 'sottoclasse',        label: tf('sottoclasse') },
+    { key: 'gruppoOmogeneo',     label: tf('gruppoOmogeneo') },
+    { key: 'nomLinea',           label: tg('nomLinea') },
+    { key: 'stagione',           label: tg('stagione') },
+    { key: 'collezione',         label: tg('collezione') },
+    { key: 'colore',             label: tg('colore') },
+    { key: 'temaColore',         label: tg('temaColore') },
+  ];
+
+  const detailFields: { key: keyof Product; label: string }[] = [
+    { key: 'produttore', label: tf('produttore') },
+    { key: 'misura',     label: tp('misura') },
+    { key: 'lotSize',    label: tp('lotSizeLabel') },
+  ];
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['product', id],
@@ -68,7 +72,7 @@ export default function ProductDetailView({ id }: Props) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <LoadingSpinner size="lg" text="Caricamento..." />
+        <LoadingSpinner size="lg" text={tp('loading')} />
       </div>
     );
   }
@@ -76,35 +80,33 @@ export default function ProductDetailView({ id }: Props) {
   if (isError || !product) {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-4">
-        <p className="text-gray-400">Prodotto non trovato.</p>
+        <p className="text-gray-400">{tp('notFound')}</p>
         <button
           onClick={() => router.push('/catalog')}
           className="text-sm text-accent hover:underline"
         >
-          Torna al catalogo
+          {tp('backToCatalog')}
         </button>
       </div>
     );
   }
 
-  const classFields = CLASS_FIELDS.filter(({ key }) => product[key]);
-  const detailFields = DETAIL_FIELDS.filter(({ key }) => {
+  const activeClassFields = classFields.filter(({ key }) => product[key]);
+  const activeDetailFields = detailFields.filter(({ key }) => {
     const v = product[key];
     return v !== null && v !== undefined && v !== '' && v !== 1;
   });
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
-      {/* Back */}
       <button
         onClick={() => router.back()}
         className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary transition-colors mb-6"
       >
         <ArrowLeft size={13} />
-        Torna al Catalogo
+        {tp('backToCatalog')}
       </button>
 
-      {/* Main grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 mb-10">
         {/* Image */}
         <div className="aspect-square bg-cream rounded overflow-hidden flex items-center justify-center border border-border">
@@ -124,35 +126,32 @@ export default function ProductDetailView({ id }: Props) {
 
         {/* Info */}
         <div className="flex flex-col">
-          {/* Code */}
           <p className="label-luxury text-accent mb-1">{product.code}</p>
 
-          {/* Name */}
           <h1 className="font-display text-2xl sm:text-3xl text-primary font-light leading-snug mb-4">
             {product.name}
           </h1>
 
-          {/* Price */}
           <div className="mb-6">
-            <p className="text-2xs text-gray-400 uppercase tracking-widest mb-0.5">Prezzo vendita i.i.</p>
+            <p className="text-2xs text-gray-400 uppercase tracking-widest mb-0.5">
+              {tp('retailPriceLabel')}
+            </p>
             <p className="text-3xl font-semibold text-primary">
               {formatCurrency(product.retailPrice)}
             </p>
             {product.lotSize > 1 && (
               <p className="text-xs text-gray-400 mt-0.5">
-                Confezione da {product.lotSize} pz
+                {tp('lotPack', { lotSize: product.lotSize })}
               </p>
             )}
           </div>
 
-          {/* LOT warning */}
           {hasLotWarning && (
             <div className="mb-3 p-2.5 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
-              Adatta la quantità al multiplo di {product.lotSize}
+              {tp('adjustLot', { lotSize: product.lotSize })}
             </div>
           )}
 
-          {/* Cart controls */}
           <div className="mt-auto">
             {inCart ? (
               <div className="space-y-2">
@@ -163,7 +162,7 @@ export default function ProductDetailView({ id }: Props) {
                   min={0}
                 />
                 <p className="text-xs text-center text-gray-400">
-                  {cartQty} pz nel tuo ordine
+                  {tp('inCart', { qty: cartQty })}
                 </p>
               </div>
             ) : (
@@ -174,12 +173,12 @@ export default function ProductDetailView({ id }: Props) {
                 {justAdded ? (
                   <>
                     <Check size={14} />
-                    Aggiunto
+                    {tp('added')}
                   </>
                 ) : (
                   <>
                     <ShoppingBag size={14} />
-                    Aggiungi
+                    {tp('add')}
                   </>
                 )}
               </button>
@@ -190,12 +189,11 @@ export default function ProductDetailView({ id }: Props) {
 
       {/* Details sections */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        {/* Classificazione */}
-        {classFields.length > 0 && (
+        {activeClassFields.length > 0 && (
           <div>
-            <h2 className="label-luxury text-gray-400 mb-3">Classificazione</h2>
+            <h2 className="label-luxury text-gray-400 mb-3">{tp('classification')}</h2>
             <div className="space-y-2">
-              {classFields.map(({ key, label }) => (
+              {activeClassFields.map(({ key, label }) => (
                 <div key={key} className="flex items-baseline gap-2">
                   <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
                   <span className="text-sm text-primary">{String(product[key])}</span>
@@ -205,22 +203,23 @@ export default function ProductDetailView({ id }: Props) {
           </div>
         )}
 
-        {/* Dettagli */}
-        {(detailFields.length > 0 || product.notes) && (
+        {(activeDetailFields.length > 0 || product.notes) && (
           <div>
-            <h2 className="label-luxury text-gray-400 mb-3">Dettagli</h2>
+            <h2 className="label-luxury text-gray-400 mb-3">{tp('detailsTitle')}</h2>
             <div className="space-y-2">
-              {detailFields.map(({ key, label }) => (
+              {activeDetailFields.map(({ key, label }) => (
                 <div key={key} className="flex items-baseline gap-2">
                   <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
                   <span className="text-sm text-primary">
-                    {key === 'lotSize' ? `${product[key]} pz` : String(product[key])}
+                    {key === 'lotSize'
+                      ? `${product[key]} ${tp('lotUnit')}`
+                      : String(product[key])}
                   </span>
                 </div>
               ))}
               {product.notes && (
                 <div className="flex items-start gap-2 pt-1">
-                  <span className="text-xs text-gray-400 w-32 flex-shrink-0">Note</span>
+                  <span className="text-xs text-gray-400 w-32 flex-shrink-0">{tp('notesLabel')}</span>
                   <span className="text-sm text-gray-500 italic">{product.notes}</span>
                 </div>
               )}
