@@ -13,7 +13,7 @@ import { usePreview } from '@/contexts/PreviewContext';
 import { computeProjections } from './CartSummary';
 import CartItem from './CartItem';
 import CartSummary from './CartSummary';
-import type { Canale, Product } from '@/types';
+import type { Destinazione, Product } from '@/types';
 
 type SuggestionProduct = Pick<Product, 'id' | 'code' | 'name' | 'imageUrl' | 'costPrice' | 'retailPrice' | 'lotSize' | 'iva'>;
 
@@ -23,9 +23,9 @@ export default function CartSidebar() {
   const preview = usePreview();
   const { items, collectionId, notes, clearCart, getTotalItems, hasLotWarnings, addItem } = useCartStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [canali, setCanali] = useState<Canale[]>([]);
-  const [showCanaleModal, setShowCanaleModal] = useState(false);
-  const [selectedCanaleId, setSelectedCanaleId] = useState('');
+  const [destinazioni, setDestinazioni] = useState<Destinazione[]>([]);
+  const [showDestinazioneModal, setShowDestinazioneModal] = useState(false);
+  const [selectedDestinazioneId, setSelectedDestinazioneId] = useState('');
   const t = useTranslations('cart');
   const ts = useTranslations('cartSummary');
 
@@ -36,22 +36,22 @@ export default function CartSidebar() {
 
   useEffect(() => {
     if (preview) {
-      // In preview mode, fetch canali for the simulated org via the catalog API
-      fetch('/api/catalog/canali')
+      // In preview mode, fetch destinazioni for the simulated org via the catalog API
+      fetch('/api/catalog/destinazioni')
         .then((r) => r.json())
         .then((d) => {
-          const list: Canale[] = d.data || [];
-          setCanali(list);
-          if (list.length >= 1) setSelectedCanaleId(list[0].id);
+          const list: Destinazione[] = d.data || [];
+          setDestinazioni(list);
+          if (list.length >= 1) setSelectedDestinazioneId(list[0].id);
         })
         .catch(() => {});
     } else if (isOperator && session?.user.organizationId) {
-      fetch(`/api/canali?organizationId=${session.user.organizationId}`)
+      fetch(`/api/destinazioni?organizationId=${session.user.organizationId}`)
         .then((r) => r.json())
         .then((d) => {
-          const list: Canale[] = d.data || [];
-          setCanali(list);
-          if (list.length >= 1) setSelectedCanaleId(list[0].id);
+          const list: Destinazione[] = d.data || [];
+          setDestinazioni(list);
+          if (list.length >= 1) setSelectedDestinazioneId(list[0].id);
         })
         .catch(() => {});
     }
@@ -70,8 +70,8 @@ export default function CartSidebar() {
 
   // Budget calculations
   const selectedCanale = useMemo(
-    () => canali.find((c) => c.id === selectedCanaleId),
-    [canali, selectedCanaleId]
+    () => destinazioni.find((c) => c.id === selectedDestinazioneId),
+    [destinazioni, selectedDestinazioneId]
   );
   const budget = selectedCanale?.budget ?? null;
   const { costTotal } = useMemo(() => computeProjections(items), [items]);
@@ -110,12 +110,12 @@ export default function CartSidebar() {
   async function handleCreateOrder() {
     if (isSubmitting || isEmpty) return;
     if (isOperator) {
-      if (canali.length === 0) {
+      if (destinazioni.length === 0) {
         await submitOrder(undefined);
-      } else if (canali.length === 1) {
-        await submitOrder(canali[0].id);
+      } else if (destinazioni.length === 1) {
+        await submitOrder(destinazioni[0].id);
       } else {
-        setShowCanaleModal(true);
+        setShowDestinazioneModal(true);
       }
     } else {
       await submitOrder(undefined);
@@ -273,33 +273,33 @@ export default function CartSidebar() {
         )}
       </div>
 
-      {/* Canale selection modal */}
-      {showCanaleModal && (
+      {/* Destinazione selection modal */}
+      {showDestinazioneModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowCanaleModal(false)} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDestinazioneModal(false)} />
           <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 z-10">
             <h3 className="text-sm font-semibold text-primary mb-1 tracking-wide">{t('selectCanaleTitle')}</h3>
             <p className="text-xs text-gray-400 mb-4">{t('selectCanalePlaceholder')}</p>
             <select
-              value={selectedCanaleId}
-              onChange={(e) => setSelectedCanaleId(e.target.value)}
+              value={selectedDestinazioneId}
+              onChange={(e) => setSelectedDestinazioneId(e.target.value)}
               className="w-full px-4 py-2.5 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent mb-4"
             >
-              {canali.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.tipo}{c.citta ? ` — ${c.citta}` : ''}
+              {destinazioni.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.tipo}{d.citta ? ` — ${d.citta}` : ''}
                 </option>
               ))}
             </select>
             <div className="flex gap-3">
               <button
-                onClick={() => setShowCanaleModal(false)}
+                onClick={() => setShowDestinazioneModal(false)}
                 className="flex-1 py-2.5 text-xs font-medium rounded border border-border text-gray-500 hover:bg-cream transition-colors"
               >
                 Annulla
               </button>
               <button
-                onClick={() => { setShowCanaleModal(false); submitOrder(selectedCanaleId || undefined); }}
+                onClick={() => { setShowDestinazioneModal(false); submitOrder(selectedDestinazioneId || undefined); }}
                 disabled={isSubmitting}
                 className="flex-1 py-2.5 text-xs font-medium rounded bg-primary text-background hover:bg-warm-darker transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
               >

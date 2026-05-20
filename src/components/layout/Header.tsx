@@ -77,10 +77,10 @@ export default function Header({ session }: HeaderProps) {
           {t('orders')}
         </Link>
         <Link
-          href="/catalog/canali"
+          href="/catalog/destinazioni"
           className={cn(
             'text-xs px-3 py-1.5 rounded transition-colors',
-            pathname.startsWith('/catalog/canali')
+            pathname.startsWith('/catalog/destinazioni')
               ? 'text-primary font-semibold bg-cream'
               : 'text-gray-400 hover:text-primary hover:bg-cream'
           )}

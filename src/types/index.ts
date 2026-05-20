@@ -1,6 +1,8 @@
 export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'COMMERCIALE' | 'MAGAZZINO' | 'CUSTOMER';
 export type AppRole = Role | 'OPERATOR';
-export type CanaleTipo = 'BOTTEGA' | 'EMPORIO' | 'DISTRETTO' | 'STORE' | 'OUTLET' | 'TENDONE' | 'FIERA' | 'ONLINE' | 'ALTRO';
+export type DestinazioneTipo = 'BOTTEGA' | 'EMPORIO' | 'DISTRETTO' | 'STORE' | 'OUTLET' | 'TENDONE' | 'FIERA' | 'ONLINE' | 'ALTRO';
+/** @deprecated use DestinazioneTipo */
+export type CanaleTipo = DestinazioneTipo;
 
 export type OrderStatus =
   | 'MERCE_DA_ORDINARE'
@@ -96,7 +98,7 @@ export interface Organization {
   createdAt: string;
   _count?: { operatori: number; canali: number; ordini: number };
   operatori?: Operator[];
-  canali?: Canale[];
+  destinazioni?: Destinazione[];
 }
 
 export interface Operator {
@@ -111,10 +113,10 @@ export interface Operator {
   organization?: { nome: string };
 }
 
-export interface Canale {
+export interface Destinazione {
   id: string;
   nome: string;
-  tipo: CanaleTipo;
+  tipo: DestinazioneTipo;
   citta: string | null;
   indirizzo: string | null;
   budget: number | null;
@@ -123,6 +125,8 @@ export interface Canale {
   organization?: { nome: string };
   _count?: { ordini: number };
 }
+/** @deprecated use Destinazione */
+export type Canale = Destinazione;
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
@@ -152,7 +156,9 @@ export interface Order {
   confirmedAt: string | null;
   customer?: Customer;
   organization?: Organization;
-  canale?: Canale;
+  destinazione?: Destinazione;
+  /** @deprecated use destinazione */
+  canale?: Destinazione;
   items?: OrderItem[];
 }
 
@@ -219,8 +225,8 @@ declare module 'next-auth' {
       customerCode: string;
       // Operator-specific fields
       organizationId?: string;
-      canaleId?: string;
-      canaleName?: string;
+      destinazioneId?: string;
+      destinazioneName?: string;
     };
   }
 
@@ -232,8 +238,8 @@ declare module 'next-auth' {
     customerCode: string;
     isActive?: boolean;
     organizationId?: string;
-    canaleId?: string;
-    canaleName?: string;
+    destinazioneId?: string;
+    destinazioneName?: string;
   }
 }
 
@@ -244,7 +250,7 @@ declare module 'next-auth/jwt' {
     companyName: string;
     customerCode: string;
     organizationId?: string;
-    canaleId?: string;
-    canaleName?: string;
+    destinazioneId?: string;
+    destinazioneName?: string;
   }
 }

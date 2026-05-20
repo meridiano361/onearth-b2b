@@ -14,17 +14,17 @@ import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
-import type { Organization, Operator, Canale, CanaleTipo } from '@/types';
+import type { Organization, Operator, Destinazione, DestinazioneTipo } from '@/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const TIPO_LABELS: Record<CanaleTipo, string> = {
+const TIPO_LABELS: Record<DestinazioneTipo, string> = {
   BOTTEGA: 'Bottega', EMPORIO: 'Emporio', DISTRETTO: 'Distretto',
   STORE: 'Store', OUTLET: 'Outlet', TENDONE: 'Tendone',
   FIERA: 'Fiera', ONLINE: 'Online', ALTRO: 'Altro',
 };
 
-const TIPO_ICONS: Record<CanaleTipo, React.ReactNode> = {
+const TIPO_ICONS: Record<DestinazioneTipo, React.ReactNode> = {
   BOTTEGA: <Store size={12} />, EMPORIO: <ShoppingBag size={12} />,
   DISTRETTO: <Building size={12} />, STORE: <ShoppingCart size={12} />,
   OUTLET: <Tag size={12} />, TENDONE: <Radio size={12} />,
@@ -148,29 +148,29 @@ function OperatorModal({
   );
 }
 
-// ─── CanaleModal ──────────────────────────────────────────────────────────────
+// ─── DestinazioneModal ────────────────────────────────────────────────────────
 
-function CanaleModal({ isOpen, onClose, onSave, canale, orgId }: {
+function DestinazioneModal({ isOpen, onClose, onSave, destinazione, orgId }: {
   isOpen: boolean; onClose: () => void; onSave: () => void;
-  canale?: Canale; orgId: string;
+  destinazione?: Destinazione; orgId: string;
 }) {
-  const isEdit = !!canale;
-  const [nome, setNome] = useState(canale?.nome || '');
-  const [tipo, setTipo] = useState<CanaleTipo>(canale?.tipo || 'BOTTEGA');
-  const [citta, setCitta] = useState(canale?.citta || '');
+  const isEdit = !!destinazione;
+  const [nome, setNome] = useState(destinazione?.nome || '');
+  const [tipo, setTipo] = useState<DestinazioneTipo>(destinazione?.tipo || 'BOTTEGA');
+  const [citta, setCitta] = useState(destinazione?.citta || '');
   const [saving, setSaving] = useState(false);
 
   async function handleSave() {
     setSaving(true);
     try {
-      const url = isEdit ? `/api/canali/${canale!.id}` : `/api/organizations/${orgId}/canali`;
+      const url = isEdit ? `/api/destinazioni/${destinazione!.id}` : `/api/organizations/${orgId}/destinazioni`;
       const method = isEdit ? 'PATCH' : 'POST';
       const res = await fetch(url, {
         method, headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome, tipo, citta: citta || null }),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
-      toast.success(isEdit ? 'Canale aggiornato' : 'Canale creato');
+      toast.success(isEdit ? 'Destinazione aggiornata' : 'Destinazione creata');
       onSave();
     } catch (e: any) {
       toast.error(e.message || 'Operazione fallita');
@@ -180,14 +180,14 @@ function CanaleModal({ isOpen, onClose, onSave, canale, orgId }: {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Modifica Canale' : 'Nuovo Canale'} size="sm">
+    <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Modifica Destinazione' : 'Nuova Destinazione'} size="sm">
       <div className="space-y-3">
         <Input label="Nome *" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Bottega Centro" />
         <div>
           <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">Tipo</label>
-          <select value={tipo} onChange={(e) => setTipo(e.target.value as CanaleTipo)}
+          <select value={tipo} onChange={(e) => setTipo(e.target.value as DestinazioneTipo)}
             className="w-full px-4 py-2.5 bg-white border border-border rounded text-sm focus:outline-none focus:border-accent">
-            {(Object.keys(TIPO_LABELS) as CanaleTipo[]).map((t) => (
+            {(Object.keys(TIPO_LABELS) as DestinazioneTipo[]).map((t) => (
               <option key={t} value={t}>{TIPO_LABELS[t]}</option>
             ))}
           </select>
@@ -349,7 +349,7 @@ export default function AdminOrganizzazioniPage() {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [opModal, setOpModal] = useState<{ orgId: string; orgNome: string; operator?: Operator } | null>(null);
-  const [canaleModal, setCanaleModal] = useState<{ orgId: string; canale?: Canale } | null>(null);
+  const [destinazioneModal, setDestinazioneModal] = useState<{ orgId: string; destinazione?: Destinazione } | null>(null);
   const [editOrgModal, setEditOrgModal] = useState<Organization | null>(null);
   const [resetResult, setResetResult] = useState<{ name: string; password: string } | null>(null);
   const [bulkResetResults, setBulkResetResults] = useState<{ name: string; email: string; password: string }[] | null>(null);
@@ -452,13 +452,13 @@ export default function AdminOrganizzazioniPage() {
       .catch(() => toast.error('Errore nel reset password'));
   }
 
-  async function handleDeleteCanale(canale: Canale) {
-    if (!confirm(`Eliminare il canale "${canale.nome}"?`)) return;
+  async function handleDeleteDestinazione(destinazione: Destinazione) {
+    if (!confirm(`Eliminare la destinazione "${destinazione.nome}"?`)) return;
     try {
-      const res = await fetch(`/api/canali/${canale.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/destinazioni/${destinazione.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error((await res.json()).error || 'Errore');
       refresh();
-      toast.success('Canale eliminato');
+      toast.success('Destinazione eliminata');
     } catch (e: any) { toast.error(e.message || 'Errore'); }
   }
 
@@ -512,7 +512,7 @@ export default function AdminOrganizzazioniPage() {
 
   async function handleOrgBulkDelete() {
     if (!selectedOrgCount) return;
-    if (!confirm(`Eliminare definitivamente ${selectedOrgCount} organizzazion${selectedOrgCount !== 1 ? 'i' : 'e'} con tutti i loro operatori e canali? Questa azione non può essere annullata.`)) return;
+    if (!confirm(`Eliminare definitivamente ${selectedOrgCount} organizzazion${selectedOrgCount !== 1 ? 'i' : 'e'} con tutti i loro operatori e destinazioni? Questa azione non può essere annullata.`)) return;
     setOrgBulkLoading(true);
     try {
       await Promise.all(
@@ -594,7 +594,7 @@ export default function AdminOrganizzazioniPage() {
           {orgs.map((org) => {
             const isOpen = expanded.has(org.id);
             const ops = org.operatori || [];
-            const canali = org.canali || [];
+            const destinazioni = org.destinazioni || [];
             const orgSelectedOps = ops.filter((o) => selectedOpIds.has(o.id));
             const orgSelectedCount = orgSelectedOps.length;
             const allOrgOpsSelected = ops.length > 0 && orgSelectedCount === ops.length;
@@ -629,7 +629,7 @@ export default function AdminOrganizzazioniPage() {
                     </span>
                     <span className="flex items-center gap-1.5 text-xs text-gray-400 flex-shrink-0">
                       <Store size={12} />
-                      {canali.length} canali
+                      {destinazioni.length} destinazioni
                     </span>
                   </button>
                   <button
@@ -745,36 +745,36 @@ export default function AdminOrganizzazioniPage() {
                       )}
                     </div>
 
-                    {/* Canali */}
+                    {/* Destinazioni */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Canali / Punti Vendita</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Destinazioni / Punti Vendita</p>
                         <Button variant="ghost" size="sm" icon={<Plus size={12} />}
-                          onClick={() => setCanaleModal({ orgId: org.id })}>
-                          Aggiungi canale
+                          onClick={() => setDestinazioneModal({ orgId: org.id })}>
+                          Aggiungi destinazione
                         </Button>
                       </div>
-                      {canali.length === 0 ? (
-                        <p className="text-xs text-gray-400 italic">Nessun canale — gli operatori non potranno fare ordini finché non viene creato almeno un canale.</p>
+                      {destinazioni.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic">Nessuna destinazione — gli operatori non potranno fare ordini finché non viene creata almeno una destinazione.</p>
                       ) : (
                         <div className="flex flex-wrap gap-2">
-                          {canali.map((c) => (
-                            <div key={c.id}
+                          {destinazioni.map((d) => (
+                            <div key={d.id}
                               className="flex items-center gap-2 bg-white border border-border rounded px-3 py-2 text-xs group">
-                              <span className="text-gray-400">{TIPO_ICONS[c.tipo]}</span>
-                              <span className="font-medium text-primary">{c.nome}</span>
-                              {c.citta && (
+                              <span className="text-gray-400">{TIPO_ICONS[d.tipo]}</span>
+                              <span className="font-medium text-primary">{d.nome}</span>
+                              {d.citta && (
                                 <span className="flex items-center gap-0.5 text-gray-400">
-                                  <MapPin size={10} />{c.citta}
+                                  <MapPin size={10} />{d.citta}
                                 </span>
                               )}
-                              <Badge variant="default" size="xs">{TIPO_LABELS[c.tipo]}</Badge>
+                              <Badge variant="default" size="xs">{TIPO_LABELS[d.tipo]}</Badge>
                               <div className="flex gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => setCanaleModal({ orgId: org.id, canale: c })}
+                                <button onClick={() => setDestinazioneModal({ orgId: org.id, destinazione: d })}
                                   className="p-0.5 text-gray-400 hover:text-primary rounded transition-colors" title="Modifica">
                                   <Edit2 size={11} />
                                 </button>
-                                <button onClick={() => handleDeleteCanale(c)}
+                                <button onClick={() => handleDeleteDestinazione(d)}
                                   className="p-0.5 text-gray-400 hover:text-red-500 rounded transition-colors" title="Elimina">
                                   <Trash2 size={11} />
                                 </button>
@@ -805,10 +805,10 @@ export default function AdminOrganizzazioniPage() {
           operator={opModal.operator} orgId={opModal.orgId} orgNome={opModal.orgNome} />
       )}
 
-      {canaleModal && (
-        <CanaleModal isOpen onClose={() => setCanaleModal(null)}
-          onSave={() => { setCanaleModal(null); refresh(); }}
-          canale={canaleModal.canale} orgId={canaleModal.orgId} />
+      {destinazioneModal && (
+        <DestinazioneModal isOpen onClose={() => setDestinazioneModal(null)}
+          onSave={() => { setDestinazioneModal(null); refresh(); }}
+          destinazione={destinazioneModal.destinazione} orgId={destinazioneModal.orgId} />
       )}
 
       {/* Single password reset */}

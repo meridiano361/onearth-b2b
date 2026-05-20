@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { Globe, Mic } from 'lucide-react';
+import { Globe, Mic, LayoutGrid, ShoppingBag, MapPin, FileText } from 'lucide-react';
 import ProductCard from './ProductCard';
 import type { Product } from '@/types';
 
@@ -17,7 +17,19 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-const BTN = 'flex items-center justify-center w-full py-4 text-sm font-semibold bg-primary text-white rounded transition-colors hover:bg-warm-darker active:scale-[0.99]';
+type NavItem = {
+  href: string;
+  labelKey: string;
+  icon: React.ElementType;
+  external?: boolean;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { href: '/catalog/products',           labelKey: 'catalog',    icon: LayoutGrid },
+  { href: '/catalog/orders',             labelKey: 'orders',     icon: ShoppingBag },
+  { href: '/catalog/destinazioni',       labelKey: 'channels',   icon: MapPin },
+  { href: '/condizioni-commerciali.pdf', labelKey: 'termsTitle', icon: FileText, external: true },
+];
 
 export default function CustomerHome() {
   const tn = useTranslations('nav');
@@ -44,29 +56,49 @@ export default function CustomerHome() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-10">
 
         {/* ── Section 1 — Main nav buttons ───────────────────── */}
-        <section className="flex flex-col gap-2.5 pt-2">
-          <Link href="/catalog/products" className={BTN}>
-            {tn('catalog')}
-          </Link>
-          <Link href="/catalog/orders" className={BTN}>
-            {tn('orders')}
-          </Link>
-          <Link href="/catalog/canali" className={BTN}>
-            {tn('channels')}
-          </Link>
-          <a
-            href="/condizioni-commerciali.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={BTN}
-          >
-            {th('termsTitle')}
-          </a>
+        <section className="pt-2">
+          {/* Desktop/tablet: 2×2 grid cards */}
+          <div className="hidden md:grid grid-cols-2 gap-3">
+            {NAV_ITEMS.map(({ href, labelKey, icon: Icon, external }) => {
+              const label = labelKey === 'termsTitle' ? th('termsTitle') : tn(labelKey as any);
+              const cls = 'flex flex-col items-center justify-center gap-3 bg-primary text-white rounded-xl h-36 hover:opacity-90 active:scale-[0.99] transition-all duration-150 cursor-pointer';
+              return external ? (
+                <a key={href} href={href} target="_blank" rel="noopener noreferrer" className={cls}>
+                  <Icon size={28} />
+                  <span className="text-sm font-semibold text-center px-2">{label}</span>
+                </a>
+              ) : (
+                <Link key={href} href={href} className={cls}>
+                  <Icon size={28} />
+                  <span className="text-sm font-semibold text-center px-2">{label}</span>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Mobile: stacked compact buttons */}
+          <div className="flex flex-col gap-2 md:hidden">
+            {NAV_ITEMS.map(({ href, labelKey, icon: Icon, external }) => {
+              const label = labelKey === 'termsTitle' ? th('termsTitle') : tn(labelKey as any);
+              const cls = 'flex items-center gap-3 w-full h-13 px-4 py-3.5 bg-primary text-white rounded text-sm font-semibold hover:opacity-90 active:scale-[0.99] transition-all duration-150 cursor-pointer';
+              return external ? (
+                <a key={href} href={href} target="_blank" rel="noopener noreferrer" className={cls}>
+                  <Icon size={18} />
+                  {label}
+                </a>
+              ) : (
+                <Link key={href} href={href} className={cls}>
+                  <Icon size={18} />
+                  {label}
+                </Link>
+              );
+            })}
+          </div>
         </section>
 
         {/* ── Section 2 — Scopri la collezione ───────────────── */}
         <section>
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-4">
+          <p className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide mb-4">
             Scopri la Collezione CASA 2027
           </p>
           {isLoading ? (
@@ -86,7 +118,7 @@ export default function CustomerHome() {
 
         {/* ── Section 3 — Scopri ON EARTH (minimal) ─────────── */}
         <section className="border-t border-border/50 pt-6">
-          <p className="text-2xs uppercase tracking-widest text-gray-300 mb-4">Scopri ON EARTH</p>
+          <p className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide mb-4">Scopri ON EARTH</p>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
             {/* Website */}
             <a
@@ -107,7 +139,7 @@ export default function CustomerHome() {
               className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary transition-colors"
             >
               <Mic size={14} />
-              Materia Podcast
+              Podcast MATERIA
             </a>
 
             {/* Facebook */}

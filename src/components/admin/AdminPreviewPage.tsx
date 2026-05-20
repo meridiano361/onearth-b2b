@@ -150,7 +150,7 @@ export default function AdminPreviewPage() {
           </button>
 
           <p className="text-2xs text-gray-400 leading-relaxed">
-            In modalità anteprima puoi navigare il catalogo, vedere preferiti, canali e ordini
+            In modalità anteprima puoi navigare il catalogo, vedere preferiti, destinazioni e ordini
             dell&apos;organizzazione selezionata. La creazione di ordini è disabilitata.
             Usa il banner giallo in cima alla pagina per uscire.
           </p>

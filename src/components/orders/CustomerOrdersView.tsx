@@ -144,22 +144,22 @@ export default function CustomerOrdersView() {
                   </span>
                 </div>
 
-                {/* Middle: stats + canale */}
+                {/* Middle: stats + destinazione */}
                 <p className="text-xs text-gray-500">
                   {t('articles', { count: order.items?.length ?? 0 })}
                   {' · '}
                   {order.totalItems} {t('pieces')}
                 </p>
-                {order.canale && (
+                {order.destinazione && (
                   <p className="text-2xs text-gray-400 -mt-1">
-                    {order.canale.tipo}{order.canale.citta ? ` · ${order.canale.citta}` : ''}
+                    {order.destinazione.tipo}{order.destinazione.citta ? ` · ${order.destinazione.citta}` : ''}
                   </p>
                 )}
 
                 {/* Projections */}
                 {(() => {
                   const { venditeII, guadagno, margine } = orderProjections(order);
-                  const budget = order.canale?.budget;
+                  const budget = order.destinazione?.budget;
                   const cost = Number(order.totalValue);
                   const budgetPct = budget && budget > 0 ? (cost / budget) * 100 : 0;
                   return (
@@ -182,7 +182,7 @@ export default function CustomerOrdersView() {
                         <>
                           <div className="h-px bg-border/40 my-1" />
                           <div className="flex justify-between text-2xs text-gray-400">
-                            <span>Budget canale: <span className="text-primary">{formatCurrency(budget)}</span></span>
+                            <span>Budget destinazione: <span className="text-primary">{formatCurrency(budget)}</span></span>
                             <span className={budgetPct > 100 ? 'text-red-500 font-medium' : ''}>{budgetPct.toFixed(0)}%</span>
                           </div>
                           <div className="h-1 bg-gray-100 rounded-full overflow-hidden">

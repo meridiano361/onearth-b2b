@@ -156,11 +156,11 @@ export default function MobileNav() {
                 {tn('orders')}
               </Link>
               <Link
-                href="/catalog/canali"
+                href="/catalog/destinazioni"
                 onClick={() => setMenuOpen(false)}
                 className={cn(
                   'flex items-center gap-3 px-5 py-4 text-sm transition-colors',
-                  pathname.startsWith('/catalog/canali') ? 'text-primary font-semibold bg-cream' : 'text-gray-600 hover:bg-cream'
+                  pathname.startsWith('/catalog/destinazioni') ? 'text-primary font-semibold bg-cream' : 'text-gray-600 hover:bg-cream'
                 )}
               >
                 <Store size={18} />

@@ -100,7 +100,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Code + Name */}
         <div className="px-3 pt-3 pb-1">
-          <p className="text-2xs font-medium tracking-widest uppercase text-gray-400 mb-0.5">
+          <p className="text-2xs font-medium tracking-widest uppercase text-gray-600 mb-0.5">
             {product.code}
           </p>
           <h3 className="text-sm font-medium text-primary leading-snug line-clamp-2">

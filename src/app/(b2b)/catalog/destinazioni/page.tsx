@@ -9,9 +9,9 @@ import {
 import { useTranslations } from 'next-intl';
 import { formatCurrency } from '@/lib/utils';
 import toast from 'react-hot-toast';
-import type { Canale, CanaleTipo } from '@/types';
+import type { Destinazione, DestinazioneTipo } from '@/types';
 
-const TIPO_ICONS: Record<CanaleTipo, React.ReactNode> = {
+const TIPO_ICONS: Record<DestinazioneTipo, React.ReactNode> = {
   BOTTEGA:   <Store size={16} />,
   EMPORIO:   <ShoppingBag size={16} />,
   DISTRETTO: <Building size={16} />,
@@ -25,32 +25,32 @@ const TIPO_ICONS: Record<CanaleTipo, React.ReactNode> = {
 
 const TIPO_KEYS = ['BOTTEGA', 'EMPORIO', 'DISTRETTO', 'STORE', 'OUTLET', 'TENDONE', 'FIERA', 'ONLINE', 'ALTRO'] as const;
 
-interface CanaleFormState {
-  tipo: CanaleTipo;
+interface DestinazioneFormState {
+  tipo: DestinazioneTipo;
   citta: string;
   indirizzo: string;
   budget: string;
 }
 
-const EMPTY_FORM: CanaleFormState = { tipo: 'BOTTEGA', citta: '', indirizzo: '', budget: '' };
+const EMPTY_FORM: DestinazioneFormState = { tipo: 'BOTTEGA', citta: '', indirizzo: '', budget: '' };
 
-export default function CanaliPage() {
+export default function DestinazioniPage() {
   const t = useTranslations('channels');
   const tt = useTranslations('channelTypes');
   const queryClient = useQueryClient();
 
-  const [modal, setModal] = useState<{ mode: 'add' | 'edit'; canale?: Canale } | null>(null);
-  const [form, setForm] = useState<CanaleFormState>(EMPTY_FORM);
+  const [modal, setModal] = useState<{ mode: 'add' | 'edit'; destinazione?: Destinazione } | null>(null);
+  const [form, setForm] = useState<DestinazioneFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
-  const { data: canali = [], isLoading } = useQuery<Canale[]>({
-    queryKey: ['catalog-canali'],
+  const { data: destinazioni = [], isLoading } = useQuery<Destinazione[]>({
+    queryKey: ['catalog-destinazioni'],
     queryFn: () =>
-      fetch('/api/catalog/canali')
+      fetch('/api/catalog/destinazioni')
         .then((r) => r.json())
-        .then((d) => d.data as Canale[]),
+        .then((d) => d.data as Destinazione[]),
   });
 
   function openAdd() {
@@ -58,14 +58,14 @@ export default function CanaliPage() {
     setModal({ mode: 'add' });
   }
 
-  function openEdit(canale: Canale) {
+  function openEdit(destinazione: Destinazione) {
     setForm({
-      tipo: canale.tipo,
-      citta: canale.citta || '',
-      indirizzo: canale.indirizzo || '',
-      budget: canale.budget != null ? String(canale.budget) : '',
+      tipo: destinazione.tipo,
+      citta: destinazione.citta || '',
+      indirizzo: destinazione.indirizzo || '',
+      budget: destinazione.budget != null ? String(destinazione.budget) : '',
     });
-    setModal({ mode: 'edit', canale });
+    setModal({ mode: 'edit', destinazione });
   }
 
   function closeModal() { setModal(null); }
@@ -74,7 +74,7 @@ export default function CanaliPage() {
     setSaving(true);
     try {
       const isEdit = modal?.mode === 'edit';
-      const url = isEdit ? `/api/catalog/canali/${modal!.canale!.id}` : '/api/catalog/canali';
+      const url = isEdit ? `/api/catalog/destinazioni/${modal!.destinazione!.id}` : '/api/catalog/destinazioni';
       const method = isEdit ? 'PATCH' : 'POST';
       const budgetVal = form.budget.trim() ? parseFloat(form.budget) : null;
       const res = await fetch(url, {
@@ -92,7 +92,7 @@ export default function CanaliPage() {
         throw new Error(body.error || 'Errore');
       }
       toast.success(isEdit ? t('updateSuccess') : t('createSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['catalog-canali'] });
+      queryClient.invalidateQueries({ queryKey: ['catalog-destinazioni'] });
       closeModal();
     } catch (e: any) {
       toast.error(e.message || 'Errore');
@@ -104,10 +104,10 @@ export default function CanaliPage() {
   async function handleDelete(id: string) {
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/catalog/canali/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/catalog/destinazioni/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Errore');
       toast.success(t('deleteSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['catalog-canali'] });
+      queryClient.invalidateQueries({ queryKey: ['catalog-destinazioni'] });
     } catch {
       toast.error('Errore');
     } finally {
@@ -131,7 +131,7 @@ export default function CanaliPage() {
         <div className="flex items-center justify-center py-20">
           <Loader2 size={20} className="animate-spin text-gray-400" />
         </div>
-      ) : canali.length === 0 ? (
+      ) : destinazioni.length === 0 ? (
         <div className="bg-white border border-border rounded-lg p-10 text-center">
           <Store size={32} className="text-gray-200 mx-auto mb-3" />
           <p className="text-sm text-gray-500 mb-1">{t('noChannels')}</p>
@@ -145,31 +145,31 @@ export default function CanaliPage() {
       ) : (
         <>
           <div className="space-y-3">
-            {canali.map((canale) => {
-              const isConfirming = confirmId === canale.id;
-              const isDeleting = deletingId === canale.id;
+            {destinazioni.map((destinazione) => {
+              const isConfirming = confirmId === destinazione.id;
+              const isDeleting = deletingId === destinazione.id;
 
               return (
                 <div
-                  key={canale.id}
+                  key={destinazione.id}
                   className="bg-white border border-border rounded-lg px-5 py-4 flex items-center gap-4"
                 >
                   <div className="w-9 h-9 rounded-lg bg-cream border border-border flex items-center justify-center text-gray-500 flex-shrink-0">
-                    {TIPO_ICONS[canale.tipo]}
+                    {TIPO_ICONS[destinazione.tipo]}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-primary">
-                      {tt(canale.tipo)}{canale.citta ? ` · ${canale.citta}` : ''}
+                      {tt(destinazione.tipo)}{destinazione.citta ? ` · ${destinazione.citta}` : ''}
                     </p>
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                      {canale.indirizzo && (
-                        <p className="text-xs text-gray-400">{canale.indirizzo}</p>
+                      {destinazione.indirizzo && (
+                        <p className="text-xs text-gray-400">{destinazione.indirizzo}</p>
                       )}
-                      {canale.budget != null && (
+                      {destinazione.budget != null && (
                         <p className="text-xs text-gray-400 flex items-center gap-0.5">
                           <Euro size={10} />
-                          {formatCurrency(canale.budget)}
+                          {formatCurrency(destinazione.budget)}
                         </p>
                       )}
                     </div>
@@ -179,7 +179,7 @@ export default function CanaliPage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-xs text-gray-500 hidden sm:block">{t('deleteConfirm')}</span>
                       <button
-                        onClick={() => handleDelete(canale.id)}
+                        onClick={() => handleDelete(destinazione.id)}
                         disabled={isDeleting}
                         className="text-xs bg-red-500 text-white px-2.5 py-1.5 rounded hover:bg-red-600 transition-colors disabled:opacity-50"
                       >
@@ -196,14 +196,14 @@ export default function CanaliPage() {
                   ) : (
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
-                        onClick={() => openEdit(canale)}
+                        onClick={() => openEdit(destinazione)}
                         className="flex items-center gap-1 text-xs border border-border rounded px-2.5 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
                       >
                         <Pencil size={11} />
                         <span className="hidden sm:inline">{t('edit')}</span>
                       </button>
                       <button
-                        onClick={() => setConfirmId(canale.id)}
+                        onClick={() => setConfirmId(destinazione.id)}
                         className="flex items-center gap-1 text-xs border border-red-200 rounded px-2.5 py-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <Trash2 size={11} />
@@ -248,7 +248,7 @@ export default function CanaliPage() {
                 </label>
                 <select
                   value={form.tipo}
-                  onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value as CanaleTipo }))}
+                  onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value as DestinazioneTipo }))}
                   className="w-full px-4 py-2.5 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent"
                 >
                   {TIPO_KEYS.map((k) => (

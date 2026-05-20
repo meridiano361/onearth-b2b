@@ -18,18 +18,15 @@ export default withAuth(
       }
     }
 
-    // Channel selection page: only operators need it
-    if (pathname === '/seleziona-canale') {
+    // Destination selection page: only operators need it
+    if (pathname === '/seleziona-destinazione') {
       if (isAdminRole(role)) {
         return NextResponse.redirect(new URL('/admin', req.url));
       }
-      // If operator already has a canale selected, skip this page
-      if (role === 'OPERATOR' && token?.canaleId) {
+      if (role === 'OPERATOR' && token?.destinazioneId) {
         return NextResponse.redirect(new URL('/catalog', req.url));
       }
     }
-
-    // Operators can access catalog without pre-selecting a canale (selection happens at order creation)
 
     const response = NextResponse.next();
     response.headers.set('x-pathname', pathname);
@@ -51,6 +48,6 @@ export const config = {
     '/orders/:path*',
     '/admin',
     '/admin/:path*',
-    '/seleziona-canale',
+    '/seleziona-destinazione',
   ],
 };

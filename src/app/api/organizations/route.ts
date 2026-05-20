@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
       ...o,
       createdAt: o.createdAt.toISOString(),
       operatori: o.operatori.map((op) => ({ ...op, createdAt: op.createdAt.toISOString() })),
-      canali: o.canali.map((c) => ({ ...c, createdAt: c.createdAt.toISOString() })),
+      destinazioni: o.canali.map((c) => ({ ...c, createdAt: c.createdAt.toISOString() })),
     })),
   });
 }

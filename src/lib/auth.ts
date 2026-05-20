@@ -68,10 +68,13 @@ export const authOptions: NextAuthOptions = {
         token.customerCode = user.customerCode;
         if (user.organizationId) token.organizationId = user.organizationId;
       }
-      // Allow session.update({ canaleId, canaleName }) from client
+      // Allow session.update({ destinazioneId, destinazioneName }) from client
       if (trigger === 'update' && session) {
-        if (session.canaleId !== undefined) token.canaleId = session.canaleId;
-        if (session.canaleName !== undefined) token.canaleName = session.canaleName;
+        if (session.destinazioneId !== undefined) token.destinazioneId = session.destinazioneId;
+        if (session.destinazioneName !== undefined) token.destinazioneName = session.destinazioneName;
+        // legacy field names (kept for existing sessions)
+        if (session.canaleId !== undefined) token.destinazioneId = session.canaleId;
+        if (session.canaleName !== undefined) token.destinazioneName = session.canaleName;
       }
       return token;
     },
@@ -82,8 +85,11 @@ export const authOptions: NextAuthOptions = {
         session.user.companyName = token.companyName as string;
         session.user.customerCode = token.customerCode as string;
         if (token.organizationId) session.user.organizationId = token.organizationId as string;
-        if (token.canaleId) session.user.canaleId = token.canaleId as string;
-        if (token.canaleName) session.user.canaleName = token.canaleName as string;
+        if (token.destinazioneId) session.user.destinazioneId = token.destinazioneId as string;
+        if (token.destinazioneName) session.user.destinazioneName = token.destinazioneName as string;
+        // legacy fallback
+        if (token.canaleId && !token.destinazioneId) session.user.destinazioneId = token.canaleId as string;
+        if (token.canaleName && !token.destinazioneName) session.user.destinazioneName = token.canaleName as string;
       }
       return session;
     },

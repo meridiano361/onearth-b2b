@@ -10,7 +10,7 @@ import PreviewBanner from '@/components/layout/PreviewBanner';
 import { PreviewProvider } from '@/contexts/PreviewContext';
 
 // Paths where the cart sidebar should not be shown
-const SIDEBAR_HIDDEN_PATHS = ['/catalog/orders', '/orders', '/catalog/canali'];
+const SIDEBAR_HIDDEN_PATHS = ['/catalog/orders', '/orders', '/catalog/destinazioni'];
 
 export default async function B2BLayout({
   children,

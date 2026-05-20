@@ -48,6 +48,9 @@ function serializeOrder(order: any) {
     customer: order.customer
       ? { ...order.customer, createdAt: order.customer.createdAt?.toISOString() }
       : undefined,
+    destinazione: order.canale
+      ? { ...order.canale, budget: order.canale.budget != null ? Number(order.canale.budget) : null, createdAt: order.canale.createdAt?.toISOString(), updatedAt: order.canale.updatedAt?.toISOString() }
+      : undefined,
   };
 }
 
@@ -74,7 +77,7 @@ export async function GET(
     if (!order) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     if (!isAdminRole(session.user.role)) {
-      if (session.user.role === 'OPERATOR' && order.canaleId !== session.user.canaleId) {
+      if (session.user.role === 'OPERATOR' && order.canaleId !== session.user.destinazioneId) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       if (session.user.role === 'CUSTOMER' && order.customerId !== session.user.id) {
@@ -109,7 +112,7 @@ export async function PATCH(
         select: { customerId: true, canaleId: true },
       });
       if (!orderCheck) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-      if (session.user.role === 'OPERATOR' && orderCheck.canaleId !== session.user.canaleId) {
+      if (session.user.role === 'OPERATOR' && orderCheck.canaleId !== session.user.destinazioneId) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       if (session.user.role === 'CUSTOMER' && orderCheck.customerId !== session.user.id) {
@@ -194,7 +197,7 @@ export async function DELETE(
         select: { customerId: true, canaleId: true, status: true },
       });
       if (!order) return NextResponse.json({ error: 'Ordine non trovato' }, { status: 404 });
-      if (session.user.role === 'OPERATOR' && order.canaleId !== session.user.canaleId) {
+      if (session.user.role === 'OPERATOR' && order.canaleId !== session.user.destinazioneId) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       if (session.user.role === 'CUSTOMER' && order.customerId !== session.user.id) {

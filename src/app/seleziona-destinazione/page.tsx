@@ -5,10 +5,10 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Store, Radio, Globe, Package, LogOut, CheckCircle2, ShoppingBag, Building, ShoppingCart, Tag, Landmark } from 'lucide-react';
 import { signOut } from 'next-auth/react';
-import type { Canale, CanaleTipo } from '@/types';
+import type { Destinazione, DestinazioneTipo } from '@/types';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
-const TIPO_ICONS: Record<CanaleTipo, React.ReactNode> = {
+const TIPO_ICONS: Record<DestinazioneTipo, React.ReactNode> = {
   BOTTEGA: <Store size={20} />,
   EMPORIO: <ShoppingBag size={20} />,
   DISTRETTO: <Building size={20} />,
@@ -20,7 +20,7 @@ const TIPO_ICONS: Record<CanaleTipo, React.ReactNode> = {
   ALTRO: <Package size={20} />,
 };
 
-const TIPO_LABELS: Record<CanaleTipo, string> = {
+const TIPO_LABELS: Record<DestinazioneTipo, string> = {
   BOTTEGA: 'Bottega',
   EMPORIO: 'Emporio',
   DISTRETTO: 'Distretto',
@@ -32,10 +32,10 @@ const TIPO_LABELS: Record<CanaleTipo, string> = {
   ALTRO: 'Altro',
 };
 
-export default function SelezionaCanale() {
+export default function SelezionaDestinazione() {
   const { data: session, update, status } = useSession();
   const router = useRouter();
-  const [canali, setCanali] = useState<Canale[]>([]);
+  const [destinazioni, setDestinazioni] = useState<Destinazione[]>([]);
   const [loading, setLoading] = useState(true);
   const [selecting, setSelecting] = useState<string | null>(null);
 
@@ -49,22 +49,21 @@ export default function SelezionaCanale() {
       router.push('/catalog');
       return;
     }
-    if (session?.user.canaleId) {
+    if (session?.user.destinazioneId) {
       router.push('/catalog');
       return;
     }
-    fetchCanali();
+    fetchDestinazioni();
   }, [status, session]);
 
-  async function fetchCanali() {
+  async function fetchDestinazioni() {
     try {
-      const res = await fetch(`/api/canali?organizationId=${session!.user.organizationId}`);
+      const res = await fetch(`/api/destinazioni?organizationId=${session!.user.organizationId}`);
       const json = await res.json();
-      const list: Canale[] = json.data || [];
-      setCanali(list);
-      // Auto-select if only one canale
+      const list: Destinazione[] = json.data || [];
+      setDestinazioni(list);
       if (list.length === 1) {
-        await selectCanale(list[0]);
+        await selectDestinazione(list[0]);
       }
     } catch {
       // keep loading state
@@ -73,9 +72,9 @@ export default function SelezionaCanale() {
     }
   }
 
-  async function selectCanale(canale: Canale) {
-    setSelecting(canale.id);
-    await update({ canaleId: canale.id, canaleName: canale.nome });
+  async function selectDestinazione(destinazione: Destinazione) {
+    setSelecting(destinazione.id);
+    await update({ destinazioneId: destinazione.id, destinazioneName: destinazione.nome });
     router.push('/catalog');
   }
 
@@ -118,34 +117,34 @@ export default function SelezionaCanale() {
             </p>
           </div>
 
-          {canali.length === 0 ? (
+          {destinazioni.length === 0 ? (
             <div className="bg-white border border-border rounded-lg p-8 text-center">
               <Store size={32} className="text-gray-200 mx-auto mb-3" />
               <p className="text-sm text-gray-500 mb-1">Nessun punto vendita configurato</p>
-              <p className="text-xs text-gray-400">Contatta l'amministratore per aggiungere i canali della tua organizzazione.</p>
+              <p className="text-xs text-gray-400">Contatta l'amministratore per aggiungere le destinazioni della tua organizzazione.</p>
             </div>
           ) : (
             <div className="grid gap-3">
-              {canali.map((canale) => (
+              {destinazioni.map((destinazione) => (
                 <button
-                  key={canale.id}
-                  onClick={() => selectCanale(canale)}
+                  key={destinazione.id}
+                  onClick={() => selectDestinazione(destinazione)}
                   disabled={!!selecting}
                   className="w-full bg-white border border-border rounded-lg px-5 py-4 flex items-center gap-4 hover:border-accent hover:bg-cream transition-all text-left disabled:opacity-60 group"
                 >
                   <div className="w-10 h-10 rounded-lg bg-cream border border-border flex items-center justify-center text-gray-500 group-hover:border-accent group-hover:text-accent transition-colors flex-shrink-0">
-                    {selecting === canale.id
+                    {selecting === destinazione.id
                       ? <CheckCircle2 size={20} className="text-accent" />
-                      : TIPO_ICONS[canale.tipo]
+                      : TIPO_ICONS[destinazione.tipo]
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-primary text-sm">{canale.nome}</p>
+                    <p className="font-medium text-primary text-sm">{destinazione.nome}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {TIPO_LABELS[canale.tipo]}{canale.citta ? ` · ${canale.citta}` : ''}
+                      {TIPO_LABELS[destinazione.tipo]}{destinazione.citta ? ` · ${destinazione.citta}` : ''}
                     </p>
                   </div>
-                  {selecting === canale.id && (
+                  {selecting === destinazione.id && (
                     <LoadingSpinner className="flex-shrink-0" />
                   )}
                 </button>

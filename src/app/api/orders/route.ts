@@ -49,7 +49,7 @@ function serializeOrder(order: any) {
     organization: order.organization
       ? { ...order.organization, createdAt: order.organization.createdAt?.toISOString() }
       : undefined,
-    canale: order.canale
+    destinazione: order.canale
       ? { ...order.canale, budget: order.canale.budget != null ? Number(order.canale.budget) : null, createdAt: order.canale.createdAt?.toISOString(), updatedAt: order.canale.updatedAt?.toISOString() }
       : undefined,
   };
@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
 
     if (session.user.role === 'OPERATOR') {
       orderData.organizationId = session.user.organizationId;
-      orderData.canaleId = data.canaleId || session.user.canaleId || null;
+      orderData.canaleId = data.canaleId || session.user.destinazioneId || null;
       orderData.operatorId = session.user.id;
     } else if (isAdminRole(session.user.role)) {
       if (data.customerId) orderData.customerId = data.customerId;
