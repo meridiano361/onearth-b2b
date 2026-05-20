@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag, MapPin } from 'lucide-react';
+import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag, MapPin, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
@@ -27,6 +27,9 @@ export default function CartSidebar() {
   const [destinazioni, setDestinazioni] = useState<Destinazione[]>([]);
   const [showDestinazioneModal, setShowDestinazioneModal] = useState(false);
   const [selectedDestinazioneId, setSelectedDestinazioneId] = useState('');
+  const [showCreateDestModal, setShowCreateDestModal] = useState(false);
+  const [createDestForm, setCreateDestForm] = useState<{ tipo: string; citta: string }>({ tipo: 'BOTTEGA', citta: '' });
+  const [creatingDest, setCreatingDest] = useState(false);
   const t = useTranslations('cart');
   const ts = useTranslations('cartSummary');
 
@@ -108,11 +111,35 @@ export default function CartSidebar() {
     }
   }
 
+  async function handleCreateDestinazioneAndOrder() {
+    setCreatingDest(true);
+    try {
+      const res = await fetch('/api/catalog/destinazioni', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: createDestForm.tipo,
+          citta: createDestForm.citta.trim() || null,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Errore');
+      const { data: newDest } = await res.json();
+      setShowCreateDestModal(false);
+      setDestinazioni([newDest]);
+      await submitOrder(newDest.id);
+    } catch (e: any) {
+      toast.error(e.message || 'Errore nella creazione della destinazione');
+    } finally {
+      setCreatingDest(false);
+    }
+  }
+
   async function handleCreateOrder() {
     if (isSubmitting || isEmpty) return;
     if (isOperator) {
       if (destinazioni.length === 0) {
-        return; // blocked by UI — no destinations
+        setShowCreateDestModal(true);
+        return;
       } else if (destinazioni.length === 1) {
         await submitOrder(destinazioni[0].id);
       } else {
@@ -252,17 +279,6 @@ export default function CartSidebar() {
                 <div className="w-full py-2.5 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
                   Non puoi creare ordini in modalità anteprima
                 </div>
-              ) : isOperator && destinazioni.length === 0 ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-500 text-center leading-snug">{t('noDestinazioni')}</p>
-                  <Link
-                    href="/catalog/destinazioni"
-                    className="w-full py-2.5 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 border border-primary text-primary hover:bg-cream"
-                  >
-                    <MapPin size={12} />
-                    {t('goToDestinazioni')}
-                  </Link>
-                </div>
               ) : hasWarnings ? (
                 <div className="w-full py-2.5 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
                   {t('fixLots')}
@@ -284,6 +300,53 @@ export default function CartSidebar() {
           </>
         )}
       </div>
+
+      {/* Create first destinazione modal — non-dismissible */}
+      {showCreateDestModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 z-10">
+            <div className="flex items-center gap-2 mb-1">
+              <MapPin size={14} className="text-accent flex-shrink-0" />
+              <h3 className="text-sm font-semibold text-primary tracking-wide">Attiva una destinazione</h3>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">Per creare un ordine devi prima attivare una destinazione (punto vendita).</p>
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Tipo</label>
+                <select
+                  value={createDestForm.tipo}
+                  onChange={(e) => setCreateDestForm((f) => ({ ...f, tipo: e.target.value }))}
+                  className="w-full px-3 py-2 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent"
+                >
+                  <option value="BOTTEGA">Bottega</option>
+                  <option value="MERCATO">Mercato</option>
+                  <option value="FIERA">Fiera</option>
+                  <option value="ONLINE">Online</option>
+                  <option value="ALTRO">Altro</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Città <span className="text-gray-300">(opzionale)</span></label>
+                <input
+                  type="text"
+                  value={createDestForm.citta}
+                  onChange={(e) => setCreateDestForm((f) => ({ ...f, citta: e.target.value }))}
+                  placeholder="es. Milano"
+                  className="w-full px-3 py-2 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleCreateDestinazioneAndOrder}
+              disabled={creatingDest}
+              className="w-full py-2.5 text-xs font-medium rounded bg-primary text-background hover:bg-warm-darker transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
+            >
+              {creatingDest ? <><Loader2 size={11} className="animate-spin" /> Creazione in corso…</> : <><Plus size={11} /> Crea destinazione e continua</>}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Destinazione selection modal — non-dismissible */}
       {showDestinazioneModal && (

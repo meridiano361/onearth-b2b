@@ -201,23 +201,23 @@ export default function CustomerOrdersView() {
                 <div className="flex items-center gap-2 flex-wrap">
                   {/* Modifica */}
                   {!isExported && (
-                    <Link
-                      href={`/catalog/orders/${order.id}/preview`}
+                    <button
+                      onClick={() => router.push(`/catalog/orders/${order.id}/preview`)}
                       className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
                     >
                       <Pencil size={11} />
                       <span className="hidden sm:inline">{t('edit')}</span>
-                    </Link>
+                    </button>
                   )}
 
                   {/* Anteprima */}
-                  <Link
-                    href={`/catalog/orders/${order.id}/preview`}
+                  <button
+                    onClick={() => router.push(`/catalog/orders/${order.id}/preview`)}
                     className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
                   >
                     <ScanEye size={11} />
                     <span className="hidden sm:inline">{t('preview')}</span>
-                  </Link>
+                  </button>
 
                   {/* Esporta (Demetra) */}
                   <OrderDemetraExport

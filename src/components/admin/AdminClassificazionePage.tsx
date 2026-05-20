@@ -21,6 +21,13 @@ const TIPI = [
   { tipo: 'temaColore', label: 'Tema colore' },
 ];
 
+function normalizeValue(tipo: string, v: string): string {
+  const t = v.trim();
+  if (!t) return t;
+  if (tipo === 'nomLinea') return t.toUpperCase();
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+}
+
 // For hierarchy levels: specifies the parent tipo and the FK field name to send on POST
 const PARENT_CONFIG: Record<string, { parentTipo: string; parentLabel: string; parentField: string }> = {
   famiglia: { parentTipo: 'gruppoMerceologico', parentLabel: 'Gruppo merceologico', parentField: 'gruppoMerceologicoId' },
@@ -75,7 +82,7 @@ function ClassificazioneTab({ tipo }: { tipo: string }) {
   const items: ValoreItem[] = data?.data || [];
 
   async function handleAdd() {
-    const name = newNome.trim();
+    const name = normalizeValue(tipo, newNome);
     if (!name) return;
     if (parentConfig && !newParentId) {
       toast.error(`Seleziona ${parentConfig.parentLabel}`);
@@ -109,12 +116,13 @@ function ClassificazioneTab({ tipo }: { tipo: string }) {
   }
 
   async function handleEdit(id: string) {
-    if (!editNome.trim()) return;
+    const normNome = normalizeValue(tipo, editNome);
+    if (!normNome) return;
     try {
       const res = await fetch(`/api/classificazione/${tipo}/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: editNome.trim() }),
+        body: JSON.stringify({ nome: normNome }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -200,6 +208,7 @@ function ClassificazioneTab({ tipo }: { tipo: string }) {
               autoFocus
               value={newNome}
               onChange={(e) => setNewNome(e.target.value)}
+              onBlur={() => setNewNome(normalizeValue(tipo, newNome))}
               onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setIsAdding(false); setNewNome(''); } }}
               placeholder="Nuovo valore..."
               className="flex-1 text-sm border border-border rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent bg-white"
@@ -241,6 +250,7 @@ function ClassificazioneTab({ tipo }: { tipo: string }) {
                           autoFocus
                           value={editNome}
                           onChange={(e) => setEditNome(e.target.value)}
+                          onBlur={() => setEditNome(normalizeValue(tipo, editNome))}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleEdit(item.id);
                             if (e.key === 'Escape') setEditingId(null);
