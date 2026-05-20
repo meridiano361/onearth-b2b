@@ -6,7 +6,7 @@ import {
   Plus, ChevronDown, ChevronRight, Edit2, Trash2,
   ToggleLeft, ToggleRight, KeyRound, Store, Globe, Radio, Package,
   Users, MapPin, Copy, CheckSquare, Square, Loader2,
-  ShoppingBag, Building, ShoppingCart, Tag, Landmark,
+  ShoppingBag, Building, ShoppingCart, Tag, Landmark, X,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -49,8 +49,7 @@ function EditOrgModal({ org, onClose, onSave }: { org: Organization; onClose: ()
     setSaving(true);
     try {
       const res = await fetch(`/api/organizations/${org.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome: nome.trim() }),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
@@ -203,6 +202,147 @@ function CanaleModal({ isOpen, onClose, onSave, canale, orgId }: {
   );
 }
 
+// ─── BulkResetModal ───────────────────────────────────────────────────────────
+
+function BulkResetModal({
+  results,
+  onClose,
+}: {
+  results: { name: string; email: string; password: string }[];
+  onClose: () => void;
+}) {
+  return (
+    <Modal isOpen onClose={onClose} title="Password resettate" size="md"
+      footer={<Button onClick={onClose}>Ho preso nota, chiudi</Button>}>
+      <div className="space-y-4">
+        <p className="text-sm text-gray-600">
+          Password resettate per <span className="font-semibold text-primary">{results.length} operatori</span>.
+        </p>
+        <div className="bg-cream border border-border rounded divide-y divide-border max-h-72 overflow-y-auto">
+          {results.map((r) => (
+            <div key={r.email} className="flex items-center justify-between px-4 py-2.5 gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-primary truncate">{r.name}</p>
+                <p className="text-2xs text-gray-400 truncate">{r.email}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="font-mono text-sm font-bold text-primary">{r.password}</span>
+                <button onClick={() => { navigator.clipboard.writeText(r.password); toast.success('Copiata'); }}
+                  className="text-gray-400 hover:text-primary transition-colors">
+                  <Copy size={13} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+          Comunica le password ai rispettivi operatori. Non verranno mostrate di nuovo.
+        </p>
+      </div>
+    </Modal>
+  );
+}
+
+// ─── OrgOperatorsBulkBar ──────────────────────────────────────────────────────
+
+interface BulkBarProps {
+  count: number;
+  operatorIds: string[];
+  orgId: string;
+  onDeselect: () => void;
+  onDone: (results?: { name: string; email: string; password: string }[]) => void;
+}
+
+function OrgOperatorsBulkBar({ count, operatorIds, onDeselect, onDone }: BulkBarProps) {
+  const [loading, setLoading] = useState(false);
+
+  async function runBulk(action: 'activate' | 'deactivate' | 'resetPassword') {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/operators/bulk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operatorIds, action }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
+      const json = await res.json();
+      if (action === 'activate') toast.success(`${count} operator${count !== 1 ? 'i' : 'e'} attivati`);
+      else if (action === 'deactivate') toast.success(`${count} operator${count !== 1 ? 'i' : 'e'} disattivati`);
+      onDone(action === 'resetPassword' ? json.results : undefined);
+    } catch (e: any) {
+      toast.error(e.message || 'Errore durante l\'operazione');
+      setLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Eliminare definitivamente ${count} operatore${count !== 1 ? 'i' : ''}? Questa azione non può essere annullata.`)) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/operators/bulk', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operatorIds }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
+      toast.success(`${count} operatore${count !== 1 ? 'i' : 'e'} eliminati`);
+      onDone();
+    } catch (e: any) {
+      toast.error(e.message || 'Errore durante l\'eliminazione');
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="animate-slide-up mb-3 bg-primary text-white rounded-lg px-3 py-2.5 flex flex-wrap items-center gap-2">
+      <span className="text-xs font-semibold flex-shrink-0">
+        {count} operator{count !== 1 ? 'i' : 'e'} selezionat{count !== 1 ? 'i' : 'o'}
+      </span>
+
+      <div className="flex flex-wrap items-center gap-1.5 flex-1">
+        <button
+          onClick={() => runBulk('activate')}
+          disabled={loading}
+          className="text-2xs px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50"
+        >
+          Attiva
+        </button>
+        <button
+          onClick={() => runBulk('deactivate')}
+          disabled={loading}
+          className="text-2xs px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50"
+        >
+          Disattiva
+        </button>
+        <button
+          onClick={() => runBulk('resetPassword')}
+          disabled={loading}
+          className="text-2xs px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50"
+        >
+          Reset password
+        </button>
+        <button
+          onClick={handleDelete}
+          disabled={loading}
+          className="text-2xs px-2.5 py-1 bg-red-500/70 hover:bg-red-500 rounded transition-colors disabled:opacity-50"
+        >
+          Elimina
+        </button>
+        {loading && <Loader2 size={13} className="animate-spin opacity-70" />}
+      </div>
+
+      <button
+        onClick={onDeselect}
+        disabled={loading}
+        className="text-2xs opacity-70 hover:opacity-100 transition-opacity flex items-center gap-1 flex-shrink-0"
+      >
+        <X size={12} />
+        Deseleziona
+      </button>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AdminOrganizzazioniPage() {
@@ -212,13 +352,12 @@ export default function AdminOrganizzazioniPage() {
   const [canaleModal, setCanaleModal] = useState<{ orgId: string; canale?: Canale } | null>(null);
   const [editOrgModal, setEditOrgModal] = useState<Organization | null>(null);
   const [resetResult, setResetResult] = useState<{ name: string; password: string } | null>(null);
+  const [bulkResetResults, setBulkResetResults] = useState<{ name: string; email: string; password: string }[] | null>(null);
 
-  // ── Operator bulk selection ───────────────────────────────────────────────
+  // Global operator selection (across all orgs)
   const [selectedOpIds, setSelectedOpIds] = useState<Set<string>>(new Set());
-  const [bulkLoading, setBulkLoading] = useState(false);
-  const [bulkResetResults, setBulkResetResults] = useState<{ name: string; password: string }[] | null>(null);
 
-  // ── Org bulk selection ────────────────────────────────────────────────────
+  // Org-level selection for org-bulk actions
   const [selectedOrgIds, setSelectedOrgIds] = useState<Set<string>>(new Set());
   const [orgBulkLoading, setOrgBulkLoading] = useState(false);
   const [orgBulkResetResults, setOrgBulkResetResults] = useState<{ name: string; password: string }[] | null>(null);
@@ -233,29 +372,11 @@ export default function AdminOrganizzazioniPage() {
   });
 
   const orgs: Organization[] = data?.data || [];
+  const totalOrgs = orgs.length;
+  const totalOps = orgs.reduce((s, o) => s + (o.operatori?.length || 0), 0);
 
-  // Build opId → { op, orgNome } map for bulk operations
-  const opMap = new Map<string, { op: Operator; orgNome: string }>();
-  for (const org of orgs) {
-    for (const op of org.operatori || []) {
-      opMap.set(op.id, { op, orgNome: org.nome });
-    }
-  }
-
-  const allOpIds = Array.from(opMap.keys());
-  const selectedCount = selectedOpIds.size;
-
-  const selectedOrgCount = selectedOrgIds.size;
   const allOrgsSelected = orgs.length > 0 && orgs.every((o) => selectedOrgIds.has(o.id));
-
-  function toggleOrgSelect(id: string) {
-    setSelectedOrgIds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  }
-
-  function toggleSelectAllOrgs() {
-    if (allOrgsSelected) setSelectedOrgIds(new Set());
-    else setSelectedOrgIds(new Set(orgs.map((o) => o.id)));
-  }
+  const selectedOrgCount = selectedOrgIds.size;
 
   function refresh() { queryClient.invalidateQueries({ queryKey: ['admin-organizations'] }); }
 
@@ -276,6 +397,24 @@ export default function AdminOrganizzazioniPage() {
       else ids.forEach((id) => n.add(id));
       return n;
     });
+  }
+
+  function clearOrgOps(ops: Operator[]) {
+    const ids = new Set(ops.map((o) => o.id));
+    setSelectedOpIds((prev) => {
+      const n = new Set(prev);
+      ids.forEach((id) => n.delete(id));
+      return n;
+    });
+  }
+
+  function toggleOrgSelect(id: string) {
+    setSelectedOrgIds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  function toggleSelectAllOrgs() {
+    if (allOrgsSelected) setSelectedOrgIds(new Set());
+    else setSelectedOrgIds(new Set(orgs.map((o) => o.id)));
   }
 
   // ── Single-operator actions ───────────────────────────────────────────────
@@ -323,68 +462,7 @@ export default function AdminOrganizzazioniPage() {
     } catch (e: any) { toast.error(e.message || 'Errore'); }
   }
 
-  // ── Bulk actions ──────────────────────────────────────────────────────────
-
-  async function handleBulkSetActive(attivo: boolean) {
-    if (!selectedCount) return;
-    setBulkLoading(true);
-    try {
-      await Promise.all(
-        Array.from(selectedOpIds).map((id) =>
-          fetch(`/api/operatori/${id}`, {
-            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ attivo }),
-          })
-        )
-      );
-      toast.success(`${selectedCount} operator${selectedCount !== 1 ? 'i' : 'e'} ${attivo ? 'attivati' : 'disattivati'}`);
-      refresh();
-    } catch { toast.error('Errore durante l\'operazione'); }
-    finally { setBulkLoading(false); }
-  }
-
-  async function handleBulkResetPassword() {
-    if (!selectedCount) return;
-    setBulkLoading(true);
-    try {
-      const results: { name: string; password: string }[] = [];
-      await Promise.all(
-        Array.from(selectedOpIds).map(async (id) => {
-          const entry = opMap.get(id);
-          if (!entry) return;
-          const password = generateDefaultPassword(entry.orgNome);
-          await fetch(`/api/operatori/${id}`, {
-            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ newPassword: password }),
-          });
-          results.push({ name: `${entry.op.nome} ${entry.op.cognome}`, password });
-        })
-      );
-      results.sort((a, b) => a.name.localeCompare(b.name, 'it'));
-      setBulkResetResults(results);
-      refresh();
-    } catch { toast.error('Errore durante il reset password'); }
-    finally { setBulkLoading(false); }
-  }
-
-  async function handleBulkDelete() {
-    if (!selectedCount) return;
-    if (!confirm(`Eliminare definitivamente ${selectedCount} operatore${selectedCount !== 1 ? 'i' : ''}? Questa azione non può essere annullata.`)) return;
-    setBulkLoading(true);
-    try {
-      await Promise.all(
-        Array.from(selectedOpIds).map((id) =>
-          fetch(`/api/operatori/${id}`, { method: 'DELETE' })
-        )
-      );
-      toast.success(`${selectedCount} operatore${selectedCount !== 1 ? 'i' : 'e'} eliminati`);
-      setSelectedOpIds(new Set());
-      refresh();
-    } catch { toast.error('Errore durante l\'eliminazione'); }
-    finally { setBulkLoading(false); }
-  }
-
-  // ── Org bulk handlers ─────────────────────────────────────────────────────
+  // ── Org bulk actions ──────────────────────────────────────────────────────
 
   async function handleOrgBulkSetActive(attivo: boolean) {
     if (!selectedOrgCount) return;
@@ -394,14 +472,13 @@ export default function AdminOrganizzazioniPage() {
         .filter((o) => selectedOrgIds.has(o.id))
         .flatMap((o) => o.operatori || [])
         .map((op) => op.id);
-      await Promise.all(
-        opIds.map((id) =>
-          fetch(`/api/operatori/${id}`, {
-            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ attivo }),
-          })
-        )
-      );
+      if (opIds.length > 0) {
+        const res = await fetch('/api/admin/operators/bulk', {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ operatorIds: opIds, action: attivo ? 'activate' : 'deactivate' }),
+        });
+        if (!res.ok) throw new Error('Errore');
+      }
       toast.success(`Operatori di ${selectedOrgCount} organizzazion${selectedOrgCount !== 1 ? 'i' : 'e'} ${attivo ? 'attivati' : 'disattivati'}`);
       refresh();
     } catch { toast.error('Errore durante l\'operazione'); }
@@ -439,9 +516,7 @@ export default function AdminOrganizzazioniPage() {
     setOrgBulkLoading(true);
     try {
       await Promise.all(
-        Array.from(selectedOrgIds).map((id) =>
-          fetch(`/api/organizations/${id}`, { method: 'DELETE' })
-        )
+        Array.from(selectedOrgIds).map((id) => fetch(`/api/organizations/${id}`, { method: 'DELETE' }))
       );
       toast.success(`${selectedOrgCount} organizzazioni eliminate`);
       setSelectedOrgIds(new Set());
@@ -449,9 +524,6 @@ export default function AdminOrganizzazioniPage() {
     } catch { toast.error('Errore durante l\'eliminazione'); }
     finally { setOrgBulkLoading(false); }
   }
-
-  const totalOrgs = orgs.length;
-  const totalOps = orgs.reduce((s, o) => s + (o.operatori?.length || 0), 0);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -468,92 +540,33 @@ export default function AdminOrganizzazioniPage() {
 
       {/* ── Org bulk action bar ─────────────────────────────────────────────── */}
       {selectedOrgCount > 0 && (
-        <div className="sticky top-0 z-31 mb-2 bg-amber-800 text-white rounded-lg px-4 py-3 flex flex-wrap items-center gap-3 shadow-lg">
+        <div className="sticky top-0 z-31 mb-2 bg-amber-800 text-white rounded-lg px-4 py-3 flex flex-wrap items-center gap-3 shadow-lg animate-slide-up">
           <span className="text-sm font-semibold flex-shrink-0">
             {selectedOrgCount} organizzazion{selectedOrgCount !== 1 ? 'i' : 'e'} selezionate
           </span>
           <div className="flex flex-wrap items-center gap-2 flex-1">
-            <button
-              onClick={() => handleOrgBulkSetActive(true)}
-              disabled={orgBulkLoading}
-              className="text-xs px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50"
-            >
+            <button onClick={() => handleOrgBulkSetActive(true)} disabled={orgBulkLoading}
+              className="text-xs px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50">
               Attiva operatori
             </button>
-            <button
-              onClick={() => handleOrgBulkSetActive(false)}
-              disabled={orgBulkLoading}
-              className="text-xs px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50"
-            >
+            <button onClick={() => handleOrgBulkSetActive(false)} disabled={orgBulkLoading}
+              className="text-xs px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50">
               Disattiva operatori
             </button>
-            <button
-              onClick={handleOrgBulkResetPassword}
-              disabled={orgBulkLoading}
-              className="text-xs px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50"
-            >
+            <button onClick={handleOrgBulkResetPassword} disabled={orgBulkLoading}
+              className="text-xs px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50">
               Reset password
             </button>
-            <button
-              onClick={handleOrgBulkDelete}
-              disabled={orgBulkLoading}
-              className="text-xs px-3 py-1.5 bg-red-500/80 hover:bg-red-500 rounded transition-colors disabled:opacity-50"
-            >
+            <button onClick={handleOrgBulkDelete} disabled={orgBulkLoading}
+              className="text-xs px-3 py-1.5 bg-red-500/80 hover:bg-red-500 rounded transition-colors disabled:opacity-50">
               Elimina organizzazioni
             </button>
             {orgBulkLoading && <Loader2 size={14} className="animate-spin opacity-70" />}
           </div>
-          <button
-            onClick={() => setSelectedOrgIds(new Set())}
-            className="text-xs underline opacity-70 hover:opacity-100 transition-opacity flex-shrink-0"
-          >
+          <button onClick={() => setSelectedOrgIds(new Set())}
+            className="text-xs opacity-70 hover:opacity-100 transition-opacity flex items-center gap-1 flex-shrink-0">
+            <X size={13} />
             Deseleziona tutte
-          </button>
-        </div>
-      )}
-
-      {/* ── Operator bulk action bar ─────────────────────────────────────────── */}
-      {selectedCount > 0 && (
-        <div className="sticky top-0 z-30 mb-4 bg-primary text-white rounded-lg px-4 py-3 flex flex-wrap items-center gap-3 shadow-lg">
-          <span className="text-sm font-semibold flex-shrink-0">
-            {selectedCount} selezionat{selectedCount !== 1 ? 'i' : 'o'}
-          </span>
-          <div className="flex flex-wrap items-center gap-2 flex-1">
-            <button
-              onClick={() => handleBulkSetActive(true)}
-              disabled={bulkLoading}
-              className="text-xs px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50"
-            >
-              Attiva selezionati
-            </button>
-            <button
-              onClick={() => handleBulkSetActive(false)}
-              disabled={bulkLoading}
-              className="text-xs px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50"
-            >
-              Disattiva selezionati
-            </button>
-            <button
-              onClick={handleBulkResetPassword}
-              disabled={bulkLoading}
-              className="text-xs px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50"
-            >
-              Reset password selezionati
-            </button>
-            <button
-              onClick={handleBulkDelete}
-              disabled={bulkLoading}
-              className="text-xs px-3 py-1.5 bg-red-500/80 hover:bg-red-500 rounded transition-colors disabled:opacity-50"
-            >
-              Elimina selezionati
-            </button>
-            {bulkLoading && <Loader2 size={14} className="animate-spin opacity-70" />}
-          </div>
-          <button
-            onClick={() => setSelectedOpIds(new Set())}
-            className="text-xs underline opacity-70 hover:opacity-100 transition-opacity flex-shrink-0"
-          >
-            Deseleziona tutti
           </button>
         </div>
       )}
@@ -566,15 +579,12 @@ export default function AdminOrganizzazioniPage() {
         <div className="space-y-2">
           {/* Select all orgs */}
           <div className="flex items-center gap-2 px-1 pb-1">
-            <button
-              onClick={toggleSelectAllOrgs}
+            <button onClick={toggleSelectAllOrgs}
               className="text-gray-400 hover:text-primary transition-colors"
-              title={allOrgsSelected ? 'Deseleziona tutte' : 'Seleziona tutte le organizzazioni'}
-            >
+              title={allOrgsSelected ? 'Deseleziona tutte' : 'Seleziona tutte le organizzazioni'}>
               {allOrgsSelected
                 ? <CheckSquare size={14} className="text-accent" />
-                : <Square size={14} />
-              }
+                : <Square size={14} />}
             </button>
             <span className="text-xs text-gray-400">
               {allOrgsSelected ? 'Deseleziona tutte' : 'Seleziona tutte le organizzazioni'}
@@ -585,30 +595,25 @@ export default function AdminOrganizzazioniPage() {
             const isOpen = expanded.has(org.id);
             const ops = org.operatori || [];
             const canali = org.canali || [];
-            const orgOpsSelected = ops.filter((o) => selectedOpIds.has(o.id)).length;
-            const allOrgOpsSelected = ops.length > 0 && orgOpsSelected === ops.length;
+            const orgSelectedOps = ops.filter((o) => selectedOpIds.has(o.id));
+            const orgSelectedCount = orgSelectedOps.length;
+            const allOrgOpsSelected = ops.length > 0 && orgSelectedCount === ops.length;
             const isOrgSelected = selectedOrgIds.has(org.id);
 
             return (
               <div key={org.id} className={`bg-white border rounded-lg overflow-hidden transition-colors ${isOrgSelected ? 'border-amber-400 bg-amber-50/40' : 'border-border'}`}>
                 {/* Org row */}
                 <div className="flex items-center gap-3 px-4 py-3 hover:bg-cream/30 transition-colors">
-                  {/* Org select checkbox */}
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleOrgSelect(org.id); }}
-                    className="text-gray-400 hover:text-primary transition-colors flex-shrink-0"
-                    title={isOrgSelected ? 'Deseleziona organizzazione' : 'Seleziona organizzazione'}
-                  >
+                    className="text-gray-400 hover:text-primary transition-colors flex-shrink-0">
                     {isOrgSelected
                       ? <CheckSquare size={14} className="text-amber-600" />
-                      : <Square size={14} />
-                    }
+                      : <Square size={14} />}
                   </button>
-                  {/* Expand toggle */}
                   <button
                     onClick={() => toggleExpand(org.id)}
-                    className="flex-1 flex items-center gap-3 text-left min-w-0"
-                  >
+                    className="flex-1 flex items-center gap-3 text-left min-w-0">
                     <span className="text-gray-400 flex-shrink-0">
                       {isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
                     </span>
@@ -616,18 +621,20 @@ export default function AdminOrganizzazioniPage() {
                     <span className="flex items-center gap-1.5 text-xs text-gray-400 mr-2 flex-shrink-0">
                       <Users size={12} />
                       {ops.length} operatori
+                      {orgSelectedCount > 0 && (
+                        <span className="ml-1 bg-accent text-white text-2xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                          {orgSelectedCount}
+                        </span>
+                      )}
                     </span>
                     <span className="flex items-center gap-1.5 text-xs text-gray-400 flex-shrink-0">
                       <Store size={12} />
                       {canali.length} canali
                     </span>
                   </button>
-                  {/* Modifica org */}
                   <button
                     onClick={(e) => { e.stopPropagation(); setEditOrgModal(org); }}
-                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary px-2 py-1 rounded hover:bg-cream transition-colors flex-shrink-0"
-                    title="Modifica organizzazione"
-                  >
+                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary px-2 py-1 rounded hover:bg-cream transition-colors flex-shrink-0">
                     <Edit2 size={12} />
                     <span className="hidden sm:inline">Modifica</span>
                   </button>
@@ -636,7 +643,7 @@ export default function AdminOrganizzazioniPage() {
                 {/* Expanded content */}
                 {isOpen && (
                   <div className="border-t border-border bg-cream/30 px-4 py-4 space-y-5">
-                    {/* Operators */}
+                    {/* Operators section */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Operatori</p>
@@ -645,6 +652,22 @@ export default function AdminOrganizzazioniPage() {
                           Aggiungi
                         </Button>
                       </div>
+
+                      {/* ── Per-org bulk action bar ──────────────────────── */}
+                      {orgSelectedCount > 0 && (
+                        <OrgOperatorsBulkBar
+                          count={orgSelectedCount}
+                          operatorIds={orgSelectedOps.map((o) => o.id)}
+                          orgId={org.id}
+                          onDeselect={() => clearOrgOps(ops)}
+                          onDone={(results) => {
+                            clearOrgOps(ops);
+                            refresh();
+                            if (results) setBulkResetResults(results);
+                          }}
+                        />
+                      )}
+
                       {ops.length === 0 ? (
                         <p className="text-xs text-gray-400 italic">Nessun operatore</p>
                       ) : (
@@ -652,17 +675,14 @@ export default function AdminOrganizzazioniPage() {
                           <table className="w-full text-xs">
                             <thead className="bg-cream">
                               <tr>
-                                {/* Select all for this org */}
                                 <th className="px-3 py-2 w-8">
                                   <button
                                     onClick={() => toggleSelectAllInOrg(ops)}
                                     className="text-gray-400 hover:text-primary transition-colors"
-                                    title={allOrgOpsSelected ? 'Deseleziona tutti' : 'Seleziona tutti'}
-                                  >
+                                    title={allOrgOpsSelected ? 'Deseleziona tutti' : 'Seleziona tutti'}>
                                     {allOrgOpsSelected
                                       ? <CheckSquare size={13} className="text-accent" />
-                                      : <Square size={13} />
-                                    }
+                                      : <Square size={13} />}
                                   </button>
                                 </th>
                                 <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Nome</th>
@@ -675,16 +695,13 @@ export default function AdminOrganizzazioniPage() {
                               {ops.map((op) => {
                                 const isSelected = selectedOpIds.has(op.id);
                                 return (
-                                  <tr key={op.id} className={`hover:bg-cream/50 ${isSelected ? 'bg-accent/5' : ''}`}>
+                                  <tr key={op.id} className={`transition-colors ${isSelected ? 'bg-accent/8' : 'hover:bg-cream/50'}`}>
                                     <td className="px-3 py-2">
-                                      <button
-                                        onClick={() => toggleOpSelect(op.id)}
-                                        className="text-gray-400 hover:text-primary transition-colors"
-                                      >
+                                      <button onClick={() => toggleOpSelect(op.id)}
+                                        className="text-gray-400 hover:text-primary transition-colors">
                                         {isSelected
                                           ? <CheckSquare size={13} className="text-accent" />
-                                          : <Square size={13} />
-                                        }
+                                          : <Square size={13} />}
                                       </button>
                                     </td>
                                     <td className="px-3 py-2">
@@ -778,25 +795,20 @@ export default function AdminOrganizzazioniPage() {
       {/* ── Modals ────────────────────────────────────────────────────────────── */}
 
       {editOrgModal && (
-        <EditOrgModal
-          org={editOrgModal}
-          onClose={() => setEditOrgModal(null)}
-          onSave={() => { setEditOrgModal(null); refresh(); }}
-        />
+        <EditOrgModal org={editOrgModal} onClose={() => setEditOrgModal(null)}
+          onSave={() => { setEditOrgModal(null); refresh(); }} />
       )}
 
       {opModal && (
         <OperatorModal isOpen onClose={() => setOpModal(null)}
           onSave={() => { setOpModal(null); refresh(); }}
-          operator={opModal.operator} orgId={opModal.orgId} orgNome={opModal.orgNome}
-        />
+          operator={opModal.operator} orgId={opModal.orgId} orgNome={opModal.orgNome} />
       )}
 
       {canaleModal && (
         <CanaleModal isOpen onClose={() => setCanaleModal(null)}
           onSave={() => { setCanaleModal(null); refresh(); }}
-          canale={canaleModal.canale} orgId={canaleModal.orgId}
-        />
+          canale={canaleModal.canale} orgId={canaleModal.orgId} />
       )}
 
       {/* Single password reset */}
@@ -824,7 +836,12 @@ export default function AdminOrganizzazioniPage() {
         )}
       </Modal>
 
-      {/* Org bulk password reset riepilogo */}
+      {/* Bulk password reset modal */}
+      {bulkResetResults && (
+        <BulkResetModal results={bulkResetResults} onClose={() => setBulkResetResults(null)} />
+      )}
+
+      {/* Org bulk password reset */}
       <Modal isOpen={!!orgBulkResetResults} onClose={() => setOrgBulkResetResults(null)} title="Password resettate (organizzazioni)" size="md"
         footer={<Button onClick={() => setOrgBulkResetResults(null)}>Ho preso nota, chiudi</Button>}>
         {orgBulkResetResults && (
@@ -834,35 +851,6 @@ export default function AdminOrganizzazioniPage() {
             </p>
             <div className="bg-cream border border-border rounded divide-y divide-border max-h-72 overflow-y-auto">
               {orgBulkResetResults.map((r) => (
-                <div key={r.name} className="flex items-center justify-between px-4 py-2.5 gap-3">
-                  <span className="text-sm text-primary truncate">{r.name}</span>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="font-mono text-sm font-bold text-primary">{r.password}</span>
-                    <button onClick={() => { navigator.clipboard.writeText(r.password); toast.success('Copiata'); }}
-                      className="text-gray-400 hover:text-primary transition-colors">
-                      <Copy size={13} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-              Comunica le password ai rispettivi operatori. Non verranno mostrate di nuovo.
-            </p>
-          </div>
-        )}
-      </Modal>
-
-      {/* Operator bulk password reset riepilogo */}
-      <Modal isOpen={!!bulkResetResults} onClose={() => setBulkResetResults(null)} title="Password resettate" size="md"
-        footer={<Button onClick={() => setBulkResetResults(null)}>Ho preso nota, chiudi</Button>}>
-        {bulkResetResults && (
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Password resettate per <span className="font-semibold text-primary">{bulkResetResults.length} operatori</span>.
-            </p>
-            <div className="bg-cream border border-border rounded divide-y divide-border max-h-72 overflow-y-auto">
-              {bulkResetResults.map((r) => (
                 <div key={r.name} className="flex items-center justify-between px-4 py-2.5 gap-3">
                   <span className="text-sm text-primary truncate">{r.name}</span>
                   <div className="flex items-center gap-2 flex-shrink-0">
