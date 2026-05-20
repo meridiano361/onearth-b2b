@@ -107,6 +107,7 @@ export interface Operator {
   cognome: string;
   email: string;
   telefono: string | null;
+  ruolo: string | null;
   organizationId: string;
   attivo: boolean;
   createdAt: string;

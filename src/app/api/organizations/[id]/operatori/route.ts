@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     },
     select: {
       id: true, nome: true, cognome: true, email: true,
-      telefono: true, attivo: true, organizationId: true, createdAt: true,
+      telefono: true, ruolo: true, attivo: true, organizationId: true, createdAt: true,
     },
   });
 

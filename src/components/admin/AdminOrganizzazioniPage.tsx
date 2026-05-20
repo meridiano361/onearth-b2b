@@ -38,6 +38,59 @@ function generateDefaultPassword(orgNome: string): string {
   return 'onearth_' + slug.substring(0, 5);
 }
 
+function capitalize(v: string): string {
+  const s = v.trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
+}
+
+// ─── CreateOrgModal ───────────────────────────────────────────────────────────
+
+function CreateOrgModal({ onClose, onSave }: { onClose: () => void; onSave: () => void }) {
+  const [nome, setNome] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    const n = capitalize(nome);
+    if (!n) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/organizations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: n }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
+      toast.success('Organizzazione creata');
+      onSave();
+    } catch (e: any) {
+      toast.error(e.message || 'Operazione fallita');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal isOpen onClose={onClose} title="Nuova organizzazione" size="sm">
+      <div className="space-y-4">
+        <Input
+          label="Nome organizzazione *"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          onBlur={() => setNome(capitalize(nome))}
+          placeholder="Bottega del mondo"
+          autoFocus
+        />
+        <div className="flex justify-end gap-3 pt-1">
+          <Button variant="ghost" onClick={onClose}>Annulla</Button>
+          <Button onClick={handleSave} loading={saving} disabled={!nome.trim()}>
+            Crea organizzazione
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // ─── EditOrgModal ─────────────────────────────────────────────────────────────
 
 function EditOrgModal({ org, onClose, onSave }: { org: Organization; onClose: () => void; onSave: () => void }) {
@@ -77,9 +130,14 @@ function EditOrgModal({ org, onClose, onSave }: { org: Organization; onClose: ()
 
 // ─── OperatorModal ────────────────────────────────────────────────────────────
 
+const RUOLI = [
+  'Responsabile acquisti', 'Responsabile bottega', 'Coordinatore',
+  'Membro del CdA', 'Addetto vendite', 'Volontario', 'Altro',
+];
+
 interface OperatorFormData {
   nome: string; cognome: string; email: string; telefono: string;
-  password: string; attivo: boolean;
+  ruolo: string; password: string; attivo: boolean;
 }
 
 function OperatorModal({
@@ -93,24 +151,44 @@ function OperatorModal({
   const [form, setForm] = useState<OperatorFormData>({
     nome: operator?.nome || '', cognome: operator?.cognome || '',
     email: operator?.email || '', telefono: operator?.telefono || '',
+    ruolo: operator?.ruolo || '',
     password: isEdit ? '' : defaultPwd, attivo: operator?.attivo ?? true,
   });
   const [saving, setSaving] = useState(false);
 
-  const set = (k: keyof OperatorFormData) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
+  const set = (k: keyof OperatorFormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm((f) => ({ ...f, [k]: (e.target as HTMLInputElement).type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value }));
+
+  function handlePhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setForm((f) => ({ ...f, telefono: e.target.value.replace(/\s/g, '') }));
+  }
 
   async function handleSave() {
     setSaving(true);
     try {
-      const url = isEdit ? `/api/operatori/${operator!.id}` : `/api/organizations/${orgId}/operatori`;
-      const method = isEdit ? 'PATCH' : 'POST';
-      const body: any = { nome: form.nome, cognome: form.cognome, email: form.email, telefono: form.telefono || null, attivo: form.attivo };
-      if (isEdit) { if (form.password) body.newPassword = form.password; }
-      else body.password = form.password;
-      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
-      toast.success(isEdit ? 'Operatore aggiornato' : 'Operatore creato');
+      if (isEdit) {
+        const body: any = {
+          nome: form.nome, cognome: form.cognome, email: form.email,
+          telefono: form.telefono || null, ruolo: form.ruolo || null, attivo: form.attivo,
+        };
+        if (form.password) body.newPassword = form.password;
+        const res = await fetch(`/api/operatori/${operator!.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
+        toast.success('Operatore aggiornato');
+      } else {
+        const res = await fetch(`/api/admin/organizations/${orgId}/operators`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome: form.nome, cognome: form.cognome, email: form.email,
+            telefono: form.telefono || null, ruolo: form.ruolo || null,
+            password: form.password, attivo: form.attivo,
+          }),
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
+        toast.success(`Operatore creato, password: ${form.password}`);
+      }
       onSave();
     } catch (e: any) {
       toast.error(e.message || 'Operazione fallita');
@@ -123,11 +201,23 @@ function OperatorModal({
     <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Modifica Operatore' : 'Nuovo Operatore'} size="md">
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Nome *" value={form.nome} onChange={set('nome')} placeholder="Maria" />
-          <Input label="Cognome *" value={form.cognome} onChange={set('cognome')} placeholder="Rossi" />
+          <Input label="Nome *" value={form.nome} onChange={set('nome')}
+            onBlur={() => setForm((f) => ({ ...f, nome: capitalize(f.nome) }))}
+            placeholder="Maria" />
+          <Input label="Cognome *" value={form.cognome} onChange={set('cognome')}
+            onBlur={() => setForm((f) => ({ ...f, cognome: capitalize(f.cognome) }))}
+            placeholder="Rossi" />
         </div>
         <Input label="Email *" type="email" value={form.email} onChange={set('email')} placeholder="m.rossi@org.it" />
-        <Input label="Telefono" value={form.telefono} onChange={set('telefono')} placeholder="+39 333 123456" />
+        <Input label="Telefono" value={form.telefono} onChange={handlePhoneChange} placeholder="+393331234567" />
+        <div>
+          <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">Ruolo</label>
+          <select value={form.ruolo} onChange={set('ruolo')}
+            className="w-full px-4 py-2.5 bg-white border border-border rounded text-sm focus:outline-none focus:border-accent">
+            <option value="">— Seleziona ruolo —</option>
+            {RUOLI.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
         <div>
           <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
             {isEdit ? 'Nuova Password (vuoto = invariata)' : 'Password *'}
@@ -136,12 +226,14 @@ function OperatorModal({
             placeholder={isEdit ? '••••••••' : defaultPwd} />
         </div>
         <div className="flex items-center gap-2">
-          <input type="checkbox" id="op-attivo" checked={form.attivo} onChange={set('attivo')} className="w-4 h-4 accent-accent" />
+          <input type="checkbox" id="op-attivo" checked={form.attivo}
+            onChange={(e) => setForm((f) => ({ ...f, attivo: e.target.checked }))}
+            className="w-4 h-4 accent-accent" />
           <label htmlFor="op-attivo" className="text-sm text-primary">Attivo (può accedere)</label>
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="ghost" onClick={onClose}>Annulla</Button>
-          <Button onClick={handleSave} loading={saving}>{isEdit ? 'Salva' : 'Crea'}</Button>
+          <Button onClick={handleSave} loading={saving}>{isEdit ? 'Salva' : 'Crea operatore'}</Button>
         </div>
       </div>
     </Modal>
@@ -348,6 +440,7 @@ function OrgOperatorsBulkBar({ count, operatorIds, onDeselect, onDone }: BulkBar
 export default function AdminOrganizzazioniPage() {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [showNewOrg, setShowNewOrg] = useState(false);
   const [opModal, setOpModal] = useState<{ orgId: string; orgNome: string; operator?: Operator } | null>(null);
   const [destinazioneModal, setDestinazioneModal] = useState<{ orgId: string; destinazione?: Destinazione } | null>(null);
   const [editOrgModal, setEditOrgModal] = useState<Organization | null>(null);
@@ -536,6 +629,9 @@ export default function AdminOrganizzazioniPage() {
             {totalOrgs} organizzazioni · {totalOps} operatori
           </p>
         </div>
+        <Button icon={<Plus size={13} />} onClick={() => setShowNewOrg(true)}>
+          Nuova organizzazione
+        </Button>
       </div>
 
       {/* ── Org bulk action bar ─────────────────────────────────────────────── */}
@@ -649,7 +745,7 @@ export default function AdminOrganizzazioniPage() {
                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Operatori</p>
                         <Button variant="ghost" size="sm" icon={<Plus size={12} />}
                           onClick={() => setOpModal({ orgId: org.id, orgNome: org.nome })}>
-                          Aggiungi
+                          Aggiungi operatore
                         </Button>
                       </div>
 
@@ -793,6 +889,13 @@ export default function AdminOrganizzazioniPage() {
       )}
 
       {/* ── Modals ────────────────────────────────────────────────────────────── */}
+
+      {showNewOrg && (
+        <CreateOrgModal
+          onClose={() => setShowNewOrg(false)}
+          onSave={() => { setShowNewOrg(false); refresh(); }}
+        />
+      )}
 
       {editOrgModal && (
         <EditOrgModal org={editOrgModal} onClose={() => setEditOrgModal(null)}

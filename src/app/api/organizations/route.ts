@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
           cognome: true,
           email: true,
           telefono: true,
+          ruolo: true,
           attivo: true,
           createdAt: true,
           organizationId: true,

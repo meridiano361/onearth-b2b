@@ -277,6 +277,7 @@ model Operator {
   cognome        String
   email          String
   telefono       String?
+  ruolo          String?
   passwordHash   String
   organizationId String
   attivo         Boolean  @default(true)
