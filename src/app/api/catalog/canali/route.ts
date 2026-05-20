@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { getPreviewFromSession } from '@/lib/preview';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -31,12 +32,12 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  if (!session.user.organizationId) {
-    return NextResponse.json({ data: [] });
-  }
+  const preview = getPreviewFromSession(session);
+  const organizationId = preview?.organizationId ?? session.user.organizationId;
+  if (!organizationId) return NextResponse.json({ data: [] });
 
   const canali = await prisma.canale.findMany({
-    where: { organizationId: session.user.organizationId },
+    where: { organizationId },
     orderBy: { createdAt: 'asc' },
   });
 
@@ -47,6 +48,12 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user.organizationId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  if (getPreviewFromSession(session)) {
+    return NextResponse.json(
+      { error: 'Non puoi modificare dati in modalità anteprima', previewMode: true },
+      { status: 403 }
+    );
   }
 
   const body = await req.json();

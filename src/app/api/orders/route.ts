@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
+import { getPreviewFromSession } from '@/lib/preview';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -70,7 +71,12 @@ export async function GET(req: NextRequest) {
 
     const where: any = {};
 
-    if (!isAdminRole(session.user.role)) {
+    const preview = getPreviewFromSession(session);
+
+    if (preview) {
+      // Preview mode: show the simulated org's orders
+      where.organizationId = preview.organizationId;
+    } else if (!isAdminRole(session.user.role)) {
       if (session.user.role === 'OPERATOR') {
         where.organizationId = session.user.organizationId;
       } else {
@@ -80,7 +86,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (status) where.status = status;
-    if (isAdminRole(session.user.role)) {
+    if (!preview && isAdminRole(session.user.role)) {
       if (customerId) where.customerId = customerId;
       if (organizationId) where.organizationId = organizationId;
     }
@@ -124,6 +130,13 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (getPreviewFromSession(session)) {
+      return NextResponse.json(
+        { error: 'Non puoi creare ordini in modalità anteprima', previewMode: true },
+        { status: 403 }
+      );
+    }
 
     const body = await req.json();
     const data = createOrderSchema.parse(body);

@@ -9,6 +9,7 @@ import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
+import { usePreview } from '@/contexts/PreviewContext';
 import { computeProjections } from './CartSummary';
 import CartItem from './CartItem';
 import CartSummary from './CartSummary';
@@ -19,6 +20,7 @@ type SuggestionProduct = Pick<Product, 'id' | 'code' | 'name' | 'imageUrl' | 'co
 export default function CartSidebar() {
   const router = useRouter();
   const { data: session } = useSession();
+  const preview = usePreview();
   const { items, collectionId, notes, clearCart, getTotalItems, hasLotWarnings, addItem } = useCartStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [canali, setCanali] = useState<Canale[]>([]);
@@ -33,7 +35,17 @@ export default function CartSidebar() {
   const isOperator = session?.user.role === 'OPERATOR';
 
   useEffect(() => {
-    if (isOperator && session?.user.organizationId) {
+    if (preview) {
+      // In preview mode, fetch canali for the simulated org via the catalog API
+      fetch('/api/catalog/canali')
+        .then((r) => r.json())
+        .then((d) => {
+          const list: Canale[] = d.data || [];
+          setCanali(list);
+          if (list.length >= 1) setSelectedCanaleId(list[0].id);
+        })
+        .catch(() => {});
+    } else if (isOperator && session?.user.organizationId) {
       fetch(`/api/canali?organizationId=${session.user.organizationId}`)
         .then((r) => r.json())
         .then((d) => {
@@ -43,7 +55,7 @@ export default function CartSidebar() {
         })
         .catch(() => {});
     }
-  }, [isOperator, session?.user.organizationId]);
+  }, [isOperator, preview, session?.user.organizationId]);
 
   // Suggestions
   const productIds = items.map((i) => i.productId).join(',');
@@ -235,7 +247,11 @@ export default function CartSidebar() {
             )}
 
             <div className="px-4 pb-4 flex-shrink-0">
-              {hasWarnings ? (
+              {preview ? (
+                <div className="w-full py-2.5 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
+                  Non puoi creare ordini in modalità anteprima
+                </div>
+              ) : hasWarnings ? (
                 <div className="w-full py-2.5 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
                   {t('fixLots')}
                 </div>

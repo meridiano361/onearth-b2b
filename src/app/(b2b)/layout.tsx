@@ -2,9 +2,12 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { authOptions } from '@/lib/auth';
+import { getPreviewFromSession } from '@/lib/preview';
 import Header from '@/components/layout/Header';
 import CartSidebar from '@/components/cart/CartSidebar';
 import MobileNav from '@/components/layout/MobileNav';
+import PreviewBanner from '@/components/layout/PreviewBanner';
+import { PreviewProvider } from '@/contexts/PreviewContext';
 
 // Paths where the cart sidebar should not be shown
 const SIDEBAR_HIDDEN_PATHS = ['/catalog/orders', '/orders', '/catalog/canali'];
@@ -25,25 +28,39 @@ export default async function B2BLayout({
     (p) => pathname === p || pathname.startsWith(p + '/')
   );
 
+  const previewData = getPreviewFromSession(session);
+  const previewInfo = previewData
+    ? {
+        organizationId: previewData.organizationId,
+        operatorId: previewData.operatorId,
+        orgName: previewData.orgName,
+        operatorName: previewData.operatorName,
+      }
+    : null;
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header session={session} />
-
-      <div className="flex flex-1 overflow-hidden">
-        <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
-          {children}
-        </main>
-
-        {/* Cart sidebar — desktop only, hidden on orders pages */}
-        {!hideSidebar && (
-          <aside className="hidden lg:block w-80 xl:w-[340px] border-l border-border flex-shrink-0 bg-white overflow-y-auto">
-            <CartSidebar />
-          </aside>
+    <PreviewProvider value={previewInfo}>
+      <div className="min-h-screen bg-background flex flex-col">
+        {previewInfo && (
+          <PreviewBanner orgName={previewInfo.orgName} operatorName={previewInfo.operatorName} />
         )}
+        <Header session={session} />
+
+        <div className="flex flex-1 overflow-hidden">
+          <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+            {children}
+          </main>
+
+          {/* Cart sidebar — desktop only, hidden on orders pages */}
+          {!hideSidebar && (
+            <aside className="hidden lg:block w-80 xl:w-[340px] border-l border-border flex-shrink-0 bg-white overflow-y-auto">
+              <CartSidebar />
+            </aside>
+          )}
+        </div>
+
+        <MobileNav />
       </div>
-
-      <MobileNav />
-
-    </div>
+    </PreviewProvider>
   );
 }
