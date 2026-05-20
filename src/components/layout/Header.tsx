@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
-import { LogOut, HelpCircle, Heart } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -32,14 +32,6 @@ export default function Header({ session }: HeaderProps) {
         />
       </Link>
 
-      {/* Divider + Collection badge — hidden on small phones */}
-      <div className="hidden sm:flex items-center gap-3">
-        <div className="h-5 w-px bg-border" />
-        <span className="text-2xs tracking-widest uppercase text-gray-400 font-medium">
-          CASA 2027
-        </span>
-      </div>
-
       {/* Nav links — desktop */}
       <nav className="hidden md:flex items-center gap-1">
         <Link
@@ -56,13 +48,12 @@ export default function Header({ session }: HeaderProps) {
         <Link
           href="/catalog/preferiti"
           className={cn(
-            'text-xs px-3 py-1.5 rounded transition-colors flex items-center gap-1',
+            'text-xs px-3 py-1.5 rounded transition-colors',
             pathname.startsWith('/catalog/preferiti')
               ? 'text-primary font-semibold bg-cream'
               : 'text-gray-400 hover:text-primary hover:bg-cream'
           )}
         >
-          <Heart size={12} />
           {t('favorites')}
         </Link>
         <Link
@@ -90,13 +81,12 @@ export default function Header({ session }: HeaderProps) {
         <Link
           href="/catalog/assistenza"
           className={cn(
-            'text-xs px-3 py-1.5 rounded transition-colors flex items-center gap-1',
+            'text-xs px-3 py-1.5 rounded transition-colors',
             pathname.startsWith('/catalog/assistenza')
               ? 'text-primary font-semibold bg-cream'
               : 'text-gray-400 hover:text-primary hover:bg-cream'
           )}
         >
-          <HelpCircle size={12} />
           {t('assistance')}
         </Link>
       </nav>

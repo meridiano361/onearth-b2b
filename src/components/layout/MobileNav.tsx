@@ -1,26 +1,60 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, LayoutGrid, Heart, ShoppingCart, Menu, X, Package, Store, HelpCircle, LogOut } from 'lucide-react';
+import { Home, LayoutGrid, Heart, Package, MapPin, HelpCircle, X, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { signOut } from 'next-auth/react';
-import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { cn, formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import CartSidebar from '@/components/cart/CartSidebar';
 
 export default function MobileNav() {
-  const [cartOpen, setCartOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [ordersOpen, setOrdersOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'current' | 'saved'>('current');
   const pathname = usePathname();
   const { getTotalItems } = useCartStore();
   const totalItems = getTotalItems();
   const tn = useTranslations('nav');
 
+  useEffect(() => {
+    setOrdersOpen(false);
+  }, [pathname]);
+
   const isHome = pathname === '/catalog' || pathname === '/home';
   const isCatalog = pathname.startsWith('/catalog/products');
   const isFavorites = pathname.startsWith('/catalog/preferiti');
+  const isOrders = pathname.startsWith('/catalog/orders') || ordersOpen;
+  const isDestinazioni = pathname.startsWith('/catalog/destinazioni');
+  const isAssistenza = pathname.startsWith('/catalog/assistenza');
+
+  const { data: ordersData, isLoading: ordersLoading } = useQuery({
+    queryKey: ['mobile-saved-orders'],
+    queryFn: async () => {
+      const res = await fetch('/api/orders?limit=8');
+      if (!res.ok) return [];
+      return (await res.json()).data ?? [];
+    },
+    enabled: ordersOpen && activeTab === 'saved',
+    staleTime: 30_000,
+  });
+
+  const savedOrders: any[] = ordersData ?? [];
+
+  function navCls(active: boolean) {
+    return cn(
+      'flex-1 flex flex-col items-center justify-center gap-0.5 py-3 transition-colors',
+      active ? 'text-gray-900 font-semibold' : 'text-gray-400'
+    );
+  }
+
+  function tabCls(active: boolean) {
+    return cn(
+      'flex-1 py-2.5 text-xs font-medium border-b-2 transition-colors flex items-center justify-center gap-1.5',
+      active ? 'text-gray-900 border-gray-900' : 'text-gray-400 border-transparent'
+    );
+  }
 
   return (
     <>
@@ -30,160 +64,130 @@ export default function MobileNav() {
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-stretch">
-          {/* Home */}
-          <Link
-            href="/catalog"
-            className={cn(
-              'flex-1 flex flex-col items-center justify-center gap-0.5 py-3 text-xs transition-colors',
-              isHome ? 'text-primary font-semibold' : 'text-gray-400'
-            )}
-          >
+          <Link href="/catalog" className={navCls(isHome)}>
             <Home size={20} />
-            <span className="text-2xs tracking-wide">{tn('home')}</span>
+            <span className="text-2xs">Home</span>
           </Link>
 
-          {/* Catalogo */}
-          <Link
-            href="/catalog/products"
-            className={cn(
-              'flex-1 flex flex-col items-center justify-center gap-0.5 py-3 text-xs transition-colors',
-              isCatalog ? 'text-primary font-semibold' : 'text-gray-400'
-            )}
-          >
+          <Link href="/catalog/products" className={navCls(isCatalog)}>
             <LayoutGrid size={20} />
-            <span className="text-2xs tracking-wide">{tn('catalog')}</span>
+            <span className="text-2xs">{tn('catalog')}</span>
           </Link>
 
-          {/* Preferiti */}
-          <Link
-            href="/catalog/preferiti"
-            className={cn(
-              'flex-1 flex flex-col items-center justify-center gap-0.5 py-3 text-xs transition-colors',
-              isFavorites ? 'text-primary font-semibold' : 'text-gray-400'
-            )}
-          >
-            <Heart size={20} className={isFavorites ? 'fill-primary' : ''} />
-            <span className="text-2xs tracking-wide">{tn('favorites')}</span>
+          <Link href="/catalog/preferiti" className={navCls(isFavorites)}>
+            <Heart size={20} className={isFavorites ? 'fill-gray-900' : ''} />
+            <span className="text-2xs">{tn('favorites')}</span>
           </Link>
 
-          {/* Ordine (cart) */}
           <button
-            onClick={() => setCartOpen(true)}
-            className={cn(
-              'flex-1 flex flex-col items-center justify-center gap-0.5 py-3 text-xs relative transition-colors',
-              totalItems > 0 ? 'text-primary font-semibold' : 'text-gray-400'
-            )}
+            onClick={() => { setOrdersOpen(true); setActiveTab('current'); }}
+            className={navCls(isOrders)}
           >
             <div className="relative">
-              <ShoppingCart size={20} />
+              <Package size={20} />
               {totalItems > 0 && (
-                <span className="absolute -top-1.5 -right-2 bg-accent text-white text-2xs font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
+                <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-2xs font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
                   {totalItems > 99 ? '99+' : totalItems}
                 </span>
               )}
             </div>
-            <span className="text-2xs tracking-wide">{tn('orderTab')}</span>
+            <span className="text-2xs">{tn('orders')}</span>
           </button>
 
-          {/* Menu */}
-          <button
-            onClick={() => setMenuOpen(true)}
-            className={cn(
-              'flex-1 flex flex-col items-center justify-center gap-0.5 py-3 text-xs transition-colors',
-              menuOpen ? 'text-primary font-semibold' : 'text-gray-400'
-            )}
-          >
-            <Menu size={20} />
-            <span className="text-2xs tracking-wide">{tn('menu')}</span>
-          </button>
+          <Link href="/catalog/destinazioni" className={navCls(isDestinazioni)}>
+            <MapPin size={20} />
+            <span className="text-2xs">{tn('channels')}</span>
+          </Link>
+
+          <Link href="/catalog/assistenza" className={navCls(isAssistenza)}>
+            <HelpCircle size={20} />
+            <span className="text-2xs">{tn('assistance')}</span>
+          </Link>
         </div>
       </nav>
 
-      {/* Cart drawer */}
-      {cartOpen && (
+      {/* Orders drawer */}
+      {ordersOpen && (
         <div className="md:hidden fixed inset-0 z-40">
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setCartOpen(false)}
+            onClick={() => setOrdersOpen(false)}
           />
           <div
-            className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[92vh] flex flex-col shadow-luxury-xl animate-slide-up"
+            className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[85vh] flex flex-col shadow-luxury-xl animate-slide-up"
             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
-            <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0 border-b border-border">
-              <span className="text-xs font-semibold text-primary uppercase tracking-widest">{tn('orderDrawer')}</span>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0 border-b border-border">
+              <span className="text-xs font-semibold text-primary uppercase tracking-widest">Ordini</span>
               <button
-                onClick={() => setCartOpen(false)}
+                onClick={() => setOrdersOpen(false)}
                 className="text-gray-400 hover:text-primary transition-colors p-1"
               >
                 <X size={18} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              <CartSidebar />
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Menu drawer */}
-      {menuOpen && (
-        <div className="md:hidden fixed inset-0 z-40">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setMenuOpen(false)}
-          />
-          <div
-            className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-luxury-xl animate-slide-up"
-            style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-          >
-            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border">
-              <span className="text-xs font-semibold text-primary uppercase tracking-widest">{tn('menu')}</span>
-              <button onClick={() => setMenuOpen(false)} className="text-gray-400 hover:text-primary transition-colors p-1">
-                <X size={18} />
+            {/* Tabs */}
+            <div className="flex border-b border-border flex-shrink-0">
+              <button className={tabCls(activeTab === 'current')} onClick={() => setActiveTab('current')}>
+                Ordine corrente
+                {totalItems > 0 && (
+                  <span className="bg-primary text-white text-2xs px-1.5 py-0.5 rounded-full leading-none">
+                    {totalItems}
+                  </span>
+                )}
+              </button>
+              <button className={tabCls(activeTab === 'saved')} onClick={() => setActiveTab('saved')}>
+                I miei ordini
               </button>
             </div>
-            <div className="py-2">
-              <Link
-                href="/catalog/orders"
-                onClick={() => setMenuOpen(false)}
-                className={cn(
-                  'flex items-center gap-3 px-5 py-4 text-sm transition-colors',
-                  pathname.startsWith('/catalog/orders') ? 'text-primary font-semibold bg-cream' : 'text-gray-600 hover:bg-cream'
-                )}
-              >
-                <Package size={18} />
-                {tn('orders')}
-              </Link>
-              <Link
-                href="/catalog/destinazioni"
-                onClick={() => setMenuOpen(false)}
-                className={cn(
-                  'flex items-center gap-3 px-5 py-4 text-sm transition-colors',
-                  pathname.startsWith('/catalog/destinazioni') ? 'text-primary font-semibold bg-cream' : 'text-gray-600 hover:bg-cream'
-                )}
-              >
-                <Store size={18} />
-                {tn('channels')}
-              </Link>
-              <Link
-                href="/catalog/assistenza"
-                onClick={() => setMenuOpen(false)}
-                className={cn(
-                  'flex items-center gap-3 px-5 py-4 text-sm transition-colors',
-                  pathname.startsWith('/catalog/assistenza') ? 'text-primary font-semibold bg-cream' : 'text-gray-600 hover:bg-cream'
-                )}
-              >
-                <HelpCircle size={18} />
-                {tn('assistance')}
-              </Link>
-              <button
-                onClick={() => signOut({ callbackUrl: '/login' })}
-                className="w-full flex items-center gap-3 px-5 py-4 text-sm text-gray-600 hover:bg-cream transition-colors border-t border-border mt-1"
-              >
-                <LogOut size={18} />
-                {tn('logout')}
-              </button>
+
+            {/* Tab content */}
+            <div className="flex-1 overflow-y-auto">
+              {activeTab === 'current' ? (
+                <CartSidebar />
+              ) : ordersLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 size={24} className="animate-spin text-gray-300" />
+                </div>
+              ) : savedOrders.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+                  <Package size={32} className="text-gray-200 mb-3" />
+                  <p className="text-sm text-gray-400 font-light">Nessun ordine trovato</p>
+                </div>
+              ) : (
+                <div className="px-4 py-3 space-y-2">
+                  {savedOrders.map((order) => (
+                    <Link
+                      key={order.id}
+                      href="/catalog/orders"
+                      onClick={() => setOrdersOpen(false)}
+                      className="flex items-center justify-between p-3 rounded border border-border hover:border-primary/30 hover:bg-cream transition-colors"
+                    >
+                      <div>
+                        <p className="text-xs font-medium text-primary">
+                          #{(order.orderNumber ?? order.id.slice(-6)).toUpperCase()}
+                        </p>
+                        <p className="text-2xs text-gray-400">
+                          {new Date(order.createdAt).toLocaleDateString('it-IT')}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-medium text-primary">{formatCurrency(order.totalValue)}</p>
+                        <p className="text-2xs text-gray-400">{order.totalItems} prodotti</p>
+                      </div>
+                    </Link>
+                  ))}
+                  <Link
+                    href="/catalog/orders"
+                    onClick={() => setOrdersOpen(false)}
+                    className="block w-full text-center py-2.5 text-xs text-primary font-medium border border-primary/30 rounded hover:bg-cream transition-colors mt-2"
+                  >
+                    Vedi tutti gli ordini →
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
