@@ -97,8 +97,8 @@ export default function CustomerHome() {
           )}
         </section>
 
-        {/* ── Section 3 — Scopri ON EARTH ────────────────────── */}
-        <section className="border-t border-border/50 pt-6 pb-4">
+        {/* ── Section 3 — Esplora l'ecosistema ON EARTH ──────── */}
+        <section className="bg-white rounded-xl shadow-sm border border-gray-100 py-8 px-6">
           <p className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide mb-5">
             {th('discoverTitle')}
           </p>
