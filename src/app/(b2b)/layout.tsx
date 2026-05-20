@@ -30,7 +30,7 @@ export default async function B2BLayout({
       <Header session={session} />
 
       <div className="flex flex-1 overflow-hidden">
-        <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
+        <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
           {children}
         </main>
 

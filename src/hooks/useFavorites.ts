@@ -18,7 +18,7 @@ export function useFavorites() {
   const toggle = useMutation({
     mutationFn: async (productId: string) => {
       if (ids.includes(productId)) {
-        await fetch(`/api/catalog/favorites?productId=${productId}`, { method: 'DELETE' });
+        await fetch(`/api/catalog/favorites/${productId}`, { method: 'DELETE' });
       } else {
         await fetch('/api/catalog/favorites', {
           method: 'POST',

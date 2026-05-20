@@ -68,12 +68,12 @@ export default function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
 
-          {/* Heart / favorite */}
+          {/* Heart / favorite — top-right */}
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(product.id); }}
             className={cn(
-              'absolute top-2 left-2 bg-white/80 backdrop-blur-sm rounded-full p-1.5 transition-opacity',
-              isFavorited(product.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              'absolute top-2 right-2 bg-white/80 backdrop-blur-sm rounded-full p-1.5 transition-all duration-150 active:scale-90',
+              isFavorited(product.id) ? 'opacity-100 scale-110' : 'opacity-0 group-hover:opacity-100'
             )}
           >
             <Heart
@@ -82,9 +82,12 @@ export default function ProductCard({ product }: ProductCardProps) {
             />
           </button>
 
-          {/* In-cart overlay */}
+          {/* In-cart overlay — shown left when favorited, right otherwise */}
           {inCart && (
-            <div className="absolute top-2 right-2 bg-accent rounded-full p-1">
+            <div className={cn(
+              'absolute top-2 bg-accent rounded-full p-1',
+              isFavorited(product.id) ? 'left-2' : 'right-2'
+            )}>
               <Check size={10} className="text-white" />
             </div>
           )}

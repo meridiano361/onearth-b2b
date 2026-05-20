@@ -26,7 +26,7 @@ export default function MobileNav() {
     <>
       {/* Bottom tab bar */}
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-30"
+        className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-30"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-stretch">
@@ -101,7 +101,7 @@ export default function MobileNav() {
 
       {/* Cart drawer */}
       {cartOpen && (
-        <div className="lg:hidden fixed inset-0 z-40">
+        <div className="md:hidden fixed inset-0 z-40">
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setCartOpen(false)}
@@ -128,7 +128,7 @@ export default function MobileNav() {
 
       {/* Menu drawer */}
       {menuOpen && (
-        <div className="lg:hidden fixed inset-0 z-40">
+        <div className="md:hidden fixed inset-0 z-40">
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setMenuOpen(false)}
