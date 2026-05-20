@@ -157,12 +157,12 @@ export default function CustomerHome() {
         </section>
 
         {/* ── Esplora l'ecosistema ON EARTH ───────────────────── */}
-        <section>
+        <section className="!mb-0">
           <p className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide mb-4 whitespace-nowrap">
             {th('discoverTitle')}
           </p>
 
-          <div className="bg-black rounded-xl p-5">
+          <div className="bg-black rounded-xl px-5 pt-5 pb-4">
             {/* Row 1: IG + FB a sinistra | on-earth.it a destra */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
