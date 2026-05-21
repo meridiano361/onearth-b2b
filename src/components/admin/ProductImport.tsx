@@ -66,6 +66,36 @@ const COLUMN_ALIASES: Record<string, string[]> = {
   sottofamiglia:      ['sottofamiglia', 'subfamily', 'sub_family', 'sub_categoria'],
 };
 
+const FIELD_LABELS: Record<string, string> = {
+  code:               'Codice',
+  name:               'Nome',
+  costPrice:          'Prezzo costo i.e.',
+  retailPrice:        'Prezzo vendita i.i.',
+  produttore:         'Produttore',
+  misura:             'Misure',
+  gruppoMerceologico: 'Gruppo merceologico',
+  famiglia:           'Famiglia',
+  classe:             'Classe',
+  sottoclasse:        'Sottoclasse',
+  gruppoOmogeneo:     'Gruppo omogeneo',
+  nomLinea:           'Linea',
+  stagione:           'Stagione',
+  collezione:         'Collezione',
+  colore:             'Colore',
+  temaColore:         'Tema colore',
+  lotSize:            'Confezione',
+  iva:                'IVA (%)',
+  fasciaRicarico:     'Fascia di ricarico',
+  fasciaSconto:       'Fascia di sconto',
+  tranche:            'Tranche',
+  notes:              'Note',
+  isActive:           'Attivo',
+  description:        'Descrizione',
+  category:           'Categoria',
+  imageUrl:           'URL Immagine',
+  sottofamiglia:      'Sottofamiglia',
+};
+
 function mapColumn(headers: string[]): Record<string, string> {
   const mapping: Record<string, string> = {};
   for (const [field, aliases] of Object.entries(COLUMN_ALIASES)) {
@@ -277,8 +307,8 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
         <div className="space-y-2 mb-6">
           {allFields.map((field) => (
             <div key={field} className="flex items-center gap-3">
-              <span className="text-xs w-28 flex-shrink-0">
-                {field}
+              <span className="text-xs w-44 flex-shrink-0">
+                {FIELD_LABELS[field] ?? field}
                 {requiredFields.includes(field) && <span className="text-red-400"> *</span>}
               </span>
               <select
