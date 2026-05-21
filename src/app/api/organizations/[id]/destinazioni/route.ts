@@ -6,9 +6,11 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
 const createSchema = z.object({
-  nome: z.string().min(1),
+  nome: z.string().min(1).optional().nullable(),
   tipo: z.enum(['BOTTEGA', 'EMPORIO', 'DISTRETTO', 'STORE', 'OUTLET', 'TENDONE', 'FIERA', 'ONLINE', 'ALTRO']).default('BOTTEGA'),
   citta: z.string().optional().nullable(),
+  indirizzo: z.string().optional().nullable(),
+  budget: z.number().min(0).optional().nullable(),
 });
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -36,11 +38,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const body = await req.json();
   const data = createSchema.parse(body);
 
+  const nome = data.nome?.trim() || (data.citta?.trim() ? `${data.tipo} — ${data.citta.trim()}` : data.tipo);
+
   const canale = await prisma.canale.create({
     data: {
-      nome: data.nome.trim(),
+      nome,
       tipo: data.tipo,
-      citta: data.citta || null,
+      citta: data.citta?.trim() || null,
+      indirizzo: data.indirizzo?.trim() || null,
+      budget: data.budget ?? null,
       organizationId: params.id,
     },
   });

@@ -28,7 +28,7 @@ export default function CartSidebar() {
   const [showDestinazioneModal, setShowDestinazioneModal] = useState(false);
   const [selectedDestinazioneId, setSelectedDestinazioneId] = useState('');
   const [showCreateDestModal, setShowCreateDestModal] = useState(false);
-  const [createDestForm, setCreateDestForm] = useState<{ tipo: string; citta: string }>({ tipo: 'BOTTEGA', citta: '' });
+  const [createDestForm, setCreateDestForm] = useState<{ tipo: string; citta: string; indirizzo: string; budget: string }>({ tipo: 'BOTTEGA', citta: '', indirizzo: '', budget: '' });
   const [creatingDest, setCreatingDest] = useState(false);
   const t = useTranslations('cart');
   const ts = useTranslations('cartSummary');
@@ -120,6 +120,8 @@ export default function CartSidebar() {
         body: JSON.stringify({
           tipo: createDestForm.tipo,
           citta: createDestForm.citta.trim() || null,
+          indirizzo: createDestForm.indirizzo.trim() || null,
+          budget: createDestForm.budget.trim() ? parseFloat(createDestForm.budget) : null,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Errore');
@@ -313,14 +315,18 @@ export default function CartSidebar() {
             <p className="text-xs text-gray-400 mb-4">Per creare un ordine devi prima attivare una destinazione (punto vendita).</p>
             <div className="space-y-3 mb-4">
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Tipo</label>
+                <label className="text-xs font-medium text-gray-600 mb-1 block uppercase tracking-wide">Tipo *</label>
                 <select
                   value={createDestForm.tipo}
                   onChange={(e) => setCreateDestForm((f) => ({ ...f, tipo: e.target.value }))}
                   className="w-full px-3 py-2 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent"
                 >
                   <option value="BOTTEGA">Bottega</option>
-                  <option value="MERCATO">Mercato</option>
+                  <option value="EMPORIO">Emporio</option>
+                  <option value="DISTRETTO">Distretto</option>
+                  <option value="STORE">Store</option>
+                  <option value="OUTLET">Outlet</option>
+                  <option value="TENDONE">Tendone</option>
                   <option value="FIERA">Fiera</option>
                   <option value="ONLINE">Online</option>
                   <option value="ALTRO">Altro</option>
@@ -335,6 +341,31 @@ export default function CartSidebar() {
                   placeholder="es. Milano"
                   className="w-full px-3 py-2 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent"
                 />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Indirizzo <span className="text-gray-300">(opzionale)</span></label>
+                <input
+                  type="text"
+                  value={createDestForm.indirizzo}
+                  onChange={(e) => setCreateDestForm((f) => ({ ...f, indirizzo: e.target.value }))}
+                  placeholder="es. Via Roma 10"
+                  className="w-full px-3 py-2 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Budget acquisto € <span className="text-gray-300">(opzionale)</span></label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={createDestForm.budget}
+                    onChange={(e) => setCreateDestForm((f) => ({ ...f, budget: e.target.value }))}
+                    placeholder="es. 5000"
+                    className="w-full pl-7 pr-3 py-2 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent"
+                  />
+                </div>
               </div>
             </div>
             <button

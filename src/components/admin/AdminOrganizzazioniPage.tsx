@@ -247,9 +247,10 @@ function DestinazioneModal({ isOpen, onClose, onSave, destinazione, orgId }: {
   destinazione?: Destinazione; orgId: string;
 }) {
   const isEdit = !!destinazione;
-  const [nome, setNome] = useState(destinazione?.nome || '');
   const [tipo, setTipo] = useState<DestinazioneTipo>(destinazione?.tipo || 'BOTTEGA');
   const [citta, setCitta] = useState(destinazione?.citta || '');
+  const [indirizzo, setIndirizzo] = useState(destinazione?.indirizzo || '');
+  const [budget, setBudget] = useState(destinazione?.budget != null ? String(destinazione.budget) : '');
   const [saving, setSaving] = useState(false);
 
   async function handleSave() {
@@ -259,7 +260,11 @@ function DestinazioneModal({ isOpen, onClose, onSave, destinazione, orgId }: {
       const method = isEdit ? 'PATCH' : 'POST';
       const res = await fetch(url, {
         method, headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, tipo, citta: citta || null }),
+        body: JSON.stringify({
+          tipo, citta: citta.trim() || null,
+          indirizzo: indirizzo.trim() || null,
+          budget: budget.trim() ? parseFloat(budget) : null,
+        }),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
       toast.success(isEdit ? 'Destinazione aggiornata' : 'Destinazione creata');
@@ -274,9 +279,8 @@ function DestinazioneModal({ isOpen, onClose, onSave, destinazione, orgId }: {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Modifica Destinazione' : 'Nuova Destinazione'} size="sm">
       <div className="space-y-3">
-        <Input label="Nome *" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Bottega Centro" />
         <div>
-          <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">Tipo</label>
+          <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">Tipo *</label>
           <select value={tipo} onChange={(e) => setTipo(e.target.value as DestinazioneTipo)}
             className="w-full px-4 py-2.5 bg-white border border-border rounded text-sm focus:outline-none focus:border-accent">
             {(Object.keys(TIPO_LABELS) as DestinazioneTipo[]).map((t) => (
@@ -285,6 +289,19 @@ function DestinazioneModal({ isOpen, onClose, onSave, destinazione, orgId }: {
           </select>
         </div>
         <Input label="Città" value={citta} onChange={(e) => setCitta(e.target.value)} placeholder="Milano" />
+        <Input label="Indirizzo" value={indirizzo} onChange={(e) => setIndirizzo(e.target.value)} placeholder="Via Roma 10" />
+        <div>
+          <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">Budget acquisto €</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+            <input
+              type="number" min="0" step="100"
+              value={budget} onChange={(e) => setBudget(e.target.value)}
+              placeholder="es. 5000"
+              className="w-full pl-7 pr-4 py-2.5 bg-white border border-border rounded text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-accent"
+            />
+          </div>
+        </div>
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="ghost" onClick={onClose}>Annulla</Button>
           <Button onClick={handleSave} loading={saving}>{isEdit ? 'Salva' : 'Crea'}</Button>

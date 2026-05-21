@@ -15,6 +15,7 @@ const updateSchema = z.object({
     'ESPORTATO',
   ]).optional(),
   notes: z.string().optional().nullable(),
+  canaleId: z.string().optional().nullable(),
 });
 
 const FILL_MERCE_STATUSES = new Set([
@@ -102,9 +103,11 @@ export async function PATCH(
     const body = await req.json();
     const data = updateSchema.parse(body);
 
-    // Operators/customers can only mark their own orders as ESPORTATO
+    // Operators/customers can only: mark order as ESPORTATO, or change canaleId
     if (session.user.role === 'OPERATOR' || session.user.role === 'CUSTOMER') {
-      if (data.status !== 'ESPORTATO') {
+      const isChangingCanale = data.canaleId !== undefined && !data.status;
+      const isMarkingExported = data.status === 'ESPORTATO';
+      if (!isChangingCanale && !isMarkingExported) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       const orderCheck = await prisma.order.findUnique({
@@ -118,9 +121,19 @@ export async function PATCH(
       if (session.user.role === 'CUSTOMER' && orderCheck.customerId !== session.user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
+
+      if (isChangingCanale && data.canaleId && session.user.organizationId) {
+        const canale = await prisma.canale.findFirst({
+          where: { id: data.canaleId, organizationId: session.user.organizationId },
+          select: { id: true },
+        });
+        if (!canale) return NextResponse.json({ error: 'Destinazione non trovata' }, { status: 404 });
+      }
+
+      const updatePayload: any = isMarkingExported ? { status: 'ESPORTATO' } : { canaleId: data.canaleId };
       const updated = await prisma.order.update({
         where: { id: params.id },
-        data: { status: 'ESPORTATO' },
+        data: updatePayload,
         include: {
           customer: { select: { id: true, companyName: true, customerCode: true, email: true, createdAt: true } },
           organization: { select: { id: true, nome: true, createdAt: true } },

@@ -2,13 +2,14 @@
 
 import { useState, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, CheckCircle, Minus, Plus, X, Database, Search, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle, Minus, Plus, X, Database, Search, Loader2, MapPin, Copy } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import type { Order, OrderItem, Product } from '@/types';
+import type { Order, OrderItem, Product, Destinazione } from '@/types';
 
 // ── Grouping options ───────────────────────────────────────────
 const GROUPING_KEYS = [
@@ -278,6 +279,7 @@ function AddProductsModal({
 // ── Main view ──────────────────────────────────────────────────
 export default function OrderPreviewView({ id }: { id: string }) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const t = useTranslations('preview');
   const tg = useTranslations('groupings');
 
@@ -290,6 +292,24 @@ export default function OrderPreviewView({ id }: { id: string }) {
   const [exportingDemetra, setExportingDemetra] = useState(false);
   const [addProductsOpen, setAddProductsOpen] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
+
+  // ── Change destination ─────────────────────────────────────
+  const [showChangeDestModal, setShowChangeDestModal] = useState(false);
+  const [newCanaleId, setNewCanaleId] = useState('');
+  const [changingDest, setChangingDest] = useState(false);
+
+  // ── Duplicate order ────────────────────────────────────────
+  const [showDupModal, setShowDupModal] = useState(false);
+  const [dupCanaleId, setDupCanaleId] = useState('');
+  const [duplicating, setDuplicating] = useState(false);
+
+  const { data: destData } = useQuery<{ data: Destinazione[] }>({
+    queryKey: ['catalog-destinazioni-preview'],
+    queryFn: () => fetch('/api/catalog/destinazioni').then((r) => r.json()),
+    enabled: showChangeDestModal || showDupModal,
+    staleTime: 60_000,
+  });
+  const destinazioni = destData?.data ?? [];
 
   const { data: order, isLoading, error } = useQuery<Order>({
     queryKey: ['order-preview', id],
@@ -438,6 +458,51 @@ export default function OrderPreviewView({ id }: { id: string }) {
     }
   }
 
+  async function handleChangeDest() {
+    setChangingDest(true);
+    try {
+      const res = await fetch(`/api/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ canaleId: newCanaleId || null }),
+      });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      setShowChangeDestModal(false);
+      toast.success('Destinazione aggiornata');
+    } catch {
+      toast.error('Errore nell\'aggiornamento della destinazione');
+    } finally {
+      setChangingDest(false);
+    }
+  }
+
+  async function handleDuplicate() {
+    if (!dupCanaleId) return;
+    setDuplicating(true);
+    try {
+      const orderItems = (order?.items ?? []).map((i: any) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+      }));
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: orderItems, canaleId: dupCanaleId }),
+      });
+      if (!res.ok) throw new Error();
+      const { data: newOrder } = await res.json();
+      toast.success('Ordine duplicato con successo');
+      router.push(`/catalog/orders/${newOrder.id}/preview`);
+    } catch {
+      toast.error('Errore nella duplicazione dell\'ordine');
+    } finally {
+      setDuplicating(false);
+    }
+  }
+
   const currentGroupLabel = GROUPINGS.find((g) => g.value === groupBy)?.label ?? '';
 
   // ── Loading / error states ─────────────────────────────────
@@ -471,6 +536,82 @@ export default function OrderPreviewView({ id }: { id: string }) {
             queryClient.invalidateQueries({ queryKey: ['my-orders'] });
           }}
         />
+      )}
+
+      {/* Change destination modal */}
+      {showChangeDestModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowChangeDestModal(false)} />
+          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 z-10">
+            <h3 className="text-sm font-semibold text-primary mb-1 tracking-wide">Cambia destinazione</h3>
+            <p className="text-xs text-gray-400 mb-3">Seleziona la destinazione da associare a questo ordine.</p>
+            <select
+              value={newCanaleId}
+              onChange={(e) => setNewCanaleId(e.target.value)}
+              className="w-full px-3 py-2.5 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent mb-4"
+            >
+              <option value="">— Nessuna —</option>
+              {destinazioni.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.tipo}{d.citta ? ` · ${d.citta}` : ''}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowChangeDestModal(false)}
+                className="flex-1 py-2 text-xs border border-border rounded text-gray-500 hover:bg-cream transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleChangeDest}
+                disabled={changingDest}
+                className="flex-1 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {changingDest ? <Loader2 size={11} className="animate-spin" /> : 'Salva'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate order modal */}
+      {showDupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDupModal(false)} />
+          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 z-10">
+            <h3 className="text-sm font-semibold text-primary mb-1 tracking-wide">Duplica ordine</h3>
+            <p className="text-xs text-gray-400 mb-3">Seleziona la destinazione per il nuovo ordine.</p>
+            <select
+              value={dupCanaleId}
+              onChange={(e) => setDupCanaleId(e.target.value)}
+              className="w-full px-3 py-2.5 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent mb-4"
+            >
+              <option value="">— Seleziona destinazione —</option>
+              {destinazioni.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.tipo}{d.citta ? ` · ${d.citta}` : ''}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDupModal(false)}
+                className="flex-1 py-2 text-xs border border-border rounded text-gray-500 hover:bg-cream transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleDuplicate}
+                disabled={duplicating || !dupCanaleId}
+                className="flex-1 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {duplicating ? <Loader2 size={11} className="animate-spin" /> : <><Copy size={11} /> Duplica</>}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Page header ──────────────────────────────────── */}
@@ -524,6 +665,24 @@ export default function OrderPreviewView({ id }: { id: string }) {
           ))}
         </div>
       </div>
+
+      {/* ── Destination info bar ──────────────────────────── */}
+      {order.destinazione && (
+        <div className="px-4 sm:px-6 py-2 bg-cream/50 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+            <MapPin size={11} className="text-gray-400 flex-shrink-0" />
+            <span>{order.destinazione.tipo}{order.destinazione.citta ? ` · ${order.destinazione.citta}` : ''}</span>
+          </div>
+          {order.status !== 'ESPORTATO' && (
+            <button
+              onClick={() => { setNewCanaleId(order.canaleId ?? ''); setShowChangeDestModal(true); }}
+              className="text-xs text-accent hover:text-accent/80 transition-colors flex-shrink-0"
+            >
+              Cambia
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── Content ───────────────────────────────────────── */}
       <div className="flex-1 px-4 sm:px-6 py-6 pb-32 lg:pb-24">
@@ -616,6 +775,15 @@ export default function OrderPreviewView({ id }: { id: string }) {
                 {exporting ? t('generating') : `PDF · ${currentGroupLabel}`}
               </span>
               <span className="sm:hidden">PDF</span>
+            </button>
+
+            {/* Duplica ordine */}
+            <button
+              onClick={() => { setDupCanaleId(order.canaleId ?? ''); setShowDupModal(true); }}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded hover:bg-cream transition-colors text-gray-600 hover:text-primary flex-shrink-0"
+            >
+              <Copy size={12} />
+              <span className="hidden sm:inline">Duplica</span>
             </button>
 
             {/* Esporta in Demetra — primary CTA */}
