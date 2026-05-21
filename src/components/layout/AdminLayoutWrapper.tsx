@@ -19,10 +19,10 @@ export default function AdminLayoutWrapper({ children }: { children: React.React
         />
       )}
 
-      {/* Sidebar — fixed on mobile (slide in), static on desktop */}
+      {/* Sidebar — always fixed, slides in on mobile */}
       <div
         className={cn(
-          'fixed lg:relative inset-y-0 left-0 z-50 w-56 flex-shrink-0 transition-transform duration-300 ease-out',
+          'fixed inset-y-0 left-0 z-50 w-56 flex-shrink-0 transition-transform duration-300 ease-out',
           'lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
@@ -30,8 +30,8 @@ export default function AdminLayoutWrapper({ children }: { children: React.React
         <AdminSidebar onClose={() => setSidebarOpen(false)} />
       </div>
 
-      {/* Main area */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
+      {/* Main area — offset by sidebar width on desktop */}
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-56">
         {/* Mobile top bar */}
         <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-primary border-b border-white/10 flex-shrink-0">
           <button

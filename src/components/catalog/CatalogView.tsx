@@ -47,7 +47,7 @@ export default function CatalogView() {
   const [showFilters, setShowFilters]     = useState(false);
   const [filters, setFilters]             = useState<Filters>(EMPTY_FILTERS);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
-  const [sortBy, setSortBy]               = useState<'default' | 'az' | 'za' | 'price-asc' | 'price-desc'>('default');
+  const [sortBy, setSortBy]               = useState<'default' | 'az' | 'za' | 'price-asc' | 'price-desc' | 'collection-az' | 'collection-za'>('default');
   const { favoriteIds } = useFavorites();
   const tn = useTranslations('nav');
 
@@ -126,8 +126,10 @@ export default function CatalogView() {
 
     if (sortBy === 'az')         result = [...result].sort((a, b) => a.name.localeCompare(b.name, 'it'));
     else if (sortBy === 'za')    result = [...result].sort((a, b) => b.name.localeCompare(a.name, 'it'));
-    else if (sortBy === 'price-asc')  result = [...result].sort((a, b) => Number(a.costPrice) - Number(b.costPrice));
-    else if (sortBy === 'price-desc') result = [...result].sort((a, b) => Number(b.costPrice) - Number(a.costPrice));
+    else if (sortBy === 'price-asc')       result = [...result].sort((a, b) => Number(a.costPrice) - Number(b.costPrice));
+    else if (sortBy === 'price-desc')      result = [...result].sort((a, b) => Number(b.costPrice) - Number(a.costPrice));
+    else if (sortBy === 'collection-az')   result = [...result].sort((a, b) => (a.collezione ?? '').localeCompare(b.collezione ?? '', 'it'));
+    else if (sortBy === 'collection-za')   result = [...result].sort((a, b) => (b.collezione ?? '').localeCompare(a.collezione ?? '', 'it'));
 
     return result;
   }, [products, debouncedSearch, filters, onlyFavorites, favoriteIds, sortBy]);
@@ -264,6 +266,8 @@ export default function CatalogView() {
             <option value="za">Z → A</option>
             <option value="price-asc">Prezzo crescente</option>
             <option value="price-desc">Prezzo decrescente</option>
+            <option value="collection-az">Collezione A → Z</option>
+            <option value="collection-za">Collezione Z → A</option>
           </select>
 
           {/* Favorites toggle */}
