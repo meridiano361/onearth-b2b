@@ -103,7 +103,20 @@ export default function ProductCard({ product }: ProductCardProps) {
           <p className="text-2xs font-medium tracking-widest uppercase text-gray-600 mb-0.5">
             {product.code}
           </p>
-          <h3 className="text-sm font-medium text-primary leading-snug h-12 overflow-hidden">
+          <h3
+            className="text-sm font-medium text-primary"
+            style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
+              minHeight: '2.5rem',
+              maxHeight: '2.5rem',
+              lineHeight: '1.25rem',
+            }}
+          >
             {product.name}
           </h3>
         </div>

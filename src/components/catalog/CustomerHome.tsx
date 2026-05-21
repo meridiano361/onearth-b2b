@@ -72,7 +72,22 @@ function SpotlightCard({ product }: { product: Product }) {
 
       <div className="p-2 flex flex-col flex-1">
         <Link href={`/catalog/${product.id}`}>
-          <p className="text-xs text-primary leading-snug min-h-[2.5rem] mb-2">{product.name}</p>
+          <p
+            className="text-xs text-primary mb-2"
+            style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
+              minHeight: '2.5rem',
+              maxHeight: '2.5rem',
+              lineHeight: '1.25rem',
+            }}
+          >
+            {product.name}
+          </p>
         </Link>
         <button
           onClick={handleAdd}
