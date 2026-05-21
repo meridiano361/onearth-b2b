@@ -63,6 +63,7 @@ export interface Product {
   fasciaSconto: number | null;
   collezione: string | null;
   tranche: string | null;
+  paese: string | null;
   iva: number;
   createdAt: string;
   category?: Category | null;

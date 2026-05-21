@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import ManagedSelect from '@/components/admin/ManagedSelect';
+import PaeseSelect from '@/components/ui/PaeseSelect';
 import toast from 'react-hot-toast';
 import type { Product } from '@/types';
 
@@ -36,6 +37,7 @@ const schema = z
     fasciaRicarico: z.string().optional(),
     fasciaSconto: z.string().optional(),
     tranche: z.string().optional(),
+    paese: z.string().optional(),
     notes: z.string().optional(),
     imageUrl: z.string().optional(),
     isActive: z.boolean().default(true),
@@ -203,6 +205,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           fasciaRicarico: product.fasciaRicarico || '',
           fasciaSconto: product.fasciaSconto != null ? String(product.fasciaSconto) : '',
           tranche: product.tranche || '',
+          paese: product.paese || '',
           notes: product.notes || '',
           imageUrl: product.imageUrl || '',
           isActive: product.isActive,
@@ -344,6 +347,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           fasciaRicarico: v.fasciaRicarico || null,
           fasciaSconto: v.fasciaSconto ? parseFloat(v.fasciaSconto) || null : null,
           tranche: v.tranche || null,
+          paese: v.paese || null,
           notes: v.notes || null,
           imageUrl: v.imageUrl || null,
         }),
@@ -398,6 +402,11 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           onChange={(v) => setValue('produttore', v)}
         />
       </div>
+      <PaeseSelect
+        label="Paese di origine"
+        value={watch('paese') || ''}
+        onChange={(v) => setValue('paese', v)}
+      />
 
       {/* ── Classificazione gerarchica ── */}
       <SectionLabel>Classificazione</SectionLabel>

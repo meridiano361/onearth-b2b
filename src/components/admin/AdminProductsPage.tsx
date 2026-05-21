@@ -2,13 +2,14 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus } from 'lucide-react';
+import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import PaeseSelect from '@/components/ui/PaeseSelect';
 import ProductImport from './ProductImport';
 import BulkImageUpload from './BulkImageUpload';
 import ProductForm from './ProductForm';
@@ -16,14 +17,45 @@ import type { Product } from '@/types';
 import toast from 'react-hot-toast';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
+type SortField = 'code' | 'name' | 'produttore' | 'costPrice' | 'retailPrice' | 'iva';
+type SortDir = 'asc' | 'desc';
 
 interface BulkEditValues {
+  // Anagrafica
+  produttore: string;
+  misura: string;
+  paese: string;
+  // Classificazione
   gruppoMerceologico: string;
   famiglia: string;
   classe: string;
-  produttore: string;
+  sottoclasse: string;
+  gruppoOmogeneo: string;
+  nomLinea: string;
+  stagione: string;
+  collezione: string;
+  colore: string;
+  temaColore: string;
+  // Prezzi e logistica
+  lotSize: string;
+  iva: string;
+  costPrice: string;
+  retailPrice: string;
+  fasciaRicarico: string;
+  fasciaSconto: string;
+  tranche: string;
+  // Altri
+  notes: string;
   isActive: '' | 'true' | 'false';
 }
+
+const EMPTY_BULK: BulkEditValues = {
+  produttore: '', misura: '', paese: '',
+  gruppoMerceologico: '', famiglia: '', classe: '', sottoclasse: '', gruppoOmogeneo: '',
+  nomLinea: '', stagione: '', collezione: '', colore: '', temaColore: '',
+  lotSize: '', iva: '', costPrice: '', retailPrice: '', fasciaRicarico: '', fasciaSconto: '', tranche: '',
+  notes: '', isActive: '',
+};
 
 function uniqueSorted(products: Product[], key: keyof Product): string[] {
   const set = new Set<string>();
@@ -37,7 +69,6 @@ function uniqueSorted(products: Product[], key: keyof Product): string[] {
 export default function AdminProductsPage() {
   const queryClient = useQueryClient();
 
-  // Modals / edit state
   const [showImport, setShowImport] = useState(false);
   const [showBulkImages, setShowBulkImages] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -52,19 +83,17 @@ export default function AdminProductsPage() {
   const [filterTranche, setFilterTranche] = useState('');
   const [filterActive, setFilterActive] = useState<ActiveFilter>('all');
 
+  // Sort
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
-  const [bulkEditValues, setBulkEditValues] = useState<BulkEditValues>({
-    gruppoMerceologico: '',
-    famiglia: '',
-    classe: '',
-    produttore: '',
-    isActive: '',
-  });
+  const [bulkEditValues, setBulkEditValues] = useState<BulkEditValues>(EMPTY_BULK);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-products'],
@@ -77,17 +106,15 @@ export default function AdminProductsPage() {
 
   const allProducts: Product[] = data?.data || [];
 
-  // Dropdown options derived from full list
   const gruppoOptions = useMemo(() => uniqueSorted(allProducts, 'gruppoMerceologico'), [allProducts]);
   const famigliaOptions = useMemo(() => uniqueSorted(allProducts, 'famiglia'), [allProducts]);
   const classeOptions = useMemo(() => uniqueSorted(allProducts, 'classe'), [allProducts]);
   const produttoreOptions = useMemo(() => uniqueSorted(allProducts, 'produttore'), [allProducts]);
   const trancheOptions = useMemo(() => uniqueSorted(allProducts, 'tranche'), [allProducts]);
 
-  // Client-side filtering
   const products = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return allProducts.filter((p) => {
+    let filtered = allProducts.filter((p) => {
       if (q) {
         const match =
           p.code.toLowerCase().includes(q) ||
@@ -104,30 +131,54 @@ export default function AdminProductsPage() {
       if (filterActive === 'inactive' && p.isActive) return false;
       return true;
     });
-  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterProduttore, filterTranche, filterActive]);
+
+    if (sortField) {
+      filtered = [...filtered].sort((a, b) => {
+        const aVal = a[sortField] ?? '';
+        const bVal = b[sortField] ?? '';
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+          return sortDir === 'asc'
+            ? aVal.localeCompare(bVal, 'it', { sensitivity: 'base' })
+            : bVal.localeCompare(aVal, 'it', { sensitivity: 'base' });
+        }
+        return sortDir === 'asc' ? (Number(aVal) - Number(bVal)) : (Number(bVal) - Number(aVal));
+      });
+    }
+
+    return filtered;
+  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterProduttore, filterTranche, filterActive, sortField, sortDir]);
+
+  function handleColumnSort(field: SortField) {
+    if (sortField === field) {
+      if (sortDir === 'asc') setSortDir('desc');
+      else { setSortField(null); setSortDir('asc'); }
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  }
+
+  function SortIcon({ field }: { field: SortField }) {
+    if (sortField !== field) return <ChevronsUpDown size={11} className="ml-1 text-gray-300 inline" />;
+    return sortDir === 'asc'
+      ? <ChevronUp size={11} className="ml-1 text-accent inline" />
+      : <ChevronDown size={11} className="ml-1 text-accent inline" />;
+  }
 
   const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterProduttore || filterTranche || filterActive !== 'all';
 
   function resetFilters() {
-    setSearch('');
-    setFilterGruppo('');
-    setFilterFamiglia('');
-    setFilterClasse('');
-    setFilterProduttore('');
-    setFilterTranche('');
+    setSearch(''); setFilterGruppo(''); setFilterFamiglia('');
+    setFilterClasse(''); setFilterProduttore(''); setFilterTranche('');
     setFilterActive('all');
   }
 
-  // Selection helpers
   const allVisibleSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
   const someSelected = selectedIds.size > 0;
 
   function toggleSelectAll() {
-    if (allVisibleSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(products.map((p) => p.id)));
-    }
+    if (allVisibleSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(products.map((p) => p.id)));
   }
 
   function toggleSelect(id: string) {
@@ -188,13 +239,31 @@ export default function AdminProductsPage() {
     }
   }
 
+  function setBulk(k: keyof BulkEditValues, v: string) {
+    setBulkEditValues((prev) => ({ ...prev, [k]: v }));
+  }
+
   async function handleBulkUpdate() {
+    const b = bulkEditValues;
     const payload: Record<string, unknown> = {};
-    if (bulkEditValues.gruppoMerceologico.trim()) payload.gruppoMerceologico = bulkEditValues.gruppoMerceologico.trim();
-    if (bulkEditValues.famiglia.trim()) payload.famiglia = bulkEditValues.famiglia.trim();
-    if (bulkEditValues.classe.trim()) payload.classe = bulkEditValues.classe.trim();
-    if (bulkEditValues.produttore.trim()) payload.produttore = bulkEditValues.produttore.trim();
-    if (bulkEditValues.isActive !== '') payload.isActive = bulkEditValues.isActive === 'true';
+
+    const strMap: [keyof BulkEditValues, string][] = [
+      ['produttore', b.produttore], ['misura', b.misura], ['paese', b.paese],
+      ['gruppoMerceologico', b.gruppoMerceologico], ['famiglia', b.famiglia],
+      ['classe', b.classe], ['sottoclasse', b.sottoclasse], ['gruppoOmogeneo', b.gruppoOmogeneo],
+      ['nomLinea', b.nomLinea], ['stagione', b.stagione], ['collezione', b.collezione],
+      ['colore', b.colore], ['temaColore', b.temaColore],
+      ['fasciaRicarico', b.fasciaRicarico], ['tranche', b.tranche], ['notes', b.notes],
+    ];
+    for (const [k, v] of strMap) {
+      if (v.trim()) payload[k] = v.trim();
+    }
+    if (b.lotSize.trim()) { const n = parseInt(b.lotSize, 10); if (!isNaN(n) && n > 0) payload.lotSize = n; }
+    if (b.iva.trim()) { const n = parseInt(b.iva, 10); if (!isNaN(n)) payload.iva = n; }
+    if (b.costPrice.trim()) { const n = parseFloat(b.costPrice); if (!isNaN(n) && n > 0) payload.costPrice = n; }
+    if (b.retailPrice.trim()) { const n = parseFloat(b.retailPrice); if (!isNaN(n) && n > 0) payload.retailPrice = n; }
+    if (b.fasciaSconto.trim()) { const n = parseFloat(b.fasciaSconto); if (!isNaN(n)) payload.fasciaSconto = n; }
+    if (b.isActive !== '') payload.isActive = b.isActive === 'true';
 
     if (Object.keys(payload).length === 0) {
       toast.error('Compila almeno un campo');
@@ -211,7 +280,7 @@ export default function AdminProductsPage() {
       if (!res.ok) throw new Error('Failed');
       const { updated } = await res.json();
       setShowBulkEdit(false);
-      setBulkEditValues({ gruppoMerceologico: '', famiglia: '', classe: '', produttore: '', isActive: '' });
+      setBulkEditValues(EMPTY_BULK);
       setSelectedIds(new Set());
       await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success(`${updated} prodott${updated === 1 ? 'o aggiornato' : 'i aggiornati'}`);
@@ -223,6 +292,21 @@ export default function AdminProductsPage() {
   }
 
   const selectClass = 'h-8 border border-border rounded px-2 text-xs text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent';
+  const bulkInputClass = 'w-full h-9 border border-border rounded px-3 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-gray-300';
+  const bulkLabelClass = 'block text-xs font-medium text-gray-600 mb-1';
+  const bulkSectionClass = 'text-2xs font-semibold tracking-widest uppercase text-gray-400 mb-2 pt-2';
+
+  function thBtn(field: SortField, label: string) {
+    return (
+      <button
+        onClick={() => handleColumnSort(field)}
+        className="flex items-center whitespace-nowrap hover:text-accent transition-colors"
+      >
+        {label}
+        <SortIcon field={field} />
+      </button>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -234,24 +318,13 @@ export default function AdminProductsPage() {
           <p className="text-sm text-gray-400 mt-0.5">{data?.total || 0} prodotti in collezione</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          <Button
-            variant="secondary"
-            icon={<Upload size={13} />}
-            onClick={() => setShowImport(true)}
-          >
+          <Button variant="secondary" icon={<Upload size={13} />} onClick={() => setShowImport(true)}>
             <span className="hidden sm:inline">Importa da Excel</span>
           </Button>
-          <Button
-            variant="secondary"
-            icon={<ImagePlus size={13} />}
-            onClick={() => setShowBulkImages(true)}
-          >
+          <Button variant="secondary" icon={<ImagePlus size={13} />} onClick={() => setShowBulkImages(true)}>
             <span className="hidden sm:inline">Carica foto in blocco</span>
           </Button>
-          <Button
-            icon={<Plus size={13} />}
-            onClick={() => setShowCreateForm(true)}
-          >
+          <Button icon={<Plus size={13} />} onClick={() => setShowCreateForm(true)}>
             <span className="hidden sm:inline">Aggiungi Prodotto</span>
             <span className="sm:hidden">Aggiungi</span>
           </Button>
@@ -261,93 +334,43 @@ export default function AdminProductsPage() {
       {/* Filter bar */}
       <div className="mb-4 space-y-2">
         <div className="flex flex-wrap gap-2 items-center">
-          {/* Text search */}
           <div className="w-56">
-            <Input
-              placeholder="Codice, descrizione, produttore..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              icon={<Search size={14} />}
-            />
+            <Input placeholder="Codice, descrizione, produttore..." value={search} onChange={(e) => setSearch(e.target.value)} icon={<Search size={14} />} />
           </div>
-
-          {/* Gruppo merceologico */}
-          <select
-            value={filterGruppo}
-            onChange={(e) => setFilterGruppo(e.target.value)}
-            className={selectClass}
-          >
+          <select value={filterGruppo} onChange={(e) => setFilterGruppo(e.target.value)} className={selectClass}>
             <option value="">Gruppo merceologico</option>
             {gruppoOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
-
-          {/* Famiglia */}
-          <select
-            value={filterFamiglia}
-            onChange={(e) => setFilterFamiglia(e.target.value)}
-            className={selectClass}
-          >
+          <select value={filterFamiglia} onChange={(e) => setFilterFamiglia(e.target.value)} className={selectClass}>
             <option value="">Famiglia</option>
             {famigliaOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
-
-          {/* Classe */}
-          <select
-            value={filterClasse}
-            onChange={(e) => setFilterClasse(e.target.value)}
-            className={selectClass}
-          >
+          <select value={filterClasse} onChange={(e) => setFilterClasse(e.target.value)} className={selectClass}>
             <option value="">Classe</option>
             {classeOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
-
-          {/* Produttore */}
-          <select
-            value={filterProduttore}
-            onChange={(e) => setFilterProduttore(e.target.value)}
-            className={selectClass}
-          >
+          <select value={filterProduttore} onChange={(e) => setFilterProduttore(e.target.value)} className={selectClass}>
             <option value="">Produttore</option>
             {produttoreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
-
-          {/* Tranche */}
-          <select
-            value={filterTranche}
-            onChange={(e) => setFilterTranche(e.target.value)}
-            className={selectClass}
-          >
+          <select value={filterTranche} onChange={(e) => setFilterTranche(e.target.value)} className={selectClass}>
             <option value="">Tranche</option>
             {trancheOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
-
-          {/* Attivo toggle */}
-          <select
-            value={filterActive}
-            onChange={(e) => setFilterActive(e.target.value as ActiveFilter)}
-            className={selectClass}
-          >
+          <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as ActiveFilter)} className={selectClass}>
             <option value="all">Tutti</option>
             <option value="active">Attivi</option>
             <option value="inactive">Non attivi</option>
           </select>
-
           {hasFilters && (
-            <button
-              onClick={resetFilters}
-              className="flex items-center gap-1 h-8 px-2 text-xs text-gray-500 hover:text-primary border border-border rounded hover:bg-cream transition-colors"
-            >
+            <button onClick={resetFilters} className="flex items-center gap-1 h-8 px-2 text-xs text-gray-500 hover:text-primary border border-border rounded hover:bg-cream transition-colors">
               <RotateCcw size={11} />
               Reset filtri
             </button>
           )}
         </div>
-
-        {/* Result count */}
         {hasFilters && (
-          <p className="text-xs text-gray-400">
-            {products.length} risultat{products.length === 1 ? 'o' : 'i'} su {allProducts.length}
-          </p>
+          <p className="text-xs text-gray-400">{products.length} risultat{products.length === 1 ? 'o' : 'i'} su {allProducts.length}</p>
         )}
       </div>
 
@@ -358,30 +381,13 @@ export default function AdminProductsPage() {
             {selectedIds.size} prodott{selectedIds.size === 1 ? 'o selezionato' : 'i selezionati'}
           </span>
           <div className="flex items-center gap-2 ml-auto">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setBulkEditValues({ gruppoMerceologico: '', famiglia: '', classe: '', produttore: '', isActive: '' });
-                setShowBulkEdit(true);
-              }}
-            >
+            <Button variant="secondary" size="sm" onClick={() => { setBulkEditValues(EMPTY_BULK); setShowBulkEdit(true); }}>
               Modifica selezionati
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<Trash2 size={12} />}
-              onClick={() => setShowBulkDeleteConfirm(true)}
-              className="text-red-500 hover:text-red-600 hover:bg-red-50"
-            >
+            <Button variant="ghost" size="sm" icon={<Trash2 size={12} />} onClick={() => setShowBulkDeleteConfirm(true)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
               Elimina selezionati
             </Button>
-            <button
-              onClick={() => setSelectedIds(new Set())}
-              className="p-1 text-gray-400 hover:text-primary"
-              title="Deseleziona tutto"
-            >
+            <button onClick={() => setSelectedIds(new Set())} className="p-1 text-gray-400 hover:text-primary" title="Deseleziona tutto">
               <X size={14} />
             </button>
           </div>
@@ -394,20 +400,14 @@ export default function AdminProductsPage() {
           <thead>
             <tr>
               <th className="w-8">
-                <input
-                  type="checkbox"
-                  checked={allVisibleSelected}
-                  onChange={toggleSelectAll}
-                  className="w-3.5 h-3.5 accent-accent cursor-pointer"
-                  disabled={products.length === 0}
-                />
+                <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} className="w-3.5 h-3.5 accent-accent cursor-pointer" disabled={products.length === 0} />
               </th>
-              <th>Codice</th>
-              <th>Descrizione</th>
-              <th>Produttore</th>
-              <th>Costo i.e.</th>
-              <th>Vendita i.i.</th>
-              <th>IVA</th>
+              <th>{thBtn('code', 'Codice')}</th>
+              <th>{thBtn('name', 'Descrizione')}</th>
+              <th>{thBtn('produttore', 'Produttore')}</th>
+              <th>{thBtn('costPrice', 'Costo i.e.')}</th>
+              <th>{thBtn('retailPrice', 'Vendita i.i.')}</th>
+              <th>{thBtn('iva', 'IVA')}</th>
               <th>% Ric.</th>
               <th>Stato</th>
               <th className="w-20"></th>
@@ -415,87 +415,41 @@ export default function AdminProductsPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr>
-                <td colSpan={10} className="py-12 text-center">
-                  <LoadingSpinner className="mx-auto" />
-                </td>
-              </tr>
+              <tr><td colSpan={10} className="py-12 text-center"><LoadingSpinner className="mx-auto" /></td></tr>
             ) : products.length === 0 ? (
-              <tr>
-                <td colSpan={10} className="py-12 text-center text-gray-400 text-sm">
-                  Nessun prodotto trovato
-                </td>
-              </tr>
+              <tr><td colSpan={10} className="py-12 text-center text-gray-400 text-sm">Nessun prodotto trovato</td></tr>
             ) : (
               products.map((product) => {
                 const ivaFactor = 1 + (product.iva ?? 22) / 100;
                 const pvn = product.retailPrice / ivaFactor;
-                const ricarico =
-                  product.costPrice > 0
-                    ? ((pvn - product.costPrice) / product.costPrice) * 100
-                    : null;
+                const ricarico = product.costPrice > 0 ? ((pvn - product.costPrice) / product.costPrice) * 100 : null;
                 return (
-                <tr key={product.id} className={selectedIds.has(product.id) ? 'bg-accent/5' : undefined}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(product.id)}
-                      onChange={() => toggleSelect(product.id)}
-                      className="w-3.5 h-3.5 accent-accent cursor-pointer"
-                    />
-                  </td>
-                  <td>
-                    <span className="font-mono text-xs text-gray-500">{product.code}</span>
-                  </td>
-                  <td>
-                    <p className="font-medium text-primary text-xs">{product.name}</p>
-                  </td>
-                  <td>
-                    <span className="text-xs text-gray-500">{product.produttore || '—'}</span>
-                  </td>
-                  <td className="font-medium text-xs">{formatCurrency(product.costPrice)}</td>
-                  <td className="text-xs text-gray-500">{formatCurrency(product.retailPrice)}</td>
-                  <td className="text-xs text-center text-gray-500">{product.iva ?? 22}%</td>
-                  <td className="text-xs text-center">
-                    {ricarico !== null ? (
-                      <span className={ricarico >= 0 ? 'text-green-600' : 'text-red-500'}>
-                        {ricarico >= 0 ? '+' : ''}{ricarico.toFixed(1)}%
-                      </span>
-                    ) : (
-                      <span className="text-gray-300">—</span>
-                    )}
-                  </td>
-                  <td>
-                    <Badge variant={product.isActive ? 'success' : 'default'} size="xs">
-                      {product.isActive ? 'Attivo' : 'Inattivo'}
-                    </Badge>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setEditingProduct(product)}
-                        className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
-                        title="Modifica"
-                      >
-                        <Edit2 size={13} />
-                      </button>
-                      <button
-                        onClick={() => handleToggleActive(product)}
-                        className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
-                        title={product.isActive ? 'Disattiva' : 'Attiva'}
-                      >
-                        {product.isActive ? <EyeOff size={13} /> : <Eye size={13} />}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(product)}
-                        className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
-                        title="Elimina"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                  <tr key={product.id} className={selectedIds.has(product.id) ? 'bg-accent/5' : undefined}>
+                    <td><input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="w-3.5 h-3.5 accent-accent cursor-pointer" /></td>
+                    <td><span className="font-mono text-xs text-gray-500">{product.code}</span></td>
+                    <td><p className="font-medium text-primary text-xs">{product.name}</p></td>
+                    <td><span className="text-xs text-gray-500">{product.produttore || '—'}</span></td>
+                    <td className="font-medium text-xs">{formatCurrency(product.costPrice)}</td>
+                    <td className="text-xs text-gray-500">{formatCurrency(product.retailPrice)}</td>
+                    <td className="text-xs text-center text-gray-500">{product.iva ?? 22}%</td>
+                    <td className="text-xs text-center">
+                      {ricarico !== null ? (
+                        <span className={ricarico >= 0 ? 'text-green-600' : 'text-red-500'}>
+                          {ricarico >= 0 ? '+' : ''}{ricarico.toFixed(1)}%
+                        </span>
+                      ) : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td><Badge variant={product.isActive ? 'success' : 'default'} size="xs">{product.isActive ? 'Attivo' : 'Inattivo'}</Badge></td>
+                    <td>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setEditingProduct(product)} className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica"><Edit2 size={13} /></button>
+                        <button onClick={() => handleToggleActive(product)} className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title={product.isActive ? 'Disattiva' : 'Attiva'}>
+                          {product.isActive ? <EyeOff size={13} /> : <Eye size={13} />}
+                        </button>
+                        <button onClick={() => handleDelete(product)} className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina"><Trash2 size={13} /></button>
+                      </div>
+                    </td>
+                  </tr>
                 );
               })
             )}
@@ -503,150 +457,128 @@ export default function AdminProductsPage() {
         </table>
       </div>
 
-      {/* Import Excel Modal */}
-      <Modal
-        isOpen={showImport}
-        onClose={() => setShowImport(false)}
-        title="Importa prodotti da Excel"
-        size="xl"
-      >
-        <ProductImport
-          onSuccess={() => {
-            setShowImport(false);
-            queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-          }}
-        />
+      {/* Import Modal */}
+      <Modal isOpen={showImport} onClose={() => setShowImport(false)} title="Importa prodotti da Excel" size="xl">
+        <ProductImport onSuccess={() => { setShowImport(false); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }} />
       </Modal>
 
-      {/* Bulk Image Upload Modal */}
-      <Modal
-        isOpen={showBulkImages}
-        onClose={() => setShowBulkImages(false)}
-        title="Carica foto in blocco"
-        size="lg"
-      >
-        <BulkImageUpload
-          onSuccess={() => {
-            setShowBulkImages(false);
-            queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-          }}
-        />
+      {/* Bulk Images Modal */}
+      <Modal isOpen={showBulkImages} onClose={() => setShowBulkImages(false)} title="Carica foto in blocco" size="lg">
+        <BulkImageUpload onSuccess={() => { setShowBulkImages(false); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }} />
       </Modal>
 
       {/* Edit Modal */}
-      <Modal
-        isOpen={!!editingProduct}
-        onClose={() => setEditingProduct(null)}
-        title="Modifica Prodotto"
-        size="lg"
-      >
+      <Modal isOpen={!!editingProduct} onClose={() => setEditingProduct(null)} title="Modifica Prodotto" size="lg">
         {editingProduct && (
-          <ProductForm
-            product={editingProduct}
-            onSuccess={() => {
-              setEditingProduct(null);
-              queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-            }}
-            onCancel={() => setEditingProduct(null)}
-          />
+          <ProductForm product={editingProduct} onSuccess={() => { setEditingProduct(null); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }} onCancel={() => setEditingProduct(null)} />
         )}
       </Modal>
 
       {/* Create Modal */}
-      <Modal
-        isOpen={showCreateForm}
-        onClose={() => setShowCreateForm(false)}
-        title="Aggiungi Prodotto"
-        size="lg"
-      >
-        <ProductForm
-          onSuccess={() => {
-            setShowCreateForm(false);
-            queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-          }}
-          onCancel={() => setShowCreateForm(false)}
-        />
+      <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)} title="Aggiungi Prodotto" size="lg">
+        <ProductForm onSuccess={() => { setShowCreateForm(false); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }} onCancel={() => setShowCreateForm(false)} />
       </Modal>
 
       {/* Bulk Edit Modal */}
-      <Modal
-        isOpen={showBulkEdit}
-        onClose={() => setShowBulkEdit(false)}
-        title={`Modifica ${selectedIds.size} prodott${selectedIds.size === 1 ? 'o' : 'i'}`}
-        size="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-xs text-gray-400">Solo i campi compilati verranno aggiornati.</p>
+      <Modal isOpen={showBulkEdit} onClose={() => setShowBulkEdit(false)} title={`Modifica ${selectedIds.size} prodott${selectedIds.size === 1 ? 'o' : 'i'}`} size="lg">
+        <div className="space-y-2">
+          <p className="text-xs text-gray-400 pb-1">Solo i campi compilati verranno aggiornati.</p>
 
-          <div className="space-y-3">
-            <Input
-              label="Gruppo merceologico"
-              value={bulkEditValues.gruppoMerceologico}
-              onChange={(e) => setBulkEditValues((v) => ({ ...v, gruppoMerceologico: e.target.value }))}
-              placeholder="es. Tessili casa"
-            />
-            <Input
-              label="Famiglia"
-              value={bulkEditValues.famiglia}
-              onChange={(e) => setBulkEditValues((v) => ({ ...v, famiglia: e.target.value }))}
-              placeholder="es. Prodotti tessili"
-            />
-            <Input
-              label="Classe"
-              value={bulkEditValues.classe}
-              onChange={(e) => setBulkEditValues((v) => ({ ...v, classe: e.target.value }))}
-              placeholder="es. Tavola"
-            />
-            <Input
-              label="Produttore"
-              value={bulkEditValues.produttore}
-              onChange={(e) => setBulkEditValues((v) => ({ ...v, produttore: e.target.value }))}
-              placeholder="Nome del produttore"
-            />
+          <p className={bulkSectionClass}>Anagrafica</p>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Stato</label>
-              <select
-                value={bulkEditValues.isActive}
-                onChange={(e) => setBulkEditValues((v) => ({ ...v, isActive: e.target.value as BulkEditValues['isActive'] }))}
-                className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent"
-              >
+              <label className={bulkLabelClass}>Produttore</label>
+              <input value={bulkEditValues.produttore} onChange={(e) => setBulk('produttore', e.target.value)} placeholder="—" className={bulkInputClass} />
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Misure</label>
+              <input value={bulkEditValues.misura} onChange={(e) => setBulk('misura', e.target.value)} placeholder="—" className={bulkInputClass} />
+            </div>
+          </div>
+          <PaeseSelect label="Paese" value={bulkEditValues.paese} onChange={(v) => setBulk('paese', v)} placeholder="— non modificare —" />
+
+          <p className={bulkSectionClass}>Classificazione</p>
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              ['gruppoMerceologico', 'Gruppo merceologico'], ['famiglia', 'Famiglia'],
+              ['classe', 'Classe'], ['sottoclasse', 'Sottoclasse'],
+              ['gruppoOmogeneo', 'Gruppo omogeneo'], ['nomLinea', 'Linea'],
+              ['stagione', 'Stagione'], ['collezione', 'Collezione'],
+              ['colore', 'Colore'], ['temaColore', 'Tema colore'],
+            ] as [keyof BulkEditValues, string][]).map(([k, label]) => (
+              <div key={k}>
+                <label className={bulkLabelClass}>{label}</label>
+                <input value={bulkEditValues[k] as string} onChange={(e) => setBulk(k, e.target.value)} placeholder="—" className={bulkInputClass} />
+              </div>
+            ))}
+          </div>
+
+          <p className={bulkSectionClass}>Prezzi e Logistica</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={bulkLabelClass}>Confezione</label>
+              <input type="number" min="1" step="1" value={bulkEditValues.lotSize} onChange={(e) => setBulk('lotSize', e.target.value)} placeholder="—" className={bulkInputClass} />
+            </div>
+            <div>
+              <label className={bulkLabelClass}>IVA (%)</label>
+              <select value={bulkEditValues.iva} onChange={(e) => setBulk('iva', e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
                 <option value="">— non modificare —</option>
-                <option value="true">Attivo</option>
-                <option value="false">Non attivo</option>
+                {[0, 4, 5, 10, 22].map((v) => <option key={v} value={String(v)}>{v}%</option>)}
               </select>
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Prezzo costo i.e. (€)</label>
+              <input type="number" step="0.01" min="0" value={bulkEditValues.costPrice} onChange={(e) => setBulk('costPrice', e.target.value)} placeholder="—" className={bulkInputClass} />
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Prezzo vendita i.i. (€)</label>
+              <input type="number" step="0.01" min="0" value={bulkEditValues.retailPrice} onChange={(e) => setBulk('retailPrice', e.target.value)} placeholder="—" className={bulkInputClass} />
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Fascia di ricarico</label>
+              <input value={bulkEditValues.fasciaRicarico} onChange={(e) => setBulk('fasciaRicarico', e.target.value)} placeholder="—" className={bulkInputClass} />
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Fascia di sconto (%)</label>
+              <input type="number" step="0.01" min="0" max="100" value={bulkEditValues.fasciaSconto} onChange={(e) => setBulk('fasciaSconto', e.target.value)} placeholder="—" className={bulkInputClass} />
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Tranche</label>
+              <input value={bulkEditValues.tranche} onChange={(e) => setBulk('tranche', e.target.value)} placeholder="—" className={bulkInputClass} />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
+          <p className={bulkSectionClass}>Altri</p>
+          <div>
+            <label className={bulkLabelClass}>Note</label>
+            <textarea value={bulkEditValues.notes} onChange={(e) => setBulk('notes', e.target.value)} placeholder="—" rows={2} className="w-full border border-border rounded px-3 py-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-gray-300 resize-none" />
+          </div>
+          <div>
+            <label className={bulkLabelClass}>Stato</label>
+            <select value={bulkEditValues.isActive} onChange={(e) => setBulk('isActive', e.target.value as BulkEditValues['isActive'])} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+              <option value="">— non modificare —</option>
+              <option value="true">Attivo</option>
+              <option value="false">Non attivo</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3">
             <Button variant="ghost" onClick={() => setShowBulkEdit(false)}>Annulla</Button>
-            <Button onClick={handleBulkUpdate} loading={isBulkUpdating}>
-              Applica modifiche
-            </Button>
+            <Button onClick={handleBulkUpdate} loading={isBulkUpdating}>Applica modifiche</Button>
           </div>
         </div>
       </Modal>
 
       {/* Bulk Delete Confirm */}
-      <Modal
-        isOpen={showBulkDeleteConfirm}
-        onClose={() => setShowBulkDeleteConfirm(false)}
-        title="Conferma eliminazione"
-        size="sm"
-      >
+      <Modal isOpen={showBulkDeleteConfirm} onClose={() => setShowBulkDeleteConfirm(false)} title="Conferma eliminazione" size="sm">
         <div className="space-y-4">
           <p className="text-sm text-primary">
             Sei sicuro di voler eliminare <strong>{selectedIds.size} prodott{selectedIds.size === 1 ? 'o' : 'i'}</strong>?
             Questa azione non può essere annullata.
           </p>
           <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => setShowBulkDeleteConfirm(false)}>
-              Annulla
-            </Button>
-            <Button
-              onClick={handleBulkDelete}
-              loading={isBulkDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white border-red-600"
-            >
+            <Button variant="ghost" onClick={() => setShowBulkDeleteConfirm(false)}>Annulla</Button>
+            <Button onClick={handleBulkDelete} loading={isBulkDeleting} className="bg-red-600 hover:bg-red-700 text-white border-red-600">
               Elimina {selectedIds.size} prodott{selectedIds.size === 1 ? 'o' : 'i'}
             </Button>
           </div>

@@ -7,6 +7,20 @@ import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { PAESI } from '@/lib/paesi';
+
+function PaeseSelectInline({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-7 text-xs border border-border rounded px-2 bg-white focus:outline-none focus:ring-1 focus:ring-accent text-primary max-w-[160px]"
+    >
+      <option value="">— nessuno —</option>
+      {PAESI.map((p) => <option key={p} value={p}>{p}</option>)}
+    </select>
+  );
+}
 
 const TIPI = [
   { tipo: 'gruppoMerceologico', label: 'Gruppo merceologico' },
@@ -24,7 +38,7 @@ const TIPI = [
 function normalizeValue(tipo: string, v: string): string {
   const t = v.trim();
   if (!t) return t;
-  if (tipo === 'nomLinea') return t.toUpperCase();
+  if (tipo === 'nomLinea' || tipo === 'collezione') return t.toUpperCase();
   return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
 }
 
@@ -322,7 +336,7 @@ function ProduttoriTab() {
   const [editValue, setEditValue] = useState('');
   const [deletingNome, setDeletingNome] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery<{ data: { nome: string; count: number }[] }>({
+  const { data, isLoading } = useQuery<{ data: { nome: string; count: number; paese: string | null }[] }>({
     queryKey: ['admin-produttori'],
     queryFn: () => fetch('/api/admin/produttori').then((r) => r.json()),
   });
@@ -368,6 +382,21 @@ function ProduttoriTab() {
       setEditingNome(null);
       queryClient.invalidateQueries({ queryKey: ['admin-produttori'] });
       toast.success('Produttore rinominato');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  }
+
+  async function handlePaeseChange(nome: string, paese: string) {
+    try {
+      const res = await fetch('/api/admin/produttori', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vecchioNome: nome, paese: paese || null }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Errore');
+      queryClient.invalidateQueries({ queryKey: ['admin-produttori'] });
+      toast.success('Paese aggiornato');
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -428,6 +457,14 @@ function ProduttoriTab() {
       ) : (
         <div className="bg-white border border-border rounded overflow-hidden">
           <table className="table-luxury w-full">
+            <thead>
+              <tr className="border-b border-border bg-cream/50">
+                <th className="text-left px-4 py-2 text-2xs font-semibold text-gray-400 uppercase tracking-wide">Nome</th>
+                <th className="text-left px-4 py-2 text-2xs font-semibold text-gray-400 uppercase tracking-wide w-20">Prodotti</th>
+                <th className="text-left px-4 py-2 text-2xs font-semibold text-gray-400 uppercase tracking-wide">Paese</th>
+                <th className="px-4 py-2 w-20" />
+              </tr>
+            </thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item.nome}>
@@ -449,10 +486,16 @@ function ProduttoriTab() {
                       <span className="text-sm text-primary">{item.nome}</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-xs text-gray-400 w-24">
-                    {item.count > 0 ? `${item.count} prod.` : <span className="text-gray-300">—</span>}
+                  <td className="py-3 px-4 text-xs text-gray-400 w-20">
+                    {item.count > 0 ? `${item.count}` : <span className="text-gray-300">—</span>}
                   </td>
-                  <td className="py-3 px-4 w-36">
+                  <td className="py-3 px-4">
+                    <PaeseSelectInline
+                      value={item.paese || ''}
+                      onChange={(v) => handlePaeseChange(item.nome, v)}
+                    />
+                  </td>
+                  <td className="py-3 px-4 w-20">
                     {deletingNome === item.nome ? (
                       <div className="flex items-center gap-2 justify-end">
                         <button onClick={() => handleDelete(item.nome)} className="text-2xs text-red-600 hover:text-red-700 font-medium">Conferma</button>

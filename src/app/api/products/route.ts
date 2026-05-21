@@ -37,6 +37,7 @@ const productSchema = z.object({
   fasciaSconto: z.coerce.number().min(0).max(100).optional().nullable(),
   collezione: z.string().optional().nullable(),
   tranche: z.string().optional().nullable(),
+  paese: z.string().optional().nullable(),
   iva: z.coerce.number().int().min(0).max(100).default(22),
 });
 
@@ -146,6 +147,8 @@ export async function POST(req: NextRequest) {
         fasciaRicarico: data.fasciaRicarico || null,
         fasciaSconto: data.fasciaSconto ?? null,
         collezione: data.collezione || null,
+        tranche: data.tranche || null,
+        paese: data.paese || null,
         iva: data.iva ?? 22,
       },
       include: { category: true },

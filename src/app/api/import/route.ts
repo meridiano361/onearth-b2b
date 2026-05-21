@@ -67,6 +67,7 @@ const importRowSchema = z.object({
   fasciaSconto: z.any().optional(),
   collezione: z.any().optional(),
   tranche: z.any().optional(),
+  paese: z.any().optional(),
   iva: z.any().optional(),
   isActive: z.any().optional(),
 });
@@ -143,6 +144,7 @@ export async function POST(req: NextRequest) {
           sottofamiglia: str(parsed.sottofamiglia),
           colore: str(parsed.colore),
           nomLinea: nomLineaValue,
+          paese: str(parsed.paese),
           misura: str(parsed.misura),
           produttore: parsed.produttore ? titleCase(str(parsed.produttore) ?? '') || null : null,
           gruppoMerceologico: str(parsed.gruppoMerceologico),

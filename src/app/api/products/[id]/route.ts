@@ -36,6 +36,7 @@ const updateSchema = z.object({
   fasciaSconto: z.coerce.number().min(0).max(100).optional().nullable(),
   collezione: z.string().optional().nullable(),
   tranche: z.string().optional().nullable(),
+  paese: z.string().optional().nullable(),
   iva: z.coerce.number().int().min(0).max(100).optional(),
 });
 

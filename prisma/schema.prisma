@@ -74,6 +74,7 @@ model Product {
   fasciaSconto       Decimal? @db.Decimal(5, 2)
   collezione         String?
   tranche            String?
+  paese              String?
   iva                Int      @default(22)
   createdAt          DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -175,6 +176,7 @@ model TemaColore {
 model Produttore {
   id        String   @id @default(cuid())
   nome      String   @unique
+  paese     String?
   createdAt DateTime @default(now())
   @@map("lkp_produttori")
 }
