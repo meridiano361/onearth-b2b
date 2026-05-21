@@ -5,6 +5,7 @@ import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { normalizeProductClassificationFields } from '@/lib/normalizeClassification';
+import { normalizeProductName } from '@/lib/normalizeProductName';
 
 const updateSchema = z.object({
   code: z.string().min(1).optional(),
@@ -79,6 +80,14 @@ export async function PATCH(
 
     const body = await req.json();
     const data = normalizeProductClassificationFields(updateSchema.parse(body));
+
+    // Normalize name if provided, using the incoming nomLinea or the existing one
+    if (data.name) {
+      const linea = data.nomLinea !== undefined
+        ? data.nomLinea
+        : (await prisma.product.findUnique({ where: { id: params.id }, select: { nomLinea: true } }))?.nomLinea;
+      data.name = normalizeProductName(data.name, linea);
+    }
 
     const product = await prisma.product.update({
       where: { id: params.id },

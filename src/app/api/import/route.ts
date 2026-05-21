@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
 import { titleCase } from '@/lib/normalizeClassification';
+import { normalizeProductName } from '@/lib/normalizeProductName';
 
 function parseDecimal(v: any): number | undefined {
   if (v === undefined || v === null || v === '') return undefined;
@@ -127,8 +128,9 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        const nomLineaValue = str(parsed.nomLinea);
         const fields = {
-          name: parsed.name,
+          name: normalizeProductName(parsed.name, nomLineaValue),
           description: str(parsed.description),
           costPrice: parsed.costPrice,
           retailPrice: parsed.retailPrice,
@@ -140,7 +142,7 @@ export async function POST(req: NextRequest) {
           famiglia: str(parsed.famiglia),
           sottofamiglia: str(parsed.sottofamiglia),
           colore: str(parsed.colore),
-          nomLinea: str(parsed.nomLinea),
+          nomLinea: nomLineaValue,
           misura: str(parsed.misura),
           produttore: parsed.produttore ? titleCase(str(parsed.produttore) ?? '') || null : null,
           gruppoMerceologico: str(parsed.gruppoMerceologico),

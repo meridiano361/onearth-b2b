@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
 import { normalizeProductClassificationFields } from '@/lib/normalizeClassification';
+import { normalizeProductName } from '@/lib/normalizeProductName';
 
 const productSchema = z.object({
   code: z.string().min(1),
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
     const product = await prisma.product.create({
       data: {
         code: data.code.toUpperCase().trim(),
-        name: data.name.trim(),
+        name: normalizeProductName(data.name, data.nomLinea),
         description: data.description || null,
         costPrice: data.costPrice,
         retailPrice: data.retailPrice,
