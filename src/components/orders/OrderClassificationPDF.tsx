@@ -169,6 +169,62 @@ const s = StyleSheet.create({
   footerText: { fontSize: 6.5, color: C.muted, letterSpacing: 0.5 },
 });
 
+// ── Summary styles ────────────────────────────────────────────
+const ss = StyleSheet.create({
+  sectionBar: {
+    backgroundColor: C.primary,
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingLeft: 10,
+    paddingRight: 10,
+    marginBottom: 0,
+  },
+  sectionBarText: {
+    fontSize: 7.5,
+    fontFamily: 'Helvetica-Bold',
+    letterSpacing: 2,
+    color: C.white,
+    textTransform: 'uppercase',
+  },
+  tableSection: { marginBottom: 20 },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    backgroundColor: C.cream,
+    borderBottomWidth: 0.5,
+    borderBottomColor: C.border,
+    borderBottomStyle: 'solid',
+    paddingTop: 5,
+    paddingBottom: 5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 0.5,
+    borderBottomColor: C.border,
+    borderBottomStyle: 'solid',
+    paddingTop: 4,
+    paddingBottom: 4,
+  },
+  tableTotalRow: {
+    flexDirection: 'row',
+    backgroundColor: C.cream,
+    paddingTop: 5,
+    paddingBottom: 5,
+  },
+  colGruppo: { flex: 1, paddingLeft: 10 },
+  colNum: { width: 64, textAlign: 'right', paddingRight: 10 },
+  thText: { fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: C.muted, letterSpacing: 1 },
+  tdText: { fontSize: 7.5, color: C.primary },
+  tdTotal: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: C.primary },
+  summaryTitle: {
+    fontSize: 12,
+    fontFamily: 'Helvetica-Bold',
+    letterSpacing: 3,
+    color: C.primary,
+    marginBottom: 4,
+  },
+  summarySub: { fontSize: 7, letterSpacing: 2, color: C.accent, marginBottom: 20 },
+});
+
 // ── Helpers ───────────────────────────────────────────────────
 function euro(n: number) {
   return '€ ' + n.toFixed(2).replace('.', ',');
@@ -182,6 +238,57 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
+}
+
+// ── Summary helpers ───────────────────────────────────────────
+interface SummaryRow { label: string; articoli: number; pezzi: number; costo: number }
+
+function buildSummary(items: EnrichedItem[], field: string): SummaryRow[] {
+  const map = new Map<string, { articoli: number; pezzi: number; costo: number }>();
+  for (const item of items) {
+    const key = (item.product as any)[field] as string | null || 'Non classificato';
+    const cur = map.get(key) ?? { articoli: 0, pezzi: 0, costo: 0 };
+    map.set(key, { articoli: cur.articoli + 1, pezzi: cur.pezzi + item.quantity, costo: cur.costo + Number(item.subtotal) });
+  }
+  return Array.from(map.entries())
+    .map(([label, d]) => ({ label, ...d }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'it'));
+}
+
+function SummaryTable({ title, rows }: { title: string; rows: SummaryRow[] }) {
+  const totale: SummaryRow = {
+    label: 'TOTALE',
+    articoli: rows.reduce((s, r) => s + r.articoli, 0),
+    pezzi: rows.reduce((s, r) => s + r.pezzi, 0),
+    costo: rows.reduce((s, r) => s + r.costo, 0),
+  };
+  return (
+    <View style={ss.tableSection}>
+      <View style={ss.sectionBar}>
+        <Text style={ss.sectionBarText}>{title}</Text>
+      </View>
+      <View style={ss.tableHeaderRow}>
+        <View style={ss.colGruppo}><Text style={ss.thText}>GRUPPO</Text></View>
+        <View style={ss.colNum}><Text style={ss.thText}>ARTICOLI</Text></View>
+        <View style={ss.colNum}><Text style={ss.thText}>PEZZI</Text></View>
+        <View style={ss.colNum}><Text style={ss.thText}>COSTO I.E.</Text></View>
+      </View>
+      {rows.map((row, i) => (
+        <View key={i} style={ss.tableRow}>
+          <View style={ss.colGruppo}><Text style={ss.tdText}>{row.label}</Text></View>
+          <View style={ss.colNum}><Text style={ss.tdText}>{row.articoli}</Text></View>
+          <View style={ss.colNum}><Text style={ss.tdText}>{row.pezzi}</Text></View>
+          <View style={ss.colNum}><Text style={ss.tdText}>{euro(row.costo)}</Text></View>
+        </View>
+      ))}
+      <View style={ss.tableTotalRow}>
+        <View style={ss.colGruppo}><Text style={ss.tdTotal}>{totale.label}</Text></View>
+        <View style={ss.colNum}><Text style={ss.tdTotal}>{totale.articoli}</Text></View>
+        <View style={ss.colNum}><Text style={ss.tdTotal}>{totale.pezzi}</Text></View>
+        <View style={ss.colNum}><Text style={ss.tdTotal}>{euro(totale.costo)}</Text></View>
+      </View>
+    </View>
+  );
 }
 
 // ── Product card ──────────────────────────────────────────────
@@ -238,6 +345,11 @@ export function OrderClassificationPDF({
     }));
 
   const grandTotal = Number(order.totalValue);
+
+  const summaryTemaColore = buildSummary(items, 'temaColore');
+  const summaryColore     = buildSummary(items, 'colore');
+  const summarySottoclasse = buildSummary(items, 'sottoclasse');
+  const summaryFamiglia   = buildSummary(items, 'famiglia');
 
   return (
     <Document>
@@ -307,6 +419,35 @@ export function OrderClassificationPDF({
         </View>
 
         {/* Footer — repeats on every page */}
+        <View style={s.footer} fixed>
+          <Text style={s.footerText}>ON EARTH B2B  ·  CASA 2027</Text>
+          <Text
+            style={s.footerText}
+            render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`}
+          />
+        </View>
+      </Page>
+
+      {/* Summary page */}
+      <Page size="A4" style={s.page}>
+        {/* Header */}
+        <View style={s.header}>
+          <View>
+            <Text style={ss.summaryTitle}>ON EARTH</Text>
+            <Text style={ss.summarySub}>RIEPILOGO SPESA PER GRUPPO</Text>
+          </View>
+          <View style={s.metaBlock}>
+            <Text style={s.orderNum}>#{order.id.slice(0, 8).toUpperCase()}</Text>
+            <Text style={s.orderDetail}>{customerName}</Text>
+          </View>
+        </View>
+
+        {summaryTemaColore.length > 0 && <SummaryTable title="Tema colore" rows={summaryTemaColore} />}
+        {summaryColore.length > 0 && <SummaryTable title="Colore" rows={summaryColore} />}
+        {summarySottoclasse.length > 0 && <SummaryTable title="Sottoclasse" rows={summarySottoclasse} />}
+        {summaryFamiglia.length > 0 && <SummaryTable title="Famiglia" rows={summaryFamiglia} />}
+
+        {/* Footer */}
         <View style={s.footer} fixed>
           <Text style={s.footerText}>ON EARTH B2B  ·  CASA 2027</Text>
           <Text

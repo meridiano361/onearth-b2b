@@ -47,6 +47,7 @@ export default function CatalogView() {
   const [showFilters, setShowFilters]     = useState(false);
   const [filters, setFilters]             = useState<Filters>(EMPTY_FILTERS);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [sortBy, setSortBy]               = useState<'default' | 'az' | 'za' | 'price-asc' | 'price-desc'>('default');
   const { favoriteIds } = useFavorites();
   const tn = useTranslations('nav');
 
@@ -114,8 +115,13 @@ export default function CatalogView() {
     if (tranche)            result = result.filter((p) => p.tranche            === tranche);
     if (onlyFavorites)      result = result.filter((p) => favoriteIds.has(p.id));
 
+    if (sortBy === 'az')         result = [...result].sort((a, b) => a.name.localeCompare(b.name, 'it'));
+    else if (sortBy === 'za')    result = [...result].sort((a, b) => b.name.localeCompare(a.name, 'it'));
+    else if (sortBy === 'price-asc')  result = [...result].sort((a, b) => Number(a.costPrice) - Number(b.costPrice));
+    else if (sortBy === 'price-desc') result = [...result].sort((a, b) => Number(b.costPrice) - Number(a.costPrice));
+
     return result;
-  }, [products, debouncedSearch, filters, onlyFavorites, favoriteIds]);
+  }, [products, debouncedSearch, filters, onlyFavorites, favoriteIds, sortBy]);
 
   const filterProps = {
     products,
@@ -232,6 +238,19 @@ export default function CatalogView() {
               </button>
             )}
           </div>
+
+          {/* Sort selector */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="text-xs border border-border rounded px-2 py-2 bg-white text-gray-600 focus:outline-none focus:border-accent transition-colors flex-shrink-0"
+          >
+            <option value="default">Default</option>
+            <option value="az">A → Z</option>
+            <option value="za">Z → A</option>
+            <option value="price-asc">Prezzo ↑</option>
+            <option value="price-desc">Prezzo ↓</option>
+          </select>
 
           {/* Favorites toggle */}
           <button
