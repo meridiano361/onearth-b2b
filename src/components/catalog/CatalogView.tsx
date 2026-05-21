@@ -82,6 +82,15 @@ export default function CatalogView() {
     },
   });
 
+  const { data: docsData } = useQuery({
+    queryKey: ['public-documents'],
+    queryFn: () => fetch('/api/documents').then((r) => r.json()),
+    staleTime: 60_000,
+  });
+  const publicDocs: { tipo: string; url: string; nome: string }[] = docsData?.data ?? [];
+  const condizioniDoc = publicDocs.find((d) => d.tipo === 'Condizioni Commerciali');
+  const catalogoDoc   = publicDocs.find((d) => d.tipo === 'Catalogo PDF');
+
   const products = productsData ?? [];
 
   const filteredProducts = useMemo(() => {
@@ -182,24 +191,28 @@ export default function CatalogView() {
         <div className="border-b border-border bg-cream/30 px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
           <span className="text-2xs uppercase tracking-widest text-gray-400 font-medium hidden sm:block">CASA 2027</span>
           <div className="flex items-center gap-4 ml-auto">
-            <a
-              href="/condizioni-commerciali.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary transition-colors"
-            >
-              <FileDown size={13} />
-              Condizioni Commerciali
-            </a>
-            <a
-              href="/catalogo.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary transition-colors"
-            >
-              <FileDown size={13} />
-              Scarica catalogo PDF
-            </a>
+            {condizioniDoc && (
+              <a
+                href={condizioniDoc.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary transition-colors"
+              >
+                <FileDown size={13} />
+                Condizioni Commerciali
+              </a>
+            )}
+            {catalogoDoc && (
+              <a
+                href={catalogoDoc.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary transition-colors"
+              >
+                <FileDown size={13} />
+                Scarica catalogo PDF
+              </a>
+            )}
           </div>
         </div>
 

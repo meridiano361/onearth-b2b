@@ -358,6 +358,19 @@ model Favorite {
   @@map("favorites")
 }
 
+model Document {
+  id         String   @id @default(cuid())
+  nome       String
+  tipo       String
+  url        String
+  storageKey String
+  size       Int
+  visibile   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@map("documents")
+}
+
 model OrderItem {
   id          String  @id @default(cuid())
   orderId     String
