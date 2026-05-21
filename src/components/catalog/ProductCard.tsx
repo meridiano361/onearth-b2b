@@ -141,12 +141,6 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
 
-        {/* Notes */}
-        {product.notes && (
-          <p className="text-2xs text-gray-400 mb-3 max-h-8 overflow-hidden italic">
-            {product.notes}
-          </p>
-        )}
 
         {/* Lot warning */}
         {hasLotWarning && (
