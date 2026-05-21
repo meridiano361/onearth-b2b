@@ -17,6 +17,10 @@ function upperAll(s: string): string {
   return s.trim().toUpperCase();
 }
 
+function titleCase(s: string): string {
+  return s.trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 async function normalizeTable(
   label: string,
   delegate: any,
@@ -77,7 +81,7 @@ async function normalizeProductFields(): Promise<{ normalized: number }> {
 
     const capFields = [
       'gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo',
-      'colore', 'temaColore', 'stagione', 'produttore', 'collezione', 'tranche',
+      'colore', 'temaColore', 'stagione', 'collezione', 'tranche',
     ] as const;
 
     for (const f of capFields) {
@@ -86,6 +90,11 @@ async function normalizeProductFields(): Promise<{ normalized: number }> {
         const norm = capFirst(val);
         if (norm !== val) data[f] = norm;
       }
+    }
+
+    if (p.produttore) {
+      const norm = titleCase(p.produttore);
+      if (norm !== p.produttore) data.produttore = norm;
     }
 
     if (p.nomLinea) {
@@ -123,7 +132,7 @@ async function main() {
   add(await normalizeTable('Colore', prisma.colore, capFirst));
   add(await normalizeTable('TemaColore', prisma.temaColore, capFirst));
   add(await normalizeTable('Linea', prisma.linea, upperAll));
-  add(await normalizeTable('Produttore', prisma.produttore, capFirst));
+  add(await normalizeTable('Produttore', prisma.produttore, titleCase));
   add(await normalizeTable('Tranche', prisma.tranche, capFirst));
 
   // Hierarchical (bottom-up to avoid FK conflicts)

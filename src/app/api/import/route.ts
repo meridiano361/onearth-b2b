@@ -5,6 +5,7 @@ import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
+import { titleCase } from '@/lib/normalizeClassification';
 
 function parseDecimal(v: any): number | undefined {
   if (v === undefined || v === null || v === '') return undefined;
@@ -141,7 +142,7 @@ export async function POST(req: NextRequest) {
           colore: str(parsed.colore),
           nomLinea: str(parsed.nomLinea),
           misura: str(parsed.misura),
-          produttore: str(parsed.produttore),
+          produttore: parsed.produttore ? titleCase(str(parsed.produttore) ?? '') || null : null,
           gruppoMerceologico: str(parsed.gruppoMerceologico),
           classe: str(parsed.classe),
           sottoclasse: str(parsed.sottoclasse),
