@@ -82,7 +82,7 @@ function ProductCard({
       <div className="p-2.5 flex flex-col gap-1.5 flex-1 min-h-0">
         <div>
           <p className="text-2xs font-mono text-gray-400 tracking-wider leading-none">{product.code}</p>
-          <p className="text-xs font-medium text-primary leading-snug mt-1 line-clamp-2 break-words">{product.name}</p>
+          <p className="text-xs font-medium text-primary leading-snug mt-1 h-10 overflow-hidden">{product.name}</p>
         </div>
 
         <p className="text-2xs text-gray-400 mt-auto">
@@ -240,7 +240,7 @@ function AddProductsModal({
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className="text-2xs font-mono text-gray-400 truncate">{product.code}</p>
-                  <p className="text-xs text-primary line-clamp-2 break-words font-medium">{product.name}</p>
+                  <p className="text-xs text-primary h-10 overflow-hidden font-medium">{product.name}</p>
                   <p className="text-2xs text-gray-400">{formatCurrency(product.costPrice)}</p>
                 </div>
 

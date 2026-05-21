@@ -28,7 +28,7 @@ export default function CartItem({ item }: CartItemProps) {
           <p className="text-2xs font-medium tracking-wide uppercase text-gray-400 leading-none mb-0.5">
             {item.product.code}
           </p>
-          <p className="text-xs font-medium text-primary leading-snug line-clamp-2 break-words mb-1.5">
+          <p className="text-xs font-medium text-primary leading-snug h-10 overflow-hidden mb-1.5">
             {item.product.name}
           </p>
           <div className="flex items-center gap-2">
