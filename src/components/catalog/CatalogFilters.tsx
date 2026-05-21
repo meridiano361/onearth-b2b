@@ -82,16 +82,77 @@ export default function CatalogFilters({
 }: CatalogFiltersProps) {
   const t = useTranslations('filters');
 
-  const gruppoMerceologicoOpts = useMemo(() => opts(products, 'gruppoMerceologico'), [products]);
-  const famigliaOpts           = useMemo(() => opts(products, 'famiglia'),           [products]);
-  const classeOpts             = useMemo(() => opts(products, 'classe'),             [products]);
-  const sottoclasseOpts        = useMemo(() => opts(products, 'sottoclasse'),        [products]);
-  const gruppoOmogeneoOpts     = useMemo(() => opts(products, 'gruppoOmogeneo'),     [products]);
-  const nomLineaOpts           = useMemo(() => opts(products, 'nomLinea'),           [products]);
-  const coloreOpts             = useMemo(() => opts(products, 'colore'),             [products]);
-  const collezioneOpts         = useMemo(() => opts(products, 'collezione'),         [products]);
-  const produttoreOpts         = useMemo(() => opts(products, 'produttore'),         [products]);
-  const trancheOpts            = useMemo(() => opts(products, 'tranche'),            [products]);
+  // ── Cascading product subsets ──────────────────────────────
+  const byGM = useMemo(() =>
+    selectedGruppoMerceologico
+      ? products.filter((p) => p.gruppoMerceologico === selectedGruppoMerceologico)
+      : products,
+    [products, selectedGruppoMerceologico]
+  );
+
+  const byGMFam = useMemo(() =>
+    selectedFamiglia ? byGM.filter((p) => p.famiglia === selectedFamiglia) : byGM,
+    [byGM, selectedFamiglia]
+  );
+
+  const byGMFamCls = useMemo(() =>
+    selectedClasse ? byGMFam.filter((p) => p.classe === selectedClasse) : byGMFam,
+    [byGMFam, selectedClasse]
+  );
+
+  const byGMFamClsSub = useMemo(() =>
+    selectedSottoclasse ? byGMFamCls.filter((p) => p.sottoclasse === selectedSottoclasse) : byGMFamCls,
+    [byGMFamCls, selectedSottoclasse]
+  );
+
+  // All hierarchy filters applied — used for flat filter options
+  const byHierarchy = useMemo(() =>
+    selectedGruppoOmogeneo
+      ? byGMFamClsSub.filter((p) => p.gruppoOmogeneo === selectedGruppoOmogeneo)
+      : byGMFamClsSub,
+    [byGMFamClsSub, selectedGruppoOmogeneo]
+  );
+
+  // ── Options per level ──────────────────────────────────────
+  const gruppoMerceologicoOpts = useMemo(() => opts(products,      'gruppoMerceologico'), [products]);
+  const famigliaOpts           = useMemo(() => opts(byGM,          'famiglia'),           [byGM]);
+  const classeOpts             = useMemo(() => opts(byGMFam,       'classe'),             [byGMFam]);
+  const sottoclasseOpts        = useMemo(() => opts(byGMFamCls,    'sottoclasse'),        [byGMFamCls]);
+  const gruppoOmogeneoOpts     = useMemo(() => opts(byGMFamClsSub, 'gruppoOmogeneo'),     [byGMFamClsSub]);
+
+  // Flat filters scoped to active hierarchy
+  const nomLineaOpts   = useMemo(() => opts(byHierarchy, 'nomLinea'),   [byHierarchy]);
+  const coloreOpts     = useMemo(() => opts(byHierarchy, 'colore'),     [byHierarchy]);
+  const collezioneOpts = useMemo(() => opts(byHierarchy, 'collezione'), [byHierarchy]);
+  const produttoreOpts = useMemo(() => opts(byHierarchy, 'produttore'), [byHierarchy]);
+  const trancheOpts    = useMemo(() => opts(byHierarchy, 'tranche'),    [byHierarchy]);
+
+  // ── Cascading onChange handlers ────────────────────────────
+  function handleGruppoMerceologicoChange(v: string | null) {
+    onGruppoMerceologicoChange(v);
+    onFamigliaChange(null);
+    onClasseChange(null);
+    onSottoclasseChange(null);
+    onGruppoOmogeneoChange(null);
+  }
+
+  function handleFamigliaChange(v: string | null) {
+    onFamigliaChange(v);
+    onClasseChange(null);
+    onSottoclasseChange(null);
+    onGruppoOmogeneoChange(null);
+  }
+
+  function handleClasseChange(v: string | null) {
+    onClasseChange(v);
+    onSottoclasseChange(null);
+    onGruppoOmogeneoChange(null);
+  }
+
+  function handleSottoclasseChange(v: string | null) {
+    onSottoclasseChange(v);
+    onGruppoOmogeneoChange(null);
+  }
 
   return (
     <div className="w-56 flex-shrink-0 border-r border-border bg-white overflow-y-auto">
@@ -111,16 +172,19 @@ export default function CatalogFilters({
           )}
         </div>
 
-        <FilterSelect label={t('gruppoMerceologico')} allLabel={t('all')} value={selectedGruppoMerceologico} options={gruppoMerceologicoOpts} onChange={onGruppoMerceologicoChange} />
-        <FilterSelect label={t('famiglia')}           allLabel={t('all')} value={selectedFamiglia}           options={famigliaOpts}           onChange={onFamigliaChange} />
-        <FilterSelect label={t('classe')}             allLabel={t('all')} value={selectedClasse}             options={classeOpts}             onChange={onClasseChange} />
-        <FilterSelect label={t('sottoclasse')}        allLabel={t('all')} value={selectedSottoclasse}        options={sottoclasseOpts}        onChange={onSottoclasseChange} />
+        {/* Hierarchy */}
+        <FilterSelect label={t('gruppoMerceologico')} allLabel={t('all')} value={selectedGruppoMerceologico} options={gruppoMerceologicoOpts} onChange={handleGruppoMerceologicoChange} />
+        <FilterSelect label={t('famiglia')}           allLabel={t('all')} value={selectedFamiglia}           options={famigliaOpts}           onChange={handleFamigliaChange} />
+        <FilterSelect label={t('classe')}             allLabel={t('all')} value={selectedClasse}             options={classeOpts}             onChange={handleClasseChange} />
+        <FilterSelect label={t('sottoclasse')}        allLabel={t('all')} value={selectedSottoclasse}        options={sottoclasseOpts}        onChange={handleSottoclasseChange} />
         <FilterSelect label={t('gruppoOmogeneo')}     allLabel={t('all')} value={selectedGruppoOmogeneo}     options={gruppoOmogeneoOpts}     onChange={onGruppoOmogeneoChange} />
-        <FilterSelect label={t('linea')}              allLabel={t('all')} value={selectedNomLinea}           options={nomLineaOpts}           onChange={onNomLineaChange} />
-        <FilterSelect label={t('colore')}             allLabel={t('all')} value={selectedColore}             options={coloreOpts}             onChange={onColoreChange} />
-        <FilterSelect label={t('collezione')}         allLabel={t('all')} value={selectedCollezione}         options={collezioneOpts}         onChange={onCollezioneChange} />
-        <FilterSelect label={t('produttore')}         allLabel={t('all')} value={selectedProduttore}         options={produttoreOpts}         onChange={onProduttoreChange} />
-        <FilterSelect label={t('tranche')}            allLabel={t('all')} value={selectedTranche}            options={trancheOpts}            onChange={onTrancheChange} />
+
+        {/* Flat filters scoped to hierarchy */}
+        <FilterSelect label={t('linea')}     allLabel={t('all')} value={selectedNomLinea}   options={nomLineaOpts}   onChange={onNomLineaChange} />
+        <FilterSelect label={t('colore')}    allLabel={t('all')} value={selectedColore}     options={coloreOpts}     onChange={onColoreChange} />
+        <FilterSelect label={t('collezione')} allLabel={t('all')} value={selectedCollezione} options={collezioneOpts} onChange={onCollezioneChange} />
+        <FilterSelect label={t('produttore')} allLabel={t('all')} value={selectedProduttore} options={produttoreOpts} onChange={onProduttoreChange} />
+        <FilterSelect label={t('tranche')}   allLabel={t('all')} value={selectedTranche}    options={trancheOpts}    onChange={onTrancheChange} />
 
       </div>
     </div>
