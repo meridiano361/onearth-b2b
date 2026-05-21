@@ -313,6 +313,186 @@ function ClassificazioneTab({ tipo }: { tipo: string }) {
   );
 }
 
+function ProduttoriTab() {
+  const queryClient = useQueryClient();
+  const [isAdding, setIsAdding] = useState(false);
+  const [newNome, setNewNome] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingNome, setEditingNome] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [deletingNome, setDeletingNome] = useState<string | null>(null);
+
+  const { data, isLoading } = useQuery<{ data: { nome: string; count: number }[] }>({
+    queryKey: ['admin-produttori'],
+    queryFn: () => fetch('/api/admin/produttori').then((r) => r.json()),
+  });
+
+  const items = data?.data ?? [];
+
+  function normalizeTitle(s: string) {
+    return s.trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  async function handleAdd() {
+    const nome = normalizeTitle(newNome);
+    if (!nome) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/admin/produttori', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Errore');
+      setNewNome('');
+      setIsAdding(false);
+      queryClient.invalidateQueries({ queryKey: ['admin-produttori'] });
+      toast.success('Produttore aggiunto');
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleEdit(vecchioNome: string) {
+    const nuovoNome = normalizeTitle(editValue);
+    if (!nuovoNome || nuovoNome === vecchioNome) { setEditingNome(null); return; }
+    try {
+      const res = await fetch('/api/admin/produttori', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vecchioNome, nuovoNome }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Errore');
+      setEditingNome(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-produttori'] });
+      toast.success('Produttore rinominato');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  }
+
+  async function handleDelete(nome: string) {
+    try {
+      const res = await fetch('/api/admin/produttori', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Errore');
+      setDeletingNome(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-produttori'] });
+      toast.success('Produttore eliminato');
+    } catch (err: any) {
+      toast.error(err.message);
+      setDeletingNome(null);
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs text-gray-400">{items.length} produttor{items.length === 1 ? 'e' : 'i'}</p>
+        {!isAdding && (
+          <Button size="sm" icon={<Plus size={12} />} onClick={() => { setIsAdding(true); setNewNome(''); }}>
+            Aggiungi
+          </Button>
+        )}
+      </div>
+
+      {isAdding && (
+        <div className="flex items-center gap-2 mb-3 p-3 bg-cream rounded border border-border">
+          <input
+            autoFocus
+            value={newNome}
+            onChange={(e) => setNewNome(e.target.value)}
+            onBlur={() => setNewNome(normalizeTitle(newNome))}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setIsAdding(false); setNewNome(''); } }}
+            placeholder="Nome produttore..."
+            className="flex-1 text-sm border border-border rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent bg-white"
+          />
+          <button onClick={handleAdd} disabled={isSubmitting} className="p-1.5 text-green-600 hover:text-green-700 disabled:opacity-50">
+            <Check size={15} />
+          </button>
+          <button onClick={() => { setIsAdding(false); setNewNome(''); }} className="p-1.5 text-gray-400 hover:text-gray-600">
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="py-12 text-center"><LoadingSpinner className="mx-auto" /></div>
+      ) : items.length === 0 ? (
+        <p className="text-center text-gray-400 text-sm py-12">Nessun produttore. Clicca "Aggiungi" per iniziare.</p>
+      ) : (
+        <div className="bg-white border border-border rounded overflow-hidden">
+          <table className="table-luxury w-full">
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.nome}>
+                  <td className="py-3 px-4">
+                    {editingNome === item.nome ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          autoFocus
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => setEditValue(normalizeTitle(editValue))}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleEdit(item.nome); if (e.key === 'Escape') setEditingNome(null); }}
+                          className="flex-1 text-sm border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent"
+                        />
+                        <button onClick={() => handleEdit(item.nome)} className="p-1 text-green-600 hover:text-green-700"><Check size={13} /></button>
+                        <button onClick={() => setEditingNome(null)} className="p-1 text-gray-400 hover:text-gray-600"><X size={13} /></button>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-primary">{item.nome}</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-xs text-gray-400 w-24">
+                    {item.count > 0 ? `${item.count} prod.` : <span className="text-gray-300">—</span>}
+                  </td>
+                  <td className="py-3 px-4 w-36">
+                    {deletingNome === item.nome ? (
+                      <div className="flex items-center gap-2 justify-end">
+                        <button onClick={() => handleDelete(item.nome)} className="text-2xs text-red-600 hover:text-red-700 font-medium">Conferma</button>
+                        <button onClick={() => setDeletingNome(null)} className="text-2xs text-gray-400 hover:text-gray-600">Annulla</button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 justify-end">
+                        <button
+                          onClick={() => { setEditingNome(item.nome); setEditValue(item.nome); }}
+                          className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
+                          title="Rinomina"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                        <button
+                          onClick={() => setDeletingNome(item.nome)}
+                          className={cn(
+                            'p-1.5 rounded transition-colors',
+                            item.count > 0
+                              ? 'text-gray-200 cursor-not-allowed'
+                              : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                          )}
+                          title={item.count > 0 ? `${item.count} prodotti usano questo produttore` : 'Elimina'}
+                          disabled={item.count > 0}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminClassificazionePage() {
   const [activeTab, setActiveTab] = useState(TIPI[0].tipo);
 
@@ -340,6 +520,17 @@ export default function AdminClassificazionePage() {
             {label}
           </button>
         ))}
+        <button
+          onClick={() => setActiveTab('produttori')}
+          className={cn(
+            'px-3 py-2 text-xs font-medium transition-colors border-b-2 -mb-px',
+            activeTab === 'produttori'
+              ? 'border-accent text-accent'
+              : 'border-transparent text-gray-500 hover:text-primary hover:border-gray-300'
+          )}
+        >
+          Produttori
+        </button>
       </div>
 
       {/* Tab content */}
@@ -348,6 +539,7 @@ export default function AdminClassificazionePage() {
           <ClassificazioneTab key={tipo} tipo={tipo} />
         ) : null
       )}
+      {activeTab === 'produttori' && <ProduttoriTab />}
     </div>
   );
 }

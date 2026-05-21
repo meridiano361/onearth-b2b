@@ -210,7 +210,7 @@ export default function CatalogView() {
                 className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary transition-colors"
               >
                 <FileDown size={13} />
-                Scarica catalogo PDF
+                Catalogo CASA 2027
               </a>
             )}
           </div>
