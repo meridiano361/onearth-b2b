@@ -103,7 +103,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <p className="text-2xs font-medium tracking-widest uppercase text-gray-600 mb-0.5">
             {product.code}
           </p>
-          <h3 className="text-sm font-medium text-primary leading-snug line-clamp-2 min-h-[3rem]">
+          <h3 className="text-sm font-medium text-primary leading-snug line-clamp-2 break-words min-h-[3rem]">
             {product.name}
           </h3>
         </div>
@@ -130,7 +130,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Notes */}
         {product.notes && (
-          <p className="text-2xs text-gray-400 mb-3 line-clamp-2 italic">
+          <p className="text-2xs text-gray-400 mb-3 line-clamp-2 break-words italic">
             {product.notes}
           </p>
         )}
