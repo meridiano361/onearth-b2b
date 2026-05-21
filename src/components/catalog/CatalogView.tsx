@@ -245,11 +245,12 @@ export default function CatalogView() {
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
             className="text-xs border border-border rounded px-2 py-2 bg-white text-gray-600 focus:outline-none focus:border-accent transition-colors flex-shrink-0"
           >
+            <option value="" disabled>Ordina per...</option>
             <option value="default">Rilevanza</option>
             <option value="az">A → Z</option>
             <option value="za">Z → A</option>
-            <option value="price-asc">Prezzo ↑</option>
-            <option value="price-desc">Prezzo ↓</option>
+            <option value="price-asc">Prezzo crescente</option>
+            <option value="price-desc">Prezzo decrescente</option>
           </select>
 
           {/* Favorites toggle */}
