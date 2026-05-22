@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   BookOpen,
   Download,
@@ -37,6 +37,31 @@ interface FormState {
   mostraLogo: boolean;
   mostraData: boolean;
   mostraPagina: boolean;
+  // New fields
+  formato: 'A4-P' | 'A4-L' | 'A3-P' | 'A3-L';
+  colonne: number;
+  righe: number;
+  margine: 'stretto' | 'normale' | 'ampio';
+  colori: {
+    sfondoPagina: string;
+    sfondoFoto: string;
+    testoPrimario: string;
+    testoSecondario: string;
+  };
+  modalitaSeparatore: 'pagina-intera' | 'inline' | 'nuova-riga';
+  copertina: {
+    attiva: boolean;
+    immagineBase64: string | null;
+    titolo: string;
+    sottotitolo: string;
+    layout: 'full-overlay' | 'half' | 'solo-testo';
+  };
+  paginaFinale: {
+    attiva: boolean;
+    titolo: string;
+    testo: string;
+    mostraLogo: boolean;
+  };
 }
 
 interface Template {
@@ -87,34 +112,45 @@ const DEFAULT_STATE: FormState = {
   mostraLogo: true,
   mostraData: true,
   mostraPagina: true,
+  formato: 'A4-P',
+  colonne: 4,
+  righe: 6,
+  margine: 'normale',
+  colori: {
+    sfondoPagina: '#E8DDD0',
+    sfondoFoto: '#FFFFFF',
+    testoPrimario: '#1C1C1C',
+    testoSecondario: '#9CA3AF',
+  },
+  modalitaSeparatore: 'pagina-intera',
+  copertina: {
+    attiva: false,
+    immagineBase64: null,
+    titolo: 'Collezione CASA 2027',
+    sottotitolo: '',
+    layout: 'full-overlay',
+  },
+  paginaFinale: {
+    attiva: false,
+    titolo: '',
+    testo: '',
+    mostraLogo: true,
+  },
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── ON EARTH palette ──────────────────────────────────────────────────────────
 
-function buildQueryString(config: FormState): string {
-  const p = new URLSearchParams();
-
-  if (config.gruppoMerceologico) p.set('gruppoMerceologico', config.gruppoMerceologico);
-  if (config.famiglia) p.set('famiglia', config.famiglia);
-  if (config.classe) p.set('classe', config.classe);
-  if (config.sottoclasse) p.set('sottoclasse', config.sottoclasse);
-  if (config.gruppoOmogeneo) p.set('gruppoOmogeneo', config.gruppoOmogeneo);
-  if (config.nomLinea) p.set('nomLinea', config.nomLinea);
-  if (config.collezione) p.set('collezione', config.collezione);
-  if (config.colore) p.set('colore', config.colore);
-  if (config.produttore) p.set('produttore', config.produttore);
-  if (config.tranche) p.set('tranche', config.tranche);
-  p.set('soloAttivi', String(config.soloAttivi));
-  p.set('raggruppa', config.raggruppa);
-  p.set('ordina', config.ordina);
-  p.set('titolo', config.titolo);
-  p.set('mostraLogo', String(config.mostraLogo));
-  p.set('mostraData', String(config.mostraData));
-  p.set('mostraPagina', String(config.mostraPagina));
-  p.set('campi', JSON.stringify(config.campi));
-
-  return p.toString();
-}
+const PALETTE = [
+  { nome: 'Bianco', hex: '#FFFFFF' },
+  { nome: 'Tortora chiaro', hex: '#F5F0EA' },
+  { nome: 'Tortora', hex: '#E8DDD0' },
+  { nome: 'Beige', hex: '#D4C4B0' },
+  { nome: 'Grigio chiaro', hex: '#E5E5E5' },
+  { nome: 'Grigio', hex: '#9CA3AF' },
+  { nome: 'Nero', hex: '#000000' },
+  { nome: 'Verde salvia', hex: '#8FAF8F' },
+  { nome: 'Terracotta', hex: '#C17A5A' },
+];
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -193,10 +229,42 @@ function CheckboxField({
   );
 }
 
+function ColorSwatchPicker({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (hex: string) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1.5">{label}</label>
+      <div className="flex flex-wrap gap-1.5">
+        {PALETTE.map((c) => (
+          <button
+            key={c.hex}
+            type="button"
+            title={c.nome}
+            onClick={() => onChange(c.hex)}
+            style={{ backgroundColor: c.hex }}
+            className={`w-7 h-7 rounded transition-all ${
+              value.toLowerCase() === c.hex.toLowerCase()
+                ? 'border-2 border-primary ring-1 ring-primary/30 scale-110'
+                : 'border-2 border-transparent hover:border-gray-300'
+            } ${c.hex === '#FFFFFF' ? 'border-gray-200' : ''}`}
+          />
+        ))}
+      </div>
+      <p className="text-2xs text-gray-400 mt-1">{PALETTE.find(c => c.hex.toLowerCase() === value.toLowerCase())?.nome ?? value}</p>
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function AdminCatalogoPDFPage() {
-  const queryClient = useQueryClient();
   const [config, setConfig] = useState<FormState>(DEFAULT_STATE);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
@@ -204,13 +272,18 @@ export default function AdminCatalogoPDFPage() {
   const [templateName, setTemplateName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showTemplates, setShowTemplates] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Section open/close
   const [sections, setSections] = useState({
     filtri: true,
+    formato: true,
+    colori: false,
     raggruppamento: true,
     campi: true,
     intestazione: true,
+    copertina: false,
+    paginaFinale: false,
   });
 
   const toggleSection = (k: keyof typeof sections) =>
@@ -243,6 +316,7 @@ export default function AdminCatalogoPDFPage() {
 
   // Derived option lists
   const byType = (tipo: string): string[] =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     classData?.data?.filter((v: any) => v.tipo === tipo).map((v: any) => v.nome) ?? [];
 
   const gruppiMerceologici = byType('gruppoMerceologico');
@@ -253,6 +327,7 @@ export default function AdminCatalogoPDFPage() {
   const linee = byType('nomLinea');
   const collezioni = byType('collezione');
   const colori = byType('colore');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const produttori = produttoriData?.data?.map((p: any) => p.nome) ?? [];
   const tranches = optionsData?.tranches ?? [];
 
@@ -260,11 +335,56 @@ export default function AdminCatalogoPDFPage() {
 
   // ── Field updaters ─────────────────────────────────────────────────────────
 
-  const set = useCallback((key: keyof FormState, value: any) =>
-    setConfig((c) => ({ ...c, [key]: value })), []);
+  const set = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (key: keyof FormState, value: any) =>
+      setConfig((c) => ({ ...c, [key]: value })),
+    []
+  );
 
-  const setField = useCallback((key: keyof CatalogFields, value: boolean) =>
-    setConfig((c) => ({ ...c, campi: { ...c.campi, [key]: value } })), []);
+  const setField = useCallback(
+    (key: keyof CatalogFields, value: boolean) =>
+      setConfig((c) => ({ ...c, campi: { ...c.campi, [key]: value } })),
+    []
+  );
+
+  const setColore = useCallback(
+    (key: keyof FormState['colori'], value: string) =>
+      setConfig((c) => ({ ...c, colori: { ...c.colori, [key]: value } })),
+    []
+  );
+
+  const setCopertina = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (key: keyof FormState['copertina'], value: any) =>
+      setConfig((c) => ({ ...c, copertina: { ...c.copertina, [key]: value } })),
+    []
+  );
+
+  const setPaginaFinale = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (key: keyof FormState['paginaFinale'], value: any) =>
+      setConfig((c) => ({ ...c, paginaFinale: { ...c.paginaFinale, [key]: value } })),
+    []
+  );
+
+  // ── Image upload handler ───────────────────────────────────────────────────
+
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Immagine troppo grande (max 2 MB)');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setCopertina('immagineBase64', dataUrl);
+    };
+    reader.readAsDataURL(file);
+  }
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
@@ -272,6 +392,7 @@ export default function AdminCatalogoPDFPage() {
     setIsPreviewing(true);
     setPreview(null);
     try {
+      // Pass colonne/righe to preview so it can compute the right page count
       const res = await fetch('/api/admin/catalogo-pdf/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -280,8 +401,8 @@ export default function AdminCatalogoPDFPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Errore');
       setPreview(data);
-    } catch (err: any) {
-      toast.error(err.message || 'Errore anteprima');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Errore anteprima');
     } finally {
       setIsPreviewing(false);
     }
@@ -289,13 +410,16 @@ export default function AdminCatalogoPDFPage() {
 
   async function handleGeneraPDF() {
     if (!preview) {
-      toast.error('Esegui prima l\'anteprima');
+      toast.error("Esegui prima l'anteprima");
       return;
     }
     setIsGenerating(true);
     try {
-      const qs = buildQueryString(config);
-      const res = await fetch(`/api/admin/catalogo-pdf?${qs}`);
+      const res = await fetch('/api/admin/catalogo-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Errore sconosciuto' }));
         throw new Error(err.error);
@@ -312,8 +436,8 @@ export default function AdminCatalogoPDFPage() {
       a.remove();
       URL.revokeObjectURL(url);
       toast.success('PDF generato con successo');
-    } catch (err: any) {
-      toast.error(err.message || 'Errore generazione PDF');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Errore generazione PDF');
     } finally {
       setIsGenerating(false);
     }
@@ -326,10 +450,15 @@ export default function AdminCatalogoPDFPage() {
     }
     setIsSaving(true);
     try {
+      // Exclude large image from saved config
+      const configToSave = {
+        ...config,
+        copertina: { ...config.copertina, immagineBase64: null },
+      };
       const res = await fetch('/api/admin/catalogo-pdf/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: templateName.trim(), configurazione: config }),
+        body: JSON.stringify({ nome: templateName.trim(), configurazione: configToSave }),
       });
       if (!res.ok) throw new Error('Errore salvataggio');
       toast.success('Configurazione salvata');
@@ -374,7 +503,7 @@ export default function AdminCatalogoPDFPage() {
           </div>
         </div>
 
-        {/* Filtri */}
+        {/* ── Filtri ── */}
         <div className="border border-border rounded overflow-hidden">
           <SectionTitle open={sections.filtri} onToggle={() => toggleSection('filtri')}>
             Filtri prodotti
@@ -412,56 +541,187 @@ export default function AdminCatalogoPDFPage() {
           )}
         </div>
 
-        {/* Raggruppamento e ordinamento */}
+        {/* ── Formato pagina ── */}
         <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.raggruppamento} onToggle={() => toggleSection('raggruppamento')}>
-            Raggruppamento e ordinamento
+          <SectionTitle open={sections.formato} onToggle={() => toggleSection('formato')}>
+            Formato pagina
           </SectionTitle>
-          {sections.raggruppamento && (
-            <div className="p-4 grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Raggruppa per</label>
-                <select
-                  value={config.raggruppa}
-                  onChange={(e) => set('raggruppa', e.target.value)}
-                  className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                >
-                  <option value="">Nessun raggruppamento</option>
-                  <option value="nomLinea">Linea</option>
-                  <option value="classe">Classe</option>
-                  <option value="sottoclasse">Sottoclasse</option>
-                  <option value="famiglia">Famiglia</option>
-                  <option value="gruppoOmogeneo">Gruppo omogeneo</option>
-                  <option value="collezione">Collezione</option>
-                  <option value="produttore">Produttore</option>
-                  <option value="paese">Paese</option>
-                </select>
-                {config.raggruppa && (
-                  <p className="text-2xs text-gray-400 mt-1">
-                    Ogni gruppo inizia su una nuova pagina con titolo separatore
-                  </p>
-                )}
+          {sections.formato && (
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Formato</label>
+                  <select
+                    value={config.formato}
+                    onChange={(e) => set('formato', e.target.value)}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  >
+                    <option value="A4-P">A4 Verticale</option>
+                    <option value="A4-L">A4 Orizzontale</option>
+                    <option value="A3-P">A3 Verticale</option>
+                    <option value="A3-L">A3 Orizzontale</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Margini</label>
+                  <select
+                    value={config.margine}
+                    onChange={(e) => set('margine', e.target.value)}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  >
+                    <option value="stretto">Stretto (10 pt)</option>
+                    <option value="normale">Normale (20 pt)</option>
+                    <option value="ampio">Ampio (30 pt)</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Ordina per</label>
-                <select
-                  value={config.ordina}
-                  onChange={(e) => set('ordina', e.target.value)}
-                  className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                >
-                  <option value="code">Codice A→Z</option>
-                  <option value="name">Descrizione A→Z</option>
-                  <option value="costPrice_asc">Prezzo crescente</option>
-                  <option value="costPrice_desc">Prezzo decrescente</option>
-                  <option value="nomLinea">Linea</option>
-                  <option value="collezione">Collezione</option>
-                </select>
+              <div className="grid grid-cols-3 gap-3 items-end">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Colonne</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={6}
+                    value={config.colonne}
+                    onChange={(e) => set('colonne', Math.max(1, Math.min(6, parseInt(e.target.value) || 1)))}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Righe</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={config.righe}
+                    onChange={(e) => set('righe', Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  />
+                </div>
+                <div className="pb-0.5">
+                  <p className="text-xs text-gray-500 font-medium">
+                    = <span className="text-primary font-bold">{config.colonne * config.righe}</span> prodotti/pagina
+                  </p>
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Informazioni da mostrare */}
+        {/* ── Stile e colori ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.colori} onToggle={() => toggleSection('colori')}>
+            Stile e colori
+          </SectionTitle>
+          {sections.colori && (
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <ColorSwatchPicker
+                label="Sfondo pagina"
+                value={config.colori.sfondoPagina}
+                onChange={(v) => setColore('sfondoPagina', v)}
+              />
+              <ColorSwatchPicker
+                label="Sfondo foto"
+                value={config.colori.sfondoFoto}
+                onChange={(v) => setColore('sfondoFoto', v)}
+              />
+              <ColorSwatchPicker
+                label="Testo primario"
+                value={config.colori.testoPrimario}
+                onChange={(v) => setColore('testoPrimario', v)}
+              />
+              <ColorSwatchPicker
+                label="Testo secondario"
+                value={config.colori.testoSecondario}
+                onChange={(v) => setColore('testoSecondario', v)}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* ── Raggruppamento e ordinamento ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.raggruppamento} onToggle={() => toggleSection('raggruppamento')}>
+            Raggruppamento e ordinamento
+          </SectionTitle>
+          {sections.raggruppamento && (
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Raggruppa per</label>
+                  <select
+                    value={config.raggruppa}
+                    onChange={(e) => set('raggruppa', e.target.value)}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  >
+                    <option value="">Nessun raggruppamento</option>
+                    <option value="nomLinea">Linea</option>
+                    <option value="classe">Classe</option>
+                    <option value="sottoclasse">Sottoclasse</option>
+                    <option value="famiglia">Famiglia</option>
+                    <option value="gruppoOmogeneo">Gruppo omogeneo</option>
+                    <option value="collezione">Collezione</option>
+                    <option value="produttore">Produttore</option>
+                    <option value="paese">Paese</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Ordina per</label>
+                  <select
+                    value={config.ordina}
+                    onChange={(e) => set('ordina', e.target.value)}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  >
+                    <option value="code">Codice A→Z</option>
+                    <option value="name">Descrizione A→Z</option>
+                    <option value="costPrice_asc">Prezzo crescente</option>
+                    <option value="costPrice_desc">Prezzo decrescente</option>
+                    <option value="nomLinea">Linea</option>
+                    <option value="collezione">Collezione</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Separator mode — shown only when grouping is active */}
+              {config.raggruppa && (
+                <div>
+                  <p className="text-xs font-medium text-gray-600 mb-2">Modalità raggruppamento</p>
+                  <div className="space-y-2">
+                    {(
+                      [
+                        { value: 'pagina-intera', label: 'Pagina intera per sezione', desc: 'Ogni gruppo ha una pagina separatore dedicata' },
+                        { value: 'inline', label: 'Intestazione inline', desc: 'Intestazione compatta, tutti i gruppi sulla stessa pagina' },
+                        { value: 'nuova-riga', label: 'Vai a capo, stessa pagina', desc: 'Intestazione prominente con linea, tutti sulla stessa pagina' },
+                      ] as const
+                    ).map((opt) => (
+                      <label
+                        key={opt.value}
+                        className="flex items-start gap-2 cursor-pointer group"
+                      >
+                        <input
+                          type="radio"
+                          name="modalitaSeparatore"
+                          value={opt.value}
+                          checked={config.modalitaSeparatore === opt.value}
+                          onChange={() => set('modalitaSeparatore', opt.value)}
+                          className="mt-0.5 accent-primary"
+                        />
+                        <div>
+                          <span className="text-xs font-medium text-gray-700 group-hover:text-primary transition-colors">
+                            {opt.label}
+                          </span>
+                          <p className="text-2xs text-gray-400">{opt.desc}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Informazioni da mostrare ── */}
         <div className="border border-border rounded overflow-hidden">
           <SectionTitle open={sections.campi} onToggle={() => toggleSection('campi')}>
             Informazioni da mostrare
@@ -484,7 +744,7 @@ export default function AdminCatalogoPDFPage() {
           )}
         </div>
 
-        {/* Intestazione */}
+        {/* ── Intestazione ── */}
         <div className="border border-border rounded overflow-hidden">
           <SectionTitle open={sections.intestazione} onToggle={() => toggleSection('intestazione')}>
             Intestazione catalogo
@@ -510,7 +770,157 @@ export default function AdminCatalogoPDFPage() {
           )}
         </div>
 
-        {/* Salva configurazione */}
+        {/* ── Copertina ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.copertina} onToggle={() => toggleSection('copertina')}>
+            Copertina
+          </SectionTitle>
+          {sections.copertina && (
+            <div className="p-4 space-y-4">
+              <CheckboxField
+                label="Includi copertina"
+                checked={config.copertina.attiva}
+                onChange={(v) => setCopertina('attiva', v)}
+              />
+              {config.copertina.attiva && (
+                <div className="space-y-3 pl-2 border-l-2 border-border">
+                  {/* Image upload */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Immagine di copertina (max 2 MB)
+                    </label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                    />
+                    {config.copertina.immagineBase64 && (
+                      <div className="mt-2 flex items-center gap-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={config.copertina.immagineBase64}
+                          alt="Anteprima copertina"
+                          className="h-16 w-24 object-cover rounded border border-border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCopertina('immagineBase64', null);
+                            if (fileInputRef.current) fileInputRef.current.value = '';
+                          }}
+                          className="text-2xs text-red-500 hover:text-red-700 underline"
+                        >
+                          Rimuovi immagine
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Titolo */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Titolo copertina</label>
+                    <input
+                      type="text"
+                      value={config.copertina.titolo}
+                      onChange={(e) => setCopertina('titolo', e.target.value)}
+                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      placeholder="es. Collezione CASA 2027"
+                    />
+                  </div>
+
+                  {/* Sottotitolo */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Sottotitolo <span className="text-gray-400 font-normal">(opzionale)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={config.copertina.sottotitolo}
+                      onChange={(e) => setCopertina('sottotitolo', e.target.value)}
+                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      placeholder="es. Primavera / Estate 2027"
+                    />
+                  </div>
+
+                  {/* Layout */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Layout copertina</label>
+                    <select
+                      value={config.copertina.layout}
+                      onChange={(e) => setCopertina('layout', e.target.value)}
+                      className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    >
+                      <option value="full-overlay">Immagine piena con testo sovrapposto</option>
+                      <option value="half">Metà immagine, metà testo</option>
+                      <option value="solo-testo">Solo testo (nessuna immagine)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Pagina finale ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.paginaFinale} onToggle={() => toggleSection('paginaFinale')}>
+            Pagina finale
+          </SectionTitle>
+          {sections.paginaFinale && (
+            <div className="p-4 space-y-4">
+              <CheckboxField
+                label="Includi pagina finale"
+                checked={config.paginaFinale.attiva}
+                onChange={(v) => setPaginaFinale('attiva', v)}
+              />
+              {config.paginaFinale.attiva && (
+                <div className="space-y-3 pl-2 border-l-2 border-border">
+                  {/* Titolo */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Titolo pagina <span className="text-gray-400 font-normal">(opzionale)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={config.paginaFinale.titolo}
+                      onChange={(e) => setPaginaFinale('titolo', e.target.value)}
+                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      placeholder="es. Grazie per la tua scelta"
+                    />
+                  </div>
+
+                  {/* Testo libero */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Testo libero{' '}
+                      <span className="text-gray-400 font-normal">
+                        ({config.paginaFinale.testo.length}/1000)
+                      </span>
+                    </label>
+                    <textarea
+                      value={config.paginaFinale.testo}
+                      onChange={(e) => setPaginaFinale('testo', e.target.value.slice(0, 1000))}
+                      rows={4}
+                      className="w-full border border-border rounded px-3 py-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                      placeholder="Testo da mostrare nella pagina finale del catalogo…"
+                    />
+                  </div>
+
+                  {/* Logo */}
+                  <CheckboxField
+                    label="Logo ON EARTH in fondo"
+                    checked={config.paginaFinale.mostraLogo}
+                    onChange={(v) => setPaginaFinale('mostraLogo', v)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Salva configurazione ── */}
         <div className="border border-border rounded p-4 space-y-3">
           <p className="text-xs font-semibold tracking-widest uppercase text-gray-500">Salva configurazione</p>
           <div className="flex gap-2">
@@ -606,7 +1016,7 @@ export default function AdminCatalogoPDFPage() {
 
           {!preview && (
             <p className="text-2xs text-gray-400 text-center">
-              Esegui prima l'anteprima per stimare il numero di pagine
+              Esegui prima l&apos;anteprima per stimare il numero di pagine
             </p>
           )}
         </div>
@@ -673,8 +1083,12 @@ export default function AdminCatalogoPDFPage() {
         <div className="border border-border rounded p-4 bg-blue-50/50">
           <p className="text-2xs font-semibold uppercase tracking-widest text-blue-500 mb-2">Formato PDF</p>
           <ul className="space-y-1 text-2xs text-gray-500">
-            <li>• A4 verticale (595 × 842 pt)</li>
-            <li>• 4 colonne × 6 righe = 24 prodotti/pagina</li>
+            <li>• {config.formato === 'A4-P' ? 'A4 verticale (595 × 842 pt)' :
+                   config.formato === 'A4-L' ? 'A4 orizzontale (842 × 595 pt)' :
+                   config.formato === 'A3-P' ? 'A3 verticale (842 × 1191 pt)' :
+                   'A3 orizzontale (1191 × 842 pt)'}</li>
+            <li>• {config.colonne} colonne × {config.righe} righe = <strong>{config.colonne * config.righe}</strong> prodotti/pagina</li>
+            <li>• Margini {config.margine === 'stretto' ? '10' : config.margine === 'normale' ? '20' : '30'} pt</li>
             <li>• Header con logo, titolo, data</li>
             <li>• Footer con numero pagina</li>
           </ul>

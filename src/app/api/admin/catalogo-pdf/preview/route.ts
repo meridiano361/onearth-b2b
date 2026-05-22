@@ -26,25 +26,39 @@ export async function POST(req: NextRequest) {
       if (body[f]) where[f] = body[f];
     }
 
+    // Use dynamic colonne/righe if provided, else fall back to defaults
+    const colonne = Math.max(1, Math.min(6, Number(body.colonne) || 4));
+    const righe = Math.max(1, Math.min(10, Number(body.righe) || 6));
+    const productsPerPage = colonne * righe;
+
     const count = await prisma.product.count({ where });
-    const pages = Math.ceil(count / 24);
+    const productPages = Math.ceil(count / productsPerPage);
 
     // Calculate group pages if grouping is active
     let groupPages = 0;
+    const modalitaSeparatore: string = body.modalitaSeparatore ?? 'pagina-intera';
+
     if (body.raggruppa && count > 0) {
-      const groupField = body.raggruppa;
-      const groups = await prisma.product.groupBy({
-        by: [groupField as any],
-        where,
-        _count: { id: true },
-      });
-      groupPages = groups.length;
+      // Only pagina-intera adds extra separator pages
+      if (modalitaSeparatore === 'pagina-intera') {
+        const groupField = body.raggruppa;
+        const groups = await prisma.product.groupBy({
+          by: [groupField as any],
+          where,
+          _count: { id: true },
+        });
+        groupPages = groups.length;
+      }
     }
+
+    // Add cover/final pages to estimate
+    const coverPage = body.copertina?.attiva ? 1 : 0;
+    const finalPage = body.paginaFinale?.attiva ? 1 : 0;
 
     return NextResponse.json({
       count,
-      pages: pages + groupPages,
-      productPages: pages,
+      pages: productPages + groupPages + coverPage + finalPage,
+      productPages,
       groupPages,
     });
   } catch (err) {
