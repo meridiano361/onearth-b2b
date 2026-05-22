@@ -22,6 +22,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const cartQty = getItemQuantity(product.id);
   const [localQty, setLocalQty] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
+  const [heartPop, setHeartPop] = useState(false);
 
   const inCart = cartQty > 0;
   const hasLotWarning = cartQty > 0 && !isValidLotQuantity(cartQty, product.lotSize);
@@ -58,17 +59,24 @@ export default function ProductCard({ product }: ProductCardProps) {
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
 
-          {/* Heart / favorite — top-left */}
+          {/* Heart / favorite — always visible, top-left, 44px touch area */}
           <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(product.id); }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleFavorite(product.id);
+              setHeartPop(true);
+              setTimeout(() => setHeartPop(false), 200);
+            }}
             className={cn(
-              'absolute top-2 left-2 bg-white/80 backdrop-blur-sm rounded-full p-1.5 transition-all duration-150 active:scale-90',
-              isFavorited(product.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              'absolute top-0 left-0 w-11 h-11 flex items-center justify-center transition-transform duration-200',
+              heartPop ? 'scale-125' : 'scale-100'
             )}
           >
             <Heart
-              size={11}
-              className={isFavorited(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}
+              size={18}
+              className={isFavorited(product.id) ? 'fill-red-500 text-red-500' : 'text-white'}
+              style={{ filter: isFavorited(product.id) ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.8))' }}
             />
           </button>
 

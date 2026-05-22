@@ -14,6 +14,7 @@ function LookbookCard({ product }: { product: Product }) {
   const { addItem, getItemQuantity } = useCartStore();
   const { isFavorited, toggle: toggleFavorite } = useFavorites();
   const [justAdded, setJustAdded] = useState(false);
+  const [heartPop, setHeartPop] = useState(false);
 
   const inCart = getItemQuantity(product.id) > 0;
 
@@ -46,17 +47,24 @@ function LookbookCard({ product }: { product: Product }) {
         </div>
       </Link>
 
-      {/* Heart */}
+      {/* Heart — always visible, 44px touch area */}
       <button
-        onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleFavorite(product.id);
+          setHeartPop(true);
+          setTimeout(() => setHeartPop(false), 200);
+        }}
         className={cn(
-          'absolute top-2 left-2 w-7 h-7 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-full transition-all duration-150',
-          isFavorited(product.id)
-            ? 'opacity-100'
-            : 'opacity-0 group-hover:opacity-100'
+          'absolute top-0 left-0 w-11 h-11 flex items-center justify-center transition-transform duration-200',
+          heartPop ? 'scale-125' : 'scale-100'
         )}
       >
-        <Heart size={12} className={isFavorited(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-500'} />
+        <Heart
+          size={18}
+          className={isFavorited(product.id) ? 'fill-red-500 text-red-500' : 'text-white'}
+          style={{ filter: isFavorited(product.id) ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.8))' }}
+        />
       </button>
 
       {/* Add button (+) — always visible on mobile, hover on desktop */}

@@ -302,18 +302,18 @@ export default function CatalogView() {
             {/* View mode toggle */}
             <ViewToggle mode={viewMode} onChange={setViewMode} />
 
-            {/* Favorites toggle */}
+            {/* Favorites toggle — desktop only (mobile uses per-card hearts) */}
             <button
               onClick={() => setOnlyFavorites((v) => !v)}
               className={cn(
-                'flex items-center gap-1.5 text-xs font-medium border rounded px-2.5 py-2 transition-colors flex-shrink-0',
+                'hidden md:flex items-center gap-1.5 text-xs font-medium border rounded px-2.5 py-2 transition-colors flex-shrink-0',
                 onlyFavorites
                   ? 'bg-red-50 border-red-300 text-red-600'
                   : 'text-gray-600 border-border hover:bg-cream'
               )}
             >
               <Heart size={13} className={onlyFavorites ? 'fill-red-500 text-red-500' : ''} />
-              <span className="hidden sm:inline">{tn('favorites')}</span>
+              <span>{tn('favorites')}</span>
             </button>
 
             {/* Results count + reset */}

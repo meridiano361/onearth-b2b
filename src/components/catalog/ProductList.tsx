@@ -14,6 +14,7 @@ function ProductRow({ product }: { product: Product }) {
   const { addItem, getItemQuantity } = useCartStore();
   const { isFavorited, toggle: toggleFavorite } = useFavorites();
   const [justAdded, setJustAdded] = useState(false);
+  const [heartPop, setHeartPop] = useState(false);
 
   const cartQty = getItemQuantity(product.id);
   const inCart = cartQty > 0;
@@ -34,18 +35,27 @@ function ProductRow({ product }: { product: Product }) {
       )}
     >
       {/* Thumbnail + heart */}
-      <div className="relative flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded overflow-hidden bg-cream group/thumb">
+      <div className="relative flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded overflow-hidden bg-cream">
         <Link href={`/catalog/${product.id}`} className="block w-full h-full">
           <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
         </Link>
         <button
-          onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavorite(product.id);
+            setHeartPop(true);
+            setTimeout(() => setHeartPop(false), 200);
+          }}
           className={cn(
-            'absolute top-1 left-1 w-5 h-5 flex items-center justify-center bg-white/85 rounded-full transition-all',
-            isFavorited(product.id) ? 'opacity-100' : 'opacity-0 group-hover/thumb:opacity-100'
+            'absolute top-0 left-0 w-11 h-11 flex items-center justify-center transition-transform duration-200',
+            heartPop ? 'scale-125' : 'scale-100'
           )}
         >
-          <Heart size={9} className={isFavorited(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'} />
+          <Heart
+            size={14}
+            className={isFavorited(product.id) ? 'fill-red-500 text-red-500' : 'text-white'}
+            style={{ filter: isFavorited(product.id) ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.8))' }}
+          />
         </button>
         {inCart && (
           <div className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center bg-accent rounded-full">
