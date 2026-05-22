@@ -20,11 +20,7 @@ export async function POST(req: NextRequest) {
     const data = createSchema.parse(body);
     const record = await prisma.accessRequest.create({ data });
 
-    try {
-      await sendAccessRequestNotification({ ...data, createdAt: record.createdAt });
-    } catch (emailErr) {
-      console.error('[access-requests] Email notification failed:', emailErr);
-    }
+    await sendAccessRequestNotification(data);
 
     return NextResponse.json({ data: record }, { status: 201 });
   } catch (err: any) {
