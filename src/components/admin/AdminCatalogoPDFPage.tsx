@@ -17,7 +17,17 @@ import {
   AlignRight,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import type { CatalogFields } from '@/components/admin/CatalogoPDFDocument';
+import type {
+  CatalogFields,
+  FieldStyle,
+  CardFieldStyles,
+  SeparatorStyle,
+  PageHeaderStyle,
+  PageFooterStyle,
+  CardBoxStyle,
+  CoverTypography,
+  FinalPageTypography,
+} from '@/components/admin/CatalogoPDFDocument';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -73,6 +83,13 @@ interface FormState {
     titoloAllineamento: 'left' | 'center' | 'right';
     testoAllineamento: 'left' | 'center' | 'right';
   };
+  cardFieldStyles: CardFieldStyles;
+  separatoreStyle: SeparatorStyle;
+  headerStyle: PageHeaderStyle;
+  footerStyle: PageFooterStyle;
+  cardBoxStyle: CardBoxStyle;
+  copertinaTypo: CoverTypography;
+  paginaFinaleTypo: FinalPageTypography;
 }
 
 interface Template {
@@ -154,6 +171,42 @@ const DEFAULT_STATE: FormState = {
     mostraLogo: true,
     titoloAllineamento: 'center',
     testoAllineamento: 'center',
+  },
+  cardFieldStyles: {
+    codice:      { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+    descrizione: { fontSize: 7,   bold: false, italic: false, color: '#1C1C1C', align: 'left', uppercase: false },
+    misure:      { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+    produttore:  { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+    paese:       { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+    prezzoCosto: { fontSize: 8,   bold: false, italic: false, color: '#1C1C1C', align: 'left', uppercase: false },
+    pvp:         { fontSize: 8,   bold: false, italic: false, color: '#1C1C1C', align: 'left', uppercase: false },
+    linea:       { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+    collezione:  { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+    confezione:  { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+    iva:         { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+  },
+  separatoreStyle: {
+    fontSize: 16, bold: true, italic: false, color: '#1C1C1C', bgColor: '#E8DDD0',
+    align: 'center', height: 36, uppercase: true,
+  },
+  headerStyle: {
+    titleFontSize: 8, titleBold: false, titleItalic: false, titleColor: '#1C1C1C',
+    titleAlign: 'center', showSeparator: true, separatorColor: '#D4CEC7',
+  },
+  footerStyle: {
+    fontSize: 6.5, color: '#9CA3AF', align: 'center', customText: '', showSeparator: true,
+  },
+  cardBoxStyle: {
+    borderWidth: 0.5, borderColor: '#D4CEC7', borderRadius: 0, padding: 4,
+  },
+  copertinaTypo: {
+    titoloFontSize: 28, titoloBold: true, titoloItalic: false, titoloColor: '#FFFFFF',
+    titoloUppercase: true, sottotitoloFontSize: 13, sottotitoloBold: false,
+    sottotitoloItalic: false, sottotitoloColor: '#FFFFFF', bgColor: '#E8DDD0',
+  },
+  paginaFinaleTypo: {
+    titoloFontSize: 20, titoloBold: true, titoloItalic: false, titoloColor: '#1C1C1C',
+    testoFontSize: 10, testoColor: '#9CA3AF',
   },
 };
 
@@ -310,6 +363,153 @@ function AlignToggle({
   );
 }
 
+function ToggleBtn({
+  active,
+  onClick,
+  children,
+  title,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className={`w-8 h-8 rounded text-xs border transition-colors ${
+        active ? 'bg-primary text-white border-primary' : 'border-border text-gray-600 hover:border-gray-300'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function MiniColorPicker({ value, onChange }: { value: string; onChange: (hex: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {PALETTE.map((c) => (
+        <button
+          key={c.hex}
+          type="button"
+          title={c.nome}
+          onClick={() => onChange(c.hex)}
+          style={{ backgroundColor: c.hex }}
+          className={`w-5 h-5 rounded-sm transition-all border ${
+            value.toLowerCase() === c.hex.toLowerCase()
+              ? 'ring-2 ring-primary scale-110 border-primary'
+              : 'border-gray-200 hover:scale-110'
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function FieldStyleRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: FieldStyle;
+  onChange: (fs: FieldStyle) => void;
+}) {
+  const upd = (patch: Partial<FieldStyle>) => onChange({ ...value, ...patch });
+  return (
+    <div className="py-2.5 space-y-1.5">
+      <p className="text-xs font-medium text-gray-700">{label}</p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <input
+          type="number"
+          min={5}
+          max={24}
+          step={0.5}
+          value={value.fontSize}
+          onChange={(e) => upd({ fontSize: parseFloat(e.target.value) || 7 })}
+          title="Dimensione font (pt)"
+          className="w-14 h-8 border border-border rounded px-1.5 text-xs bg-white text-center focus:outline-none"
+        />
+        <ToggleBtn active={value.bold} onClick={() => upd({ bold: !value.bold })}><span className="font-bold">B</span></ToggleBtn>
+        <ToggleBtn active={value.italic} onClick={() => upd({ italic: !value.italic })}><span className="italic">I</span></ToggleBtn>
+        <ToggleBtn active={value.uppercase} onClick={() => upd({ uppercase: !value.uppercase })} title="Tutto maiuscolo">AA</ToggleBtn>
+        <AlignToggle value={value.align} onChange={(v) => upd({ align: v })} />
+      </div>
+      <MiniColorPicker value={value.color} onChange={(v) => upd({ color: v })} />
+    </div>
+  );
+}
+
+function CardPreview({ config }: { config: FormState }) {
+  const cfs = config.cardFieldStyles;
+  const box = config.cardBoxStyle;
+  const f = config.campi;
+  const S = 14; // scale factor: 1pt → S/595 * W
+
+  function fs2px(pt: number) { return pt * 0.75; }
+
+  function fieldCSS(fld: FieldStyle): React.CSSProperties {
+    return {
+      fontSize: fs2px(fld.fontSize),
+      fontWeight: fld.bold ? 'bold' : 'normal',
+      fontStyle: fld.italic ? 'italic' : 'normal',
+      color: fld.color,
+      textAlign: fld.align,
+      textTransform: fld.uppercase ? 'uppercase' : undefined,
+      margin: 0,
+      lineHeight: 1.2,
+    };
+  }
+
+  return (
+    <div>
+      <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Anteprima scheda</p>
+      <div
+        style={{
+          width: 110,
+          backgroundColor: config.colori.sfondoPagina,
+          border: box.borderWidth > 0 ? `${Math.max(0.5, box.borderWidth * 0.4)}px solid ${box.borderColor}` : 'none',
+          borderRadius: box.borderRadius * 0.4,
+          overflow: 'hidden',
+          flexShrink: 0,
+        }}
+      >
+        {f.foto && (
+          <div style={{ height: 55, backgroundColor: config.colori.sfondoFoto, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 7, color: '#ccc', fontFamily: 'monospace' }}>foto</span>
+          </div>
+        )}
+        <div style={{ padding: box.padding * 0.4 }}>
+          {f.codice && <p style={fieldCSS(cfs.codice)}>COD-001</p>}
+          {f.descrizione && <p style={{ ...fieldCSS(cfs.descrizione), marginBottom: 1, lineHeight: 1.25 }}>Nome prodotto esempio</p>}
+          {(f.misure || f.produttore || f.paese || f.linea || f.collezione || f.confezione || f.iva) && (
+            <p style={{ ...fieldCSS(cfs.misure), marginBottom: 2 }}>10×5 cm · Produttore</p>
+          )}
+          {(f.prezzoCosto || f.pvp) && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
+              {f.prezzoCosto && (
+                <div>
+                  <p style={{ fontSize: fs2px(5.5), color: cfs.prezzoCosto.color, textTransform: 'uppercase', margin: 0 }}>Costo</p>
+                  <p style={fieldCSS(cfs.prezzoCosto)}>€12,50</p>
+                </div>
+              )}
+              {f.pvp && (
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: fs2px(5.5), color: cfs.pvp.color, textTransform: 'uppercase', margin: 0 }}>PVP</p>
+                  <p style={fieldCSS(cfs.pvp)}>€29,90</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CoverPreview({ config }: { config: { copertina: FormState['copertina']; colori: FormState['colori'] } }) {
   const cov = config.copertina;
   if (!cov.attiva) return null;
@@ -419,8 +619,13 @@ export default function AdminCatalogoPDFPage() {
     formato: true,
     colori: false,
     raggruppamento: true,
+    separatoreStile: false,
     campi: true,
+    campiStile: false,
+    riquadro: false,
     intestazione: true,
+    headerStile: false,
+    footerStile: false,
     copertina: false,
     paginaFinale: false,
   });
@@ -504,6 +709,48 @@ export default function AdminCatalogoPDFPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (key: keyof FormState['paginaFinale'], value: any) =>
       setConfig((c) => ({ ...c, paginaFinale: { ...c.paginaFinale, [key]: value } })),
+    []
+  );
+
+  const setCardFieldStyle = useCallback(
+    (field: keyof CardFieldStyles, fs: FieldStyle) =>
+      setConfig((c) => ({ ...c, cardFieldStyles: { ...c.cardFieldStyles, [field]: fs } })),
+    []
+  );
+
+  const setSeparatoreStyle = useCallback(
+    (patch: Partial<SeparatorStyle>) =>
+      setConfig((c) => ({ ...c, separatoreStyle: { ...c.separatoreStyle, ...patch } })),
+    []
+  );
+
+  const setHeaderStyle = useCallback(
+    (patch: Partial<PageHeaderStyle>) =>
+      setConfig((c) => ({ ...c, headerStyle: { ...c.headerStyle, ...patch } })),
+    []
+  );
+
+  const setFooterStyle = useCallback(
+    (patch: Partial<PageFooterStyle>) =>
+      setConfig((c) => ({ ...c, footerStyle: { ...c.footerStyle, ...patch } })),
+    []
+  );
+
+  const setCardBoxStyle = useCallback(
+    (patch: Partial<CardBoxStyle>) =>
+      setConfig((c) => ({ ...c, cardBoxStyle: { ...c.cardBoxStyle, ...patch } })),
+    []
+  );
+
+  const setCopertinaTypo = useCallback(
+    (patch: Partial<CoverTypography>) =>
+      setConfig((c) => ({ ...c, copertinaTypo: { ...c.copertinaTypo, ...patch } })),
+    []
+  );
+
+  const setPaginaFinaleTypo = useCallback(
+    (patch: Partial<FinalPageTypography>) =>
+      setConfig((c) => ({ ...c, paginaFinaleTypo: { ...c.paginaFinaleTypo, ...patch } })),
     []
   );
 
@@ -876,6 +1123,42 @@ export default function AdminCatalogoPDFPage() {
           )}
         </div>
 
+        {/* ── Stile separatori sezioni ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.separatoreStile} onToggle={() => toggleSection('separatoreStile')}>
+            Stile separatori sezioni
+          </SectionTitle>
+          {sections.separatoreStile && (
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione font (pt)</label>
+                  <input type="number" min={8} max={40} value={config.separatoreStyle.fontSize}
+                    onChange={(e) => setSeparatoreStyle({ fontSize: parseFloat(e.target.value) || 16 })}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Altezza (pt)</label>
+                  <input type="number" min={20} max={120} value={config.separatoreStyle.height}
+                    onChange={(e) => setSeparatoreStyle({ height: parseInt(e.target.value) || 36 })}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-gray-500 w-20">Stile testo</span>
+                <ToggleBtn active={config.separatoreStyle.bold} onClick={() => setSeparatoreStyle({ bold: !config.separatoreStyle.bold })}><span className="font-bold">B</span></ToggleBtn>
+                <ToggleBtn active={config.separatoreStyle.italic} onClick={() => setSeparatoreStyle({ italic: !config.separatoreStyle.italic })}><span className="italic">I</span></ToggleBtn>
+                <ToggleBtn active={config.separatoreStyle.uppercase} onClick={() => setSeparatoreStyle({ uppercase: !config.separatoreStyle.uppercase })} title="Tutto maiuscolo">AA</ToggleBtn>
+                <AlignToggle value={config.separatoreStyle.align} onChange={(v) => setSeparatoreStyle({ align: v })} />
+              </div>
+              <ColorSwatchPicker label="Colore testo" value={config.separatoreStyle.color}
+                onChange={(v) => setSeparatoreStyle({ color: v })} />
+              <ColorSwatchPicker label="Colore sfondo" value={config.separatoreStyle.bgColor}
+                onChange={(v) => setSeparatoreStyle({ bgColor: v })} />
+            </div>
+          )}
+        </div>
+
         {/* ── Informazioni da mostrare ── */}
         <div className="border border-border rounded overflow-hidden">
           <SectionTitle open={sections.campi} onToggle={() => toggleSection('campi')}>
@@ -895,6 +1178,94 @@ export default function AdminCatalogoPDFPage() {
               <CheckboxField label="Collezione" checked={config.campi.collezione} onChange={(v) => setField('collezione', v)} />
               <CheckboxField label="Confezione" checked={config.campi.confezione} onChange={(v) => setField('confezione', v)} />
               <CheckboxField label="IVA" checked={config.campi.iva} onChange={(v) => setField('iva', v)} />
+            </div>
+          )}
+        </div>
+
+        {/* ── Tipografia campi scheda ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.campiStile} onToggle={() => toggleSection('campiStile')}>
+            Tipografia campi scheda
+          </SectionTitle>
+          {sections.campiStile && (
+            <div className="p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="divide-y divide-border/50">
+                  {config.campi.codice && (
+                    <FieldStyleRow label="Codice" value={config.cardFieldStyles.codice}
+                      onChange={(fs) => setCardFieldStyle('codice', fs)} />
+                  )}
+                  {config.campi.descrizione && (
+                    <FieldStyleRow label="Descrizione" value={config.cardFieldStyles.descrizione}
+                      onChange={(fs) => setCardFieldStyle('descrizione', fs)} />
+                  )}
+                  {(config.campi.misure || config.campi.produttore || config.campi.paese ||
+                    config.campi.linea || config.campi.collezione || config.campi.confezione || config.campi.iva) && (
+                    <FieldStyleRow label="Dettagli (misure, produttore, paese…)" value={config.cardFieldStyles.misure}
+                      onChange={(fs) => setCardFieldStyle('misure', fs)} />
+                  )}
+                  {config.campi.prezzoCosto && (
+                    <FieldStyleRow label="Prezzo costo" value={config.cardFieldStyles.prezzoCosto}
+                      onChange={(fs) => setCardFieldStyle('prezzoCosto', fs)} />
+                  )}
+                  {config.campi.pvp && (
+                    <FieldStyleRow label="PVP" value={config.cardFieldStyles.pvp}
+                      onChange={(fs) => setCardFieldStyle('pvp', fs)} />
+                  )}
+                </div>
+                <div className="flex justify-center sm:justify-start">
+                  <CardPreview config={config} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Riquadro prodotto ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.riquadro} onToggle={() => toggleSection('riquadro')}>
+            Riquadro prodotto
+          </SectionTitle>
+          {sections.riquadro && (
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Bordo</label>
+                  <select value={config.cardBoxStyle.borderWidth}
+                    onChange={(e) => setCardBoxStyle({ borderWidth: parseFloat(e.target.value) })}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none">
+                    <option value="0">Nessuno</option>
+                    <option value="0.5">Sottile (0.5)</option>
+                    <option value="1">Normale (1)</option>
+                    <option value="2">Spesso (2)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Angoli</label>
+                  <select value={config.cardBoxStyle.borderRadius}
+                    onChange={(e) => setCardBoxStyle({ borderRadius: parseInt(e.target.value) })}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none">
+                    <option value="0">Nessuno</option>
+                    <option value="4">Arrotondati</option>
+                    <option value="8">Molto arrotondati</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Padding interno</label>
+                  <select value={config.cardBoxStyle.padding}
+                    onChange={(e) => setCardBoxStyle({ padding: parseInt(e.target.value) })}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none">
+                    <option value="2">Stretto (2)</option>
+                    <option value="4">Normale (4)</option>
+                    <option value="6">Ampio (6)</option>
+                    <option value="8">Molto ampio (8)</option>
+                  </select>
+                </div>
+              </div>
+              {config.cardBoxStyle.borderWidth > 0 && (
+                <ColorSwatchPicker label="Colore bordo" value={config.cardBoxStyle.borderColor}
+                  onChange={(v) => setCardBoxStyle({ borderColor: v })} />
+              )}
             </div>
           )}
         </div>
@@ -921,6 +1292,77 @@ export default function AdminCatalogoPDFPage() {
                 <CheckboxField label="Mostra data generazione" checked={config.mostraData} onChange={(v) => set('mostraData', v)} />
                 <CheckboxField label="Numero di pagina" checked={config.mostraPagina} onChange={(v) => set('mostraPagina', v)} />
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Stile intestazione pagina ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.headerStile} onToggle={() => toggleSection('headerStile')}>
+            Stile intestazione pagina
+          </SectionTitle>
+          {sections.headerStile && (
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione font (pt)</label>
+                  <input type="number" min={5} max={20} value={config.headerStyle.titleFontSize}
+                    onChange={(e) => setHeaderStyle({ titleFontSize: parseFloat(e.target.value) || 8 })}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
+                </div>
+                <div className="flex items-end gap-1.5">
+                  <ToggleBtn active={config.headerStyle.titleBold} onClick={() => setHeaderStyle({ titleBold: !config.headerStyle.titleBold })}><span className="font-bold">B</span></ToggleBtn>
+                  <ToggleBtn active={config.headerStyle.titleItalic} onClick={() => setHeaderStyle({ titleItalic: !config.headerStyle.titleItalic })}><span className="italic">I</span></ToggleBtn>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-600 w-24">Allineamento</span>
+                <AlignToggle value={config.headerStyle.titleAlign} onChange={(v) => setHeaderStyle({ titleAlign: v })} />
+              </div>
+              <ColorSwatchPicker label="Colore titolo" value={config.headerStyle.titleColor}
+                onChange={(v) => setHeaderStyle({ titleColor: v })} />
+              <CheckboxField label="Mostra linea separatrice" checked={config.headerStyle.showSeparator}
+                onChange={(v) => setHeaderStyle({ showSeparator: v })} />
+              {config.headerStyle.showSeparator && (
+                <ColorSwatchPicker label="Colore linea" value={config.headerStyle.separatorColor}
+                  onChange={(v) => setHeaderStyle({ separatorColor: v })} />
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Stile piè di pagina ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.footerStile} onToggle={() => toggleSection('footerStile')}>
+            Stile piè di pagina
+          </SectionTitle>
+          {sections.footerStile && (
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione font (pt)</label>
+                  <input type="number" min={5} max={12} value={config.footerStyle.fontSize}
+                    onChange={(e) => setFooterStyle({ fontSize: parseFloat(e.target.value) || 6.5 })}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
+                </div>
+                <div className="flex items-end">
+                  <AlignToggle value={config.footerStyle.align} onChange={(v) => setFooterStyle({ align: v })} />
+                </div>
+              </div>
+              <ColorSwatchPicker label="Colore testo" value={config.footerStyle.color}
+                onChange={(v) => setFooterStyle({ color: v })} />
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Testo personalizzato <span className="text-gray-400 font-normal">(opzionale)</span>
+                </label>
+                <input type="text" value={config.footerStyle.customText}
+                  onChange={(e) => setFooterStyle({ customText: e.target.value })}
+                  placeholder="es. ON EARTH — Catalogo riservato"
+                  className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                <p className="text-2xs text-gray-400 mt-1">Verrà mostrato prima del numero pagina</p>
+              </div>
+              <CheckboxField label="Mostra linea separatrice" checked={config.footerStyle.showSeparator}
+                onChange={(v) => setFooterStyle({ showSeparator: v })} />
             </div>
           )}
         </div>
@@ -1091,6 +1533,44 @@ export default function AdminCatalogoPDFPage() {
                     />
                   </div>
 
+                  {/* Tipografia copertina */}
+                  <div className="space-y-3 pt-1">
+                    <p className="text-xs font-semibold text-gray-600">Tipografia</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Font titolo (pt)</label>
+                        <input type="number" min={10} max={60} value={config.copertinaTypo.titoloFontSize}
+                          onChange={(e) => setCopertinaTypo({ titoloFontSize: parseFloat(e.target.value) || 28 })}
+                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
+                      </div>
+                      <div className="flex items-end gap-1">
+                        <ToggleBtn active={config.copertinaTypo.titoloBold} onClick={() => setCopertinaTypo({ titoloBold: !config.copertinaTypo.titoloBold })}><span className="font-bold">B</span></ToggleBtn>
+                        <ToggleBtn active={config.copertinaTypo.titoloItalic} onClick={() => setCopertinaTypo({ titoloItalic: !config.copertinaTypo.titoloItalic })}><span className="italic">I</span></ToggleBtn>
+                        <ToggleBtn active={config.copertinaTypo.titoloUppercase} onClick={() => setCopertinaTypo({ titoloUppercase: !config.copertinaTypo.titoloUppercase })} title="Tutto maiuscolo">AA</ToggleBtn>
+                      </div>
+                    </div>
+                    <MiniColorPicker value={config.copertinaTypo.titoloColor}
+                      onChange={(v) => setCopertinaTypo({ titoloColor: v })} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Font sottotitolo (pt)</label>
+                        <input type="number" min={8} max={32} value={config.copertinaTypo.sottotitoloFontSize}
+                          onChange={(e) => setCopertinaTypo({ sottotitoloFontSize: parseFloat(e.target.value) || 13 })}
+                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
+                      </div>
+                      <div className="flex items-end gap-1">
+                        <ToggleBtn active={config.copertinaTypo.sottotitoloBold} onClick={() => setCopertinaTypo({ sottotitoloBold: !config.copertinaTypo.sottotitoloBold })}><span className="font-bold">B</span></ToggleBtn>
+                        <ToggleBtn active={config.copertinaTypo.sottotitoloItalic} onClick={() => setCopertinaTypo({ sottotitoloItalic: !config.copertinaTypo.sottotitoloItalic })}><span className="italic">I</span></ToggleBtn>
+                      </div>
+                    </div>
+                    <MiniColorPicker value={config.copertinaTypo.sottotitoloColor}
+                      onChange={(v) => setCopertinaTypo({ sottotitoloColor: v })} />
+                    {config.copertina.layout !== 'full-overlay' && (
+                      <ColorSwatchPicker label="Colore sfondo (layout testo / metà)" value={config.copertinaTypo.bgColor}
+                        onChange={(v) => setCopertinaTypo({ bgColor: v })} />
+                    )}
+                  </div>
+
                   {/* Preview */}
                   <CoverPreview config={config} />
                 </div>
@@ -1146,6 +1626,36 @@ export default function AdminCatalogoPDFPage() {
                       className="w-full border border-border rounded px-3 py-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
                       placeholder="Testo da mostrare nella pagina finale del catalogo…"
                     />
+                  </div>
+
+                  {/* Tipografia pagina finale */}
+                  <div className="space-y-3 pt-1">
+                    <p className="text-xs font-semibold text-gray-600">Tipografia</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Font titolo (pt)</label>
+                        <input type="number" min={10} max={48} value={config.paginaFinaleTypo.titoloFontSize}
+                          onChange={(e) => setPaginaFinaleTypo({ titoloFontSize: parseFloat(e.target.value) || 20 })}
+                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
+                      </div>
+                      <div className="flex items-end gap-1">
+                        <ToggleBtn active={config.paginaFinaleTypo.titoloBold} onClick={() => setPaginaFinaleTypo({ titoloBold: !config.paginaFinaleTypo.titoloBold })}><span className="font-bold">B</span></ToggleBtn>
+                        <ToggleBtn active={config.paginaFinaleTypo.titoloItalic} onClick={() => setPaginaFinaleTypo({ titoloItalic: !config.paginaFinaleTypo.titoloItalic })}><span className="italic">I</span></ToggleBtn>
+                      </div>
+                    </div>
+                    <MiniColorPicker value={config.paginaFinaleTypo.titoloColor}
+                      onChange={(v) => setPaginaFinaleTypo({ titoloColor: v })} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Font testo corpo (pt)</label>
+                        <input type="number" min={6} max={24} value={config.paginaFinaleTypo.testoFontSize}
+                          onChange={(e) => setPaginaFinaleTypo({ testoFontSize: parseFloat(e.target.value) || 10 })}
+                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
+                      </div>
+                    </div>
+                    <MiniColorPicker value={config.paginaFinaleTypo.testoColor}
+                      onChange={(v) => setPaginaFinaleTypo({ testoColor: v })} />
+                    <p className="text-2xs text-gray-400">Usa **testo** per grassetto e *testo* per corsivo nel campo testo libero</p>
                   </div>
 
                   {/* Logo */}

@@ -199,6 +199,42 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
       titoloAllineamento: 'center',
       testoAllineamento: 'center',
     },
+    cardFieldStyles: fullConfig?.cardFieldStyles ?? {
+      codice:      { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+      descrizione: { fontSize: 7,   bold: false, italic: false, color: '#1C1C1C', align: 'left', uppercase: false },
+      misure:      { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+      produttore:  { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+      paese:       { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+      prezzoCosto: { fontSize: 8,   bold: false, italic: false, color: '#1C1C1C', align: 'left', uppercase: false },
+      pvp:         { fontSize: 8,   bold: false, italic: false, color: '#1C1C1C', align: 'left', uppercase: false },
+      linea:       { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+      collezione:  { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+      confezione:  { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+      iva:         { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
+    },
+    separatoreStyle: fullConfig?.separatoreStyle ?? {
+      fontSize: 16, bold: true, italic: false, color: '#1C1C1C', bgColor: '#E8DDD0',
+      align: 'center', height: 36, uppercase: true,
+    },
+    headerStyle: fullConfig?.headerStyle ?? {
+      titleFontSize: 8, titleBold: false, titleItalic: false, titleColor: '#1C1C1C',
+      titleAlign: 'center', showSeparator: true, separatorColor: '#D4CEC7',
+    },
+    footerStyle: fullConfig?.footerStyle ?? {
+      fontSize: 6.5, color: '#9CA3AF', align: 'center', customText: '', showSeparator: true,
+    },
+    cardBoxStyle: fullConfig?.cardBoxStyle ?? {
+      borderWidth: 0.5, borderColor: '#D4CEC7', borderRadius: 0, padding: 4,
+    },
+    copertinaTypo: fullConfig?.copertinaTypo ?? {
+      titoloFontSize: 28, titoloBold: true, titoloItalic: false, titoloColor: '#FFFFFF',
+      titoloUppercase: true, sottotitoloFontSize: 13, sottotitoloBold: false,
+      sottotitoloItalic: false, sottotitoloColor: '#FFFFFF', bgColor: '#E8DDD0',
+    },
+    paginaFinaleTypo: fullConfig?.paginaFinaleTypo ?? {
+      titoloFontSize: 20, titoloBold: true, titoloItalic: false, titoloColor: '#1C1C1C',
+      testoFontSize: 10, testoColor: '#9CA3AF',
+    },
   };
 
   // If a cover image was provided separately (e.g. from GET route), inject it

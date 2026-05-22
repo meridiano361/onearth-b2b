@@ -18,6 +18,89 @@ export type CatalogFields = {
   iva: boolean;
 };
 
+// ── New typography types ──────────────────────────────────────────────────────
+
+export type FieldStyle = {
+  fontSize: number;
+  bold: boolean;
+  italic: boolean;
+  color: string;
+  align: 'left' | 'center' | 'right';
+  uppercase: boolean;
+};
+
+export type CardFieldStyles = {
+  codice: FieldStyle;
+  descrizione: FieldStyle;
+  misure: FieldStyle;
+  produttore: FieldStyle;
+  paese: FieldStyle;
+  prezzoCosto: FieldStyle;
+  pvp: FieldStyle;
+  linea: FieldStyle;
+  collezione: FieldStyle;
+  confezione: FieldStyle;
+  iva: FieldStyle;
+};
+
+export type SeparatorStyle = {
+  fontSize: number;
+  bold: boolean;
+  italic: boolean;
+  color: string;
+  bgColor: string;
+  align: 'left' | 'center' | 'right';
+  height: number;
+  uppercase: boolean;
+};
+
+export type PageHeaderStyle = {
+  titleFontSize: number;
+  titleBold: boolean;
+  titleItalic: boolean;
+  titleColor: string;
+  titleAlign: 'left' | 'center' | 'right';
+  showSeparator: boolean;
+  separatorColor: string;
+};
+
+export type PageFooterStyle = {
+  fontSize: number;
+  color: string;
+  align: 'left' | 'center' | 'right';
+  customText: string;
+  showSeparator: boolean;
+};
+
+export type CardBoxStyle = {
+  borderWidth: number;    // 0, 0.5, 1, 2
+  borderColor: string;
+  borderRadius: number;   // 0, 4, 8
+  padding: number;        // 2, 4, 6, 8
+};
+
+export type CoverTypography = {
+  titoloFontSize: number;
+  titoloBold: boolean;
+  titoloItalic: boolean;
+  titoloColor: string;
+  titoloUppercase: boolean;
+  sottotitoloFontSize: number;
+  sottotitoloBold: boolean;
+  sottotitoloItalic: boolean;
+  sottotitoloColor: string;
+  bgColor: string;
+};
+
+export type FinalPageTypography = {
+  titoloFontSize: number;
+  titoloBold: boolean;
+  titoloItalic: boolean;
+  titoloColor: string;
+  testoFontSize: number;
+  testoColor: string;
+};
+
 export type CatalogConfig = {
   titolo: string;
   mostraLogo: boolean;
@@ -59,6 +142,14 @@ export type CatalogConfig = {
     titoloAllineamento: 'left' | 'center' | 'right';
     testoAllineamento: 'left' | 'center' | 'right';
   };
+  // Typography customization
+  cardFieldStyles: CardFieldStyles;
+  separatoreStyle: SeparatorStyle;
+  headerStyle: PageHeaderStyle;
+  footerStyle: PageFooterStyle;
+  cardBoxStyle: CardBoxStyle;
+  copertinaTypo: CoverTypography;
+  paginaFinaleTypo: FinalPageTypography;
 };
 
 export type ProductForPDF = {
@@ -114,6 +205,30 @@ function resolveCoverLogo(cov: CatalogConfig['copertina'], headerLogoBase64: str
   return headerLogoBase64;
 }
 
+// ── Typography helpers ────────────────────────────────────────────────────────
+
+function fieldFont(fs: FieldStyle): string {
+  if (fs.bold && fs.italic) return 'Helvetica-BoldOblique';
+  if (fs.bold) return 'Helvetica-Bold';
+  if (fs.italic) return 'Helvetica-Oblique';
+  return 'Helvetica';
+}
+
+type Segment = { text: string; bold: boolean; italic: boolean };
+
+function parseInlineText(raw: string): Segment[] {
+  if (!raw) return [];
+  const segments: Segment[] = [];
+  const re = /(\*\*(.+?)\*\*|\*(.+?)\*|([^*]+))/g;
+  let m;
+  while ((m = re.exec(raw)) !== null) {
+    if (m[2]) segments.push({ text: m[2], bold: true, italic: false });
+    else if (m[3]) segments.push({ text: m[3], bold: false, italic: true });
+    else if (m[4]) segments.push({ text: m[4], bold: false, italic: false });
+  }
+  return segments.length > 0 ? segments : [{ text: raw, bold: false, italic: false }];
+}
+
 // ── Layout computation ────────────────────────────────────────────────────────
 
 interface Layout {
@@ -149,7 +264,7 @@ function computeLayout(config: CatalogConfig): Layout {
   const f = config.campi;
   const IMG_H = f.foto ? Math.round(CARD_H * 0.56) : 0;
 
-  const TEXT_PAD = 4;
+  const TEXT_PAD = config.cardBoxStyle?.padding ?? 4;
   const CODE_H = 10;
   const DESC_H = 17;
   const DETAIL_H = 10;
@@ -189,7 +304,6 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: 0.5,
     paddingBottom: 6,
   },
   headerLeft: { width: 100 },
@@ -200,9 +314,7 @@ const s = StyleSheet.create({
     letterSpacing: 2.5,
   },
   headerTitle: {
-    fontSize: 8,
     letterSpacing: 0.5,
-    textAlign: 'center',
     flex: 1,
     paddingHorizontal: 8,
   },
@@ -214,34 +326,17 @@ const s = StyleSheet.create({
     bottom: 8,
     left: 20,
     right: 20,
-    borderTopWidth: 0.5,
     paddingTop: 3,
     alignItems: 'center',
   },
-  footerText: { fontSize: 6.5 },
   // Grid
   row: { flexDirection: 'row' },
   // Product card
   cell: {
-    borderWidth: 0.5,
     overflow: 'hidden',
   },
   textArea: {
     flex: 1,
-    overflow: 'hidden',
-  },
-  code: {
-    fontSize: 6.5,
-    letterSpacing: 0.3,
-    overflow: 'hidden',
-  },
-  desc: {
-    fontSize: 7,
-    lineHeight: 1.25,
-    overflow: 'hidden',
-  },
-  detail: {
-    fontSize: 6,
     overflow: 'hidden',
   },
   priceRow: {
@@ -254,10 +349,6 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.3,
     marginBottom: 1,
-  },
-  priceValue: {
-    fontSize: 7.5,
-    fontFamily: 'Helvetica-Bold',
   },
   // Separator page (pagina-intera mode)
   separatorPage: {
@@ -277,43 +368,10 @@ const s = StyleSheet.create({
     height: 1.5,
     marginBottom: 14,
   },
-  separatorTitle: {
-    fontSize: 26,
-    fontFamily: 'Helvetica-Bold',
-    letterSpacing: 3,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    marginBottom: 12,
-  },
   separatorCount: {
     fontSize: 10,
     textAlign: 'center',
     letterSpacing: 1.5,
-  },
-  // Inline separator
-  inlineHeader: {
-    height: 14,
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  inlineHeaderText: {
-    fontSize: 7,
-    fontFamily: 'Helvetica-Bold',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  // New-row separator
-  newRowHeader: {
-    height: 18,
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-  },
-  newRowHeaderText: {
-    fontSize: 8,
-    fontFamily: 'Helvetica-Bold',
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
   },
 });
 
@@ -334,13 +392,16 @@ function CatalogHeader({
   today: string;
   layout: Layout;
 }) {
-  const borderColor = '#D4CEC7';
-  const textColor = config.colori.testoPrimario;
+  const hs = config.headerStyle;
+  const borderColor = hs.separatorColor;
+  const textColor = hs.titleColor;
   const mutedColor = config.colori.testoSecondario;
+  const titleFont = hs.titleBold ? 'Helvetica-Bold' : hs.titleItalic ? 'Helvetica-Oblique' : 'Helvetica';
 
   return (
     <View
       style={[s.header, {
+        borderBottomWidth: hs.showSeparator ? 0.5 : 0,
         borderBottomColor: borderColor,
         left: layout.M,
         right: layout.M,
@@ -354,7 +415,12 @@ function CatalogHeader({
           <Text style={[s.headerBrand, { color: textColor }]}>ON EARTH</Text>
         )}
       </View>
-      <Text style={[s.headerTitle, { color: textColor }]}>{config.titolo}</Text>
+      <Text style={[s.headerTitle, {
+        fontSize: hs.titleFontSize,
+        fontFamily: titleFont,
+        color: textColor,
+        textAlign: hs.titleAlign as any,
+      }]}>{config.titolo}</Text>
       <View style={s.headerRight}>
         {config.mostraData && (
           <Text style={[s.headerDate, { color: mutedColor }]}>{today}</Text>
@@ -372,21 +438,25 @@ function CatalogFooter({
   layout: Layout;
 }) {
   if (!config.mostraPagina) return null;
-  const borderColor = '#D4CEC7';
-  const mutedColor = config.colori.testoSecondario;
+  const fs = config.footerStyle;
 
   return (
     <View
       style={[s.footer, {
-        borderTopColor: borderColor,
+        borderTopWidth: fs.showSeparator ? 0.5 : 0,
+        borderTopColor: fs.color,
         left: layout.M,
         right: layout.M,
       }]}
       fixed
     >
       <Text
-        style={[s.footerText, { color: mutedColor }]}
-        render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`}
+        style={{ fontSize: fs.fontSize, color: fs.color, textAlign: fs.align as any }}
+        render={({ pageNumber, totalPages }) =>
+          fs.customText
+            ? `${fs.customText} — ${pageNumber} / ${totalPages}`
+            : `${pageNumber} / ${totalPages}`
+        }
       />
     </View>
   );
@@ -405,6 +475,8 @@ function ProductCard({
 }) {
   const f = config.campi;
   const colori = config.colori;
+  const cfs = config.cardFieldStyles;
+  const box = config.cardBoxStyle;
 
   if (isEmpty || !product) {
     return (
@@ -431,12 +503,17 @@ function ProductCard({
   if (f.iva) details.push(`IVA ${product.iva}%`);
   const detailStr = details.join(' · ');
 
+  const misureStyle = cfs.misure;
+  const detailText = misureStyle.uppercase ? detailStr.toUpperCase() : detailStr;
+
   return (
     <View
       style={[s.cell, {
         width: layout.CARD_W,
         height: layout.CARD_H,
-        borderColor: '#D4CEC7',
+        borderWidth: box.borderWidth,
+        borderColor: box.borderColor,
+        borderRadius: box.borderRadius,
         backgroundColor: colori.sfondoPagina,
       }]}
     >
@@ -444,7 +521,7 @@ function ProductCard({
       {f.foto && (
         <View
           style={{
-            width: layout.CARD_W - 1,
+            width: layout.CARD_W - box.borderWidth,
             height: layout.IMG_H,
             backgroundColor: colori.sfondoFoto,
             alignItems: 'center',
@@ -455,7 +532,7 @@ function ProductCard({
           {product.imageDataUri ? (
             <Image
               style={{
-                width: layout.CARD_W - 1,
+                width: layout.CARD_W - box.borderWidth,
                 height: layout.IMG_H,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 objectFit: 'contain' as any,
@@ -474,14 +551,21 @@ function ProductCard({
       {/* Text area */}
       <View
         style={[s.textArea, {
-          padding: layout.TEXT_PAD,
+          padding: box.padding,
           height: layout.TEXT_AREA_H,
         }]}
       >
         {f.codice && (
           <View style={{ height: layout.CODE_H, overflow: 'hidden' }}>
-            <Text style={[s.code, { color: colori.testoSecondario }]}>
-              {product.code}
+            <Text style={{
+              fontSize: cfs.codice.fontSize,
+              fontFamily: fieldFont(cfs.codice),
+              color: cfs.codice.color,
+              textAlign: cfs.codice.align as any,
+              letterSpacing: 0.3,
+              overflow: 'hidden',
+            }}>
+              {cfs.codice.uppercase ? product.code.toUpperCase() : product.code}
             </Text>
           </View>
         )}
@@ -489,8 +573,17 @@ function ProductCard({
         {f.descrizione && (
           <View style={{ height: layout.DESC_H, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            <Text style={[s.desc, { color: colori.testoPrimario }]} {...({ numberOfLines: 2 } as any)}>
-              {product.description || product.name}
+            <Text style={{
+              fontSize: cfs.descrizione.fontSize,
+              fontFamily: fieldFont(cfs.descrizione),
+              color: cfs.descrizione.color,
+              textAlign: cfs.descrizione.align as any,
+              lineHeight: 1.25,
+              overflow: 'hidden',
+            }} {...({ numberOfLines: 2 } as any)}>
+              {cfs.descrizione.uppercase
+                ? (product.description || product.name).toUpperCase()
+                : (product.description || product.name)}
             </Text>
           </View>
         )}
@@ -498,8 +591,14 @@ function ProductCard({
         {anyDetail && (
           <View style={{ height: layout.DETAIL_H, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            <Text style={[s.detail, { color: colori.testoSecondario }]} {...({ numberOfLines: 1 } as any)}>
-              {detailStr}
+            <Text style={{
+              fontSize: misureStyle.fontSize,
+              fontFamily: fieldFont(misureStyle),
+              color: misureStyle.color,
+              textAlign: misureStyle.align as any,
+              overflow: 'hidden',
+            }} {...({ numberOfLines: 1 } as any)}>
+              {detailText}
             </Text>
           </View>
         )}
@@ -513,16 +612,26 @@ function ProductCard({
           <View style={[s.priceRow, { height: layout.PRICES_H }]}>
             {f.prezzoCosto && (
               <View style={s.priceItem}>
-                <Text style={[s.priceLabel, { color: colori.testoSecondario }]}>Costo i.e.</Text>
-                <Text style={[s.priceValue, { color: colori.testoPrimario }]}>
+                <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Costo i.e.</Text>
+                <Text style={{
+                  fontSize: cfs.prezzoCosto.fontSize,
+                  fontFamily: fieldFont(cfs.prezzoCosto),
+                  color: cfs.prezzoCosto.color,
+                  textAlign: cfs.prezzoCosto.align as any,
+                }}>
                   {euro(product.costPrice)}
                 </Text>
               </View>
             )}
             {f.pvp && (
               <View style={s.priceItem}>
-                <Text style={[s.priceLabel, { color: colori.testoSecondario }]}>PVP i.i.</Text>
-                <Text style={[s.priceValue, { color: colori.testoPrimario }]}>
+                <Text style={[s.priceLabel, { color: cfs.pvp.color }]}>PVP i.i.</Text>
+                <Text style={{
+                  fontSize: cfs.pvp.fontSize,
+                  fontFamily: fieldFont(cfs.pvp),
+                  color: cfs.pvp.color,
+                  textAlign: cfs.pvp.align as any,
+                }}>
                   {euro(product.retailPrice)}
                 </Text>
               </View>
@@ -576,12 +685,25 @@ function CoverPage({
   layout: Layout;
 }) {
   const cov = config.copertina;
+  const typo = config.copertinaTypo;
   const { pageW, pageH } = layout;
   const coverLogoBase64 = resolveCoverLogo(cov, config.logoBase64);
   const logoH = COVER_LOGO_H[cov.logoDimensione] ?? 28;
   const logoJustify = COVER_LOGO_JUSTIFY[cov.logoPosizione] ?? 'center';
   const titleAlign = cov.titoloAllineamento ?? 'center';
   const subtitleAlign = cov.sottotitoloAllineamento ?? 'center';
+
+  const titleFont = (typo.titoloBold && typo.titoloItalic) ? 'Helvetica-BoldOblique'
+    : typo.titoloBold ? 'Helvetica-Bold'
+    : typo.titoloItalic ? 'Helvetica-Oblique'
+    : 'Helvetica';
+
+  const subtitleFont = (typo.sottotitoloBold && typo.sottotitoloItalic) ? 'Helvetica-BoldOblique'
+    : typo.sottotitoloBold ? 'Helvetica-Bold'
+    : typo.sottotitoloItalic ? 'Helvetica-Oblique'
+    : 'Helvetica';
+
+  const titoloText = typo.titoloUppercase ? cov.titolo.toUpperCase() : cov.titolo;
 
   if (cov.layout === 'full-overlay') {
     return (
@@ -638,19 +760,25 @@ function CoverPage({
         >
           <Text
             style={{
-              fontSize: 28,
-              fontFamily: 'Helvetica-Bold',
-              color: '#FFFFFF',
+              fontSize: typo.titoloFontSize,
+              fontFamily: titleFont,
+              color: typo.titoloColor,
               letterSpacing: 3,
-              textTransform: 'uppercase',
               marginBottom: 6,
               textAlign: titleAlign,
             }}
           >
-            {cov.titolo}
+            {titoloText}
           </Text>
           {cov.sottotitolo ? (
-            <Text style={{ fontSize: 13, color: '#FFFFFF', letterSpacing: 1, opacity: 0.85, textAlign: subtitleAlign }}>
+            <Text style={{
+              fontSize: typo.sottotitoloFontSize,
+              fontFamily: subtitleFont,
+              color: typo.sottotitoloColor,
+              letterSpacing: 1,
+              opacity: 0.85,
+              textAlign: subtitleAlign,
+            }}>
               {cov.sottotitolo}
             </Text>
           ) : null}
@@ -698,7 +826,7 @@ function CoverPage({
             right: 0,
             bottom: 0,
             justifyContent: 'center',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: typo.bgColor,
             paddingHorizontal: 40,
           }}
         >
@@ -710,22 +838,22 @@ function CoverPage({
           )}
           <Text
             style={{
-              fontSize: 24,
-              fontFamily: 'Helvetica-Bold',
-              color: config.colori.testoPrimario,
+              fontSize: typo.titoloFontSize,
+              fontFamily: titleFont,
+              color: typo.titoloColor,
               letterSpacing: 3,
-              textTransform: 'uppercase',
               textAlign: titleAlign,
               marginBottom: 8,
             }}
           >
-            {cov.titolo}
+            {titoloText}
           </Text>
           {cov.sottotitolo ? (
             <Text
               style={{
-                fontSize: 12,
-                color: config.colori.testoSecondario,
+                fontSize: typo.sottotitoloFontSize,
+                fontFamily: subtitleFont,
+                color: typo.sottotitoloColor,
                 letterSpacing: 1,
                 textAlign: subtitleAlign,
               }}
@@ -744,7 +872,7 @@ function CoverPage({
       size={[pageW, pageH] as [number, number]}
       style={{
         fontFamily: 'Helvetica',
-        backgroundColor: config.colori.sfondoPagina,
+        backgroundColor: typo.bgColor,
         justifyContent: 'center',
         paddingHorizontal: 60,
       }}
@@ -767,22 +895,22 @@ function CoverPage({
       />
       <Text
         style={{
-          fontSize: 26,
-          fontFamily: 'Helvetica-Bold',
-          color: config.colori.testoPrimario,
+          fontSize: typo.titoloFontSize,
+          fontFamily: titleFont,
+          color: typo.titoloColor,
           letterSpacing: 4,
-          textTransform: 'uppercase',
           textAlign: titleAlign,
           marginBottom: 12,
         }}
       >
-        {cov.titolo}
+        {titoloText}
       </Text>
       {cov.sottotitolo ? (
         <Text
           style={{
-            fontSize: 13,
-            color: config.colori.testoSecondario,
+            fontSize: typo.sottotitoloFontSize,
+            fontFamily: subtitleFont,
+            color: typo.sottotitoloColor,
             letterSpacing: 1.5,
             textAlign: subtitleAlign,
           }}
@@ -804,9 +932,17 @@ function FinalPage({
   layout: Layout;
 }) {
   const pf = config.paginaFinale;
+  const typo = config.paginaFinaleTypo;
   const { pageW, pageH } = layout;
   const titleAlign = pf.titoloAllineamento ?? 'center';
   const textAlign = pf.testoAllineamento ?? 'center';
+
+  const titleFont = (typo.titoloBold && typo.titoloItalic) ? 'Helvetica-BoldOblique'
+    : typo.titoloBold ? 'Helvetica-Bold'
+    : typo.titoloItalic ? 'Helvetica-Oblique'
+    : 'Helvetica';
+
+  const segments = pf.testo ? parseInlineText(pf.testo) : [];
 
   return (
     <Page
@@ -821,11 +957,10 @@ function FinalPage({
       {pf.titolo ? (
         <Text
           style={{
-            fontSize: 20,
-            fontFamily: 'Helvetica-Bold',
-            color: config.colori.testoPrimario,
+            fontSize: typo.titoloFontSize,
+            fontFamily: titleFont,
+            color: typo.titoloColor,
             letterSpacing: 2,
-            textTransform: 'uppercase',
             textAlign: titleAlign,
             marginBottom: 18,
           }}
@@ -837,14 +972,26 @@ function FinalPage({
       {pf.testo ? (
         <Text
           style={{
-            fontSize: 10,
-            color: config.colori.testoSecondario,
+            fontSize: typo.testoFontSize,
+            color: typo.testoColor,
             textAlign: textAlign,
             lineHeight: 1.6,
             marginBottom: 24,
           }}
         >
-          {pf.testo}
+          {segments.map((seg, i) => (
+            <Text
+              key={i}
+              style={{
+                fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique'
+                  : seg.bold ? 'Helvetica-Bold'
+                  : seg.italic ? 'Helvetica-Oblique'
+                  : 'Helvetica',
+              }}
+            >
+              {seg.text}
+            </Text>
+          ))}
         </Text>
       ) : null}
 
@@ -873,18 +1020,32 @@ function SeparatorPageFull({
   today: string;
 }) {
   const { pageW, pageH } = layout;
+  const sep = config.separatoreStyle;
+  const sepFont = (sep.bold && sep.italic) ? 'Helvetica-BoldOblique'
+    : sep.bold ? 'Helvetica-Bold'
+    : sep.italic ? 'Helvetica-Oblique'
+    : 'Helvetica';
+  const displayKey = sep.uppercase ? groupKey.toUpperCase() : groupKey;
+
   return (
     <Page
       size={[pageW, pageH] as [number, number]}
-      style={[s.separatorPage, { backgroundColor: config.colori.sfondoPagina }]}
+      style={[s.separatorPage, { backgroundColor: sep.bgColor }]}
     >
       <CatalogHeader config={config} today={today} layout={layout} />
       <View style={s.separatorContent}>
-        <View style={[s.separatorAccentLine, { backgroundColor: '#8B7355' }]} />
-        <Text style={[s.separatorTitle, { color: config.colori.testoPrimario }]}>
-          {groupKey}
+        <View style={[s.separatorAccentLine, { backgroundColor: sep.color }]} />
+        <Text style={{
+          fontSize: sep.fontSize,
+          fontFamily: sepFont,
+          color: sep.color,
+          letterSpacing: 3,
+          textAlign: sep.align as any,
+          marginBottom: 12,
+        }}>
+          {displayKey}
         </Text>
-        <Text style={[s.separatorCount, { color: config.colori.testoSecondario }]}>
+        <Text style={[s.separatorCount, { color: sep.color }]}>
           {productCount} {productCount === 1 ? 'prodotto' : 'prodotti'}
         </Text>
       </View>
@@ -902,15 +1063,32 @@ function InlineGroupHeader({
   config: CatalogConfig;
   layout: Layout;
 }) {
+  const sep = config.separatoreStyle;
+  const inlineH = Math.max(10, Math.round(sep.height / 2));
+  const sepFont = (sep.bold && sep.italic) ? 'Helvetica-BoldOblique'
+    : sep.bold ? 'Helvetica-Bold'
+    : sep.italic ? 'Helvetica-Oblique'
+    : 'Helvetica';
+  const displayKey = sep.uppercase ? groupKey.toUpperCase() : groupKey;
+
   return (
     <View
-      style={[s.inlineHeader, {
-        backgroundColor: config.colori.sfondoPagina,
+      style={{
+        height: inlineH,
+        justifyContent: 'center',
+        paddingHorizontal: 6,
+        backgroundColor: sep.bgColor,
         width: layout.CARD_W * layout.COLS,
-      }]}
+      }}
     >
-      <Text style={[s.inlineHeaderText, { color: config.colori.testoPrimario }]}>
-        {groupKey}
+      <Text style={{
+        fontSize: Math.max(6, sep.fontSize * 0.6),
+        fontFamily: sepFont,
+        color: sep.color,
+        letterSpacing: 1,
+        textAlign: sep.align as any,
+      }}>
+        {displayKey}
       </Text>
     </View>
   );
@@ -925,17 +1103,34 @@ function NewRowGroupHeader({
   config: CatalogConfig;
   layout: Layout;
 }) {
+  const sep = config.separatoreStyle;
+  const sepFont = (sep.bold && sep.italic) ? 'Helvetica-BoldOblique'
+    : sep.bold ? 'Helvetica-Bold'
+    : sep.italic ? 'Helvetica-Oblique'
+    : 'Helvetica';
+  const displayKey = sep.uppercase ? groupKey.toUpperCase() : groupKey;
+
   return (
     <View
-      style={[s.newRowHeader, {
-        backgroundColor: config.colori.sfondoPagina,
-        borderBottomColor: '#8B7355',
+      style={{
+        height: sep.height,
+        justifyContent: 'center',
+        paddingHorizontal: 8,
+        backgroundColor: sep.bgColor,
+        borderBottomWidth: 1,
+        borderBottomColor: sep.color,
         width: layout.CARD_W * layout.COLS,
         marginTop: 6,
-      }]}
+      }}
     >
-      <Text style={[s.newRowHeaderText, { color: config.colori.testoPrimario }]}>
-        {groupKey}
+      <Text style={{
+        fontSize: sep.fontSize,
+        fontFamily: sepFont,
+        color: sep.color,
+        letterSpacing: 1.5,
+        textAlign: sep.align as any,
+      }}>
+        {displayKey}
       </Text>
     </View>
   );
