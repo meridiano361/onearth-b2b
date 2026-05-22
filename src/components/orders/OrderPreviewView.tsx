@@ -75,29 +75,38 @@ function ProductCard({
         </div>
 
         <p className="text-2xs text-gray-400 mt-auto">
-          P.V.C. i.i.:{' '}
+          PVP:{' '}
           <span className="text-gray-600 font-medium">{formatCurrency(retailWithTax)}</span>
         </p>
 
         {/* Quantity control */}
         <div className={`flex items-center justify-between pt-2 border-t border-border/60 ${isSaving ? 'opacity-60' : ''}`}>
-          <div className="flex items-center border border-border overflow-hidden text-xs">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => onQtyChange(item.id, effectiveQty - lotSize)}
-              disabled={isSaving || effectiveQty <= lotSize}
-              className="px-2 py-1 hover:bg-cream border-r border-border disabled:opacity-30 transition-colors"
+              onClick={() => {
+                const newQty = effectiveQty - lotSize;
+                if (newQty <= 0) {
+                  if (window.confirm('Vuoi rimuovere il prodotto dall\'ordine?')) {
+                    onRemove(item.id);
+                  }
+                } else {
+                  onQtyChange(item.id, newQty);
+                }
+              }}
+              disabled={isSaving}
+              className="w-10 h-10 flex items-center justify-center rounded border border-border hover:bg-cream disabled:opacity-30 transition-colors active:scale-95"
               aria-label={decreaseLabel}
             >
-              <Minus size={9} />
+              <Minus size={14} />
             </button>
-            <span className="px-2.5 py-1 font-medium text-center min-w-[2rem]">{effectiveQty}</span>
+            <span className="text-xl font-semibold text-primary text-center min-w-[2.5rem]">{effectiveQty}</span>
             <button
               onClick={() => onQtyChange(item.id, effectiveQty + lotSize)}
               disabled={isSaving}
-              className="px-2 py-1 hover:bg-cream border-l border-border disabled:opacity-30 transition-colors"
+              className="w-10 h-10 flex items-center justify-center rounded border border-border hover:bg-cream disabled:opacity-30 transition-colors active:scale-95"
               aria-label={increaseLabel}
             >
-              <Plus size={9} />
+              <Plus size={14} />
             </button>
           </div>
           <span className="text-sm font-semibold text-primary">{formatCurrency(effectiveSubtotal)}</span>
@@ -613,7 +622,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
                 {t('title')}
               </p>
               <p className="text-sm font-semibold text-primary tracking-wide">
-                #{order.id.slice(0, 8).toUpperCase()}
+                {order.orderNumber ?? `#${order.id.slice(0, 8).toUpperCase()}`}
               </p>
             </div>
           </div>

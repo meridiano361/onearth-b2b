@@ -149,6 +149,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  orderNumber: string | null;
   customerId: string | null;
   organizationId: string | null;
   canaleId: string | null;

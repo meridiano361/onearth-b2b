@@ -132,7 +132,7 @@ export default function CustomerOrdersView() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-xs font-mono font-semibold text-primary tracking-widest">
-                      #{order.id.slice(0, 8).toUpperCase()}
+                      {order.orderNumber ?? `#${order.id.slice(0, 8).toUpperCase()}`}
                     </p>
                     <p className="text-2xs text-gray-400 mt-0.5">
                       {formatDate(order.createdAt)}

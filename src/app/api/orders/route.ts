@@ -191,6 +191,30 @@ export async function POST(req: NextRequest) {
       orderData.customerId = session.user.id;
     }
 
+    // Generate order number #YYYYMMDDOOOOODD##
+    if (orderData.organizationId && orderData.canaleId) {
+      const [org, canale] = await Promise.all([
+        prisma.organization.findUnique({ where: { id: orderData.organizationId }, select: { nome: true } }),
+        prisma.canale.findUnique({ where: { id: orderData.canaleId }, select: { tipo: true } }),
+      ]);
+      if (org && canale) {
+        const now = new Date();
+        const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+        const org5 = org.nome.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 5).padEnd(5, 'X');
+        const destMap: Record<string, string> = {
+          BOTTEGA: 'BO', EMPORIO: 'EM', DISTRETTO: 'DI', STORE: 'ST',
+          OUTLET: 'OU', TENDONE: 'TE', FIERA: 'FI', ONLINE: 'ON', ALTRO: 'AL',
+        };
+        const dest2 = destMap[canale.tipo] ?? 'AL';
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+        const count = await prisma.order.count({
+          where: { organizationId: orderData.organizationId, createdAt: { gte: startOfDay, lt: endOfDay } },
+        });
+        orderData.orderNumber = `#${date}${org5}${dest2}${String(count + 1).padStart(2, '0')}`;
+      }
+    }
+
     const order = await prisma.order.create({
       data: orderData,
       include: {
