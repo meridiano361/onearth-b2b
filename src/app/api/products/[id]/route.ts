@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { normalizeProductClassificationFields } from '@/lib/normalizeClassification';
 import { normalizeProductName } from '@/lib/normalizeProductName';
 import { syncProductClassification } from '@/lib/syncClassification';
+import { translateProduct } from '@/lib/translate';
 
 const updateSchema = z.object({
   code: z.string().min(1).optional(),
@@ -61,6 +62,7 @@ export async function GET(
         ...product,
         costPrice: Number(product.costPrice),
         retailPrice: Number(product.retailPrice),
+        fasciaSconto: product.fasciaSconto != null ? Number(product.fasciaSconto) : null,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
       },
@@ -99,11 +101,20 @@ export async function PATCH(
 
     void syncProductClassification(data);
 
+    // Auto-translate se la descrizione è stata aggiornata
+    if (data.description !== undefined) {
+      const testo = data.description || product.name;
+      void translateProduct(testo).then((trad) =>
+        prisma.product.update({ where: { id: params.id }, data: trad })
+      ).catch(() => {});
+    }
+
     return NextResponse.json({
       data: {
         ...product,
         costPrice: Number(product.costPrice),
         retailPrice: Number(product.retailPrice),
+        fasciaSconto: product.fasciaSconto != null ? Number(product.fasciaSconto) : null,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
       },

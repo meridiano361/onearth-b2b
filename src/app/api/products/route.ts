@@ -8,6 +8,7 @@ import { slugify } from '@/lib/utils';
 import { normalizeProductClassificationFields } from '@/lib/normalizeClassification';
 import { normalizeProductName } from '@/lib/normalizeProductName';
 import { syncProductClassification } from '@/lib/syncClassification';
+import { translateProduct } from '@/lib/translate';
 
 const productSchema = z.object({
   code: z.string().min(1),
@@ -157,11 +158,18 @@ export async function POST(req: NextRequest) {
 
     void syncProductClassification(data);
 
+    // Auto-translate alla creazione
+    const testoPerTrad = data.description || data.name;
+    void translateProduct(testoPerTrad).then((trad) =>
+      prisma.product.update({ where: { id: product.id }, data: trad })
+    ).catch(() => {});
+
     return NextResponse.json({
       data: {
         ...product,
         costPrice: Number(product.costPrice),
         retailPrice: Number(product.retailPrice),
+        fasciaSconto: product.fasciaSconto != null ? Number(product.fasciaSconto) : null,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
       },

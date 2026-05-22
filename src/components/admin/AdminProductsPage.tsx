@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -73,6 +73,9 @@ export default function AdminProductsPage() {
   const [showBulkImages, setShowBulkImages] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showTranslateConfirm, setShowTranslateConfirm] = useState(false);
+  const [isTranslatingAll, setIsTranslatingAll] = useState(false);
+  const [translateProgress, setTranslateProgress] = useState<{ done: number; total: number } | null>(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -291,6 +294,37 @@ export default function AdminProductsPage() {
     }
   }
 
+  async function handleTranslateAll() {
+    const missing = allProducts.filter((p) => !(p as any).descrizioneEn);
+    if (missing.length === 0) { toast('Tutti i prodotti hanno già le traduzioni'); return; }
+    setIsTranslatingAll(true);
+    setTranslateProgress({ done: 0, total: missing.length });
+    const ids = missing.map((p) => p.id);
+    // Invia in batch da 10 per mostrare progress
+    const BATCH = 10;
+    let done = 0;
+    for (let i = 0; i < ids.length; i += BATCH) {
+      const batch = ids.slice(i, i + BATCH);
+      try {
+        const res = await fetch('/api/admin/products/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productIds: batch }),
+        });
+        const data = await res.json();
+        done += data.translated ?? batch.length;
+      } catch {
+        done += batch.length;
+      }
+      setTranslateProgress({ done, total: missing.length });
+    }
+    setIsTranslatingAll(false);
+    setShowTranslateConfirm(false);
+    setTranslateProgress(null);
+    toast.success(`Traduzione completata: ${done} prodotti tradotti`);
+    queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+  }
+
   const selectClass = 'h-8 border border-border rounded px-2 text-xs text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent';
   const bulkInputClass = 'w-full h-9 border border-border rounded px-3 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-gray-300';
   const bulkLabelClass = 'block text-xs font-medium text-gray-600 mb-1';
@@ -323,6 +357,9 @@ export default function AdminProductsPage() {
           </Button>
           <Button variant="secondary" icon={<ImagePlus size={13} />} onClick={() => setShowBulkImages(true)}>
             <span className="hidden sm:inline">Carica foto in blocco</span>
+          </Button>
+          <Button variant="secondary" icon={<Languages size={13} />} onClick={() => setShowTranslateConfirm(true)}>
+            <span className="hidden sm:inline">Traduci tutti</span>
           </Button>
           <Button icon={<Plus size={13} />} onClick={() => setShowCreateForm(true)}>
             <span className="hidden sm:inline">Aggiungi Prodotto</span>
@@ -582,6 +619,37 @@ export default function AdminProductsPage() {
               Elimina {selectedIds.size} prodott{selectedIds.size === 1 ? 'o' : 'i'}
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Translate Confirm Modal */}
+      <Modal isOpen={showTranslateConfirm} onClose={() => !isTranslatingAll && setShowTranslateConfirm(false)} title="Traduci descrizioni prodotti" size="sm">
+        <div className="space-y-4">
+          {!isTranslatingAll ? (
+            <>
+              <p className="text-sm text-gray-600">
+                Tradurre automaticamente <strong>{allProducts.filter((p) => !(p as any).descrizioneEn).length} prodotti</strong> con traduzioni mancanti?
+                Il servizio è gratuito ma potrebbe richiedere alcuni minuti.
+              </p>
+              <p className="text-xs text-gray-400">Lingue: EN · DE · FR · ES (via MyMemory API)</p>
+              <div className="flex justify-end gap-3">
+                <Button variant="ghost" onClick={() => setShowTranslateConfirm(false)}>Annulla</Button>
+                <Button icon={<Languages size={13} />} onClick={handleTranslateAll}>
+                  Avvia traduzione
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="py-4 text-center">
+              <Loader2 size={24} className="animate-spin text-accent mx-auto mb-3" />
+              <p className="text-sm font-medium text-primary">
+                {translateProgress
+                  ? `Tradotti ${translateProgress.done} di ${translateProgress.total} prodotti...`
+                  : 'Avvio traduzione...'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">Non chiudere questa pagina.</p>
+            </div>
+          )}
         </div>
       </Modal>
     </div>

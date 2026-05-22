@@ -3,47 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
-
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-
-async function translateDescription(testo: string): Promise<{
-  en: string; de: string; fr: string; es: string;
-}> {
-  if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY non configurata');
-
-  const prompt = `Traduci la seguente descrizione di un prodotto di abbigliamento/accessori in inglese, tedesco, francese e spagnolo. Rispondi SOLO con un JSON valido nel formato:
-{"en":"...","de":"...","fr":"...","es":"..."}
-
-Descrizione italiana: ${testo}`;
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Anthropic API error: ${err}`);
-  }
-
-  const data = await res.json();
-  const text = data.content?.[0]?.text ?? '';
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('JSON non trovato nella risposta');
-  return JSON.parse(jsonMatch[0]);
-}
+import { translateProduct } from '@/lib/translate';
 
 // POST /api/admin/products/translate
-// Body: { productId: string } | { all: true }
+// Body: { productId: string } | { productIds: string[] } | { all: true }
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || !isAdminRole(session.user.role)) {
@@ -52,56 +15,52 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
 
-  if (body.all) {
-    // Traduci tutti i prodotti con descrizione italiana non ancora tradotti
-    const products = await prisma.product.findMany({
-      where: {
-        description: { not: null },
-        descrizioneEn: null,
-      },
-      select: { id: true, description: true },
-    });
+  // Determina la lista di prodotti da tradurre
+  let productIds: string[] = [];
 
-    let done = 0;
-    const errors: string[] = [];
-    for (const p of products) {
-      try {
-        const trad = await translateDescription(p.description!);
-        await prisma.product.update({
-          where: { id: p.id },
-          data: {
-            descrizioneEn: trad.en,
-            descrizioneDe: trad.de,
-            descrizioneFr: trad.fr,
-            descrizioneEs: trad.es,
-          },
-        });
-        done++;
-      } catch (e: any) {
-        errors.push(`${p.id}: ${e.message}`);
-      }
-    }
-    return NextResponse.json({ done, errors });
+  if (body.all) {
+    const products = await prisma.product.findMany({
+      where: { descrizioneEn: null },
+      select: { id: true },
+    });
+    productIds = products.map((p) => p.id);
+  } else if (body.productIds && Array.isArray(body.productIds)) {
+    productIds = body.productIds;
+  } else if (body.productId) {
+    productIds = [body.productId];
+  } else {
+    return NextResponse.json({ error: 'Nessun prodotto specificato' }, { status: 400 });
   }
 
-  const { productId } = body;
-  if (!productId) return NextResponse.json({ error: 'productId required' }, { status: 400 });
+  if (productIds.length === 0) {
+    return NextResponse.json({ translated: 0, errors: [] });
+  }
 
-  const product = await prisma.product.findUnique({ where: { id: productId } });
-  if (!product) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  let translated = 0;
+  const errors: string[] = [];
 
-  const testo = product.description || product.name;
-  const trad = await translateDescription(testo);
+  for (const id of productIds) {
+    try {
+      const product = await prisma.product.findUnique({
+        where: { id },
+        select: { id: true, description: true, name: true },
+      });
+      if (!product) { errors.push(`${id}: non trovato`); continue; }
 
-  await prisma.product.update({
-    where: { id: productId },
-    data: {
-      descrizioneEn: trad.en,
-      descrizioneDe: trad.de,
-      descrizioneFr: trad.fr,
-      descrizioneEs: trad.es,
-    },
-  });
+      const testo = product.description || product.name;
+      const trad = await translateProduct(testo);
 
-  return NextResponse.json({ ok: true, translations: trad });
+      await prisma.product.update({
+        where: { id },
+        data: trad,
+      });
+      translated++;
+    } catch (e: any) {
+      errors.push(`${id}: ${e.message}`);
+    }
+    // Rate limit MyMemory: 200ms tra ogni chiamata
+    await new Promise((r) => setTimeout(r, 200));
+  }
+
+  return NextResponse.json({ translated, errors });
 }
