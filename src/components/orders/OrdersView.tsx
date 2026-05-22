@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Package, Download, ChevronDown, ChevronUp, ScanEye } from 'lucide-react';
-import OrderPDFExport from './OrderPDFExport';
+import { Package, Download, ChevronDown, ChevronUp, ScanEye, Edit2, Trash2 } from 'lucide-react';
 import OrderDemetraExport from './OrderDemetraExport';
 import { formatCurrency, formatDate, getOrderStatusLabel } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
@@ -14,9 +13,10 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { Order } from '@/types';
 import toast from 'react-hot-toast';
 
-function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boolean }) {
+function OrderRow({ order, isHighlighted, onDeleted }: { order: Order; isHighlighted: boolean; onDeleted: () => void }) {
   const [isExpanded, setIsExpanded] = useState(isHighlighted);
   const [isExporting, setIsExporting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const t = useTranslations('orders');
 
   const statusColors: Record<string, string> = {
@@ -51,6 +51,21 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
     }
   }
 
+  async function handleDelete() {
+    if (!confirm('Eliminare questo ordine? L\'azione è irreversibile.')) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      toast.success('Ordine eliminato');
+      onDeleted();
+    } catch {
+      toast.error('Errore nell\'eliminazione dell\'ordine');
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <div
       className={`border rounded mb-3 overflow-hidden transition-all duration-200 ${
@@ -80,14 +95,16 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
         </div>
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          {/* 1. Modifica */}
           <button
-            onClick={(e) => { e.stopPropagation(); handleExportExcel(); }}
-            disabled={isExporting}
+            onClick={(e) => { e.stopPropagation(); setIsExpanded((v) => !v); }}
             className="text-xs text-gray-400 hover:text-primary border border-border rounded px-2 py-1.5 hover:bg-cream transition-all flex items-center gap-1"
           >
-            <Download size={11} />
-            <span className="hidden sm:inline">XLSX</span>
+            <Edit2 size={11} />
+            <span className="hidden sm:inline">Modifica</span>
           </button>
+
+          {/* 2. Anteprima */}
           <Link
             href={`/catalog/orders/${order.id}/preview`}
             onClick={(e) => e.stopPropagation()}
@@ -96,8 +113,30 @@ function OrderRow({ order, isHighlighted }: { order: Order; isHighlighted: boole
             <ScanEye size={11} />
             <span className="hidden sm:inline">{t('preview')}</span>
           </Link>
-          <OrderPDFExport order={order} />
+
+          {/* 3. Esporta Excel */}
+          <button
+            onClick={(e) => { e.stopPropagation(); handleExportExcel(); }}
+            disabled={isExporting}
+            className="text-xs text-gray-400 hover:text-primary border border-border rounded px-2 py-1.5 hover:bg-cream transition-all flex items-center gap-1 disabled:opacity-50"
+          >
+            <Download size={11} />
+            <span className="hidden sm:inline">Excel</span>
+          </button>
+
+          {/* 4. Esporta Demetra */}
           <OrderDemetraExport order={order} />
+
+          {/* 5. Elimina */}
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+            disabled={isDeleting}
+            className="text-xs text-red-400 hover:text-red-600 border border-red-200 rounded px-2 py-1.5 hover:bg-red-50 transition-all flex items-center gap-1 disabled:opacity-50"
+          >
+            <Trash2 size={11} />
+            <span className="hidden sm:inline">Elimina</span>
+          </button>
+
           {isExpanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
         </div>
       </div>
@@ -180,6 +219,7 @@ export default function OrdersView() {
   const searchParams = useSearchParams();
   const highlight = searchParams.get('highlight');
   const t = useTranslations('orders');
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: ['my-orders'],
@@ -223,6 +263,7 @@ export default function OrdersView() {
               key={order.id}
               order={order}
               isHighlighted={order.id === highlight}
+              onDeleted={() => queryClient.invalidateQueries({ queryKey: ['my-orders'] })}
             />
           ))}
         </div>

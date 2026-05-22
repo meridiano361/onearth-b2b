@@ -76,6 +76,10 @@ model Product {
   tranche            String?
   paese              String?
   iva                Int      @default(22)
+  descrizioneEn      String?
+  descrizioneDe      String?
+  descrizioneFr      String?
+  descrizioneEs      String?
   createdAt          DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

@@ -65,6 +65,10 @@ export interface Product {
   tranche: string | null;
   paese: string | null;
   iva: number;
+  descrizioneEn: string | null;
+  descrizioneDe: string | null;
+  descrizioneFr: string | null;
+  descrizioneEs: string | null;
   createdAt: string;
   category?: Category | null;
 }

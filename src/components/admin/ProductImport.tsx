@@ -366,7 +366,7 @@ export default function ProductImport({ onSuccess }: ProductImportProps) {
                 <th className="text-left px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">Categoria</th>
                 <th className="text-right px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">Costo</th>
                 <th className="text-right px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">Vendita</th>
-                <th className="text-center px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">LOT</th>
+                <th className="text-center px-3 py-2 text-2xs uppercase tracking-wide text-gray-500">CONF</th>
               </tr>
             </thead>
             <tbody>

@@ -83,7 +83,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           {product.lotSize > 1 && (
             <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded">
               <Layers size={9} className="text-gray-500" />
-              <span className="text-2xs text-gray-600 font-medium">LOT {product.lotSize}</span>
+              <span className="text-2xs text-gray-600 font-medium">CONF {product.lotSize}</span>
             </div>
           )}
         </div>

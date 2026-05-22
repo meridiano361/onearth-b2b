@@ -330,6 +330,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
         name,
         items: grpItems,
         subtotal: grpItems.reduce((s, it) => s + it.effectiveSubtotal, 0),
+        totalQty: grpItems.reduce((s, it) => s + it.effectiveQty, 0),
       }));
   }, [items, groupBy]);
 
@@ -718,6 +719,31 @@ export default function OrderPreviewView({ id }: { id: string }) {
             </div>
           </section>
         ))}
+
+        {/* ── Riepilogo ─────────────────────────────────────── */}
+        {groups.length > 1 && (
+          <section className="mt-4 mb-8 border border-border rounded overflow-hidden">
+            <div className="bg-cream/50 px-4 py-2 border-b border-border">
+              <p className="text-2xs font-bold tracking-[0.12em] uppercase text-gray-500">Riepilogo</p>
+            </div>
+            <table className="w-full text-xs">
+              <tbody>
+                {groups.map((group) => (
+                  <tr key={group.name} className="border-b border-border/40 last:border-0">
+                    <td className="px-4 py-2 text-primary">{group.name}</td>
+                    <td className="px-4 py-2 text-right text-gray-500">{group.totalQty} pz</td>
+                    <td className="px-4 py-2 text-right font-medium text-primary">{formatCurrency(group.subtotal)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-primary text-white">
+                  <td className="px-4 py-2.5 font-bold uppercase tracking-wide text-xs">TOTALE</td>
+                  <td className="px-4 py-2.5 text-right font-bold">{grandQty} pz</td>
+                  <td className="px-4 py-2.5 text-right font-bold text-sm">{formatCurrency(grandTotal)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        )}
       </div>
 
       {/* ── Fixed footer ──────────────────────────────────── */}

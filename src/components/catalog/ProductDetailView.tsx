@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ShoppingBag, Check } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { formatCurrency, isValidLotQuantity } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -23,6 +23,7 @@ export default function ProductDetailView({ id }: Props) {
   const tp = useTranslations('product');
   const tf = useTranslations('filters');
   const tg = useTranslations('groupings');
+  const locale = useLocale();
 
   const classFields: { key: keyof Product; label: string }[] = [
     { key: 'gruppoMerceologico', label: tf('gruppoMerceologico') },
@@ -39,6 +40,7 @@ export default function ProductDetailView({ id }: Props) {
 
   const detailFields: { key: keyof Product; label: string }[] = [
     { key: 'produttore', label: tf('produttore') },
+    { key: 'paese',      label: 'Paese' },
     { key: 'misura',     label: tp('misura') },
     { key: 'lotSize',    label: tp('lotSizeLabel') },
   ];
@@ -98,6 +100,20 @@ export default function ProductDetailView({ id }: Props) {
     return v !== null && v !== undefined && v !== '' && v !== 1;
   });
 
+  const localizedDescription = (() => {
+    if (locale === 'en' && product.descrizioneEn) return product.descrizioneEn;
+    if (locale === 'de' && product.descrizioneDe) return product.descrizioneDe;
+    if (locale === 'fr' && product.descrizioneFr) return product.descrizioneFr;
+    if (locale === 'es' && product.descrizioneEs) return product.descrizioneEs;
+    return product.description || null;
+  })();
+
+  const hasBusinessInfo =
+    product.fasciaSconto != null ||
+    product.fasciaRicarico ||
+    product.iva != null;
+  const guadagnoPotenziale = Number(product.retailPrice) - Number(product.costPrice);
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
       <button
@@ -122,9 +138,13 @@ export default function ProductDetailView({ id }: Props) {
         <div className="flex flex-col">
           <p className="label-luxury text-accent mb-1">{product.code}</p>
 
-          <h1 className="font-display text-2xl sm:text-3xl text-primary font-light leading-snug mb-4">
+          <h1 className="font-display text-2xl sm:text-3xl text-primary font-light leading-snug mb-3">
             {product.name}
           </h1>
+
+          {localizedDescription && (
+            <p className="text-sm text-gray-500 leading-relaxed mb-4">{localizedDescription}</p>
+          )}
 
           <div className="mb-6">
             <p className="text-2xs text-gray-400 uppercase tracking-widest mb-0.5">
@@ -197,29 +217,61 @@ export default function ProductDetailView({ id }: Props) {
           </div>
         )}
 
-        {(activeDetailFields.length > 0 || product.notes) && (
-          <div>
-            <h2 className="label-luxury text-gray-400 mb-3">{tp('detailsTitle')}</h2>
-            <div className="space-y-2">
-              {activeDetailFields.map(({ key, label }) => (
-                <div key={key} className="flex items-baseline gap-2">
-                  <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
-                  <span className="text-sm text-primary">
-                    {key === 'lotSize'
-                      ? `${product[key]} ${tp('lotUnit')}`
-                      : String(product[key])}
-                  </span>
-                </div>
-              ))}
-              {product.notes && (
-                <div className="flex items-start gap-2 pt-1">
-                  <span className="text-xs text-gray-400 w-32 flex-shrink-0">{tp('notesLabel')}</span>
-                  <span className="text-sm text-gray-500 italic">{product.notes}</span>
-                </div>
-              )}
+        <div className="space-y-6">
+          {(activeDetailFields.length > 0 || product.notes) && (
+            <div>
+              <h2 className="label-luxury text-gray-400 mb-3">{tp('detailsTitle')}</h2>
+              <div className="space-y-2">
+                {activeDetailFields.map(({ key, label }) => (
+                  <div key={key} className="flex items-baseline gap-2">
+                    <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
+                    <span className="text-sm text-primary">
+                      {key === 'lotSize'
+                        ? `${product[key]} ${tp('lotUnit')}`
+                        : String(product[key])}
+                    </span>
+                  </div>
+                ))}
+                {product.notes && (
+                  <div className="flex items-start gap-2 pt-1">
+                    <span className="text-xs text-gray-400 w-32 flex-shrink-0">{tp('notesLabel')}</span>
+                    <span className="text-sm text-gray-500 italic">{product.notes}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {hasBusinessInfo && (
+            <div>
+              <h2 className="label-luxury text-gray-400 mb-3">Informazioni commerciali</h2>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {product.fasciaSconto != null && (
+                  <>
+                    <span className="text-xs text-gray-400">Fascia sconto</span>
+                    <span className="text-xs font-medium text-primary">{Number(product.fasciaSconto)}%</span>
+                  </>
+                )}
+                {product.fasciaRicarico && (
+                  <>
+                    <span className="text-xs text-gray-400">Fascia ricarico</span>
+                    <span className="text-xs font-medium text-primary">{product.fasciaRicarico}</span>
+                  </>
+                )}
+                {product.iva != null && (
+                  <>
+                    <span className="text-xs text-gray-400">IVA</span>
+                    <span className="text-xs font-medium text-primary">{product.iva}%</span>
+                  </>
+                )}
+                <>
+                  <span className="text-xs text-gray-400">Guadagno potenziale</span>
+                  <span className="text-xs font-medium text-emerald-600">{formatCurrency(guadagnoPotenziale)}</span>
+                </>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

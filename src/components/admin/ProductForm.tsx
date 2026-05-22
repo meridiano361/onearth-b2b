@@ -4,7 +4,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRef, useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Languages, Loader2 } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import ManagedSelect from '@/components/admin/ManagedSelect';
@@ -17,7 +18,8 @@ const IVA_OPTIONS = [0, 4, 5, 10, 22];
 const schema = z
   .object({
     code: z.string().min(1, 'Codice obbligatorio'),
-    name: z.string().min(1, 'Descrizione obbligatoria'),
+    name: z.string().min(1, 'Nome obbligatorio'),
+    description: z.string().optional(),
     misura: z.string().optional(),
     produttore: z.string().optional(),
     gruppoMerceologico: z.string().optional(),
@@ -118,9 +120,11 @@ function CascadeSelect({
 
 export default function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) {
   const isEdit = !!product;
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string>(product?.imageUrl || '');
   const [isUploading, setIsUploading] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
 
   // IDs for cascade filtering
   const [gmId, setGmId] = useState('');
@@ -186,6 +190,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       ? {
           code: product.code,
           name: product.name,
+          description: product.description || '',
           misura: product.misura || '',
           produttore: product.produttore || '',
           gruppoMerceologico: product.gruppoMerceologico || '',
@@ -332,6 +337,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...v,
+          description: (v as any).description || null,
           misura: v.misura || null,
           produttore: v.produttore || null,
           gruppoMerceologico: v.gruppoMerceologico || null,
@@ -383,10 +389,19 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           placeholder="OE-CAT-001"
         />
         <Input
-          label="Descrizione *"
+          label="Nome prodotto *"
           {...register('name')}
           error={errors.name?.message}
           placeholder="es. Copritavolo GEOMETRIC 140x240"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Descrizione (IT)</label>
+        <textarea
+          {...register('description')}
+          placeholder="Descrizione italiana del prodotto..."
+          rows={3}
+          className="w-full border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent resize-none"
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -704,13 +719,42 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         </label>
       </div>
 
-      <div className="flex justify-end gap-3 pt-2">
-        <Button variant="ghost" type="button" onClick={onCancel}>
-          Annulla
-        </Button>
-        <Button type="submit" loading={isSubmitting}>
-          {isEdit ? 'Salva Modifiche' : 'Crea Prodotto'}
-        </Button>
+      <div className="flex justify-between items-center gap-3 pt-2">
+        {isEdit && (
+          <button
+            type="button"
+            disabled={isTranslating}
+            onClick={async () => {
+              setIsTranslating(true);
+              try {
+                const res = await fetch('/api/admin/products/translate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ productId: product!.id }),
+                });
+                if (!res.ok) throw new Error((await res.json()).error || 'Errore');
+                toast.success('Descrizioni tradotte e salvate');
+                queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+              } catch (e: any) {
+                toast.error(e.message || 'Errore nella traduzione');
+              } finally {
+                setIsTranslating(false);
+              }
+            }}
+            className="flex items-center gap-1.5 text-xs border border-border rounded px-3 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors disabled:opacity-50"
+          >
+            {isTranslating ? <Loader2 size={12} className="animate-spin" /> : <Languages size={12} />}
+            Traduci automaticamente
+          </button>
+        )}
+        <div className="flex gap-3 ml-auto">
+          <Button variant="ghost" type="button" onClick={onCancel}>
+            Annulla
+          </Button>
+          <Button type="submit" loading={isSubmitting}>
+            {isEdit ? 'Salva Modifiche' : 'Crea Prodotto'}
+          </Button>
+        </div>
       </div>
     </form>
   );

@@ -224,84 +224,109 @@ export default function CatalogView() {
         </div>
 
         {/* Top bar */}
-        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 sm:px-6 py-3 flex items-center gap-2 sm:gap-3">
-          {/* Mobile filter button */}
-          <button
-            onClick={() => setShowFilters(true)}
-            className="md:hidden flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-border rounded px-2.5 py-2 hover:bg-cream transition-colors flex-shrink-0 relative"
-          >
-            <SlidersHorizontal size={13} />
-            Filtri
-            {activeFilterCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-accent text-white text-2xs font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-
-          {/* Search */}
-          <div className="relative flex-1 md:max-w-sm">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={handleSearchChange}
-              placeholder="Cerca per codice, nome, linea..."
-              className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-border rounded focus:outline-none focus:border-accent transition-colors"
-            />
-            {search && (
-              <button
-                onClick={() => { setSearch(''); setDebouncedSearch(''); }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X size={12} />
-              </button>
-            )}
+        <div className="sticky top-0 z-10 bg-background border-b border-border">
+          {/* Search — full width on mobile */}
+          <div className="md:hidden px-4 pt-3 pb-2">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={handleSearchChange}
+                placeholder="Cerca per codice, nome, linea..."
+                className="w-full pl-10 pr-10 py-2.5 text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-accent transition-colors"
+              />
+              {search && (
+                <button
+                  onClick={() => { setSearch(''); setDebouncedSearch(''); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Sort selector */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            className="text-xs border border-border rounded px-2 py-2 bg-white text-gray-600 focus:outline-none focus:border-accent transition-colors flex-shrink-0"
-          >
-            <option value="" disabled>Ordina per...</option>
-            <option value="default">Rilevanza</option>
-            <option value="az">A → Z</option>
-            <option value="za">Z → A</option>
-            <option value="price-asc">Prezzo crescente</option>
-            <option value="price-desc">Prezzo decrescente</option>
-            <option value="collection-az">Collezione A → Z</option>
-            <option value="collection-za">Collezione Z → A</option>
-          </select>
+          {/* Controls row */}
+          <div className="px-4 sm:px-6 py-2 sm:py-3 flex items-center gap-2 sm:gap-3">
+            {/* Mobile filter button */}
+            <button
+              onClick={() => setShowFilters(true)}
+              className="md:hidden flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-border rounded px-2.5 py-2 hover:bg-cream transition-colors flex-shrink-0 relative"
+            >
+              <SlidersHorizontal size={13} />
+              Filtri
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-accent text-white text-2xs font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
 
-          {/* View mode toggle */}
-          <ViewToggle mode={viewMode} onChange={setViewMode} />
+            {/* Search — desktop only */}
+            <div className="relative flex-1 max-w-sm hidden md:block">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={handleSearchChange}
+                placeholder="Cerca per codice, nome, linea..."
+                className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-border rounded focus:outline-none focus:border-accent transition-colors"
+              />
+              {search && (
+                <button
+                  onClick={() => { setSearch(''); setDebouncedSearch(''); }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
 
-          {/* Favorites toggle */}
-          <button
-            onClick={() => setOnlyFavorites((v) => !v)}
-            className={cn(
-              'flex items-center gap-1.5 text-xs font-medium border rounded px-2.5 py-2 transition-colors flex-shrink-0',
-              onlyFavorites
-                ? 'bg-red-50 border-red-300 text-red-600'
-                : 'text-gray-600 border-border hover:bg-cream'
-            )}
-          >
-            <Heart size={13} className={onlyFavorites ? 'fill-red-500 text-red-500' : ''} />
-            <span className="hidden sm:inline">{tn('favorites')}</span>
-          </button>
+            {/* Sort selector */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="text-xs border border-border rounded px-2 py-2 bg-white text-gray-600 focus:outline-none focus:border-accent transition-colors flex-shrink-0"
+            >
+              <option value="" disabled>Ordina per...</option>
+              <option value="default">Rilevanza</option>
+              <option value="az">A → Z</option>
+              <option value="za">Z → A</option>
+              <option value="price-asc">Prezzo crescente</option>
+              <option value="price-desc">Prezzo decrescente</option>
+              <option value="collection-az">Collezione A → Z</option>
+              <option value="collection-za">Collezione Z → A</option>
+            </select>
 
-          {/* Results count + reset */}
-          <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
-            <span className="text-xs text-gray-400">
-              {productsLoading ? 'Caricamento...' : `${filteredProducts.length} prodotti`}
-            </span>
-            {hasActiveFilters && (
-              <button onClick={handleResetAll} className="text-xs text-accent hover:text-primary transition-colors font-medium">
-                Azzera filtri
-              </button>
-            )}
+            {/* View mode toggle */}
+            <ViewToggle mode={viewMode} onChange={setViewMode} />
+
+            {/* Favorites toggle */}
+            <button
+              onClick={() => setOnlyFavorites((v) => !v)}
+              className={cn(
+                'flex items-center gap-1.5 text-xs font-medium border rounded px-2.5 py-2 transition-colors flex-shrink-0',
+                onlyFavorites
+                  ? 'bg-red-50 border-red-300 text-red-600'
+                  : 'text-gray-600 border-border hover:bg-cream'
+              )}
+            >
+              <Heart size={13} className={onlyFavorites ? 'fill-red-500 text-red-500' : ''} />
+              <span className="hidden sm:inline">{tn('favorites')}</span>
+            </button>
+
+            {/* Results count + reset */}
+            <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
+              <span className="text-xs text-gray-400">
+                {productsLoading ? 'Caricamento...' : `${filteredProducts.length} prodotti`}
+              </span>
+              {hasActiveFilters && (
+                <button onClick={handleResetAll} className="text-xs text-accent hover:text-primary transition-colors font-medium">
+                  Azzera filtri
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
