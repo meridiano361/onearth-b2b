@@ -38,9 +38,8 @@ export default function PreferitiPage() {
       <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-border/50 flex items-center justify-between gap-4">
         <div>
           <p className="label-luxury text-accent">{t('subtitle')}</p>
-          <h1 className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide flex items-center gap-2">
-            <Heart size={18} className="text-red-500 fill-red-500" />
-            {t('title')}
+          <h1 className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide">
+            I miei preferiti
           </h1>
         </div>
         {favoritedProducts.length > 0 && (
