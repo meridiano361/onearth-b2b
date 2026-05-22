@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, FileText, CheckCircle, Minus, Plus, X, Database, Search, Loader2, MapPin, Copy } from 'lucide-react';
+import OrderExcelExport from '@/components/orders/OrderExcelExport';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
@@ -776,6 +777,9 @@ export default function OrderPreviewView({ id }: { id: string }) {
               </span>
               <span className="sm:hidden">PDF</span>
             </button>
+
+            {/* Esporta Excel completo */}
+            <OrderExcelExport orderId={id} />
 
             {/* Duplica ordine */}
             <button

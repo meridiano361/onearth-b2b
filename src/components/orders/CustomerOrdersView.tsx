@@ -26,6 +26,7 @@ function orderProjections(order: Order) {
 }
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import OrderDemetraExport from '@/components/orders/OrderDemetraExport';
+import OrderExcelExport from '@/components/orders/OrderExcelExport';
 import type { Order } from '@/types';
 
 export default function CustomerOrdersView() {
@@ -224,6 +225,9 @@ export default function CustomerOrdersView() {
                     order={order}
                     onExported={() => queryClient.invalidateQueries({ queryKey: ['my-orders'] })}
                   />
+
+                  {/* Esporta Excel completo */}
+                  <OrderExcelExport orderId={order.id} />
 
                   {/* Duplica — solo per ordini esportati */}
                   {isExported && (
