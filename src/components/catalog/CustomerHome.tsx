@@ -154,21 +154,6 @@ export default function CustomerHome() {
             </div>
           )}
 
-          {/* CTA dopo lo scroll */}
-          <div className="flex gap-3 justify-center mt-5">
-            <Link
-              href="/catalog/products"
-              className="flex-1 sm:flex-none sm:w-60 px-4 sm:px-8 py-2.5 text-sm font-semibold bg-black text-white rounded-xl hover:bg-gray-800 transition-all duration-150 text-center"
-            >
-              Apri il catalogo
-            </Link>
-            <Link
-              href="/catalog/products"
-              className="flex-1 sm:flex-none sm:w-60 px-4 sm:px-8 py-2.5 text-sm font-semibold bg-black text-white rounded-xl hover:bg-gray-800 transition-all duration-150 text-center"
-            >
-              Crea un ordine
-            </Link>
-          </div>
         </section>
 
         {/* ── Social links ───────────────────────────────────── */}

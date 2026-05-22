@@ -13,12 +13,13 @@ export function ProductImage({ src, alt, className }: Props) {
 
   if (!src || error) {
     return (
-      <div className={`flex items-center justify-center bg-[#C8C0B5]/30 ${className ?? ''}`}>
-        <svg viewBox="0 0 100 100" className="w-1/3 h-1/3 opacity-15" aria-hidden>
-          <circle cx="50" cy="45" r="28" fill="none" stroke="#000" strokeWidth="4" />
-          <circle cx="50" cy="45" r="5" fill="#000" />
-          <line x1="50" y1="73" x2="50" y2="85" stroke="#000" strokeWidth="4" />
-        </svg>
+      <div className={`flex items-center justify-center bg-gray-100 ${className ?? ''}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo-on-earth/onearth_pittogramma.png"
+          alt="ON EARTH"
+          className="w-1/3 h-1/3 object-contain opacity-15"
+        />
       </div>
     );
   }
