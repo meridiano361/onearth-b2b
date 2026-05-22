@@ -27,7 +27,6 @@ function ProductCard({
   item,
   effectiveQty,
   effectiveSubtotal,
-  isSaving,
   onQtyChange,
   onRemove,
   removeLabel,
@@ -37,7 +36,6 @@ function ProductCard({
   item: OrderItem;
   effectiveQty: number;
   effectiveSubtotal: number;
-  isSaving: boolean;
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
   removeLabel: string;
@@ -46,7 +44,6 @@ function ProductCard({
 }) {
   const product = item.product!;
   const lotSize = product.lotSize || 1;
-  const retailWithTax = product.retailPrice * (1 + product.iva / 100);
 
   return (
     <div className="bg-white border border-border flex flex-col">
@@ -76,11 +73,11 @@ function ProductCard({
 
         <p className="text-2xs text-gray-400 mt-auto">
           PVP:{' '}
-          <span className="text-gray-600 font-medium">{formatCurrency(retailWithTax)}</span>
+          <span className="text-gray-600 font-medium">{formatCurrency(product.retailPrice)}</span>
         </p>
 
-        {/* Quantity control */}
-        <div className={`flex items-center justify-between pt-2 border-t border-border/60 ${isSaving ? 'opacity-60' : ''}`}>
+        {/* Quantity control — no disabled, UI is optimistic */}
+        <div className="flex items-center justify-between pt-2 border-t border-border/60">
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
@@ -93,8 +90,7 @@ function ProductCard({
                   onQtyChange(item.id, newQty);
                 }
               }}
-              disabled={isSaving}
-              className="w-10 h-10 flex items-center justify-center rounded border border-border hover:bg-cream disabled:opacity-30 transition-colors active:scale-95"
+              className="w-10 h-10 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
               aria-label={decreaseLabel}
             >
               <Minus size={14} />
@@ -102,8 +98,7 @@ function ProductCard({
             <span className="text-xl font-semibold text-primary text-center min-w-[2.5rem]">{effectiveQty}</span>
             <button
               onClick={() => onQtyChange(item.id, effectiveQty + lotSize)}
-              disabled={isSaving}
-              className="w-10 h-10 flex items-center justify-center rounded border border-border hover:bg-cream disabled:opacity-30 transition-colors active:scale-95"
+              className="w-10 h-10 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
               aria-label={increaseLabel}
             >
               <Plus size={14} />
@@ -279,7 +274,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
 
   const [groupBy, setGroupBy] = useState('collezione');
   const [qtyOverrides, setQtyOverrides] = useState<QtyMap>({});
-  const [savingId, setSavingId] = useState<string | null>(null);
+  const qtyDebounceRef = useRef<Record<string, NodeJS.Timeout>>({});
   const [exporting, setExporting] = useState(false);
   const [exportingDemetra, setExportingDemetra] = useState(false);
   const [addProductsOpen, setAddProductsOpen] = useState(false);
@@ -346,29 +341,31 @@ export default function OrderPreviewView({ id }: { id: string }) {
   const grandTotal = useMemo(() => items.reduce((s, it) => s + it.effectiveSubtotal, 0), [items]);
   const grandQty   = useMemo(() => items.reduce((s, it) => s + it.effectiveQty, 0),   [items]);
 
-  async function handleQtyChange(itemId: string, qty: number) {
+  function handleQtyChange(itemId: string, qty: number) {
     if (qty < 1) return;
+    // Immediate optimistic update
     setQtyOverrides((prev) => ({ ...prev, [itemId]: qty }));
-    setSavingId(itemId);
-    try {
-      const res = await fetch(`/api/orders/${id}/items/${itemId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity: qty }),
-      });
-      if (!res.ok) throw new Error();
-      // Invalidate the list view so totals refresh when user goes back
-      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-    } catch {
-      setQtyOverrides((prev) => {
-        const next = { ...prev };
-        delete next[itemId];
-        return next;
-      });
-      toast.error(t('updateQtyError'));
-    } finally {
-      setSavingId(null);
-    }
+    // Debounce the API call: cancel previous timer, fire 500ms after last click
+    if (qtyDebounceRef.current[itemId]) clearTimeout(qtyDebounceRef.current[itemId]);
+    qtyDebounceRef.current[itemId] = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/orders/${id}/items/${itemId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quantity: qty }),
+        });
+        if (!res.ok) throw new Error();
+        queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      } catch {
+        // Revert to server value on failure
+        setQtyOverrides((prev) => {
+          const next = { ...prev };
+          delete next[itemId];
+          return next;
+        });
+        toast.error(t('updateQtyError'));
+      }
+    }, 500);
   }
 
   async function handleRemove(itemId: string) {
@@ -707,7 +704,6 @@ export default function OrderPreviewView({ id }: { id: string }) {
                   item={item}
                   effectiveQty={item.effectiveQty}
                   effectiveSubtotal={item.effectiveSubtotal}
-                  isSaving={savingId === item.id}
                   onQtyChange={handleQtyChange}
                   onRemove={handleRemove}
                   removeLabel={t('remove')}
