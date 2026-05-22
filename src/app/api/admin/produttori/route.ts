@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
-import { titleCase } from '@/lib/normalizeClassification';
 
 function forbidden() {
   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -57,7 +56,7 @@ export async function POST(req: NextRequest) {
   const { nome, paese } = await req.json();
   if (!nome?.trim()) return NextResponse.json({ error: 'Nome obbligatorio' }, { status: 400 });
 
-  const normalized = titleCase(nome);
+  const normalized = nome.trim();
   const existing = await prisma.produttore.findUnique({ where: { nome: normalized } });
   if (existing) return NextResponse.json({ error: 'Produttore già esistente' }, { status: 409 });
 
@@ -75,7 +74,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'vecchioNome obbligatorio' }, { status: 400 });
   }
 
-  const effectiveNuovo = nuovoNome?.trim() ? titleCase(nuovoNome) : vecchioNome;
+  const effectiveNuovo = nuovoNome?.trim() ? nuovoNome.trim() : vecchioNome;
   const isRename = effectiveNuovo !== vecchioNome;
   const updatesPaese = paese !== undefined;
 

@@ -15,7 +15,7 @@ export function titleCase(s: string): string {
 const UPPER_ENTITIES = new Set(['linea', 'nomLinea', 'collezione']);
 
 // Lookup entities normalized to Title Case
-const TITLE_ENTITIES = new Set(['produttore']);
+const TITLE_ENTITIES = new Set<string>();
 
 // Lookup entities normalized to capFirst
 const CAP_ENTITIES = new Set([
@@ -35,8 +35,8 @@ export function normalizeLookupValue(entita: string, nome: string): string {
 // Product model classification fields that are UPPERCASE
 const PRODUCT_UPPER_FIELDS = ['nomLinea', 'collezione'] as const;
 
-// Product model classification fields that are Title Case
-const PRODUCT_TITLE_FIELDS = ['produttore'] as const;
+// Product model classification fields that are Title Case (none currently)
+const PRODUCT_TITLE_FIELDS: string[] = [];
 
 // Product model classification fields that are capFirst
 const PRODUCT_CAP_FIELDS = [
