@@ -48,7 +48,7 @@ function SpotlightCard({ product }: { product: Product }) {
               isFavorited(product.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
             )}
           >
-            <Heart size={10} className={isFavorited(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'} />
+            <Heart size={10} className={isFavorited(product.id) ? 'fill-[#D4C4B0] text-[#D4C4B0]' : 'text-gray-400'} />
           </button>
           {inCart && (
             <div className="absolute top-1.5 right-1.5 bg-accent rounded-full p-0.5">
@@ -118,18 +118,12 @@ export default function CustomerHome() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10 space-y-10">
 
         {/* ── Top CTA ─────────────────────────────────────────── */}
-        <div className="flex gap-3">
+        <div className="flex justify-center">
           <Link
             href="/catalog/products"
-            className="flex-1 py-2.5 text-sm font-semibold bg-black text-white rounded-xl hover:bg-gray-800 transition-all duration-150 text-center"
+            className="bg-black text-white rounded-xl px-8 py-3 text-sm font-semibold hover:bg-gray-800 transition-all duration-150"
           >
-            Apri il catalogo
-          </Link>
-          <Link
-            href="/catalog/products"
-            className="flex-1 py-2.5 text-sm font-semibold bg-black text-white rounded-xl hover:bg-gray-800 transition-all duration-150 text-center"
-          >
-            Crea un ordine
+            Apri il catalogo e crea un ordine
           </Link>
         </div>
 

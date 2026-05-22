@@ -62,7 +62,7 @@ function LookbookCard({ product }: { product: Product }) {
       >
         <Heart
           size={18}
-          className={isFavorited(product.id) ? 'fill-red-500 text-red-500' : 'text-white'}
+          className={isFavorited(product.id) ? 'fill-[#D4C4B0] text-[#D4C4B0]' : 'text-white'}
           style={{ filter: isFavorited(product.id) ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.8))' }}
         />
       </button>

@@ -337,6 +337,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...v,
+          skipNameNormalization: isEdit,
           description: (v as any).description || null,
           misura: v.misura || null,
           produttore: v.produttore || null,

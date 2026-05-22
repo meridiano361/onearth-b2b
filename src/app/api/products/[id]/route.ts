@@ -85,8 +85,8 @@ export async function PATCH(
     const body = await req.json();
     const data = normalizeProductClassificationFields(updateSchema.parse(body));
 
-    // Normalize name if provided, using the incoming nomLinea or the existing one
-    if (data.name) {
+    // Normalize name only for automated flows (imports), not manual admin edits
+    if (data.name && !(body as any).skipNameNormalization) {
       const linea = data.nomLinea !== undefined
         ? data.nomLinea
         : (await prisma.product.findUnique({ where: { id: params.id }, select: { nomLinea: true } }))?.nomLinea;

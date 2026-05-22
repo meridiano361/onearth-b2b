@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2 } from 'lucide-react';
+import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -69,6 +69,7 @@ function uniqueSorted(products: Product[], key: keyof Product): string[] {
 export default function AdminProductsPage() {
   const queryClient = useQueryClient();
 
+  const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [showBulkImages, setShowBulkImages] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -82,6 +83,11 @@ export default function AdminProductsPage() {
   const [filterGruppo, setFilterGruppo] = useState('');
   const [filterFamiglia, setFilterFamiglia] = useState('');
   const [filterClasse, setFilterClasse] = useState('');
+  const [filterSottoclasse, setFilterSottoclasse] = useState('');
+  const [filterGruppoOmogeneo, setFilterGruppoOmogeneo] = useState('');
+  const [filterColore, setFilterColore] = useState('');
+  const [filterCollezione, setFilterCollezione] = useState('');
+  const [filterLinea, setFilterLinea] = useState('');
   const [filterProduttore, setFilterProduttore] = useState('');
   const [filterTranche, setFilterTranche] = useState('');
   const [filterActive, setFilterActive] = useState<ActiveFilter>('all');
@@ -112,6 +118,11 @@ export default function AdminProductsPage() {
   const gruppoOptions = useMemo(() => uniqueSorted(allProducts, 'gruppoMerceologico'), [allProducts]);
   const famigliaOptions = useMemo(() => uniqueSorted(allProducts, 'famiglia'), [allProducts]);
   const classeOptions = useMemo(() => uniqueSorted(allProducts, 'classe'), [allProducts]);
+  const sottoclasseOptions = useMemo(() => uniqueSorted(allProducts, 'sottoclasse'), [allProducts]);
+  const gruppoOmogeneoOptions = useMemo(() => uniqueSorted(allProducts, 'gruppoOmogeneo'), [allProducts]);
+  const coloreOptions = useMemo(() => uniqueSorted(allProducts, 'colore'), [allProducts]);
+  const collezioneOptions = useMemo(() => uniqueSorted(allProducts, 'collezione'), [allProducts]);
+  const lineaOptions = useMemo(() => uniqueSorted(allProducts, 'nomLinea'), [allProducts]);
   const produttoreOptions = useMemo(() => uniqueSorted(allProducts, 'produttore'), [allProducts]);
   const trancheOptions = useMemo(() => uniqueSorted(allProducts, 'tranche'), [allProducts]);
 
@@ -128,6 +139,11 @@ export default function AdminProductsPage() {
       if (filterGruppo && p.gruppoMerceologico !== filterGruppo) return false;
       if (filterFamiglia && p.famiglia !== filterFamiglia) return false;
       if (filterClasse && p.classe !== filterClasse) return false;
+      if (filterSottoclasse && p.sottoclasse !== filterSottoclasse) return false;
+      if (filterGruppoOmogeneo && p.gruppoOmogeneo !== filterGruppoOmogeneo) return false;
+      if (filterColore && p.colore !== filterColore) return false;
+      if (filterCollezione && p.collezione !== filterCollezione) return false;
+      if (filterLinea && p.nomLinea !== filterLinea) return false;
       if (filterProduttore && p.produttore !== filterProduttore) return false;
       if (filterTranche && p.tranche !== filterTranche) return false;
       if (filterActive === 'active' && !p.isActive) return false;
@@ -149,7 +165,7 @@ export default function AdminProductsPage() {
     }
 
     return filtered;
-  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterProduttore, filterTranche, filterActive, sortField, sortDir]);
+  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterActive, sortField, sortDir]);
 
   function handleColumnSort(field: SortField) {
     if (sortField === field) {
@@ -168,11 +184,13 @@ export default function AdminProductsPage() {
       : <ChevronDown size={11} className="ml-1 text-accent inline" />;
   }
 
-  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterProduttore || filterTranche || filterActive !== 'all';
+  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterActive !== 'all';
 
   function resetFilters() {
     setSearch(''); setFilterGruppo(''); setFilterFamiglia('');
-    setFilterClasse(''); setFilterProduttore(''); setFilterTranche('');
+    setFilterClasse(''); setFilterSottoclasse(''); setFilterGruppoOmogeneo('');
+    setFilterColore(''); setFilterCollezione(''); setFilterLinea('');
+    setFilterProduttore(''); setFilterTranche('');
     setFilterActive('all');
   }
 
@@ -386,6 +404,26 @@ export default function AdminProductsPage() {
             <option value="">Classe</option>
             {classeOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
+          <select value={filterSottoclasse} onChange={(e) => setFilterSottoclasse(e.target.value)} className={selectClass}>
+            <option value="">Sottoclasse</option>
+            {sottoclasseOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+          <select value={filterGruppoOmogeneo} onChange={(e) => setFilterGruppoOmogeneo(e.target.value)} className={selectClass}>
+            <option value="">Gruppo omogeneo</option>
+            {gruppoOmogeneoOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+          <select value={filterColore} onChange={(e) => setFilterColore(e.target.value)} className={selectClass}>
+            <option value="">Colore</option>
+            {coloreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+          <select value={filterCollezione} onChange={(e) => setFilterCollezione(e.target.value)} className={selectClass}>
+            <option value="">Collezione</option>
+            {collezioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+          <select value={filterLinea} onChange={(e) => setFilterLinea(e.target.value)} className={selectClass}>
+            <option value="">Linea</option>
+            {lineaOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
           <select value={filterProduttore} onChange={(e) => setFilterProduttore(e.target.value)} className={selectClass}>
             <option value="">Produttore</option>
             {produttoreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
@@ -479,9 +517,10 @@ export default function AdminProductsPage() {
                     <td><Badge variant={product.isActive ? 'success' : 'default'} size="xs">{product.isActive ? 'Attivo' : 'Inattivo'}</Badge></td>
                     <td>
                       <div className="flex items-center gap-1">
+                        <button onClick={() => setPreviewProduct(product)} className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Anteprima"><Eye size={13} /></button>
                         <button onClick={() => setEditingProduct(product)} className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica"><Edit2 size={13} /></button>
-                        <button onClick={() => handleToggleActive(product)} className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title={product.isActive ? 'Disattiva' : 'Attiva'}>
-                          {product.isActive ? <EyeOff size={13} /> : <Eye size={13} />}
+                        <button onClick={() => handleToggleActive(product)} className={`p-1.5 rounded transition-colors ${product.isActive ? 'text-green-500 hover:text-gray-400 hover:bg-gray-50' : 'text-gray-300 hover:text-green-500 hover:bg-green-50'}`} title={product.isActive ? 'Disattiva' : 'Attiva'}>
+                          <Power size={13} />
                         </button>
                         <button onClick={() => handleDelete(product)} className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina"><Trash2 size={13} /></button>
                       </div>
@@ -493,6 +532,110 @@ export default function AdminProductsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Preview Modal */}
+      <Modal isOpen={!!previewProduct} onClose={() => setPreviewProduct(null)} title="Anteprima prodotto" size="lg">
+        {previewProduct && (() => {
+          const p = previewProduct;
+          const ivaFactor = 1 + (p.iva ?? 22) / 100;
+          const pvn = p.retailPrice / ivaFactor;
+          const ricarico = p.costPrice > 0 ? ((pvn - p.costPrice) / p.costPrice) * 100 : null;
+          const margine = pvn > 0 ? ((pvn - p.costPrice) / pvn) * 100 : null;
+          return (
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                {/* Foto */}
+                <div className="w-36 h-36 flex-shrink-0 rounded border border-border bg-cream overflow-hidden">
+                  {p.imageUrl
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">Nessuna foto</div>
+                  }
+                </div>
+                {/* Dati principali */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <span className="font-mono text-xs text-gray-400">{p.code}</span>
+                    <Badge variant={p.isActive ? 'success' : 'default'} size="xs">{p.isActive ? 'Attivo' : 'Non attivo'}</Badge>
+                  </div>
+                  <h3 className="font-semibold text-primary text-sm mb-2 leading-snug">{p.name}</h3>
+                  {p.description && <p className="text-xs text-gray-500 leading-relaxed mb-2">{p.description}</p>}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1">
+                    {p.produttore && <span className="text-xs text-gray-500"><span className="text-gray-400">Produttore:</span> {p.produttore}</span>}
+                    {p.paese && <span className="text-xs text-gray-500"><span className="text-gray-400">Paese:</span> {p.paese}</span>}
+                    {p.misura && <span className="text-xs text-gray-500"><span className="text-gray-400">Misure:</span> {p.misura}</span>}
+                    {p.lotSize > 1 && <span className="text-xs text-gray-500"><span className="text-gray-400">Confezione:</span> {p.lotSize} pz</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Classificazione */}
+              {(p.gruppoMerceologico || p.famiglia || p.classe || p.sottoclasse || p.gruppoOmogeneo || p.nomLinea || p.collezione || p.colore || p.stagione || p.tranche) && (
+                <div>
+                  <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Classificazione</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1">
+                    {p.gruppoMerceologico && <span className="text-xs text-gray-600"><span className="text-gray-400">Gruppo:</span> {p.gruppoMerceologico}</span>}
+                    {p.famiglia && <span className="text-xs text-gray-600"><span className="text-gray-400">Famiglia:</span> {p.famiglia}</span>}
+                    {p.classe && <span className="text-xs text-gray-600"><span className="text-gray-400">Classe:</span> {p.classe}</span>}
+                    {p.sottoclasse && <span className="text-xs text-gray-600"><span className="text-gray-400">Sottoclasse:</span> {p.sottoclasse}</span>}
+                    {p.gruppoOmogeneo && <span className="text-xs text-gray-600"><span className="text-gray-400">Gr. omogeneo:</span> {p.gruppoOmogeneo}</span>}
+                    {p.nomLinea && <span className="text-xs text-gray-600"><span className="text-gray-400">Linea:</span> {p.nomLinea}</span>}
+                    {p.collezione && <span className="text-xs text-gray-600"><span className="text-gray-400">Collezione:</span> {p.collezione}</span>}
+                    {p.colore && <span className="text-xs text-gray-600"><span className="text-gray-400">Colore:</span> {p.colore}</span>}
+                    {(p as any).stagione && <span className="text-xs text-gray-600"><span className="text-gray-400">Stagione:</span> {(p as any).stagione}</span>}
+                    {p.tranche && <span className="text-xs text-gray-600"><span className="text-gray-400">Tranche:</span> {p.tranche}</span>}
+                  </div>
+                </div>
+              )}
+
+              {/* Prezzi */}
+              <div>
+                <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Prezzi</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-cream/50 rounded px-3 py-2">
+                    <p className="text-2xs text-gray-400 mb-0.5">Costo i.e.</p>
+                    <p className="text-sm font-bold text-primary">{formatCurrency(p.costPrice)}</p>
+                  </div>
+                  <div className="bg-cream/50 rounded px-3 py-2">
+                    <p className="text-2xs text-gray-400 mb-0.5">PVP i.i.</p>
+                    <p className="text-sm font-semibold text-gray-700">{formatCurrency(p.retailPrice)}</p>
+                  </div>
+                  <div className="bg-cream/50 rounded px-3 py-2">
+                    <p className="text-2xs text-gray-400 mb-0.5">Ricarico</p>
+                    <p className={`text-sm font-semibold ${ricarico !== null && ricarico >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                      {ricarico !== null ? `${ricarico >= 0 ? '+' : ''}${ricarico.toFixed(1)}%` : '—'}
+                    </p>
+                  </div>
+                  <div className="bg-cream/50 rounded px-3 py-2">
+                    <p className="text-2xs text-gray-400 mb-0.5">Margine</p>
+                    <p className={`text-sm font-semibold ${margine !== null && margine >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                      {margine !== null ? `${margine >= 0 ? '+' : ''}${margine.toFixed(1)}%` : '—'}
+                    </p>
+                  </div>
+                </div>
+                {((p as any).fasciaSconto != null || (p as any).fasciaRicarico) && (
+                  <div className="flex gap-3 mt-2">
+                    {(p as any).fasciaSconto != null && <span className="text-xs text-gray-500"><span className="text-gray-400">Fascia sconto:</span> {(p as any).fasciaSconto}%</span>}
+                    {(p as any).fasciaRicarico && <span className="text-xs text-gray-500"><span className="text-gray-400">Fascia ricarico:</span> {(p as any).fasciaRicarico}</span>}
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => { setPreviewProduct(null); setEditingProduct(p); }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <Edit2 size={12} />
+                  Modifica
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
 
       {/* Import Modal */}
       <Modal isOpen={showImport} onClose={() => setShowImport(false)} title="Importa prodotti da Excel" size="xl">
