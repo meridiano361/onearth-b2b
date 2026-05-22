@@ -1,0 +1,150 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { Check, Heart, Plus, Package } from 'lucide-react';
+import { cn, formatCurrency } from '@/lib/utils';
+import { useCartStore } from '@/store/cartStore';
+import { useFavorites } from '@/hooks/useFavorites';
+import { ProductImage } from '@/components/ui/ProductImage';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import type { Product } from '@/types';
+
+function LookbookCard({ product }: { product: Product }) {
+  const { addItem, getItemQuantity } = useCartStore();
+  const { isFavorited, toggle: toggleFavorite } = useFavorites();
+  const [justAdded, setJustAdded] = useState(false);
+
+  const inCart = getItemQuantity(product.id) > 0;
+
+  function handleAdd(e: React.MouseEvent) {
+    e.stopPropagation();
+    addItem(product, product.lotSize || 1);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1500);
+  }
+
+  return (
+    <div className="relative w-full h-full overflow-hidden rounded group">
+      {/* Image */}
+      <Link href={`/catalog/${product.id}`} className="block w-full h-full">
+        <ProductImage
+          src={product.imageUrl}
+          alt={product.name}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+        />
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+        {/* Name + price overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-3">
+          <p className="text-white text-xs font-semibold leading-snug line-clamp-2 drop-shadow">
+            {product.name}
+          </p>
+          <p className="text-white/75 text-2xs mt-0.5">
+            {formatCurrency(product.costPrice)}
+          </p>
+        </div>
+      </Link>
+
+      {/* Heart */}
+      <button
+        onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
+        className={cn(
+          'absolute top-2 left-2 w-7 h-7 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-full transition-all duration-150',
+          isFavorited(product.id)
+            ? 'opacity-100'
+            : 'opacity-0 group-hover:opacity-100'
+        )}
+      >
+        <Heart size={12} className={isFavorited(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-500'} />
+      </button>
+
+      {/* Add button (+) — always visible on mobile, hover on desktop */}
+      <button
+        onClick={handleAdd}
+        className={cn(
+          'absolute bottom-2 right-2 w-8 h-8 flex items-center justify-center rounded-full shadow-md transition-all duration-150 active:scale-90',
+          justAdded || inCart
+            ? 'bg-accent text-white opacity-100'
+            : 'bg-black text-white sm:opacity-0 sm:group-hover:opacity-100 opacity-100'
+        )}
+      >
+        {justAdded ? <Check size={13} /> : <Plus size={13} />}
+      </button>
+    </div>
+  );
+}
+
+interface Props {
+  products: Product[];
+  isLoading?: boolean;
+}
+
+export default function ProductLookbook({ products, isLoading }: Props) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  if (products.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="w-16 h-16 rounded-full bg-cream flex items-center justify-center mb-4">
+          <Package size={24} className="text-gray-300" />
+        </div>
+        <p className="text-sm text-gray-400">Nessun prodotto trovato</p>
+      </div>
+    );
+  }
+
+  // Group products into sets of 3: [large, small1, small2]
+  const groups: Product[][] = [];
+  for (let i = 0; i < products.length; i += 3) {
+    groups.push(products.slice(i, i + 3));
+  }
+
+  return (
+    <div className="space-y-2">
+      {groups.map((group, gi) => {
+        const [first, second, third] = group;
+        return (
+          /*
+           * CSS Grid layout:
+           * Mobile (2 cols, row height 180px):
+           *   [Large (col-span-2, full width)] row 1
+           *   [Small1 (col-span-1)] [Small2 (col-span-1)] row 2
+           *
+           * Desktop (3 cols, row height 180px):
+           *   [Large (col-span-2, row-span-2)] [Small1 (col-span-1)] row 1
+           *   [Large (col-span-2, row-span-2)] [Small2 (col-span-1)] row 2
+           */
+          <div
+            key={gi}
+            className="grid grid-cols-2 sm:grid-cols-3 gap-2"
+            style={{ gridAutoRows: '180px' }}
+          >
+            {/* Large card */}
+            <div className="col-span-2 sm:col-span-2 sm:row-span-2">
+              <LookbookCard product={first} />
+            </div>
+
+            {/* Small cards */}
+            {second && (
+              <div className="col-span-1">
+                <LookbookCard product={second} />
+              </div>
+            )}
+            {third && (
+              <div className="col-span-1">
+                <LookbookCard product={third} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}

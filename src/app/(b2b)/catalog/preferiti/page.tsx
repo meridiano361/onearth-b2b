@@ -5,12 +5,17 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Heart } from 'lucide-react';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useViewMode } from '@/hooks/useViewMode';
 import ProductGrid from '@/components/catalog/ProductGrid';
+import ProductList from '@/components/catalog/ProductList';
+import ProductLookbook from '@/components/catalog/ProductLookbook';
+import { ViewToggle } from '@/components/catalog/ViewToggle';
 import type { Product } from '@/types';
 
 export default function PreferitiPage() {
   const t = useTranslations('favorites');
   const { favoriteIds, isLoading: favLoading } = useFavorites();
+  const { mode: viewMode, changeMode: setViewMode } = useViewMode();
 
   const { data: productsData, isLoading: productsLoading } = useQuery({
     queryKey: ['products'],
@@ -30,12 +35,17 @@ export default function PreferitiPage() {
 
   return (
     <div className="flex flex-col min-h-full">
-      <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-border/50">
-        <p className="label-luxury text-accent">{t('subtitle')}</p>
-        <h1 className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide flex items-center gap-2">
-          <Heart size={18} className="text-red-500 fill-red-500" />
-          {t('title')}
-        </h1>
+      <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-border/50 flex items-center justify-between gap-4">
+        <div>
+          <p className="label-luxury text-accent">{t('subtitle')}</p>
+          <h1 className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide flex items-center gap-2">
+            <Heart size={18} className="text-red-500 fill-red-500" />
+            {t('title')}
+          </h1>
+        </div>
+        {favoritedProducts.length > 0 && (
+          <ViewToggle mode={viewMode} onChange={setViewMode} />
+        )}
       </div>
 
       <div className="px-3 sm:px-6 py-4 sm:py-6">
@@ -48,7 +58,11 @@ export default function PreferitiPage() {
             <p className="text-xs text-gray-400">{t('noFavoritesHint')}</p>
           </div>
         ) : (
-          <ProductGrid products={favoritedProducts} isLoading={false} />
+          <>
+            {viewMode === 'grid' && <ProductGrid products={favoritedProducts} isLoading={false} />}
+            {viewMode === 'list' && <ProductList products={favoritedProducts} isLoading={false} />}
+            {viewMode === 'lookbook' && <ProductLookbook products={favoritedProducts} isLoading={false} />}
+          </>
         )}
       </div>
     </div>

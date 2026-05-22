@@ -8,8 +8,12 @@ import { Search, SlidersHorizontal, X, Package, Heart, FileDown } from 'lucide-r
 import { useTranslations } from 'next-intl';
 import { cn, debounce } from '@/lib/utils';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useViewMode } from '@/hooks/useViewMode';
 import CatalogFilters from './CatalogFilters';
 import ProductGrid from './ProductGrid';
+import ProductList from './ProductList';
+import ProductLookbook from './ProductLookbook';
+import { ViewToggle } from './ViewToggle';
 import type { Product } from '@/types';
 
 type Filters = {
@@ -49,6 +53,7 @@ export default function CatalogView() {
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [sortBy, setSortBy]               = useState<'default' | 'az' | 'za' | 'price-asc' | 'price-desc' | 'collection-az' | 'collection-za'>('default');
   const { favoriteIds } = useFavorites();
+  const { mode: viewMode, changeMode: setViewMode } = useViewMode();
   const tn = useTranslations('nav');
 
   const debouncedSetSearch = useCallback(
@@ -270,6 +275,9 @@ export default function CatalogView() {
             <option value="collection-za">Collezione Z → A</option>
           </select>
 
+          {/* View mode toggle */}
+          <ViewToggle mode={viewMode} onChange={setViewMode} />
+
           {/* Favorites toggle */}
           <button
             onClick={() => setOnlyFavorites((v) => !v)}
@@ -321,9 +329,17 @@ export default function CatalogView() {
           </h1>
         </div>
 
-        {/* Product grid */}
+        {/* Product display — switches based on view mode */}
         <div className="px-3 sm:px-6 py-4 sm:py-6">
-          <ProductGrid products={filteredProducts} isLoading={productsLoading} />
+          {viewMode === 'grid' && (
+            <ProductGrid products={filteredProducts} isLoading={productsLoading} />
+          )}
+          {viewMode === 'list' && (
+            <ProductList products={filteredProducts} isLoading={productsLoading} />
+          )}
+          {viewMode === 'lookbook' && (
+            <ProductLookbook products={filteredProducts} isLoading={productsLoading} />
+          )}
         </div>
       </div>
     </div>
