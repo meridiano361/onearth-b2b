@@ -392,3 +392,12 @@ model OrderItem {
   @@unique([orderId, productId])
   @@map("order_items")
 }
+
+model CatalogTemplate {
+  id            String   @id @default(cuid())
+  nome          String
+  configurazione Json
+  createdAt     DateTime @default(now())
+
+  @@map("catalog_templates")
+}

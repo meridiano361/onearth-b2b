@@ -16,6 +16,7 @@ import {
   Eye,
   FileText,
   Image as ImageIcon,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -37,6 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/admin/access-requests',  label: 'Richieste Accesso',  icon: UserPlus,        roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/documenti',        label: 'Documenti',          icon: FileText,        roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/foto',             label: 'Foto',               icon: ImageIcon,       roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { href: '/admin/catalogo-pdf',     label: 'Catalogo PDF',       icon: BookOpen,        roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/preview',          label: 'Anteprima cliente',  icon: Eye,             roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/impostazioni',     label: 'Impostazioni',       icon: Settings,        roles: ['SUPER_ADMIN'] },
 ];
