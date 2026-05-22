@@ -12,6 +12,9 @@ import {
   ChevronDown,
   ChevronUp,
   FolderOpen,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { CatalogFields } from '@/components/admin/CatalogoPDFDocument';
@@ -55,12 +58,20 @@ interface FormState {
     titolo: string;
     sottotitolo: string;
     layout: 'full-overlay' | 'half' | 'solo-testo';
+    logoTipo: 'onearth' | 'custom' | 'none';
+    logoCustomBase64: string | null;
+    logoPosizione: 'top-left' | 'top-center' | 'top-right';
+    logoDimensione: 'piccolo' | 'medio' | 'grande';
+    titoloAllineamento: 'left' | 'center' | 'right';
+    sottotitoloAllineamento: 'left' | 'center' | 'right';
   };
   paginaFinale: {
     attiva: boolean;
     titolo: string;
     testo: string;
     mostraLogo: boolean;
+    titoloAllineamento: 'left' | 'center' | 'right';
+    testoAllineamento: 'left' | 'center' | 'right';
   };
 }
 
@@ -129,12 +140,20 @@ const DEFAULT_STATE: FormState = {
     titolo: 'Collezione CASA 2027',
     sottotitolo: '',
     layout: 'full-overlay',
+    logoTipo: 'onearth',
+    logoCustomBase64: null,
+    logoPosizione: 'top-left',
+    logoDimensione: 'medio',
+    titoloAllineamento: 'center',
+    sottotitoloAllineamento: 'center',
   },
   paginaFinale: {
     attiva: false,
     titolo: '',
     testo: '',
     mostraLogo: true,
+    titoloAllineamento: 'center',
+    testoAllineamento: 'center',
   },
 };
 
@@ -262,6 +281,125 @@ function ColorSwatchPicker({
   );
 }
 
+function AlignToggle({
+  value,
+  onChange,
+}: {
+  value: 'left' | 'center' | 'right';
+  onChange: (v: 'left' | 'center' | 'right') => void;
+}) {
+  const opts: { v: 'left' | 'center' | 'right'; Icon: typeof AlignLeft }[] = [
+    { v: 'left', Icon: AlignLeft },
+    { v: 'center', Icon: AlignCenter },
+    { v: 'right', Icon: AlignRight },
+  ];
+  return (
+    <div className="flex border border-border rounded overflow-hidden">
+      {opts.map(({ v, Icon }, i) => (
+        <button
+          key={v}
+          type="button"
+          title={v === 'left' ? 'Sinistra' : v === 'center' ? 'Centro' : 'Destra'}
+          onClick={() => onChange(v)}
+          className={`flex items-center justify-center w-8 h-8 transition-colors ${i > 0 ? 'border-l border-border' : ''} ${value === v ? 'bg-primary text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+        >
+          <Icon size={12} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function CoverPreview({ config }: { config: { copertina: FormState['copertina']; colori: FormState['colori'] } }) {
+  const cov = config.copertina;
+  if (!cov.attiva) return null;
+
+  const W = 160;
+  const H = Math.round(W * 842 / 595);
+
+  const justifyLogo = cov.logoPosizione === 'top-left' ? 'flex-start'
+    : cov.logoPosizione === 'top-center' ? 'center'
+    : 'flex-end';
+
+  const logoH = cov.logoDimensione === 'piccolo' ? 10 : cov.logoDimensione === 'medio' ? 16 : 24;
+
+  const logoSrc = cov.logoTipo === 'onearth' ? '/logo-on-earth/onearth_solo.png'
+    : cov.logoTipo === 'custom' ? cov.logoCustomBase64
+    : null;
+
+  const bg = config.colori.sfondoPagina;
+  const textColor = config.colori.testoPrimario;
+  const mutedColor = config.colori.testoSecondario;
+
+  return (
+    <div className="mt-4">
+      <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Anteprima copertina</p>
+      <div style={{ width: W, height: H, position: 'relative', overflow: 'hidden', backgroundColor: bg, border: '1px solid #e5e7eb', borderRadius: 4 }} className="shadow-sm flex-shrink-0">
+
+        {/* Background image */}
+        {cov.immagineBase64 && cov.layout !== 'solo-testo' && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={cov.immagineBase64}
+            alt=""
+            style={{
+              position: 'absolute', inset: 0, width: '100%',
+              height: cov.layout === 'half' ? '50%' : '100%',
+              objectFit: 'cover',
+            }}
+          />
+        )}
+
+        {cov.layout === 'full-overlay' && (
+          <>
+            {/* Dark overlay */}
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '42%', background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.65))' }} />
+            {/* Logo top */}
+            {logoSrc && (
+              <div style={{ position: 'absolute', top: 8, left: 8, right: 8, display: 'flex', justifyContent: justifyLogo }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
+              </div>
+            )}
+            {/* Text */}
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 10px 10px', textAlign: cov.titoloAllineamento }}>
+              {cov.titolo && <p style={{ color: '#fff', fontSize: 7, fontWeight: 'bold', margin: 0, textTransform: 'uppercase', letterSpacing: 1 }}>{cov.titolo}</p>}
+              {cov.sottotitolo && <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 5.5, margin: '2px 0 0', textAlign: cov.sottotitoloAllineamento }}>{cov.sottotitolo}</p>}
+            </div>
+          </>
+        )}
+
+        {cov.layout === 'half' && (
+          <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, bottom: 0, backgroundColor: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '6px 10px' }}>
+            {logoSrc && (
+              <div style={{ display: 'flex', justifyContent: justifyLogo, marginBottom: 4 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
+              </div>
+            )}
+            {cov.titolo && <p style={{ color: textColor, fontSize: 7, fontWeight: 'bold', margin: 0, textTransform: 'uppercase', textAlign: cov.titoloAllineamento }}>{cov.titolo}</p>}
+            {cov.sottotitolo && <p style={{ color: mutedColor, fontSize: 5.5, margin: '2px 0 0', textAlign: cov.sottotitoloAllineamento }}>{cov.sottotitolo}</p>}
+          </div>
+        )}
+
+        {cov.layout === 'solo-testo' && (
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: bg, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 14px' }}>
+            {logoSrc && (
+              <div style={{ display: 'flex', justifyContent: justifyLogo, marginBottom: 6 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
+              </div>
+            )}
+            <div style={{ width: 16, height: 1, backgroundColor: '#8B7355', marginBottom: 6, alignSelf: 'center' }} />
+            {cov.titolo && <p style={{ color: textColor, fontSize: 7, fontWeight: 'bold', margin: 0, textTransform: 'uppercase', textAlign: cov.titoloAllineamento }}>{cov.titolo}</p>}
+            {cov.sottotitolo && <p style={{ color: mutedColor, fontSize: 5.5, margin: '3px 0 0', textAlign: cov.sottotitoloAllineamento }}>{cov.sottotitolo}</p>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function AdminCatalogoPDFPage() {
@@ -273,6 +411,7 @@ export default function AdminCatalogoPDFPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showTemplates, setShowTemplates] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
 
   // Section open/close
   const [sections, setSections] = useState({
@@ -368,7 +507,7 @@ export default function AdminCatalogoPDFPage() {
     []
   );
 
-  // ── Image upload handler ───────────────────────────────────────────────────
+  // ── Image upload handlers ──────────────────────────────────────────────────
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -382,6 +521,22 @@ export default function AdminCatalogoPDFPage() {
     reader.onload = (ev) => {
       const dataUrl = ev.target?.result as string;
       setCopertina('immagineBase64', dataUrl);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Logo troppo grande (max 5 MB)');
+      if (logoFileInputRef.current) logoFileInputRef.current.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setCopertina('logoCustomBase64', dataUrl);
     };
     reader.readAsDataURL(file);
   }
@@ -450,10 +605,10 @@ export default function AdminCatalogoPDFPage() {
     }
     setIsSaving(true);
     try {
-      // Exclude large image from saved config
+      // Exclude large images from saved config
       const configToSave = {
         ...config,
-        copertina: { ...config.copertina, immagineBase64: null },
+        copertina: { ...config.copertina, immagineBase64: null, logoCustomBase64: null },
       };
       const res = await fetch('/api/admin/catalogo-pdf/templates', {
         method: 'POST',
@@ -783,7 +938,7 @@ export default function AdminCatalogoPDFPage() {
                 onChange={(v) => setCopertina('attiva', v)}
               />
               {config.copertina.attiva && (
-                <div className="space-y-3 pl-2 border-l-2 border-border">
+                <div className="space-y-4 pl-2 border-l-2 border-border">
                   {/* Image upload */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -818,32 +973,6 @@ export default function AdminCatalogoPDFPage() {
                     )}
                   </div>
 
-                  {/* Titolo */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Titolo copertina</label>
-                    <input
-                      type="text"
-                      value={config.copertina.titolo}
-                      onChange={(e) => setCopertina('titolo', e.target.value)}
-                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-                      placeholder="es. Collezione CASA 2027"
-                    />
-                  </div>
-
-                  {/* Sottotitolo */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Sottotitolo <span className="text-gray-400 font-normal">(opzionale)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={config.copertina.sottotitolo}
-                      onChange={(e) => setCopertina('sottotitolo', e.target.value)}
-                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-                      placeholder="es. Primavera / Estate 2027"
-                    />
-                  </div>
-
                   {/* Layout */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Layout copertina</label>
@@ -857,6 +986,113 @@ export default function AdminCatalogoPDFPage() {
                       <option value="solo-testo">Solo testo (nessuna immagine)</option>
                     </select>
                   </div>
+
+                  {/* Logo */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-600">Logo in copertina</p>
+                    {(
+                      [
+                        { value: 'onearth', label: 'Logo ON EARTH (automatico)' },
+                        { value: 'custom', label: 'Carica logo personalizzato' },
+                        { value: 'none', label: 'Nessun logo' },
+                      ] as const
+                    ).map((opt) => (
+                      <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="logoTipo"
+                          value={opt.value}
+                          checked={config.copertina.logoTipo === opt.value}
+                          onChange={() => setCopertina('logoTipo', opt.value)}
+                          className="accent-primary"
+                        />
+                        <span className="text-xs text-gray-700">{opt.label}</span>
+                      </label>
+                    ))}
+
+                    {config.copertina.logoTipo === 'custom' && (
+                      <div className="pl-5 space-y-2">
+                        <input
+                          ref={logoFileInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/svg+xml"
+                          onChange={handleLogoUpload}
+                          className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                        />
+                        {config.copertina.logoCustomBase64 && (
+                          <div className="flex items-center gap-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={config.copertina.logoCustomBase64} alt="Logo" className="h-8 object-contain border border-border rounded bg-white px-2" />
+                            <button type="button" onClick={() => { setCopertina('logoCustomBase64', null); if (logoFileInputRef.current) logoFileInputRef.current.value = ''; }} className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {config.copertina.logoTipo !== 'none' && (
+                      <div className="grid grid-cols-2 gap-3 pl-5">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Posizione</label>
+                          <select
+                            value={config.copertina.logoPosizione}
+                            onChange={(e) => setCopertina('logoPosizione', e.target.value)}
+                            className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
+                          >
+                            <option value="top-left">In alto a sinistra</option>
+                            <option value="top-center">In alto al centro</option>
+                            <option value="top-right">In alto a destra</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione</label>
+                          <select
+                            value={config.copertina.logoDimensione}
+                            onChange={(e) => setCopertina('logoDimensione', e.target.value)}
+                            className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
+                          >
+                            <option value="piccolo">Piccolo</option>
+                            <option value="medio">Medio</option>
+                            <option value="grande">Grande</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Titolo */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-gray-600">Titolo copertina</label>
+                      <AlignToggle value={config.copertina.titoloAllineamento} onChange={(v) => setCopertina('titoloAllineamento', v)} />
+                    </div>
+                    <input
+                      type="text"
+                      value={config.copertina.titolo}
+                      onChange={(e) => setCopertina('titolo', e.target.value)}
+                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      placeholder="es. Collezione CASA 2027"
+                    />
+                  </div>
+
+                  {/* Sottotitolo */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-gray-600">
+                        Sottotitolo <span className="text-gray-400 font-normal">(opzionale)</span>
+                      </label>
+                      <AlignToggle value={config.copertina.sottotitoloAllineamento} onChange={(v) => setCopertina('sottotitoloAllineamento', v)} />
+                    </div>
+                    <input
+                      type="text"
+                      value={config.copertina.sottotitolo}
+                      onChange={(e) => setCopertina('sottotitolo', e.target.value)}
+                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      placeholder="es. Primavera / Estate 2027"
+                    />
+                  </div>
+
+                  {/* Preview */}
+                  <CoverPreview config={config} />
                 </div>
               )}
             </div>
@@ -879,9 +1115,12 @@ export default function AdminCatalogoPDFPage() {
                 <div className="space-y-3 pl-2 border-l-2 border-border">
                   {/* Titolo */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Titolo pagina <span className="text-gray-400 font-normal">(opzionale)</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-gray-600">
+                        Titolo pagina <span className="text-gray-400 font-normal">(opzionale)</span>
+                      </label>
+                      <AlignToggle value={config.paginaFinale.titoloAllineamento} onChange={(v) => setPaginaFinale('titoloAllineamento', v)} />
+                    </div>
                     <input
                       type="text"
                       value={config.paginaFinale.titolo}
@@ -893,12 +1132,13 @@ export default function AdminCatalogoPDFPage() {
 
                   {/* Testo libero */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Testo libero{' '}
-                      <span className="text-gray-400 font-normal">
-                        ({config.paginaFinale.testo.length}/1000)
-                      </span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-gray-600">
+                        Testo libero{' '}
+                        <span className="text-gray-400 font-normal">({config.paginaFinale.testo.length}/1000)</span>
+                      </label>
+                      <AlignToggle value={config.paginaFinale.testoAllineamento} onChange={(v) => setPaginaFinale('testoAllineamento', v)} />
+                    </div>
                     <textarea
                       value={config.paginaFinale.testo}
                       onChange={(e) => setPaginaFinale('testo', e.target.value.slice(0, 1000))}

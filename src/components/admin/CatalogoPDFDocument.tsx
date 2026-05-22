@@ -44,12 +44,20 @@ export type CatalogConfig = {
     titolo: string;
     sottotitolo: string;
     layout: 'full-overlay' | 'half' | 'solo-testo';
+    logoTipo: 'onearth' | 'custom' | 'none';
+    logoCustomBase64: string | null;
+    logoPosizione: 'top-left' | 'top-center' | 'top-right';
+    logoDimensione: 'piccolo' | 'medio' | 'grande';
+    titoloAllineamento: 'left' | 'center' | 'right';
+    sottotitoloAllineamento: 'left' | 'center' | 'right';
   };
   paginaFinale: {
     attiva: boolean;
     titolo: string;
     testo: string;
     mostraLogo: boolean;
+    titoloAllineamento: 'left' | 'center' | 'right';
+    testoAllineamento: 'left' | 'center' | 'right';
   };
 };
 
@@ -92,6 +100,19 @@ const MARGIN_VALUES: Record<string, number> = { stretto: 10, normale: 20, ampio:
 
 const HEADER_H = 36;
 const FOOTER_H = 18;
+
+const COVER_LOGO_H: Record<string, number> = { piccolo: 18, medio: 28, grande: 42 };
+const COVER_LOGO_JUSTIFY: Record<string, 'flex-start' | 'center' | 'flex-end'> = {
+  'top-left': 'flex-start',
+  'top-center': 'center',
+  'top-right': 'flex-end',
+};
+
+function resolveCoverLogo(cov: CatalogConfig['copertina'], headerLogoBase64: string | null): string | null {
+  if (cov.logoTipo === 'none') return null;
+  if (cov.logoTipo === 'custom') return cov.logoCustomBase64 ?? null;
+  return headerLogoBase64;
+}
 
 // ── Layout computation ────────────────────────────────────────────────────────
 
@@ -556,6 +577,11 @@ function CoverPage({
 }) {
   const cov = config.copertina;
   const { pageW, pageH } = layout;
+  const coverLogoBase64 = resolveCoverLogo(cov, config.logoBase64);
+  const logoH = COVER_LOGO_H[cov.logoDimensione] ?? 28;
+  const logoJustify = COVER_LOGO_JUSTIFY[cov.logoPosizione] ?? 'center';
+  const titleAlign = cov.titoloAllineamento ?? 'center';
+  const subtitleAlign = cov.sottotitoloAllineamento ?? 'center';
 
   if (cov.layout === 'full-overlay') {
     return (
@@ -567,16 +593,34 @@ function CoverPage({
             style={{ position: 'absolute', top: 0, left: 0, width: pageW, height: pageH, objectFit: 'cover' as any }}
           />
         )}
-        {/* Dark overlay */}
+
+        {/* Logo — top area */}
+        {coverLogoBase64 && (
+          <View
+            style={{
+              position: 'absolute',
+              top: 28,
+              left: 32,
+              right: 32,
+              flexDirection: 'row',
+              justifyContent: logoJustify,
+            }}
+          >
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            <Image src={coverLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
+          </View>
+        )}
+
+        {/* Dark gradient overlay */}
         <View
           style={{
             position: 'absolute',
             bottom: 0,
             left: 0,
             right: 0,
-            height: 140,
+            height: 160,
             backgroundColor: '#000000',
-            opacity: 0.5,
+            opacity: 0.55,
           }}
         />
         {/* Text on top of overlay */}
@@ -586,10 +630,10 @@ function CoverPage({
             bottom: 0,
             left: 0,
             right: 0,
-            height: 140,
+            height: 160,
             justifyContent: 'flex-end',
             paddingHorizontal: 40,
-            paddingBottom: 40,
+            paddingBottom: 44,
           }}
         >
           <Text
@@ -600,12 +644,13 @@ function CoverPage({
               letterSpacing: 3,
               textTransform: 'uppercase',
               marginBottom: 6,
+              textAlign: titleAlign,
             }}
           >
             {cov.titolo}
           </Text>
           {cov.sottotitolo ? (
-            <Text style={{ fontSize: 13, color: '#FFFFFF', letterSpacing: 1, opacity: 0.85 }}>
+            <Text style={{ fontSize: 13, color: '#FFFFFF', letterSpacing: 1, opacity: 0.85, textAlign: subtitleAlign }}>
               {cov.sottotitolo}
             </Text>
           ) : null}
@@ -653,13 +698,15 @@ function CoverPage({
             right: 0,
             bottom: 0,
             justifyContent: 'center',
-            alignItems: 'center',
             backgroundColor: '#FFFFFF',
             paddingHorizontal: 40,
           }}
         >
-          {config.logoBase64 && (
-            <Image src={config.logoBase64} style={{ height: 22, width: 140, marginBottom: 18 }} />
+          {coverLogoBase64 && (
+            <View style={{ flexDirection: 'row', justifyContent: logoJustify, marginBottom: 16 }}>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              <Image src={coverLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
+            </View>
           )}
           <Text
             style={{
@@ -668,7 +715,7 @@ function CoverPage({
               color: config.colori.testoPrimario,
               letterSpacing: 3,
               textTransform: 'uppercase',
-              textAlign: 'center',
+              textAlign: titleAlign,
               marginBottom: 8,
             }}
           >
@@ -680,7 +727,7 @@ function CoverPage({
                 fontSize: 12,
                 color: config.colori.testoSecondario,
                 letterSpacing: 1,
-                textAlign: 'center',
+                textAlign: subtitleAlign,
               }}
             >
               {cov.sottotitolo}
@@ -699,11 +746,14 @@ function CoverPage({
         fontFamily: 'Helvetica',
         backgroundColor: config.colori.sfondoPagina,
         justifyContent: 'center',
-        alignItems: 'center',
+        paddingHorizontal: 60,
       }}
     >
-      {config.logoBase64 && (
-        <Image src={config.logoBase64} style={{ height: 22, width: 140, marginBottom: 24 }} />
+      {coverLogoBase64 && (
+        <View style={{ flexDirection: 'row', justifyContent: logoJustify, marginBottom: 24 }}>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <Image src={coverLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
+        </View>
       )}
       {/* Accent line */}
       <View
@@ -711,6 +761,7 @@ function CoverPage({
           width: 50,
           height: 1.5,
           backgroundColor: '#8B7355',
+          alignSelf: 'center',
           marginBottom: 20,
         }}
       />
@@ -721,7 +772,7 @@ function CoverPage({
           color: config.colori.testoPrimario,
           letterSpacing: 4,
           textTransform: 'uppercase',
-          textAlign: 'center',
+          textAlign: titleAlign,
           marginBottom: 12,
         }}
       >
@@ -733,7 +784,7 @@ function CoverPage({
             fontSize: 13,
             color: config.colori.testoSecondario,
             letterSpacing: 1.5,
-            textAlign: 'center',
+            textAlign: subtitleAlign,
           }}
         >
           {cov.sottotitolo}
@@ -754,6 +805,8 @@ function FinalPage({
 }) {
   const pf = config.paginaFinale;
   const { pageW, pageH } = layout;
+  const titleAlign = pf.titoloAllineamento ?? 'center';
+  const textAlign = pf.testoAllineamento ?? 'center';
 
   return (
     <Page
@@ -762,7 +815,6 @@ function FinalPage({
         fontFamily: 'Helvetica',
         backgroundColor: config.colori.sfondoPagina,
         justifyContent: 'center',
-        alignItems: 'center',
         paddingHorizontal: 60,
       }}
     >
@@ -774,7 +826,7 @@ function FinalPage({
             color: config.colori.testoPrimario,
             letterSpacing: 2,
             textTransform: 'uppercase',
-            textAlign: 'center',
+            textAlign: titleAlign,
             marginBottom: 18,
           }}
         >
@@ -787,7 +839,7 @@ function FinalPage({
           style={{
             fontSize: 10,
             color: config.colori.testoSecondario,
-            textAlign: 'center',
+            textAlign: textAlign,
             lineHeight: 1.6,
             marginBottom: 24,
           }}
@@ -797,7 +849,9 @@ function FinalPage({
       ) : null}
 
       {pf.mostraLogo && config.logoBase64 && (
-        <Image src={config.logoBase64} style={{ height: 20, width: 130, marginTop: 10 }} />
+        <View style={{ alignItems: 'center' }}>
+          <Image src={config.logoBase64} style={{ height: 20, width: 130, marginTop: 10 }} />
+        </View>
       )}
     </Page>
   );

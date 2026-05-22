@@ -184,12 +184,20 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
       titolo: '',
       sottotitolo: '',
       layout: 'full-overlay',
+      logoTipo: 'onearth',
+      logoCustomBase64: null,
+      logoPosizione: 'top-left',
+      logoDimensione: 'medio',
+      titoloAllineamento: 'center',
+      sottotitoloAllineamento: 'center',
     },
     paginaFinale: fullConfig?.paginaFinale ?? {
       attiva: false,
       titolo: '',
       testo: '',
       mostraLogo: true,
+      titoloAllineamento: 'center',
+      testoAllineamento: 'center',
     },
   };
 
