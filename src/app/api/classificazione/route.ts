@@ -4,6 +4,20 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 
+// Deduplicate case-insensitively, normalize to "First letter uppercase rest lowercase", sort.
+function dedupNorm<T extends { nome: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const item of items) {
+    const key = item.nome.trim().toLowerCase();
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      result.push({ ...item, nome: key.charAt(0).toUpperCase() + key.slice(1) });
+    }
+  }
+  return result.sort((a, b) => a.nome.localeCompare(b.nome, 'it'));
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -34,16 +48,16 @@ export async function GET(req: NextRequest) {
     ]);
 
     const valori = [
-      ...gruppiMerceologici.map((v) => ({ ...v, tipo: 'gruppoMerceologico' })),
-      ...famiglie.map((v) => ({ ...v, tipo: 'famiglia' })),
-      ...classi.map((v) => ({ ...v, tipo: 'classe' })),
-      ...sottoclassi.map((v) => ({ ...v, tipo: 'sottoclasse' })),
-      ...gruppiOmogenei.map((v) => ({ ...v, tipo: 'gruppoOmogeneo' })),
-      ...linee.map((v) => ({ ...v, tipo: 'nomLinea' })),
-      ...stagioni.map((v) => ({ ...v, tipo: 'stagione' })),
-      ...collezioni.map((v) => ({ ...v, tipo: 'collezione' })),
-      ...colori.map((v) => ({ ...v, tipo: 'colore' })),
-      ...temiColore.map((v) => ({ ...v, tipo: 'temaColore' })),
+      ...dedupNorm(gruppiMerceologici).map((v) => ({ ...v, tipo: 'gruppoMerceologico' })),
+      ...dedupNorm(famiglie).map((v) => ({ ...v, tipo: 'famiglia' })),
+      ...dedupNorm(classi).map((v) => ({ ...v, tipo: 'classe' })),
+      ...dedupNorm(sottoclassi).map((v) => ({ ...v, tipo: 'sottoclasse' })),
+      ...dedupNorm(gruppiOmogenei).map((v) => ({ ...v, tipo: 'gruppoOmogeneo' })),
+      ...dedupNorm(linee).map((v) => ({ ...v, tipo: 'nomLinea' })),
+      ...dedupNorm(stagioni).map((v) => ({ ...v, tipo: 'stagione' })),
+      ...dedupNorm(collezioni).map((v) => ({ ...v, tipo: 'collezione' })),
+      ...dedupNorm(colori).map((v) => ({ ...v, tipo: 'colore' })),
+      ...dedupNorm(temiColore).map((v) => ({ ...v, tipo: 'temaColore' })),
     ];
 
     return NextResponse.json({ data: valori });

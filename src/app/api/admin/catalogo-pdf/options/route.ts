@@ -25,9 +25,23 @@ export async function GET() {
       }),
     ]);
 
+    function dedupNormStrings(values: (string | null)[]): string[] {
+      const seen = new Set<string>();
+      const result: string[] = [];
+      for (const v of values) {
+        if (!v) continue;
+        const key = v.trim().toLowerCase();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          result.push(key.charAt(0).toUpperCase() + key.slice(1));
+        }
+      }
+      return result.sort((a, b) => a.localeCompare(b, 'it'));
+    }
+
     return NextResponse.json({
-      tranches: tranches.map((t) => t.tranche).filter(Boolean),
-      paesi: paesi.map((p) => p.paese).filter(Boolean),
+      tranches: dedupNormStrings(tranches.map((t) => t.tranche)),
+      paesi: dedupNormStrings(paesi.map((p) => p.paese)),
     });
   } catch (err) {
     console.error('[catalogo-pdf options]', err);

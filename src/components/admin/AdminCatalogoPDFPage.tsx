@@ -809,10 +809,21 @@ export default function AdminCatalogoPDFPage() {
     queryFn: () => fetch('/api/admin/catalogo-pdf/templates').then((r) => r.json()),
   });
 
-  // Derived option lists
-  const byType = (tipo: string): string[] =>
+  // Derived option lists — deduplicate case-insensitively client-side as safety net
+  const byType = (tipo: string): string[] => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    classData?.data?.filter((v: any) => v.tipo === tipo).map((v: any) => v.nome) ?? [];
+    const raw: string[] = classData?.data?.filter((v: any) => v.tipo === tipo).map((v: any) => v.nome as string) ?? [];
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const n of raw) {
+      const key = n.trim().toLowerCase();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        result.push(key.charAt(0).toUpperCase() + key.slice(1));
+      }
+    }
+    return result.sort((a, b) => a.localeCompare(b, 'it'));
+  };
 
   const gruppiMerceologici = byType('gruppoMerceologico');
   const famiglie = byType('famiglia');

@@ -41,8 +41,24 @@ export async function GET() {
     if (!countMap.has(l.nome)) countMap.set(l.nome, 0);
   }
 
+  // Deduplicate case-insensitively and normalize names
+  const seen = new Set<string>();
   const result = Array.from(countMap.entries())
-    .map(([nome, count]) => ({ nome, count, paese: paeseMap.get(nome) ?? null }))
+    .map(([nome, count]) => {
+      const normalized = nome.trim().toLowerCase();
+      return {
+        nome: normalized.charAt(0).toUpperCase() + normalized.slice(1),
+        count,
+        paese: paeseMap.get(nome) ?? null,
+        _key: normalized,
+      };
+    })
+    .filter(({ _key }) => {
+      if (seen.has(_key)) return false;
+      seen.add(_key);
+      return true;
+    })
+    .map(({ _key: _k, ...rest }) => rest)
     .sort((a, b) => a.nome.localeCompare(b.nome, 'it'));
 
   return NextResponse.json({ data: result });
