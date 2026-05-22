@@ -9,6 +9,7 @@ import { formatCurrency, isValidLotQuantity } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import QuantitySelector from './QuantitySelector';
+import { ProductImage } from '@/components/ui/ProductImage';
 import type { Product } from '@/types';
 
 interface Props {
@@ -109,19 +110,12 @@ export default function ProductDetailView({ id }: Props) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 mb-10">
         {/* Image */}
-        <div className="aspect-square bg-cream rounded overflow-hidden flex items-center justify-center border border-border">
-          {product.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <span className="font-display text-6xl text-gray-200 tracking-wider">
-              {product.code.slice(0, 2)}
-            </span>
-          )}
+        <div className="aspect-square bg-cream rounded overflow-hidden border border-border">
+          <ProductImage
+            src={product.imageUrl}
+            alt={product.name}
+            className="w-full h-full object-cover"
+          />
         </div>
 
         {/* Info */}

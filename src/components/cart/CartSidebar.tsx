@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag, MapPin, Plus } from 'lucide-react';
+import { ProductImage } from '@/components/ui/ProductImage';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
@@ -250,14 +251,7 @@ export default function CartSidebar() {
                   {suggestions.map((p) => (
                     <div key={p.id} className="flex items-center gap-2 bg-cream/50 rounded p-2">
                       <div className="w-10 h-10 flex-shrink-0 rounded bg-white overflow-hidden border border-border">
-                        {p.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <span className="text-2xs text-gray-300">{p.code.slice(0, 2)}</span>
-                          </div>
-                        )}
+                        <ProductImage src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-2xs font-mono text-gray-400 truncate">{p.code}</p>

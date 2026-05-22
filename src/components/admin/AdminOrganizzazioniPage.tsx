@@ -715,42 +715,82 @@ export default function AdminOrganizzazioniPage() {
 
             return (
               <div key={org.id} className={`bg-white border rounded-lg overflow-hidden transition-colors ${isOrgSelected ? 'border-amber-400 bg-amber-50/40' : 'border-border'}`}>
-                {/* Org row */}
-                <div className="flex items-center gap-3 px-4 py-3 hover:bg-cream/30 transition-colors">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleOrgSelect(org.id); }}
-                    className="text-gray-400 hover:text-primary transition-colors flex-shrink-0">
-                    {isOrgSelected
-                      ? <CheckSquare size={14} className="text-amber-600" />
-                      : <Square size={14} />}
-                  </button>
-                  <button
-                    onClick={() => toggleExpand(org.id)}
-                    className="flex-1 flex items-center gap-3 text-left min-w-0">
-                    <span className="text-gray-400 flex-shrink-0">
-                      {isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                    </span>
-                    <span className="flex-1 font-medium text-primary text-sm truncate">{org.nome}</span>
-                    <span className="flex items-center gap-1.5 text-xs text-gray-400 mr-2 flex-shrink-0">
-                      <Users size={12} />
-                      {ops.length} operatori
+                {/* Org row — mobile: card vertical; desktop: single flex row */}
+                <div className="px-3 py-3 hover:bg-cream/30 transition-colors">
+                  {/* Mobile layout */}
+                  <div className="md:hidden space-y-1">
+                    {/* Name (full width, no truncate) */}
+                    <p className="font-medium text-primary text-sm leading-snug">{org.nome}</p>
+                    {/* Stats */}
+                    <p className="text-xs text-gray-400">
+                      {ops.length} operatori · {destinazioni.length} destinazioni
                       {orgSelectedCount > 0 && (
-                        <span className="ml-1 bg-accent text-white text-2xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                          {orgSelectedCount}
+                        <span className="ml-1.5 bg-accent text-white text-2xs font-bold px-1.5 py-0.5 rounded-full">
+                          {orgSelectedCount} sel.
                         </span>
                       )}
-                    </span>
-                    <span className="flex items-center gap-1.5 text-xs text-gray-400 flex-shrink-0">
-                      <Store size={12} />
-                      {destinazioni.length} destinazioni
-                    </span>
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setEditOrgModal(org); }}
-                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary px-2 py-1 rounded hover:bg-cream transition-colors flex-shrink-0">
-                    <Edit2 size={12} />
-                    <span className="hidden sm:inline">Modifica</span>
-                  </button>
+                    </p>
+                    {/* Actions row */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleOrgSelect(org.id); }}
+                        className="text-gray-400 hover:text-primary transition-colors p-1 -ml-1">
+                        {isOrgSelected
+                          ? <CheckSquare size={15} className="text-amber-600" />
+                          : <Square size={15} />}
+                      </button>
+                      <button
+                        onClick={() => toggleExpand(org.id)}
+                        className="flex-1 flex items-center justify-center gap-1 text-xs text-gray-500 hover:text-primary border border-border rounded py-1 transition-colors">
+                        {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                        {isOpen ? 'Chiudi' : 'Espandi'}
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEditOrgModal(org); }}
+                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary border border-border rounded px-2.5 py-1 hover:bg-cream transition-colors">
+                        <Edit2 size={12} />
+                        Modifica
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Desktop layout (original) */}
+                  <div className="hidden md:flex items-center gap-3">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleOrgSelect(org.id); }}
+                      className="text-gray-400 hover:text-primary transition-colors flex-shrink-0">
+                      {isOrgSelected
+                        ? <CheckSquare size={14} className="text-amber-600" />
+                        : <Square size={14} />}
+                    </button>
+                    <button
+                      onClick={() => toggleExpand(org.id)}
+                      className="flex-1 flex items-center gap-3 text-left min-w-0">
+                      <span className="text-gray-400 flex-shrink-0">
+                        {isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                      </span>
+                      <span className="flex-1 font-medium text-primary text-sm">{org.nome}</span>
+                      <span className="flex items-center gap-1.5 text-xs text-gray-400 mr-2 flex-shrink-0">
+                        <Users size={12} />
+                        {ops.length} operatori
+                        {orgSelectedCount > 0 && (
+                          <span className="ml-1 bg-accent text-white text-2xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                            {orgSelectedCount}
+                          </span>
+                        )}
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs text-gray-400 flex-shrink-0">
+                        <Store size={12} />
+                        {destinazioni.length} destinazioni
+                      </span>
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditOrgModal(org); }}
+                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary px-2 py-1 rounded hover:bg-cream transition-colors flex-shrink-0">
+                      <Edit2 size={12} />
+                      <span>Modifica</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Expanded content */}
@@ -784,77 +824,147 @@ export default function AdminOrganizzazioniPage() {
                       {ops.length === 0 ? (
                         <p className="text-xs text-gray-400 italic">Nessun operatore</p>
                       ) : (
-                        <div className="bg-white rounded border border-border overflow-hidden">
-                          <table className="w-full text-xs">
-                            <thead className="bg-cream">
-                              <tr>
-                                <th className="px-3 py-2 w-8">
-                                  <button
-                                    onClick={() => toggleSelectAllInOrg(ops)}
-                                    className="text-gray-400 hover:text-primary transition-colors"
-                                    title={allOrgOpsSelected ? 'Deseleziona tutti' : 'Seleziona tutti'}>
-                                    {allOrgOpsSelected
-                                      ? <CheckSquare size={13} className="text-accent" />
-                                      : <Square size={13} />}
-                                  </button>
-                                </th>
-                                <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Nome</th>
-                                <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Email</th>
-                                <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Stato</th>
-                                <th className="w-24"></th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                              {ops.map((op) => {
-                                const isSelected = selectedOpIds.has(op.id);
-                                return (
-                                  <tr key={op.id} className={`transition-colors ${isSelected ? 'bg-accent/8' : 'hover:bg-cream/50'}`}>
-                                    <td className="px-3 py-2">
-                                      <button onClick={() => toggleOpSelect(op.id)}
-                                        className="text-gray-400 hover:text-primary transition-colors">
-                                        {isSelected
-                                          ? <CheckSquare size={13} className="text-accent" />
-                                          : <Square size={13} />}
-                                      </button>
-                                    </td>
-                                    <td className="px-3 py-2">
-                                      <span className="font-medium text-primary">{op.nome} {op.cognome}</span>
-                                    </td>
-                                    <td className="px-3 py-2 text-gray-500">{op.email}</td>
-                                    <td className="px-3 py-2">
-                                      <Badge variant={op.attivo ? 'success' : 'default'} size="xs">
-                                        {op.attivo ? 'Attivo' : 'Inattivo'}
-                                      </Badge>
-                                    </td>
-                                    <td className="px-3 py-2">
-                                      <div className="flex items-center gap-1 justify-end">
-                                        <button onClick={() => setOpModal({ orgId: org.id, orgNome: org.nome, operator: op })}
-                                          className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica">
-                                          <Edit2 size={12} />
+                        <>
+                          {/* Select all + desktop table header */}
+                          <div className="hidden md:block bg-white rounded border border-border overflow-hidden">
+                            <table className="w-full text-xs">
+                              <thead className="bg-cream">
+                                <tr>
+                                  <th className="px-3 py-2 w-8">
+                                    <button
+                                      onClick={() => toggleSelectAllInOrg(ops)}
+                                      className="text-gray-400 hover:text-primary transition-colors"
+                                      title={allOrgOpsSelected ? 'Deseleziona tutti' : 'Seleziona tutti'}>
+                                      {allOrgOpsSelected
+                                        ? <CheckSquare size={13} className="text-accent" />
+                                        : <Square size={13} />}
+                                    </button>
+                                  </th>
+                                  <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Nome</th>
+                                  <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Email</th>
+                                  <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Stato</th>
+                                  <th className="w-24"></th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border">
+                                {ops.map((op) => {
+                                  const isSelected = selectedOpIds.has(op.id);
+                                  return (
+                                    <tr key={op.id} className={`transition-colors ${isSelected ? 'bg-accent/8' : 'hover:bg-cream/50'}`}>
+                                      <td className="px-3 py-2">
+                                        <button onClick={() => toggleOpSelect(op.id)}
+                                          className="text-gray-400 hover:text-primary transition-colors">
+                                          {isSelected
+                                            ? <CheckSquare size={13} className="text-accent" />
+                                            : <Square size={13} />}
                                         </button>
-                                        <button onClick={() => handleResetPassword(op, org.nome)}
-                                          className="p-1 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Reset password">
-                                          <KeyRound size={12} />
-                                        </button>
-                                        <button onClick={() => handleToggleOperator(op)}
-                                          className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
-                                          title={op.attivo ? 'Disattiva' : 'Attiva'}>
-                                          {op.attivo
-                                            ? <ToggleRight size={14} className="text-green-500" />
-                                            : <ToggleLeft size={14} />}
-                                        </button>
-                                        <button onClick={() => handleDeleteOperator(op)}
-                                          className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina">
-                                          <Trash2 size={12} />
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
+                                      </td>
+                                      <td className="px-3 py-2">
+                                        <span className="font-medium text-primary">{op.nome} {op.cognome}</span>
+                                      </td>
+                                      <td className="px-3 py-2 text-gray-500">{op.email}</td>
+                                      <td className="px-3 py-2">
+                                        <Badge variant={op.attivo ? 'success' : 'default'} size="xs">
+                                          {op.attivo ? 'Attivo' : 'Inattivo'}
+                                        </Badge>
+                                      </td>
+                                      <td className="px-3 py-2">
+                                        <div className="flex items-center gap-1 justify-end">
+                                          <button onClick={() => setOpModal({ orgId: org.id, orgNome: org.nome, operator: op })}
+                                            className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica">
+                                            <Edit2 size={12} />
+                                          </button>
+                                          <button onClick={() => handleResetPassword(op, org.nome)}
+                                            className="p-1 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Reset password">
+                                            <KeyRound size={12} />
+                                          </button>
+                                          <button onClick={() => handleToggleOperator(op)}
+                                            className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
+                                            title={op.attivo ? 'Disattiva' : 'Attiva'}>
+                                            {op.attivo
+                                              ? <ToggleRight size={14} className="text-green-500" />
+                                              : <ToggleLeft size={14} />}
+                                          </button>
+                                          <button onClick={() => handleDeleteOperator(op)}
+                                            className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina">
+                                            <Trash2 size={12} />
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Mobile: card list */}
+                          <div className="md:hidden space-y-2">
+                            {/* Select all on mobile */}
+                            <button
+                              onClick={() => toggleSelectAllInOrg(ops)}
+                              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary transition-colors">
+                              {allOrgOpsSelected
+                                ? <CheckSquare size={13} className="text-accent" />
+                                : <Square size={13} />}
+                              {allOrgOpsSelected ? 'Deseleziona tutti' : 'Seleziona tutti'}
+                            </button>
+                            {ops.map((op) => {
+                              const isSelected = selectedOpIds.has(op.id);
+                              return (
+                                <div
+                                  key={op.id}
+                                  className={`rounded border p-3 space-y-2 transition-colors ${isSelected ? 'border-accent/40 bg-accent/5' : 'border-border bg-white'}`}
+                                >
+                                  {/* Name + status */}
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <p className="font-medium text-primary text-sm">{op.nome} {op.cognome}</p>
+                                      <p
+                                        className="text-xs text-gray-500 mt-0.5"
+                                        style={{ overflowWrap: 'break-word', wordBreak: 'break-all' }}
+                                      >
+                                        {op.email}
+                                      </p>
+                                    </div>
+                                    <Badge variant={op.attivo ? 'success' : 'default'} size="xs">
+                                      {op.attivo ? 'Attivo' : 'Inattivo'}
+                                    </Badge>
+                                  </div>
+                                  {/* Actions */}
+                                  <div className="flex items-center gap-1 pt-1 border-t border-border/50">
+                                    <button onClick={() => toggleOpSelect(op.id)}
+                                      className="p-1.5 text-gray-400 hover:text-primary transition-colors" title="Seleziona">
+                                      {isSelected
+                                        ? <CheckSquare size={14} className="text-accent" />
+                                        : <Square size={14} />}
+                                    </button>
+                                    <div className="flex-1" />
+                                    <button onClick={() => setOpModal({ orgId: org.id, orgNome: org.nome, operator: op })}
+                                      className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica">
+                                      <Edit2 size={14} />
+                                    </button>
+                                    <button onClick={() => handleResetPassword(op, org.nome)}
+                                      className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Reset password">
+                                      <KeyRound size={14} />
+                                    </button>
+                                    <button onClick={() => handleToggleOperator(op)}
+                                      className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
+                                      title={op.attivo ? 'Disattiva' : 'Attiva'}>
+                                      {op.attivo
+                                        ? <ToggleRight size={16} className="text-green-500" />
+                                        : <ToggleLeft size={16} />}
+                                    </button>
+                                    <button onClick={() => handleDeleteOperator(op)}
+                                      className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina">
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
                       )}
                     </div>
 

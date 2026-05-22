@@ -8,6 +8,7 @@ import { cn, formatCurrency, isValidLotQuantity } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import QuantitySelector from './QuantitySelector';
+import { ProductImage } from '@/components/ui/ProductImage';
 import type { Product } from '@/types';
 
 interface ProductCardProps {
@@ -21,7 +22,6 @@ export default function ProductCard({ product }: ProductCardProps) {
   const cartQty = getItemQuantity(product.id);
   const [localQty, setLocalQty] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
-  const [imgError, setImgError] = useState(false);
 
   const inCart = cartQty > 0;
   const hasLotWarning = cartQty > 0 && !isValidLotQuantity(cartQty, product.lotSize);
@@ -52,21 +52,11 @@ export default function ProductCard({ product }: ProductCardProps) {
       <Link href={`/catalog/${product.id}`} className="block">
         {/* Image */}
         <div className="h-40 relative bg-cream overflow-hidden rounded-t">
-          {product.imageUrl && !imgError ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <span className="font-display text-2xl text-gray-300 tracking-wider">
-                {product.code.slice(0, 2)}
-              </span>
-            </div>
-          )}
+          <ProductImage
+            src={product.imageUrl}
+            alt={product.name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
 
           {/* Heart / favorite — top-left */}
           <button

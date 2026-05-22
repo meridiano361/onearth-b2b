@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, FileText, CheckCircle, Minus, Plus, X, Database, Search, Loader2, MapPin, Copy } from 'lucide-react';
 import OrderExcelExport from '@/components/orders/OrderExcelExport';
+import { ProductImage } from '@/components/ui/ProductImage';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
@@ -51,20 +52,7 @@ function ProductCard({
     <div className="bg-white border border-border flex flex-col">
       {/* Image */}
       <div className="relative aspect-[4/3] bg-[#C8C0B5] overflow-hidden">
-        {product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            loading="lazy"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-xs font-mono text-white/80 tracking-wider text-center px-2">
-              {product.code}
-            </span>
-          </div>
-        )}
+        <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
         {/* Remove button */}
         <button
           onClick={() => onRemove(item.id)}
@@ -229,13 +217,7 @@ function AddProductsModal({
               >
                 {/* Thumbnail */}
                 <div className="w-10 h-10 flex-shrink-0 bg-[#C8C0B5] overflow-hidden rounded">
-                  {product.imageUrl ? (
-                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-2xs font-mono text-white/80">{product.code.slice(0, 4)}</span>
-                    </div>
-                  )}
+                  <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                 </div>
 
                 {/* Info */}
