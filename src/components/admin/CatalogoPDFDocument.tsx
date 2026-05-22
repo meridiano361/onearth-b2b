@@ -101,6 +101,23 @@ export type FinalPageTypography = {
   testoColor: string;
 };
 
+export type CustomSection = {
+  id: string;
+  nome: string;
+  descrizione?: string;
+  criteri: {
+    classe: string[];
+    sottoclasse: string[];
+    famiglia: string[];
+    gruppoOmogeneo: string[];
+    nomLinea: string[];
+    colore: string[];
+    produttore: string[];
+  };
+  mostraSottosezioni: boolean;
+  ordinamento: 'code' | 'name' | 'costPrice_asc' | 'costPrice_desc' | 'nomLinea';
+};
+
 export type CatalogConfig = {
   titolo: string;
   mostraLogo: boolean;
@@ -121,6 +138,10 @@ export type CatalogConfig = {
     testoSecondario: string;
   };
   modalitaSeparatore: 'pagina-intera' | 'inline' | 'nuova-riga';
+  // Custom sections
+  useSezioniPersonalizzate?: boolean;
+  sezioniPersonalizzate?: CustomSection[];
+  includiProdottiNonAssegnati?: boolean;
   copertina: {
     attiva: boolean;
     immagineBase64: string | null;
@@ -129,10 +150,19 @@ export type CatalogConfig = {
     layout: 'full-overlay' | 'half' | 'solo-testo';
     logoTipo: 'onearth' | 'custom' | 'none';
     logoCustomBase64: string | null;
+    // New grid-style logo position
+    logoPosX?: 'left' | 'center' | 'right';
+    logoPosY?: 'top' | 'middle' | 'bottom';
+    // Legacy (kept for backward compat)
     logoPosizione: 'top-left' | 'top-center' | 'top-right';
     logoDimensione: 'piccolo' | 'medio' | 'grande';
     titoloAllineamento: 'left' | 'center' | 'right';
     sottotitoloAllineamento: 'left' | 'center' | 'right';
+    // Image position/scale/opacity controls
+    imgOffsetX?: number;
+    imgOffsetY?: number;
+    imgScale?: number;
+    imgOpacity?: number;
   };
   paginaFinale: {
     attiva: boolean;
@@ -198,6 +228,14 @@ const COVER_LOGO_JUSTIFY: Record<string, 'flex-start' | 'center' | 'flex-end'> =
   'top-center': 'center',
   'top-right': 'flex-end',
 };
+
+// ── ITEM 1 helper ─────────────────────────────────────────────────────────────
+
+function alignToFlex(align: 'left' | 'center' | 'right'): 'flex-start' | 'center' | 'flex-end' {
+  if (align === 'center') return 'center';
+  if (align === 'right') return 'flex-end';
+  return 'flex-start';
+}
 
 function resolveCoverLogo(cov: CatalogConfig['copertina'], headerLogoBase64: string | null): string | null {
   if (cov.logoTipo === 'none') return null;
@@ -611,8 +649,8 @@ function ProductCard({
         {anyPrice && (
           <View style={[s.priceRow, { height: layout.PRICES_H }]}>
             {f.prezzoCosto && (
-              <View style={s.priceItem}>
-                <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Costo i.e.</Text>
+              <View style={[s.priceItem, { alignItems: alignToFlex(cfs.prezzoCosto.align) }]}>
+                <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color, textAlign: cfs.prezzoCosto.align as any }]}>Costo i.e.</Text>
                 <Text style={{
                   fontSize: cfs.prezzoCosto.fontSize,
                   fontFamily: fieldFont(cfs.prezzoCosto),
@@ -624,8 +662,8 @@ function ProductCard({
               </View>
             )}
             {f.pvp && (
-              <View style={s.priceItem}>
-                <Text style={[s.priceLabel, { color: cfs.pvp.color }]}>PVP i.i.</Text>
+              <View style={[s.priceItem, { alignItems: alignToFlex(cfs.pvp.align) }]}>
+                <Text style={[s.priceLabel, { color: cfs.pvp.color, textAlign: cfs.pvp.align as any }]}>PVP i.i.</Text>
                 <Text style={{
                   fontSize: cfs.pvp.fontSize,
                   fontFamily: fieldFont(cfs.pvp),
@@ -689,9 +727,30 @@ function CoverPage({
   const { pageW, pageH } = layout;
   const coverLogoBase64 = resolveCoverLogo(cov, config.logoBase64);
   const logoH = COVER_LOGO_H[cov.logoDimensione] ?? 28;
-  const logoJustify = COVER_LOGO_JUSTIFY[cov.logoPosizione] ?? 'center';
+
+  // ITEM 4B: logo grid position
+  const posX = cov.logoPosX ?? (
+    cov.logoPosizione?.includes('center') ? 'center' :
+    cov.logoPosizione?.includes('right') ? 'right' : 'left'
+  );
+  const posY = cov.logoPosY ?? 'top';
+  const logoJustify: 'flex-start' | 'center' | 'flex-end' =
+    posX === 'center' ? 'center' : posX === 'right' ? 'flex-end' : 'flex-start';
+  const logoVertical: Record<string, number> = {
+    top: 28,
+    middle: pageH / 2 - logoH / 2,
+    bottom: pageH - logoH - 28,
+  };
+  const logoTop = logoVertical[posY] ?? 28;
+
   const titleAlign = cov.titoloAllineamento ?? 'center';
   const subtitleAlign = cov.sottotitoloAllineamento ?? 'center';
+
+  // ITEM 3B: image position/scale/opacity helpers
+  const imgScale = cov.imgScale ?? 100;
+  const imgOffsetX = cov.imgOffsetX ?? 0;
+  const imgOffsetY = cov.imgOffsetY ?? 0;
+  const imgOpacity = (cov.imgOpacity ?? 100) / 100;
 
   const titleFont = (typo.titoloBold && typo.titoloItalic) ? 'Helvetica-BoldOblique'
     : typo.titoloBold ? 'Helvetica-Bold'
@@ -706,22 +765,27 @@ function CoverPage({
   const titoloText = typo.titoloUppercase ? cov.titolo.toUpperCase() : cov.titolo;
 
   if (cov.layout === 'full-overlay') {
+    const imgW = pageW * imgScale / 100;
+    const imgH = pageH * imgScale / 100;
+    const imgLeft = (pageW - imgW) / 2 + (pageW * imgOffsetX / 100);
+    const imgTop = (pageH - imgH) / 2 + (pageH * imgOffsetY / 100);
+
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica' }}>
         {cov.immagineBase64 && (
           <Image
             src={cov.immagineBase64}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            style={{ position: 'absolute', top: 0, left: 0, width: pageW, height: pageH, objectFit: 'cover' as any }}
+            style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }}
           />
         )}
 
-        {/* Logo — top area */}
+        {/* Logo — position from grid */}
         {coverLogoBase64 && (
           <View
             style={{
               position: 'absolute',
-              top: 28,
+              top: logoTop,
               left: 32,
               right: 32,
               flexDirection: 'row',
@@ -789,6 +853,11 @@ function CoverPage({
 
   if (cov.layout === 'half') {
     const halfH = pageH / 2;
+    const imgWh = pageW * imgScale / 100;
+    const imgHh = halfH * imgScale / 100;
+    const imgLeftH = (pageW - imgWh) / 2 + (pageW * imgOffsetX / 100);
+    const imgTopH = (halfH - imgHh) / 2 + (halfH * imgOffsetY / 100);
+
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica' }}>
         {/* Top half: image */}
@@ -797,12 +866,13 @@ function CoverPage({
             src={cov.immagineBase64}
             style={{
               position: 'absolute',
-              top: 0,
-              left: 0,
-              width: pageW,
-              height: halfH,
+              top: imgTopH,
+              left: imgLeftH,
+              width: imgWh,
+              height: imgHh,
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               objectFit: 'cover' as any,
+              opacity: imgOpacity,
             }}
           />
         ) : (
@@ -866,7 +936,7 @@ function CoverPage({
     );
   }
 
-  // solo-testo
+  // solo-testo (no image)
   return (
     <Page
       size={[pageW, pageH] as [number, number]}

@@ -8,7 +8,20 @@ import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
 import { CatalogoPDFDocument } from '@/components/admin/CatalogoPDFDocument';
-import type { CatalogConfig, CatalogFields, GroupForPDF, ProductForPDF } from '@/components/admin/CatalogoPDFDocument';
+import type { CatalogConfig, CatalogFields, GroupForPDF, ProductForPDF, CustomSection } from '@/components/admin/CatalogoPDFDocument';
+
+function productMatchesSection(product: ProductForPDF, criteri: CustomSection['criteri']): boolean {
+  const checks = [
+    criteri.classe.length > 0 && criteri.classe.includes(product.classe ?? ''),
+    criteri.sottoclasse.length > 0 && criteri.sottoclasse.includes(product.sottoclasse ?? ''),
+    criteri.famiglia.length > 0 && criteri.famiglia.includes(product.famiglia ?? ''),
+    criteri.gruppoOmogeneo.length > 0 && criteri.gruppoOmogeneo.includes(product.gruppoOmogeneo ?? ''),
+    criteri.nomLinea.length > 0 && criteri.nomLinea.includes(product.nomLinea ?? ''),
+    criteri.colore.length > 0 && criteri.colore.includes((product as any).colore ?? ''),
+    criteri.produttore.length > 0 && criteri.produttore.includes(product.produttore ?? ''),
+  ];
+  return checks.some(Boolean);
+}
 
 const SORT_MAP: Record<string, any> = {
   code: [{ code: 'asc' }],
@@ -143,19 +156,68 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
 
   // Build groups
   let groups: GroupForPDF[];
-  const groupField = RAGGRUPPAMENTO_FIELD[raggruppa];
-  if (raggruppa && groupField) {
-    const map = new Map<string, ProductForPDF[]>();
-    for (const p of productsForPDF) {
-      const key = (p[groupField] as string | null) || 'Non specificato';
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(p);
+
+  // ITEM 6D: Custom sections logic
+  if (fullConfig?.useSezioniPersonalizzate && fullConfig.sezioniPersonalizzate && fullConfig.sezioniPersonalizzate.length > 0) {
+    const customGroups: GroupForPDF[] = [];
+    const assignedIds = new Set<string>();
+
+    const sectionSortMap: Record<string, (a: ProductForPDF, b: ProductForPDF) => number> = {
+      code: (a, b) => a.code.localeCompare(b.code),
+      name: (a, b) => (a.name || '').localeCompare(b.name || ''),
+      costPrice_asc: (a, b) => a.costPrice - b.costPrice,
+      costPrice_desc: (a, b) => b.costPrice - a.costPrice,
+      nomLinea: (a, b) => (a.nomLinea || '').localeCompare(b.nomLinea || ''),
+    };
+
+    for (const sezione of fullConfig.sezioniPersonalizzate) {
+      const sectionProducts = productsForPDF
+        .filter((p) => productMatchesSection(p, sezione.criteri))
+        .sort(sectionSortMap[sezione.ordinamento] ?? sectionSortMap.code);
+
+      sectionProducts.forEach((p) => assignedIds.add(p.id));
+
+      if (sezione.mostraSottosezioni) {
+        // Group by the most specific criterion available
+        const subMap = new Map<string, ProductForPDF[]>();
+        for (const p of sectionProducts) {
+          const subKey = p.sottoclasse || p.classe || p.famiglia || p.gruppoOmogeneo || p.nomLinea || 'Non specificato';
+          if (!subMap.has(subKey)) subMap.set(subKey, []);
+          subMap.get(subKey)!.push(p);
+        }
+        for (const [subKey, subProducts] of subMap.entries()) {
+          customGroups.push({ key: `${sezione.nome} — ${subKey}`, products: subProducts });
+        }
+      } else {
+        if (sectionProducts.length > 0) {
+          customGroups.push({ key: sezione.nome, products: sectionProducts });
+        }
+      }
     }
-    groups = Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b, 'it'))
-      .map(([key, prods]) => ({ key, products: prods }));
+
+    if (fullConfig.includiProdottiNonAssegnati !== false) {
+      const unassigned = productsForPDF.filter((p) => !assignedIds.has(p.id));
+      if (unassigned.length > 0) {
+        customGroups.push({ key: 'Altri prodotti', products: unassigned });
+      }
+    }
+
+    groups = customGroups;
   } else {
-    groups = [{ key: '', products: productsForPDF }];
+    const groupField = RAGGRUPPAMENTO_FIELD[raggruppa];
+    if (raggruppa && groupField) {
+      const map = new Map<string, ProductForPDF[]>();
+      for (const p of productsForPDF) {
+        const key = (p[groupField] as string | null) || 'Non specificato';
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(p);
+      }
+      groups = Array.from(map.entries())
+        .sort(([a], [b]) => a.localeCompare(b, 'it'))
+        .map(([key, prods]) => ({ key, products: prods }));
+    } else {
+      groups = [{ key: '', products: productsForPDF }];
+    }
   }
 
   const config: CatalogConfig = {
@@ -178,6 +240,9 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
       testoSecondario: '#9CA3AF',
     },
     modalitaSeparatore: fullConfig?.modalitaSeparatore ?? 'pagina-intera',
+    useSezioniPersonalizzate: fullConfig?.useSezioniPersonalizzate ?? false,
+    sezioniPersonalizzate: fullConfig?.sezioniPersonalizzate ?? [],
+    includiProdottiNonAssegnati: fullConfig?.includiProdottiNonAssegnati ?? true,
     copertina: fullConfig?.copertina ?? {
       attiva: false,
       immagineBase64: null,
@@ -186,10 +251,16 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
       layout: 'full-overlay',
       logoTipo: 'onearth',
       logoCustomBase64: null,
+      logoPosX: 'left',
+      logoPosY: 'top',
       logoPosizione: 'top-left',
       logoDimensione: 'medio',
       titoloAllineamento: 'center',
       sottotitoloAllineamento: 'center',
+      imgOffsetX: 0,
+      imgOffsetY: 0,
+      imgScale: 100,
+      imgOpacity: 100,
     },
     paginaFinale: fullConfig?.paginaFinale ?? {
       attiva: false,
@@ -381,6 +452,16 @@ export async function POST(req: NextRequest) {
         modalitaSeparatore: body.modalitaSeparatore,
         copertina: body.copertina,
         paginaFinale: body.paginaFinale,
+        cardFieldStyles: body.cardFieldStyles,
+        separatoreStyle: body.separatoreStyle,
+        headerStyle: body.headerStyle,
+        footerStyle: body.footerStyle,
+        cardBoxStyle: body.cardBoxStyle,
+        copertinaTypo: body.copertinaTypo,
+        paginaFinaleTypo: body.paginaFinaleTypo,
+        useSezioniPersonalizzate: body.useSezioniPersonalizzate,
+        sezioniPersonalizzate: body.sezioniPersonalizzate,
+        includiProdottiNonAssegnati: body.includiProdottiNonAssegnati,
       },
     });
 

@@ -27,7 +27,11 @@ import type {
   CardBoxStyle,
   CoverTypography,
   FinalPageTypography,
+  CustomSection,
 } from '@/components/admin/CatalogoPDFDocument';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -70,11 +74,23 @@ interface FormState {
     layout: 'full-overlay' | 'half' | 'solo-testo';
     logoTipo: 'onearth' | 'custom' | 'none';
     logoCustomBase64: string | null;
+    // ITEM 4: grid logo position
+    logoPosX: 'left' | 'center' | 'right';
+    logoPosY: 'top' | 'middle' | 'bottom';
     logoPosizione: 'top-left' | 'top-center' | 'top-right';
     logoDimensione: 'piccolo' | 'medio' | 'grande';
     titoloAllineamento: 'left' | 'center' | 'right';
     sottotitoloAllineamento: 'left' | 'center' | 'right';
+    // ITEM 3: image controls
+    imgOffsetX: number;
+    imgOffsetY: number;
+    imgScale: number;
+    imgOpacity: number;
   };
+  // ITEM 6: custom sections
+  useSezioniPersonalizzate: boolean;
+  sezioniPersonalizzate: CustomSection[];
+  includiProdottiNonAssegnati: boolean;
   paginaFinale: {
     attiva: boolean;
     titolo: string;
@@ -159,10 +175,16 @@ const DEFAULT_STATE: FormState = {
     layout: 'full-overlay',
     logoTipo: 'onearth',
     logoCustomBase64: null,
+    logoPosX: 'left',
+    logoPosY: 'top',
     logoPosizione: 'top-left',
     logoDimensione: 'medio',
     titoloAllineamento: 'center',
     sottotitoloAllineamento: 'center',
+    imgOffsetX: 0,
+    imgOffsetY: 0,
+    imgScale: 100,
+    imgOpacity: 100,
   },
   paginaFinale: {
     attiva: false,
@@ -208,6 +230,9 @@ const DEFAULT_STATE: FormState = {
     titoloFontSize: 20, titoloBold: true, titoloItalic: false, titoloColor: '#1C1C1C',
     testoFontSize: 10, testoColor: '#9CA3AF',
   },
+  useSezioniPersonalizzate: false,
+  sezioniPersonalizzate: [],
+  includiProdottiNonAssegnati: true,
 };
 
 // ── ON EARTH palette ──────────────────────────────────────────────────────────
@@ -310,10 +335,11 @@ function ColorSwatchPicker({
   value: string;
   onChange: (hex: string) => void;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1.5">{label}</label>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5 items-center">
         {PALETTE.map((c) => (
           <button
             key={c.hex}
@@ -328,6 +354,26 @@ function ColorSwatchPicker({
             } ${c.hex === '#FFFFFF' ? 'border-gray-200' : ''}`}
           />
         ))}
+        {/* Swatch del colore corrente se non è nella palette */}
+        {!PALETTE.some(c => c.hex.toLowerCase() === value.toLowerCase()) && (
+          <div style={{ backgroundColor: value }} className="w-7 h-7 rounded border-2 border-primary ring-1 ring-primary/30 scale-110 flex-shrink-0" />
+        )}
+        {/* Pulsante + per color picker libero */}
+        <button
+          type="button"
+          title="Colore personalizzato"
+          onClick={() => inputRef.current?.click()}
+          className="w-7 h-7 rounded border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-primary hover:text-primary transition-colors text-xs font-bold"
+        >
+          +
+        </button>
+        <input
+          ref={inputRef}
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="sr-only"
+        />
       </div>
       <p className="text-2xs text-gray-400 mt-1">{PALETTE.find(c => c.hex.toLowerCase() === value.toLowerCase())?.nome ?? value}</p>
     </div>
@@ -389,8 +435,9 @@ function ToggleBtn({
 }
 
 function MiniColorPicker({ value, onChange }: { value: string; onChange: (hex: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-1 items-center">
       {PALETTE.map((c) => (
         <button
           key={c.hex}
@@ -405,6 +452,23 @@ function MiniColorPicker({ value, onChange }: { value: string; onChange: (hex: s
           }`}
         />
       ))}
+      {!PALETTE.some(c => c.hex.toLowerCase() === value.toLowerCase()) && (
+        <div style={{ backgroundColor: value }} className="w-5 h-5 rounded-sm border-2 border-primary flex-shrink-0" />
+      )}
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="w-5 h-5 rounded-sm border border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-primary text-xs"
+      >
+        +
+      </button>
+      <input
+        ref={inputRef}
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="sr-only"
+      />
     </div>
   );
 }
@@ -517,8 +581,8 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
   const W = 160;
   const H = Math.round(W * 842 / 595);
 
-  const justifyLogo = cov.logoPosizione === 'top-left' ? 'flex-start'
-    : cov.logoPosizione === 'top-center' ? 'center'
+  const justifyLogo = (cov.logoPosX ?? 'left') === 'left' ? 'flex-start'
+    : (cov.logoPosX ?? 'left') === 'center' ? 'center'
     : 'flex-end';
 
   const logoH = cov.logoDimensione === 'piccolo' ? 10 : cov.logoDimensione === 'medio' ? 16 : 24;
@@ -600,6 +664,89 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
   );
 }
 
+// ── Custom Sections UI Components ─────────────────────────────────────────────
+
+function MultiSelectCriteria({
+  label,
+  options,
+  selected,
+  onChange,
+}: {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (v: string[]) => void;
+}) {
+  if (options.length === 0) return null;
+  return (
+    <div>
+      <p className="text-xs font-medium text-gray-600 mb-1">{label}</p>
+      <div className="max-h-32 overflow-y-auto border border-border rounded p-2 space-y-1">
+        {options.map((opt) => (
+          <label key={opt} className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selected.includes(opt)}
+              onChange={(e) =>
+                onChange(e.target.checked ? [...selected, opt] : selected.filter((x) => x !== opt))
+              }
+              className="accent-primary"
+            />
+            <span className="text-xs text-gray-700">{opt}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const EMPTY_SECTION: Omit<CustomSection, 'id'> = {
+  nome: '',
+  descrizione: '',
+  criteri: { classe: [], sottoclasse: [], famiglia: [], gruppoOmogeneo: [], nomLinea: [], colore: [], produttore: [] },
+  mostraSottosezioni: false,
+  ordinamento: 'code',
+};
+
+function SortableSection({
+  sezione,
+  index,
+  onEdit,
+  onDelete,
+}: {
+  sezione: CustomSection;
+  index: number;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: sezione.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 p-2 bg-white border border-border rounded">
+      <span
+        {...attributes}
+        {...listeners}
+        className="cursor-grab text-gray-300 hover:text-gray-500 select-none text-base leading-none"
+        title="Trascina per riordinare"
+      >
+        ⠿
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-primary truncate">{sezione.nome || `Sezione ${index + 1}`}</p>
+        {sezione.descrizione && <p className="text-2xs text-gray-400 truncate">{sezione.descrizione}</p>}
+      </div>
+      <button type="button" onClick={onEdit} className="text-2xs px-2 py-0.5 border border-border rounded hover:bg-gray-50 text-gray-600">Modifica</button>
+      <button type="button" onClick={onDelete} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+        <Trash2 size={12} />
+      </button>
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function AdminCatalogoPDFPage() {
@@ -628,7 +775,11 @@ export default function AdminCatalogoPDFPage() {
     footerStile: false,
     copertina: false,
     paginaFinale: false,
+    sezioniPersonalizzate: false,
   });
+
+  // Custom sections editing state
+  const [editingSection, setEditingSection] = useState<(CustomSection & { isNew?: boolean }) | null>(null);
 
   const toggleSection = (k: keyof typeof sections) =>
     setSections((s) => ({ ...s, [k]: !s[k] }));
@@ -754,6 +905,12 @@ export default function AdminCatalogoPDFPage() {
     []
   );
 
+  const setSezioniPersonalizzate = useCallback(
+    (sezioni: CustomSection[]) =>
+      setConfig((c) => ({ ...c, sezioniPersonalizzate: sezioni })),
+    []
+  );
+
   // ── Image upload handlers ──────────────────────────────────────────────────
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -857,10 +1014,29 @@ export default function AdminCatalogoPDFPage() {
         ...config,
         copertina: { ...config.copertina, immagineBase64: null, logoCustomBase64: null },
       };
+      const trimmedName = templateName.trim();
+
+      // Check if a template with this name already exists
+      const existingTemplate = templates.find(t => t.nome === trimmedName);
+      if (existingTemplate) {
+        const overwrite = confirm(`Esiste già un template di nome "${trimmedName}". Vuoi sovrascriverlo?`);
+        if (!overwrite) { setIsSaving(false); return; }
+        const res = await fetch(`/api/admin/catalogo-pdf/templates/${existingTemplate.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ configurazione: configToSave }),
+        });
+        if (!res.ok) throw new Error('Errore aggiornamento');
+        toast.success('Template aggiornato');
+        setTemplateName('');
+        refetchTemplates();
+        return;
+      }
+
       const res = await fetch('/api/admin/catalogo-pdf/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: templateName.trim(), configurazione: configToSave }),
+        body: JSON.stringify({ nome: trimmedName, configurazione: configToSave }),
       });
       if (!res.ok) throw new Error('Errore salvataggio');
       toast.success('Configurazione salvata');
@@ -889,6 +1065,28 @@ export default function AdminCatalogoPDFPage() {
     } catch {
       toast.error('Errore eliminazione template');
     }
+  }
+
+  async function handleRenameTemplate(id: string, nomeAttuale: string) {
+    const nuovoNome = window.prompt('Nuovo nome:', nomeAttuale);
+    if (!nuovoNome || nuovoNome === nomeAttuale) return;
+    const res = await fetch(`/api/admin/catalogo-pdf/templates/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome: nuovoNome }),
+    });
+    if (res.ok) { toast.success('Rinominato'); refetchTemplates(); }
+    else toast.error('Errore rinomina');
+  }
+
+  async function handleDuplicateTemplate(t: Template) {
+    const res = await fetch('/api/admin/catalogo-pdf/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fromId: t.id, nome: 'Copia di ' + t.nome }),
+    });
+    if (res.ok) { toast.success('Duplicato'); refetchTemplates(); }
+    else toast.error('Errore duplica');
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -1429,6 +1627,43 @@ export default function AdminCatalogoPDFPage() {
                     </select>
                   </div>
 
+                  {/* ITEM 3C: Image position/scale/opacity controls */}
+                  {config.copertina.layout !== 'solo-testo' && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-medium text-gray-600">Posizione e scala immagine</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Offset X (%)</label>
+                          <input type="range" min={-50} max={50} value={config.copertina.imgOffsetX ?? 0}
+                            onChange={(e) => setCopertina('imgOffsetX', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.copertina.imgOffsetX ?? 0}%</span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Offset Y (%)</label>
+                          <input type="range" min={-50} max={50} value={config.copertina.imgOffsetY ?? 0}
+                            onChange={(e) => setCopertina('imgOffsetY', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.copertina.imgOffsetY ?? 0}%</span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Scala (%)</label>
+                          <input type="range" min={50} max={200} value={config.copertina.imgScale ?? 100}
+                            onChange={(e) => setCopertina('imgScale', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.copertina.imgScale ?? 100}%</span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Opacità (%)</label>
+                          <input type="range" min={10} max={100} value={config.copertina.imgOpacity ?? 100}
+                            onChange={(e) => setCopertina('imgOpacity', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.copertina.imgOpacity ?? 100}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Logo */}
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-gray-600">Logo in copertina</p>
@@ -1474,15 +1709,27 @@ export default function AdminCatalogoPDFPage() {
                     {config.copertina.logoTipo !== 'none' && (
                       <div className="grid grid-cols-2 gap-3 pl-5">
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Posizione</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Logo X</label>
                           <select
-                            value={config.copertina.logoPosizione}
-                            onChange={(e) => setCopertina('logoPosizione', e.target.value)}
+                            value={config.copertina.logoPosX ?? 'left'}
+                            onChange={(e) => setCopertina('logoPosX', e.target.value)}
                             className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
                           >
-                            <option value="top-left">In alto a sinistra</option>
-                            <option value="top-center">In alto al centro</option>
-                            <option value="top-right">In alto a destra</option>
+                            <option value="left">Sinistra</option>
+                            <option value="center">Centro</option>
+                            <option value="right">Destra</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Logo Y</label>
+                          <select
+                            value={config.copertina.logoPosY ?? 'top'}
+                            onChange={(e) => setCopertina('logoPosY', e.target.value)}
+                            className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
+                          >
+                            <option value="top">In alto</option>
+                            <option value="middle">A metà</option>
+                            <option value="bottom">In basso</option>
                           </select>
                         </div>
                         <div>
@@ -1670,6 +1917,161 @@ export default function AdminCatalogoPDFPage() {
           )}
         </div>
 
+        {/* ── Struttura sezioni personalizzata ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.sezioniPersonalizzate} onToggle={() => toggleSection('sezioniPersonalizzate')}>
+            Struttura sezioni personalizzata
+          </SectionTitle>
+          {sections.sezioniPersonalizzate && (
+            <div className="p-4 space-y-4">
+              <CheckboxField
+                label="Usa struttura sezioni personalizzata"
+                checked={config.useSezioniPersonalizzate}
+                onChange={(v) => set('useSezioniPersonalizzate', v)}
+              />
+              {config.useSezioniPersonalizzate && (
+                <div className="space-y-3 pl-2 border-l-2 border-border">
+                  {/* DnD list of sections */}
+                  {config.sezioniPersonalizzate.length > 0 && (
+                    <DndContext
+                      collisionDetection={closestCenter}
+                      onDragEnd={({ active, over }) => {
+                        if (!over || active.id === over.id) return;
+                        const oldIdx = config.sezioniPersonalizzate.findIndex(s => s.id === active.id);
+                        const newIdx = config.sezioniPersonalizzate.findIndex(s => s.id === over.id);
+                        setSezioniPersonalizzate(arrayMove(config.sezioniPersonalizzate, oldIdx, newIdx));
+                      }}
+                    >
+                      <SortableContext items={config.sezioniPersonalizzate.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-2">
+                          {config.sezioniPersonalizzate.map((sezione, idx) => (
+                            <SortableSection
+                              key={sezione.id}
+                              sezione={sezione}
+                              index={idx}
+                              onEdit={() => setEditingSection(sezione)}
+                              onDelete={() => setSezioniPersonalizzate(config.sezioniPersonalizzate.filter(s => s.id !== sezione.id))}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  )}
+
+                  {/* Add section button */}
+                  <button
+                    type="button"
+                    onClick={() => setEditingSection({ id: crypto.randomUUID(), isNew: true, ...EMPTY_SECTION })}
+                    className="w-full h-8 border border-dashed border-border rounded text-xs text-gray-500 hover:border-primary hover:text-primary transition-colors"
+                  >
+                    + Nuova sezione
+                  </button>
+
+                  {/* Section editor */}
+                  {editingSection && (
+                    <div className="border border-primary/20 rounded p-3 space-y-3 bg-primary/5">
+                      <p className="text-xs font-semibold text-primary">{editingSection.isNew ? 'Nuova sezione' : `Modifica: ${editingSection.nome}`}</p>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Nome sezione *</label>
+                        <input
+                          type="text"
+                          value={editingSection.nome}
+                          onChange={(e) => setEditingSection({ ...editingSection, nome: e.target.value })}
+                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none"
+                          placeholder="es. Cucina, Bagno, Outdoor…"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Descrizione <span className="text-gray-400 font-normal">(opzionale)</span></label>
+                        <input
+                          type="text"
+                          value={editingSection.descrizione ?? ''}
+                          onChange={(e) => setEditingSection({ ...editingSection, descrizione: e.target.value })}
+                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-600 mb-2">Criteri (OR — basta uno)</p>
+                        <div className="space-y-2">
+                          <MultiSelectCriteria label="Classe" options={classi} selected={editingSection.criteri.classe}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, classe: v } })} />
+                          <MultiSelectCriteria label="Sottoclasse" options={sottoclassi} selected={editingSection.criteri.sottoclasse}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, sottoclasse: v } })} />
+                          <MultiSelectCriteria label="Famiglia" options={famiglie} selected={editingSection.criteri.famiglia}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, famiglia: v } })} />
+                          <MultiSelectCriteria label="Gruppo omogeneo" options={gruppiOmogenei} selected={editingSection.criteri.gruppoOmogeneo}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, gruppoOmogeneo: v } })} />
+                          <MultiSelectCriteria label="Linea" options={linee} selected={editingSection.criteri.nomLinea}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, nomLinea: v } })} />
+                          <MultiSelectCriteria label="Colore" options={colori} selected={editingSection.criteri.colore}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, colore: v } })} />
+                          <MultiSelectCriteria label="Produttore" options={produttori} selected={editingSection.criteri.produttore}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, produttore: v } })} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Ordinamento</label>
+                          <select
+                            value={editingSection.ordinamento}
+                            onChange={(e) => setEditingSection({ ...editingSection, ordinamento: e.target.value as CustomSection['ordinamento'] })}
+                            className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none"
+                          >
+                            <option value="code">Codice A→Z</option>
+                            <option value="name">Descrizione A→Z</option>
+                            <option value="costPrice_asc">Prezzo crescente</option>
+                            <option value="costPrice_desc">Prezzo decrescente</option>
+                            <option value="nomLinea">Linea</option>
+                          </select>
+                        </div>
+                        <div className="flex items-end pb-0.5">
+                          <CheckboxField
+                            label="Mostra sottosezioni"
+                            checked={editingSection.mostraSottosezioni}
+                            onChange={(v) => setEditingSection({ ...editingSection, mostraSottosezioni: v })}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={!editingSection.nome.trim()}
+                          onClick={() => {
+                            if (!editingSection.nome.trim()) return;
+                            const { isNew, ...sez } = editingSection;
+                            if (isNew) {
+                              setSezioniPersonalizzate([...config.sezioniPersonalizzate, sez]);
+                            } else {
+                              setSezioniPersonalizzate(config.sezioniPersonalizzate.map(s => s.id === sez.id ? sez : s));
+                            }
+                            setEditingSection(null);
+                          }}
+                          className="flex-1 h-8 rounded text-xs font-medium bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                        >
+                          Salva sezione
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingSection(null)}
+                          className="px-3 h-8 rounded text-xs border border-border text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                          Annulla
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <CheckboxField
+                    label="Includi prodotti non assegnati a nessuna sezione"
+                    checked={config.includiProdottiNonAssegnati}
+                    onChange={(v) => set('includiProdottiNonAssegnati', v)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* ── Salva configurazione ── */}
         <div className="border border-border rounded p-4 space-y-3">
           <p className="text-xs font-semibold tracking-widest uppercase text-gray-500">Salva configurazione</p>
@@ -1798,30 +2200,49 @@ export default function AdminCatalogoPDFPage() {
                 </p>
               ) : (
                 templates.map((t) => (
-                  <div key={t.id} className="px-4 py-3 flex items-center gap-2 hover:bg-gray-50/50">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-primary truncate">{t.nome}</p>
-                      <p className="text-2xs text-gray-400">
-                        {new Date(t.createdAt).toLocaleDateString('it-IT')}
-                      </p>
+                  <div key={t.id} className="px-4 py-3 hover:bg-gray-50/50">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-primary truncate">{t.nome}</p>
+                        <p className="text-2xs text-gray-400">
+                          {new Date(t.createdAt).toLocaleDateString('it-IT')}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleLoadTemplate(t)}
+                        title="Carica configurazione"
+                        className="flex items-center gap-1 px-2 py-1 text-2xs font-medium border border-border rounded hover:bg-white hover:text-primary transition-colors text-gray-600"
+                      >
+                        <FolderOpen size={11} />
+                        Carica
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTemplate(t.id, t.nome)}
+                        title="Elimina configurazione"
+                        className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleLoadTemplate(t)}
-                      title="Carica configurazione"
-                      className="flex items-center gap-1 px-2 py-1 text-2xs font-medium border border-border rounded hover:bg-white hover:text-primary transition-colors text-gray-600"
-                    >
-                      <FolderOpen size={11} />
-                      Carica
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteTemplate(t.id, t.nome)}
-                      title="Elimina configurazione"
-                      className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                    <div className="flex gap-1.5 mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleRenameTemplate(t.id, t.nome)}
+                        className="text-2xs text-gray-500 hover:text-primary underline"
+                      >
+                        Rinomina
+                      </button>
+                      <span className="text-2xs text-gray-300">·</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDuplicateTemplate(t)}
+                        className="text-2xs text-gray-500 hover:text-primary underline"
+                      >
+                        Duplica
+                      </button>
+                    </div>
                   </div>
                 ))
               )}

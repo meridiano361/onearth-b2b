@@ -33,11 +33,24 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
-  const { nome, configurazione } = body;
+  const { nome, configurazione, fromId } = body;
 
   if (!nome?.trim()) {
     return NextResponse.json({ error: 'Nome obbligatorio' }, { status: 400 });
   }
+
+  // Duplicate from existing template
+  if (fromId) {
+    const origin = await prisma.catalogTemplate.findUnique({ where: { id: fromId } });
+    if (!origin) {
+      return NextResponse.json({ error: 'Template origine non trovato' }, { status: 404 });
+    }
+    const template = await prisma.catalogTemplate.create({
+      data: { nome: nome.trim(), configurazione: origin.configurazione as object },
+    });
+    return NextResponse.json({ data: { ...template, createdAt: template.createdAt.toISOString() } }, { status: 201 });
+  }
+
   if (!configurazione || typeof configurazione !== 'object') {
     return NextResponse.json({ error: 'Configurazione non valida' }, { status: 400 });
   }
