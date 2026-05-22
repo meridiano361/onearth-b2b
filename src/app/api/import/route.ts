@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { slugify } from '@/lib/utils';
 import { titleCase } from '@/lib/normalizeClassification';
 import { normalizeProductName } from '@/lib/normalizeProductName';
+import { syncManyProductClassifications } from '@/lib/syncClassification';
 
 function parseDecimal(v: any): number | undefined {
   if (v === undefined || v === null || v === '') return undefined;
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
     let created = 0;
     let updated = 0;
     const errors: Array<{ row: number; message: string; data?: any }> = [];
+    const syncFields: Parameters<typeof syncManyProductClassifications>[0] = [];
     const categoryCache = new Map<string, string>();
 
     for (let i = 0; i < rows.length; i++) {
@@ -178,10 +180,24 @@ export async function POST(req: NextRequest) {
         });
 
         if (isNew) created++; else updated++;
+        syncFields.push({
+          nomLinea: fields.nomLinea,
+          collezione: fields.collezione,
+          colore: fields.colore,
+          temaColore: fields.temaColore,
+          stagione: fields.stagione,
+          gruppoMerceologico: fields.gruppoMerceologico,
+          famiglia: fields.famiglia,
+          classe: fields.classe,
+          sottoclasse: fields.sottoclasse,
+          gruppoOmogeneo: fields.gruppoOmogeneo,
+        });
       } catch (err: any) {
         errors.push({ row: i + 2, message: err.message || 'Errore sconosciuto', data: rows[i] });
       }
     }
+
+    void syncManyProductClassifications(syncFields);
 
     return NextResponse.json({ created, updated, errors });
   } catch (err) {

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { slugify } from '@/lib/utils';
 import { normalizeProductClassificationFields } from '@/lib/normalizeClassification';
 import { normalizeProductName } from '@/lib/normalizeProductName';
+import { syncProductClassification } from '@/lib/syncClassification';
 
 const productSchema = z.object({
   code: z.string().min(1),
@@ -153,6 +154,8 @@ export async function POST(req: NextRequest) {
       },
       include: { category: true },
     });
+
+    void syncProductClassification(data);
 
     return NextResponse.json({
       data: {

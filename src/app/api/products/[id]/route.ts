@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { normalizeProductClassificationFields } from '@/lib/normalizeClassification';
 import { normalizeProductName } from '@/lib/normalizeProductName';
+import { syncProductClassification } from '@/lib/syncClassification';
 
 const updateSchema = z.object({
   code: z.string().min(1).optional(),
@@ -95,6 +96,8 @@ export async function PATCH(
       data,
       include: { category: true },
     });
+
+    void syncProductClassification(data);
 
     return NextResponse.json({
       data: {

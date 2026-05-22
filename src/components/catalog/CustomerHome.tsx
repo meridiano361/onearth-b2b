@@ -8,6 +8,7 @@ import { Globe, Mic, ShoppingBag, Check, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import { useFavorites } from '@/hooks/useFavorites';
+import { ProductImage } from '@/components/ui/ProductImage';
 import type { Product } from '@/types';
 
 function shuffle<T>(arr: T[]): T[] {
@@ -23,7 +24,6 @@ function SpotlightCard({ product }: { product: Product }) {
   const { addItem, getItemQuantity } = useCartStore();
   const { isFavorited, toggle: toggleFavorite } = useFavorites();
   const [justAdded, setJustAdded] = useState(false);
-  const [imgError, setImgError] = useState(false);
 
   const cartQty = getItemQuantity(product.id);
   const inCart = cartQty > 0;
@@ -40,19 +40,7 @@ function SpotlightCard({ product }: { product: Product }) {
     <div className="flex-none w-36 flex flex-col bg-white rounded-lg border border-border overflow-hidden">
       <Link href={`/catalog/${product.id}`} className="block relative group">
         <div className="h-36 w-36 relative bg-cream overflow-hidden">
-          {product.imageUrl && !imgError ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              className="w-full h-full object-cover"
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <span className="font-display text-xl text-gray-300">{product.code.slice(0, 2)}</span>
-            </div>
-          )}
+          <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(product.id); }}
             className={cn(
@@ -129,12 +117,18 @@ export default function CustomerHome() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-10">
 
         {/* ── Top CTA ─────────────────────────────────────────── */}
-        <div className="flex justify-center">
+        <div className="flex gap-3 justify-center">
           <Link
             href="/catalog/products"
-            className="px-8 py-2.5 text-sm font-semibold bg-black text-white rounded-lg hover:bg-warm-darker transition-all duration-150"
+            className="flex-1 sm:flex-none sm:w-60 px-4 sm:px-8 py-2.5 text-sm font-semibold bg-black text-white rounded-xl hover:bg-gray-800 transition-all duration-150 text-center"
           >
             Apri il catalogo
+          </Link>
+          <Link
+            href="/catalog/products"
+            className="flex-1 sm:flex-none sm:w-60 px-4 sm:px-8 py-2.5 text-sm font-semibold bg-black text-white rounded-xl hover:bg-gray-800 transition-all duration-150 text-center"
+          >
+            Crea un ordine
           </Link>
         </div>
 
@@ -161,10 +155,16 @@ export default function CustomerHome() {
           )}
 
           {/* CTA dopo lo scroll */}
-          <div className="flex justify-center mt-5">
+          <div className="flex gap-3 justify-center mt-5">
             <Link
               href="/catalog/products"
-              className="px-8 py-2.5 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-warm-darker transition-all duration-150"
+              className="flex-1 sm:flex-none sm:w-60 px-4 sm:px-8 py-2.5 text-sm font-semibold bg-black text-white rounded-xl hover:bg-gray-800 transition-all duration-150 text-center"
+            >
+              Apri il catalogo
+            </Link>
+            <Link
+              href="/catalog/products"
+              className="flex-1 sm:flex-none sm:w-60 px-4 sm:px-8 py-2.5 text-sm font-semibold bg-black text-white rounded-xl hover:bg-gray-800 transition-all duration-150 text-center"
             >
               Crea un ordine
             </Link>
