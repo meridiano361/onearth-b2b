@@ -129,7 +129,7 @@ export default function CustomerHome() {
 
         {/* ── Scopri la collezione ─────────────────────────────── */}
         <section>
-          <p className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide mb-4 text-center mx-auto">
+          <p className="font-display text-sm sm:text-2xl text-primary font-light tracking-wide mb-4 text-center mx-auto whitespace-nowrap">
             {th('collectionTitle')}
           </p>
 
