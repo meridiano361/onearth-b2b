@@ -684,8 +684,8 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
             )}
             {/* Text */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 10px 10px', textAlign: cov.titoloAllineamento }}>
-              {cov.titolo && <p style={{ color: '#fff', fontSize: 7, fontWeight: 'bold', margin: 0, textTransform: 'uppercase', letterSpacing: 1 }}>{cov.titolo}</p>}
-              {cov.sottotitolo && <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 5.5, margin: '2px 0 0', textAlign: cov.sottotitoloAllineamento }}>{cov.sottotitolo}</p>}
+              {cov.titolo && <p style={{ color: '#fff', fontSize: 7, fontWeight: 'bold', margin: 0, textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'pre-wrap' }}>{cov.titolo}</p>}
+              {cov.sottotitolo && <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 5.5, margin: '2px 0 0', textAlign: cov.sottotitoloAllineamento, whiteSpace: 'pre-wrap' }}>{cov.sottotitolo}</p>}
             </div>
           </>
         )}
@@ -698,8 +698,8 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
                 <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
               </div>
             )}
-            {cov.titolo && <p style={{ color: textColor, fontSize: 7, fontWeight: 'bold', margin: 0, textTransform: 'uppercase', textAlign: cov.titoloAllineamento }}>{cov.titolo}</p>}
-            {cov.sottotitolo && <p style={{ color: mutedColor, fontSize: 5.5, margin: '2px 0 0', textAlign: cov.sottotitoloAllineamento }}>{cov.sottotitolo}</p>}
+            {cov.titolo && <p style={{ color: textColor, fontSize: 7, fontWeight: 'bold', margin: 0, textTransform: 'uppercase', textAlign: cov.titoloAllineamento, whiteSpace: 'pre-wrap' }}>{cov.titolo}</p>}
+            {cov.sottotitolo && <p style={{ color: mutedColor, fontSize: 5.5, margin: '2px 0 0', textAlign: cov.sottotitoloAllineamento, whiteSpace: 'pre-wrap' }}>{cov.sottotitolo}</p>}
           </div>
         )}
 
@@ -712,8 +712,8 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
               </div>
             )}
             <div style={{ width: 16, height: 1, backgroundColor: '#8B7355', marginBottom: 6, alignSelf: 'center' }} />
-            {cov.titolo && <p style={{ color: textColor, fontSize: 7, fontWeight: 'bold', margin: 0, textTransform: 'uppercase', textAlign: cov.titoloAllineamento }}>{cov.titolo}</p>}
-            {cov.sottotitolo && <p style={{ color: mutedColor, fontSize: 5.5, margin: '3px 0 0', textAlign: cov.sottotitoloAllineamento }}>{cov.sottotitolo}</p>}
+            {cov.titolo && <p style={{ color: textColor, fontSize: 7, fontWeight: 'bold', margin: 0, textTransform: 'uppercase', textAlign: cov.titoloAllineamento, whiteSpace: 'pre-wrap' }}>{cov.titolo}</p>}
+            {cov.sottotitolo && <p style={{ color: mutedColor, fontSize: 5.5, margin: '3px 0 0', textAlign: cov.sottotitoloAllineamento, whiteSpace: 'pre-wrap' }}>{cov.sottotitolo}</p>}
           </div>
         )}
       </div>
@@ -2318,12 +2318,12 @@ export default function AdminCatalogoPDFPage() {
                       <label className="text-xs font-medium text-gray-600">Titolo copertina</label>
                       <AlignToggle value={config.copertina.titoloAllineamento} onChange={(v) => setCopertina('titoloAllineamento', v)} />
                     </div>
-                    <input
-                      type="text"
+                    <textarea
+                      rows={3}
                       value={config.copertina.titolo}
                       onChange={(e) => setCopertina('titolo', e.target.value)}
-                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-                      placeholder="es. Collezione CASA 2027"
+                      className="w-full border border-border rounded px-3 py-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-vertical"
+                      placeholder={"es. Collezione\nCASA 2027\n(Invio per andare a capo)"}
                     />
                   </div>
 
@@ -2335,12 +2335,12 @@ export default function AdminCatalogoPDFPage() {
                       </label>
                       <AlignToggle value={config.copertina.sottotitoloAllineamento} onChange={(v) => setCopertina('sottotitoloAllineamento', v)} />
                     </div>
-                    <input
-                      type="text"
+                    <textarea
+                      rows={2}
                       value={config.copertina.sottotitolo}
                       onChange={(e) => setCopertina('sottotitolo', e.target.value)}
-                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-                      placeholder="es. Primavera / Estate 2027"
+                      className="w-full border border-border rounded px-3 py-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-vertical"
+                      placeholder={"es. Primavera / Estate 2027\n(Invio per andare a capo)"}
                     />
                   </div>
 
@@ -2352,12 +2352,12 @@ export default function AdminCatalogoPDFPage() {
                       </label>
                       <AlignToggle value={config.copertina.sottotitolo2Allineamento ?? 'center'} onChange={(v) => setCopertina('sottotitolo2Allineamento', v)} />
                     </div>
-                    <input
-                      type="text"
+                    <textarea
+                      rows={2}
                       value={config.copertina.sottotitolo2 ?? ''}
                       onChange={(e) => setCopertina('sottotitolo2', e.target.value)}
-                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-                      placeholder="es. Showroom Milano · Aprile 2027"
+                      className="w-full border border-border rounded px-3 py-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-vertical"
+                      placeholder={"es. Showroom Milano · Aprile 2027\n(Invio per andare a capo)"}
                     />
                   </div>
 
