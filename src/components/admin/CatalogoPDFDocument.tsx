@@ -200,6 +200,26 @@ export type CatalogConfig = {
     logoPosY?: 'top' | 'middle' | 'bottom';
     logoDimensione?: 'piccolo' | 'medio' | 'grande';
   };
+  paginaPenultima?: {
+    attiva: boolean;
+    titolo: string;
+    testo: string;
+    mostraLogo: boolean;
+    titoloAllineamento: 'left' | 'center' | 'right';
+    testoAllineamento: 'left' | 'center' | 'right';
+    immagineUrl?: string | null;
+    immagineBase64?: string | null;
+    imgOffsetX?: number;
+    imgOffsetY?: number;
+    imgScale?: number;
+    imgOpacity?: number;
+    layout?: 'full-overlay' | 'img-top' | 'img-bottom' | 'img-left' | 'background' | 'img-only';
+    logoTipo?: 'onearth' | 'custom' | 'none';
+    logoCustomBase64?: string | null;
+    logoPosX?: 'left' | 'center' | 'right';
+    logoPosY?: 'top' | 'middle' | 'bottom';
+    logoDimensione?: 'piccolo' | 'medio' | 'grande';
+  };
   // Typography customization
   cardFieldStyles: CardFieldStyles;
   separatoreStyle: SeparatorStyle;
@@ -208,6 +228,7 @@ export type CatalogConfig = {
   cardBoxStyle: CardBoxStyle;
   copertinaTypo: CoverTypography;
   paginaFinaleTypo: FinalPageTypography;
+  paginaPenultimaTypo?: FinalPageTypography;
   nuovoBadge?: {
     attivo: boolean;
     testo: string;
@@ -1426,6 +1447,207 @@ function FinalPage({
   );
 }
 
+function resolvePenultimaLogo(pp: NonNullable<CatalogConfig['paginaPenultima']>, headerLogoBase64: string | null): string | null {
+  const logoTipo = pp.logoTipo ?? (pp.mostraLogo ? 'onearth' : 'none');
+  if (logoTipo === 'none') return null;
+  if (logoTipo === 'custom') return pp.logoCustomBase64 ?? null;
+  return headerLogoBase64;
+}
+
+function PenultimaPage({
+  config,
+  layout,
+}: {
+  config: CatalogConfig;
+  layout: Layout;
+}) {
+  const pp = config.paginaPenultima!;
+  const typo = config.paginaPenultimaTypo ?? config.paginaFinaleTypo;
+  const { pageW, pageH } = layout;
+  const titleAlign = pp.titoloAllineamento ?? 'center';
+  const textAlign = pp.testoAllineamento ?? 'center';
+
+  const titleInlines = parseTitleInlines(pp.titolo, typo);
+  const bodyBlocks = parseHtmlToPdf(pp.testo ?? '');
+
+  const imgSrc = pp.immagineBase64 ?? null;
+
+  const resolvedLayout: string = pp.layout ?? 'img-top';
+
+  const imgScale = pp.imgScale ?? 100;
+  const imgOffsetX = pp.imgOffsetX ?? 0;
+  const imgOffsetY = pp.imgOffsetY ?? 0;
+  const imgOpacity = (pp.imgOpacity ?? 100) / 100;
+
+  const penultimaLogoBase64 = resolvePenultimaLogo(pp, config.logoBase64);
+  const logoDim = pp.logoDimensione ?? 'medio';
+  const logoH = FINAL_LOGO_H[logoDim] ?? 22;
+  const logoPosX = pp.logoPosX ?? 'center';
+  const logoPosY = pp.logoPosY ?? 'bottom';
+  const logoJustify: 'flex-start' | 'center' | 'flex-end' =
+    logoPosX === 'center' ? 'center' : logoPosX === 'right' ? 'flex-end' : 'flex-start';
+  const LOGO_MARGIN = 30;
+  const logoVertical: Record<string, number> = {
+    top: LOGO_MARGIN,
+    middle: pageH / 2 - logoH / 2,
+    bottom: pageH - logoH - LOGO_MARGIN,
+  };
+  const logoTop = logoVertical[logoPosY] ?? (pageH - logoH - LOGO_MARGIN);
+
+  const logoView = penultimaLogoBase64 ? (
+    <View
+      style={{
+        position: 'absolute',
+        top: logoTop,
+        left: LOGO_MARGIN,
+        right: LOGO_MARGIN,
+        flexDirection: 'row',
+        justifyContent: logoJustify,
+      }}
+    >
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <Image src={penultimaLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
+    </View>
+  ) : null;
+
+  function fullImgStyle(areaW: number, areaH: number) {
+    const imgW = areaW * imgScale / 100;
+    const imgH = areaH * imgScale / 100;
+    const left = (areaW - imgW) / 2 + (areaW * imgOffsetX / 100);
+    const top = (areaH - imgH) / 2 + (areaH * imgOffsetY / 100);
+    return { position: 'absolute' as const, top, left, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }; // eslint-disable-line @typescript-eslint/no-explicit-any
+  }
+
+  const PAD_H = 60;
+  const PAD_V = 48;
+
+  if (resolvedLayout === 'full-overlay') {
+    return (
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+        {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: '#000000', opacity: 0.55 }} />
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V }}>
+          {renderTitleInlines(titleInlines, typo, titleAlign, 8)}
+          {bodyBlocks.length > 0 ? (
+            <View style={{ width: '100%' }}>
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+            </View>
+          ) : null}
+        </View>
+        {logoView}
+      </Page>
+    );
+  }
+
+  if (resolvedLayout === 'background') {
+    return (
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+        {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingVertical: PAD_V }}>
+          {renderTitleInlines(titleInlines, typo, titleAlign)}
+          {bodyBlocks.length > 0 ? (
+            <View style={{ width: '100%' }}>
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+            </View>
+          ) : null}
+        </View>
+        {logoView}
+      </Page>
+    );
+  }
+
+  if (resolvedLayout === 'img-only') {
+    return (
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+        {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
+        {logoView}
+      </Page>
+    );
+  }
+
+  if (resolvedLayout === 'img-left') {
+    const imgAreaW = pageW * 0.45;
+    const imgW = imgAreaW * imgScale / 100;
+    const imgH = pageH * imgScale / 100;
+    const imgLeft = (imgAreaW - imgW) / 2 + (imgAreaW * imgOffsetX / 100);
+    const imgTop = (pageH - imgH) / 2 + (pageH * imgOffsetY / 100);
+    return (
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina, flexDirection: 'row' }}>
+        <View style={{ width: imgAreaW, height: pageH, overflow: 'hidden' }}>
+          {imgSrc && (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
+          )}
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingVertical: PAD_V }}>
+          {renderTitleInlines(titleInlines, typo, titleAlign)}
+          {bodyBlocks.length > 0 ? (
+            <View style={{ width: '100%' }}>
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+            </View>
+          ) : null}
+        </View>
+        {logoView}
+      </Page>
+    );
+  }
+
+  if (resolvedLayout === 'img-bottom') {
+    const imgAreaH = pageH * 0.4;
+    const textAreaH = pageH - imgAreaH;
+    const imgW = pageW * imgScale / 100;
+    const imgH = imgAreaH * imgScale / 100;
+    const imgLeft = (pageW - imgW) / 2 + (pageW * imgOffsetX / 100);
+    const imgTop = (imgAreaH - imgH) / 2 + (imgAreaH * imgOffsetY / 100);
+    return (
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+        <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingVertical: PAD_V }}>
+          {renderTitleInlines(titleInlines, typo, titleAlign)}
+          {bodyBlocks.length > 0 ? (
+            <View style={{ width: '100%' }}>
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+            </View>
+          ) : null}
+        </View>
+        <View style={{ height: imgAreaH, overflow: 'hidden' }}>
+          {imgSrc && (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
+          )}
+        </View>
+        {logoView}
+      </Page>
+    );
+  }
+
+  // img-top (default)
+  const imgAreaH = pageH * 0.4;
+  const textAreaH = pageH - imgAreaH;
+  const imgW = pageW * imgScale / 100;
+  const imgH = imgAreaH * imgScale / 100;
+  const imgLeft = (pageW - imgW) / 2 + (pageW * imgOffsetX / 100);
+  const imgTop = (imgAreaH - imgH) / 2 + (imgAreaH * imgOffsetY / 100);
+  return (
+    <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+      <View style={{ height: imgAreaH, overflow: 'hidden' }}>
+        {imgSrc && (
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
+        )}
+      </View>
+      <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingVertical: PAD_V }}>
+        {renderTitleInlines(titleInlines, typo, titleAlign)}
+        {bodyBlocks.length > 0 ? (
+          <View style={{ width: '100%' }}>
+            {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+          </View>
+        ) : null}
+      </View>
+      {logoView}
+    </Page>
+  );
+}
+
 // ── Separator components ──────────────────────────────────────────────────────
 
 function SeparatorPageFull({
@@ -1676,6 +1898,11 @@ export function CatalogoPDFDocument({ groups, config }: CatalogoPDFDocumentProps
         ))
       ) : (
         renderInlineOrNewRow()
+      )}
+
+      {/* Penultima page */}
+      {config.paginaPenultima?.attiva && (
+        <PenultimaPage config={config} layout={layout} />
       )}
 
       {/* Final page */}

@@ -124,6 +124,26 @@ interface FormState {
     logoPosY: 'top' | 'middle' | 'bottom';
     logoDimensione: 'piccolo' | 'medio' | 'grande';
   };
+  paginaPenultima: {
+    attiva: boolean;
+    titolo: string;
+    testo: string;
+    mostraLogo: boolean;
+    titoloAllineamento: 'left' | 'center' | 'right';
+    testoAllineamento: 'left' | 'center' | 'right';
+    immagineUrl?: string | null;
+    immagineBase64?: string | null;
+    imgOffsetX: number;
+    imgOffsetY: number;
+    imgScale: number;
+    imgOpacity: number;
+    layout: 'full-overlay' | 'img-top' | 'img-bottom' | 'img-left' | 'background' | 'img-only';
+    logoTipo: 'onearth' | 'custom' | 'none';
+    logoCustomBase64: string | null;
+    logoPosX: 'left' | 'center' | 'right';
+    logoPosY: 'top' | 'middle' | 'bottom';
+    logoDimensione: 'piccolo' | 'medio' | 'grande';
+  };
   cardFieldStyles: CardFieldStyles;
   separatoreStyle: SeparatorStyle;
   headerStyle: PageHeaderStyle;
@@ -131,6 +151,7 @@ interface FormState {
   cardBoxStyle: CardBoxStyle;
   copertinaTypo: CoverTypography;
   paginaFinaleTypo: FinalPageTypography;
+  paginaPenultimaTypo: FinalPageTypography;
   nuovoBadge: {
     attivo: boolean;
     testo: string;
@@ -239,6 +260,24 @@ const DEFAULT_STATE: FormState = {
     logoPosY: 'bottom',
     logoDimensione: 'medio',
   },
+  paginaPenultima: {
+    attiva: false,
+    titolo: '',
+    testo: '',
+    mostraLogo: true,
+    titoloAllineamento: 'center',
+    testoAllineamento: 'center',
+    imgOffsetX: 0,
+    imgOffsetY: 0,
+    imgScale: 100,
+    imgOpacity: 100,
+    layout: 'img-top',
+    logoTipo: 'onearth',
+    logoCustomBase64: null,
+    logoPosX: 'center',
+    logoPosY: 'bottom',
+    logoDimensione: 'medio',
+  },
   cardFieldStyles: {
     codice:      { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
     descrizione: { fontSize: 7,   bold: false, italic: false, color: '#1C1C1C', align: 'left', uppercase: false },
@@ -277,6 +316,10 @@ const DEFAULT_STATE: FormState = {
     spacingTitoloSottotitolo: 6, spacingSottotitoloSottotitolo2: 4,
   },
   paginaFinaleTypo: {
+    titoloFontSize: 20, titoloBold: true, titoloItalic: false, titoloColor: '#1C1C1C',
+    testoFontSize: 10, testoColor: '#9CA3AF',
+  },
+  paginaPenultimaTypo: {
     titoloFontSize: 20, titoloBold: true, titoloItalic: false, titoloColor: '#1C1C1C',
     testoFontSize: 10, testoColor: '#9CA3AF',
   },
@@ -1100,6 +1143,185 @@ function FinalPagePreview({ config }: { config: FormState }) {
   );
 }
 
+function PenultimaPagePreview({ config }: { config: FormState }) {
+  const pp = config.paginaPenultima;
+  if (!pp.attiva) return null;
+
+  const W = 160;
+  const H = Math.round(W * 842 / 595);
+  const scale = W / 595;
+
+  const bg = config.colori.sfondoPagina;
+  const typo = config.paginaPenultimaTypo;
+  const imgSrc = pp.immagineBase64 ?? pp.immagineUrl ?? null;
+  const layout = pp.layout ?? 'img-top';
+  const offsetX = pp.imgOffsetX ?? 0;
+  const offsetY = pp.imgOffsetY ?? 0;
+  const imgScale = pp.imgScale ?? 100;
+  const opacity = (pp.imgOpacity ?? 100) / 100;
+  const posX = pp.logoPosX ?? 'center';
+  const posY = pp.logoPosY ?? 'bottom';
+  const logoDim = pp.logoDimensione ?? 'medio';
+  const logoH = logoDim === 'piccolo' ? 8 : logoDim === 'medio' ? 12 : 18;
+  const logoTipo = pp.logoTipo ?? (pp.mostraLogo ? 'onearth' : 'none');
+  const logoSrc = logoTipo === 'onearth' ? '/logo-on-earth/onearth_solo.png'
+    : logoTipo === 'custom' ? pp.logoCustomBase64 : null;
+
+  const imgStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    opacity,
+    transform: `scale(${imgScale / 100}) translate(${offsetX}%, ${offsetY}%)`,
+    transformOrigin: 'center center',
+  };
+
+  const logoStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: posY === 'top' ? 6 : posY === 'middle' ? '50%' : undefined,
+    bottom: posY === 'bottom' ? 6 : undefined,
+    left: posX === 'left' ? 8 : posX === 'center' ? '50%' : undefined,
+    right: posX === 'right' ? 8 : undefined,
+    transform: posX === 'center' && posY === 'middle' ? 'translate(-50%, -50%)'
+      : posX === 'center' ? 'translateX(-50%)'
+      : posY === 'middle' ? 'translateY(-50%)'
+      : undefined,
+    display: 'flex',
+    pointerEvents: 'none',
+  };
+
+  const titleEl = pp.titolo ? (
+    <div
+      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pp.titoloAllineamento, margin: '0 0 4px', letterSpacing: 0.5 }}
+      dangerouslySetInnerHTML={{ __html: pp.titolo }}
+    />
+  ) : null;
+
+  const textEl = pp.testo ? (
+    <div
+      style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, lineHeight: 1.5 }}
+      dangerouslySetInnerHTML={{ __html: pp.testo }}
+    />
+  ) : null;
+
+  const logoEl = logoSrc ? (
+    <div style={logoStyle}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
+    </div>
+  ) : null;
+
+  let inner: React.ReactNode;
+
+  if (layout === 'full-overlay') {
+    inner = (
+      <>
+        {imgSrc && (
+          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imgSrc} alt="" style={imgStyle} />
+          </div>
+        )}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.65))' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 10px 10px' }}>
+          {titleEl}
+          {textEl}
+        </div>
+        {logoEl}
+      </>
+    );
+  } else if (layout === 'background') {
+    inner = (
+      <>
+        {imgSrc && (
+          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imgSrc} alt="" style={imgStyle} />
+          </div>
+        )}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 12px' }}>
+          {titleEl}
+          {textEl}
+        </div>
+        {logoEl}
+      </>
+    );
+  } else if (layout === 'img-only') {
+    inner = (
+      <>
+        {imgSrc && (
+          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imgSrc} alt="" style={imgStyle} />
+          </div>
+        )}
+        {logoEl}
+      </>
+    );
+  } else if (layout === 'img-left') {
+    inner = (
+      <div style={{ display: 'flex', height: '100%' }}>
+        <div style={{ width: '45%', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+          {imgSrc && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imgSrc} alt="" style={{ ...imgStyle, position: 'absolute', width: '100%' }} />
+          )}
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 10px', position: 'relative' }}>
+          {titleEl}
+          {textEl}
+          {logoEl}
+        </div>
+      </div>
+    );
+  } else if (layout === 'img-bottom') {
+    inner = (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 12px' }}>
+          {titleEl}
+          {textEl}
+        </div>
+        <div style={{ height: '40%', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+          {imgSrc && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imgSrc} alt="" style={{ ...imgStyle, position: 'absolute', width: '100%' }} />
+          )}
+        </div>
+        {logoEl}
+      </div>
+    );
+  } else {
+    // img-top (default)
+    inner = (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ height: '40%', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+          {imgSrc && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imgSrc} alt="" style={{ ...imgStyle, position: 'absolute', width: '100%' }} />
+          )}
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 12px' }}>
+          {titleEl}
+          {textEl}
+        </div>
+        {logoEl}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4">
+      <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Anteprima penultima pagina</p>
+      <div
+        style={{ width: W, height: H, position: 'relative', overflow: 'hidden', backgroundColor: bg, border: '1px solid #e5e7eb', borderRadius: 4 }}
+        className="shadow-sm flex-shrink-0"
+      >
+        {inner}
+      </div>
+    </div>
+  );
+}
+
 // ── Custom Sections UI Components ─────────────────────────────────────────────
 
 function MultiSelectCriteria({
@@ -1198,6 +1420,8 @@ export default function AdminCatalogoPDFPage() {
   const logoFileInputRef = useRef<HTMLInputElement>(null);
   const finalImgFileInputRef = useRef<HTMLInputElement>(null);
   const finalLogoFileInputRef = useRef<HTMLInputElement>(null);
+  const penultimaImgFileInputRef = useRef<HTMLInputElement>(null);
+  const penultimaLogoFileInputRef = useRef<HTMLInputElement>(null);
 
   // Section open/close
   const [sections, setSections] = useState({
@@ -1213,6 +1437,7 @@ export default function AdminCatalogoPDFPage() {
     headerStile: false,
     footerStile: false,
     copertina: false,
+    paginaPenultima: false,
     paginaFinale: false,
     sezioniPersonalizzate: false,
     nuovoBadge: false,
@@ -1353,6 +1578,19 @@ export default function AdminCatalogoPDFPage() {
   const setPaginaFinaleTypo = useCallback(
     (patch: Partial<FinalPageTypography>) =>
       setConfig((c) => ({ ...c, paginaFinaleTypo: { ...c.paginaFinaleTypo, ...patch } })),
+    []
+  );
+
+  const setPaginaPenultima = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (key: keyof FormState['paginaPenultima'], value: any) =>
+      setConfig((c) => ({ ...c, paginaPenultima: { ...c.paginaPenultima, [key]: value } })),
+    []
+  );
+
+  const setPaginaPenultimaTypo = useCallback(
+    (patch: Partial<FinalPageTypography>) =>
+      setConfig((c) => ({ ...c, paginaPenultimaTypo: { ...c.paginaPenultimaTypo, ...patch } })),
     []
   );
 
@@ -2465,6 +2703,286 @@ export default function AdminCatalogoPDFPage() {
 
                   {/* Preview */}
                   <CoverPreview config={config} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Penultima pagina ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.paginaPenultima} onToggle={() => toggleSection('paginaPenultima')}>
+            Penultima pagina
+          </SectionTitle>
+          {sections.paginaPenultima && (
+            <div className="p-4 space-y-4">
+              <CheckboxField
+                label="Includi penultima pagina"
+                checked={config.paginaPenultima.attiva}
+                onChange={(v) => setPaginaPenultima('attiva', v)}
+              />
+              {config.paginaPenultima.attiva && (
+                <div className="space-y-3 pl-2 border-l-2 border-border">
+                  {/* Titolo */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-gray-600">
+                        Titolo pagina <span className="text-gray-400 font-normal">(opzionale)</span>
+                      </label>
+                      <AlignToggle value={config.paginaPenultima.titoloAllineamento} onChange={(v) => setPaginaPenultima('titoloAllineamento', v)} />
+                    </div>
+                    <MiniRichTextEditor
+                      content={config.paginaPenultima.titolo}
+                      onChange={(html) => setPaginaPenultima('titolo', html)}
+                      placeholder="es. Scopri la collezione completa"
+                    />
+                  </div>
+
+                  {/* Testo libero */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Testo libero</label>
+                    <RichTextEditor
+                      content={config.paginaPenultima.testo}
+                      onChange={(html) => setPaginaPenultima('testo', html)}
+                      placeholder="Testo da mostrare nella penultima pagina del catalogo…"
+                    />
+                  </div>
+
+                  {/* Tipografia */}
+                  <div className="space-y-3 pt-1">
+                    <p className="text-xs font-semibold text-gray-600">Tipografia</p>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Font titolo (pt)</label>
+                      <input type="number" min={10} max={48} value={config.paginaPenultimaTypo.titoloFontSize}
+                        onChange={(e) => setPaginaPenultimaTypo({ titoloFontSize: parseFloat(e.target.value) || 20 })}
+                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
+                    </div>
+                    <MiniColorPicker value={config.paginaPenultimaTypo.titoloColor}
+                      onChange={(v) => setPaginaPenultimaTypo({ titoloColor: v })} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Font testo corpo (pt)</label>
+                        <input type="number" min={6} max={24} value={config.paginaPenultimaTypo.testoFontSize}
+                          onChange={(e) => setPaginaPenultimaTypo({ testoFontSize: parseFloat(e.target.value) || 10 })}
+                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
+                      </div>
+                    </div>
+                    <MiniColorPicker value={config.paginaPenultimaTypo.testoColor}
+                      onChange={(v) => setPaginaPenultimaTypo({ testoColor: v })} />
+                  </div>
+
+                  {/* Immagine */}
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-gray-600">Immagine</p>
+                    <div>
+                      <p className="text-2xs text-gray-400 mb-2">
+                        Carica sul server (consigliato) o solo per la sessione corrente (max 10 MB).
+                      </p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 10 * 1024 * 1024) { toast.error('Immagine troppo grande (max 10 MB)'); e.target.value = ''; return; }
+                            const fd = new FormData();
+                            fd.append('file', file);
+                            try {
+                              const res = await fetch('/api/admin/catalogo-pdf/upload-cover', { method: 'POST', body: fd });
+                              if (!res.ok) throw new Error((await res.json()).error);
+                              const { url } = await res.json();
+                              setPaginaPenultima('immagineUrl', url);
+                              const reader = new FileReader();
+                              reader.onload = (ev) => setPaginaPenultima('immagineBase64', ev.target?.result as string);
+                              reader.readAsDataURL(file);
+                              e.target.value = '';
+                              toast.success('Immagine caricata sul server');
+                            } catch (err: unknown) {
+                              toast.error(err instanceof Error ? err.message : 'Errore upload');
+                              e.target.value = '';
+                            }
+                          }}
+                          className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                        />
+                        <span className="text-2xs text-gray-400 flex-shrink-0">Carica sul server</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          ref={penultimaImgFileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 10 * 1024 * 1024) { toast.error('Immagine troppo grande (max 10 MB)'); e.target.value = ''; return; }
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              setPaginaPenultima('immagineBase64', ev.target?.result as string);
+                              if (penultimaImgFileInputRef.current) penultimaImgFileInputRef.current.value = '';
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                          className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-600 hover:file:bg-gray-200 cursor-pointer"
+                        />
+                        <span className="text-2xs text-gray-400 flex-shrink-0">Solo sessione</span>
+                      </div>
+                      {(config.paginaPenultima.immagineUrl || config.paginaPenultima.immagineBase64) && (
+                        <div className="mt-2 flex items-center gap-3">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={config.paginaPenultima.immagineBase64 ?? config.paginaPenultima.immagineUrl ?? ''}
+                            alt="Anteprima"
+                            className="h-12 w-20 object-cover rounded border border-border"
+                          />
+                          <div className="space-y-1">
+                            {config.paginaPenultima.immagineUrl && (
+                              <p className="text-2xs text-green-600">Salvata sul server</p>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => { setPaginaPenultima('immagineBase64', null); setPaginaPenultima('immagineUrl', null); if (penultimaImgFileInputRef.current) penultimaImgFileInputRef.current.value = ''; }}
+                              className="text-2xs text-red-500 hover:text-red-700 underline"
+                            >
+                              Rimuovi immagine
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Layout */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Layout penultima pagina</label>
+                      <select
+                        value={config.paginaPenultima.layout ?? 'img-top'}
+                        onChange={(e) => setPaginaPenultima('layout', e.target.value)}
+                        className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      >
+                        <option value="img-top">Immagine in alto, testo in basso</option>
+                        <option value="img-bottom">Immagine in basso, testo in alto</option>
+                        <option value="img-left">Immagine a sinistra, testo a destra</option>
+                        <option value="full-overlay">Immagine piena con testo sovrapposto</option>
+                        <option value="background">Immagine a sfondo intera pagina</option>
+                        <option value="img-only">Solo immagine (nessun testo)</option>
+                      </select>
+                    </div>
+
+                    {/* Image controls */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-gray-600">Posizione e scala immagine</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Offset X (%)</label>
+                          <input type="range" min={-100} max={100} value={config.paginaPenultima.imgOffsetX ?? 0}
+                            onChange={(e) => setPaginaPenultima('imgOffsetX', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.paginaPenultima.imgOffsetX ?? 0}%</span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Offset Y (%)</label>
+                          <input type="range" min={-100} max={100} value={config.paginaPenultima.imgOffsetY ?? 0}
+                            onChange={(e) => setPaginaPenultima('imgOffsetY', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.paginaPenultima.imgOffsetY ?? 0}%</span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Scala (%)</label>
+                          <input type="range" min={50} max={200} value={config.paginaPenultima.imgScale ?? 100}
+                            onChange={(e) => setPaginaPenultima('imgScale', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.paginaPenultima.imgScale ?? 100}%</span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Opacità (%)</label>
+                          <input type="range" min={10} max={100} value={config.paginaPenultima.imgOpacity ?? 100}
+                            onChange={(e) => setPaginaPenultima('imgOpacity', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.paginaPenultima.imgOpacity ?? 100}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Logo */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-gray-600">Logo</p>
+                    {(
+                      [
+                        { value: 'onearth', label: 'Logo ON EARTH (automatico)' },
+                        { value: 'custom', label: 'Carica logo personalizzato' },
+                        { value: 'none', label: 'Nessun logo' },
+                      ] as const
+                    ).map((opt) => (
+                      <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="paginaPenultimaLogoTipo"
+                          value={opt.value}
+                          checked={(config.paginaPenultima.logoTipo ?? (config.paginaPenultima.mostraLogo ? 'onearth' : 'none')) === opt.value}
+                          onChange={() => setPaginaPenultima('logoTipo', opt.value)}
+                          className="accent-primary"
+                        />
+                        <span className="text-xs text-gray-700">{opt.label}</span>
+                      </label>
+                    ))}
+
+                    {config.paginaPenultima.logoTipo === 'custom' && (
+                      <div className="pl-5 space-y-2">
+                        <input
+                          ref={penultimaLogoFileInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/svg+xml"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              setPaginaPenultima('logoCustomBase64', ev.target?.result as string);
+                              if (penultimaLogoFileInputRef.current) penultimaLogoFileInputRef.current.value = '';
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                          className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                        />
+                        {config.paginaPenultima.logoCustomBase64 && (
+                          <div className="flex items-center gap-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={config.paginaPenultima.logoCustomBase64} alt="Logo" className="h-8 object-contain border border-border rounded bg-white px-2" />
+                            <button type="button" onClick={() => { setPaginaPenultima('logoCustomBase64', null); if (penultimaLogoFileInputRef.current) penultimaLogoFileInputRef.current.value = ''; }} className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {(config.paginaPenultima.logoTipo ?? 'onearth') !== 'none' && (
+                      <div className="pl-5 space-y-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Posizione logo</label>
+                          <LogoPosGrid
+                            posX={config.paginaPenultima.logoPosX ?? 'center'}
+                            posY={config.paginaPenultima.logoPosY ?? 'bottom'}
+                            onChange={(x, y) => { setPaginaPenultima('logoPosX', x); setPaginaPenultima('logoPosY', y); }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione logo</label>
+                          <select
+                            value={config.paginaPenultima.logoDimensione ?? 'medio'}
+                            onChange={(e) => setPaginaPenultima('logoDimensione', e.target.value)}
+                            className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
+                          >
+                            <option value="piccolo">Piccolo</option>
+                            <option value="medio">Medio</option>
+                            <option value="grande">Grande</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Preview */}
+                  <PenultimaPagePreview config={config} />
                 </div>
               )}
             </div>

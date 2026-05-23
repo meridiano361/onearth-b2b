@@ -306,6 +306,8 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
       titoloFontSize: 20, titoloBold: true, titoloItalic: false, titoloColor: '#1C1C1C',
       testoFontSize: 10, testoColor: '#9CA3AF',
     },
+    paginaPenultima: fullConfig?.paginaPenultima,
+    paginaPenultimaTypo: fullConfig?.paginaPenultimaTypo,
     nuovoBadge: fullConfig?.nuovoBadge ?? {
       attivo: true,
       testo: 'NUOVO',
@@ -333,6 +335,14 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
     const fetched = await fetchImageAsJpegBase64(config.paginaFinale.immagineUrl);
     if (fetched) {
       config.paginaFinale = { ...config.paginaFinale, immagineBase64: fetched };
+    }
+  }
+
+  // If no base64 penultima-page image but a URL is available, fetch and convert it
+  if (config.paginaPenultima && !config.paginaPenultima.immagineBase64 && config.paginaPenultima.immagineUrl) {
+    const fetched = await fetchImageAsJpegBase64(config.paginaPenultima.immagineUrl);
+    if (fetched) {
+      config.paginaPenultima = { ...config.paginaPenultima, immagineBase64: fetched };
     }
   }
 
@@ -475,6 +485,7 @@ export async function POST(req: NextRequest) {
         modalitaSeparatore: body.modalitaSeparatore,
         copertina: body.copertina,
         paginaFinale: body.paginaFinale,
+        paginaPenultima: body.paginaPenultima,
         cardFieldStyles: body.cardFieldStyles,
         separatoreStyle: body.separatoreStyle,
         headerStyle: body.headerStyle,
@@ -482,6 +493,7 @@ export async function POST(req: NextRequest) {
         cardBoxStyle: body.cardBoxStyle,
         copertinaTypo: body.copertinaTypo,
         paginaFinaleTypo: body.paginaFinaleTypo,
+        paginaPenultimaTypo: body.paginaPenultimaTypo,
         useSezioniPersonalizzate: body.useSezioniPersonalizzate,
         sezioniPersonalizzate: body.sezioniPersonalizzate,
         includiProdottiNonAssegnati: body.includiProdottiNonAssegnati,

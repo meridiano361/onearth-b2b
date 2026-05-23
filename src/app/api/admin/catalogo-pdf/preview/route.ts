@@ -53,11 +53,12 @@ export async function POST(req: NextRequest) {
 
     // Add cover/final pages to estimate
     const coverPage = body.copertina?.attiva ? 1 : 0;
+    const penultimaPage = body.paginaPenultima?.attiva ? 1 : 0;
     const finalPage = body.paginaFinale?.attiva ? 1 : 0;
 
     return NextResponse.json({
       count,
-      pages: productPages + groupPages + coverPage + finalPage,
+      pages: productPages + groupPages + coverPage + penultimaPage + finalPage,
       productPages,
       groupPages,
     });
