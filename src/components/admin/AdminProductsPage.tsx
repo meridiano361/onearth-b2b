@@ -17,7 +17,7 @@ import type { Product } from '@/types';
 import toast from 'react-hot-toast';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
-type SortField = 'code' | 'name' | 'produttore' | 'costPrice' | 'retailPrice' | 'iva';
+type SortField = 'code' | 'name' | 'produttore' | 'costPrice' | 'retailPrice';
 type SortDir = 'asc' | 'desc';
 
 interface BulkEditValues {
@@ -91,6 +91,9 @@ export default function AdminProductsPage() {
   const [filterProduttore, setFilterProduttore] = useState('');
   const [filterTranche, setFilterTranche] = useState('');
   const [filterActive, setFilterActive] = useState<ActiveFilter>('all');
+  const [filterFasciaSconto, setFilterFasciaSconto] = useState('');
+  const [filterFasciaRicarico, setFilterFasciaRicarico] = useState('');
+  const [filterPrezzoCosto, setFilterPrezzoCosto] = useState('');
 
   // Sort
   const [sortField, setSortField] = useState<SortField | null>(null);
@@ -126,6 +129,21 @@ export default function AdminProductsPage() {
   const produttoreOptions = useMemo(() => uniqueSorted(allProducts, 'produttore'), [allProducts]);
   const trancheOptions = useMemo(() => uniqueSorted(allProducts, 'tranche'), [allProducts]);
 
+  function computeSconto(p: Product): number {
+    const fs = Number((p as any).fasciaSconto);
+    if (fs > 0) return fs;
+    const iva = (p.iva ?? 22);
+    const pvn = Number(p.retailPrice) / (1 + iva / 100);
+    return pvn > 0 ? (1 - Number(p.costPrice) / pvn) * 100 : 0;
+  }
+
+  function computeRicarico(p: Product): number {
+    const iva = (p.iva ?? 22);
+    const pvn = Number(p.retailPrice) / (1 + iva / 100);
+    const cost = Number(p.costPrice);
+    return cost > 0 ? ((pvn - cost) / cost) * 100 : 0;
+  }
+
   const products = useMemo(() => {
     const q = search.trim().toLowerCase();
     let filtered = allProducts.filter((p) => {
@@ -148,6 +166,29 @@ export default function AdminProductsPage() {
       if (filterTranche && p.tranche !== filterTranche) return false;
       if (filterActive === 'active' && !p.isActive) return false;
       if (filterActive === 'inactive' && p.isActive) return false;
+      if (filterFasciaSconto) {
+        const sc = computeSconto(p);
+        if (filterFasciaSconto === '0-30' && sc >= 30) return false;
+        if (filterFasciaSconto === '30-40' && (sc < 30 || sc >= 40)) return false;
+        if (filterFasciaSconto === '40-50' && (sc < 40 || sc >= 50)) return false;
+        if (filterFasciaSconto === '50-60' && (sc < 50 || sc >= 60)) return false;
+        if (filterFasciaSconto === '60+' && sc < 60) return false;
+      }
+      if (filterFasciaRicarico) {
+        const ric = computeRicarico(p);
+        if (filterFasciaRicarico === '0-50' && ric >= 50) return false;
+        if (filterFasciaRicarico === '50-100' && (ric < 50 || ric >= 100)) return false;
+        if (filterFasciaRicarico === '100-150' && (ric < 100 || ric >= 150)) return false;
+        if (filterFasciaRicarico === '150+' && ric < 150) return false;
+      }
+      if (filterPrezzoCosto) {
+        const cost = Number(p.costPrice);
+        if (filterPrezzoCosto === '0-5' && cost >= 5) return false;
+        if (filterPrezzoCosto === '5-10' && (cost < 5 || cost >= 10)) return false;
+        if (filterPrezzoCosto === '10-20' && (cost < 10 || cost >= 20)) return false;
+        if (filterPrezzoCosto === '20-50' && (cost < 20 || cost >= 50)) return false;
+        if (filterPrezzoCosto === '50+' && cost < 50) return false;
+      }
       return true;
     });
 
@@ -165,7 +206,7 @@ export default function AdminProductsPage() {
     }
 
     return filtered;
-  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterActive, sortField, sortDir]);
+  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterActive, filterFasciaSconto, filterFasciaRicarico, filterPrezzoCosto, sortField, sortDir]);
 
   function handleColumnSort(field: SortField) {
     if (sortField === field) {
@@ -184,7 +225,7 @@ export default function AdminProductsPage() {
       : <ChevronDown size={11} className="ml-1 text-accent inline" />;
   }
 
-  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterActive !== 'all';
+  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterActive !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto;
 
   function resetFilters() {
     setSearch(''); setFilterGruppo(''); setFilterFamiglia('');
@@ -192,6 +233,7 @@ export default function AdminProductsPage() {
     setFilterColore(''); setFilterCollezione(''); setFilterLinea('');
     setFilterProduttore(''); setFilterTranche('');
     setFilterActive('all');
+    setFilterFasciaSconto(''); setFilterFasciaRicarico(''); setFilterPrezzoCosto('');
   }
 
   const allVisibleSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
@@ -432,6 +474,29 @@ export default function AdminProductsPage() {
             <option value="">Tranche</option>
             {trancheOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
+          <select value={filterFasciaSconto} onChange={(e) => setFilterFasciaSconto(e.target.value)} className={selectClass}>
+            <option value="">Fascia sconto</option>
+            <option value="0-30">&lt; 30%</option>
+            <option value="30-40">30–40%</option>
+            <option value="40-50">40–50%</option>
+            <option value="50-60">50–60%</option>
+            <option value="60+">&gt; 60%</option>
+          </select>
+          <select value={filterFasciaRicarico} onChange={(e) => setFilterFasciaRicarico(e.target.value)} className={selectClass}>
+            <option value="">Fascia ricarico</option>
+            <option value="0-50">&lt; 50%</option>
+            <option value="50-100">50–100%</option>
+            <option value="100-150">100–150%</option>
+            <option value="150+">&gt; 150%</option>
+          </select>
+          <select value={filterPrezzoCosto} onChange={(e) => setFilterPrezzoCosto(e.target.value)} className={selectClass}>
+            <option value="">Prezzo costo</option>
+            <option value="0-5">0–5 €</option>
+            <option value="5-10">5–10 €</option>
+            <option value="10-20">10–20 €</option>
+            <option value="20-50">20–50 €</option>
+            <option value="50+">&gt; 50 €</option>
+          </select>
           <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as ActiveFilter)} className={selectClass}>
             <option value="all">Tutti</option>
             <option value="active">Attivi</option>
@@ -482,7 +547,7 @@ export default function AdminProductsPage() {
               <th>{thBtn('produttore', 'Produttore')}</th>
               <th>{thBtn('costPrice', 'Costo i.e.')}</th>
               <th>{thBtn('retailPrice', 'Vendita i.i.')}</th>
-              <th>{thBtn('iva', 'IVA')}</th>
+              <th>%SC</th>
               <th>% Ric.</th>
               <th>Stato</th>
               <th className="w-20"></th>
@@ -506,7 +571,13 @@ export default function AdminProductsPage() {
                     <td><span className="text-xs text-gray-500">{product.produttore || '—'}</span></td>
                     <td className="font-medium text-xs">{formatCurrency(product.costPrice)}</td>
                     <td className="text-xs text-gray-500">{formatCurrency(product.retailPrice)}</td>
-                    <td className="text-xs text-center text-gray-500">{product.iva ?? 22}%</td>
+                    <td className="text-xs text-center">
+                      {(() => {
+                        const sc = computeSconto(product);
+                        const color = sc > 40 ? 'text-green-600' : sc >= 30 ? 'text-yellow-600' : 'text-red-500';
+                        return <span className={color}>{sc.toFixed(1)}%</span>;
+                      })()}
+                    </td>
                     <td className="text-xs text-center">
                       {ricarico !== null ? (
                         <span className={ricarico >= 0 ? 'text-green-600' : 'text-red-500'}>
