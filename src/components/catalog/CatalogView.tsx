@@ -305,8 +305,8 @@ export default function CatalogView() {
               <option value="za">Z → A</option>
               <option value="price-asc">Prezzo crescente</option>
               <option value="price-desc">Prezzo decrescente</option>
-              <option value="novita">Novità (CA27 prima)</option>
-              <option value="continuativi">Continuativi (CA02–CA26 prima)</option>
+              <option value="novita">Novità</option>
+              <option value="continuativi">Continuativi</option>
             </select>
 
             {/* View mode toggle */}

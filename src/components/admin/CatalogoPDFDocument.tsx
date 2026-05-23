@@ -16,6 +16,7 @@ export type CatalogFields = {
   collezione: boolean;
   confezione: boolean;
   iva: boolean;
+  campoNome?: 'descrizione' | 'nome';
 };
 
 // ── New typography types ──────────────────────────────────────────────────────
@@ -90,6 +91,16 @@ export type CoverTypography = {
   sottotitoloItalic: boolean;
   sottotitoloColor: string;
   bgColor: string;
+  // Extended fields
+  titoloFontFamily?: 'Helvetica' | 'Times-Roman' | 'Courier';
+  sottotitoloFontFamily?: 'Helvetica' | 'Times-Roman' | 'Courier';
+  sottotitolo2FontSize?: number;
+  sottotitolo2Bold?: boolean;
+  sottotitolo2Italic?: boolean;
+  sottotitolo2Color?: string;
+  sottotitolo2FontFamily?: 'Helvetica' | 'Times-Roman' | 'Courier';
+  spacingTitoloSottotitolo?: number;
+  spacingSottotitoloSottotitolo2?: number;
 };
 
 export type FinalPageTypography = {
@@ -148,6 +159,8 @@ export type CatalogConfig = {
     immagineUrl?: string | null; // persisted URL of uploaded cover image
     titolo: string;
     sottotitolo: string;
+    sottotitolo2?: string;
+    sottotitolo2Allineamento?: 'left' | 'center' | 'right';
     layout: 'full-overlay' | 'half' | 'solo-testo';
     logoTipo: 'onearth' | 'custom' | 'none';
     logoCustomBase64: string | null;
@@ -446,15 +459,15 @@ function computeLayout(config: CatalogConfig): Layout {
 
   const TEXT_PAD = config.cardBoxStyle?.padding ?? 4;
   const CODE_H = 10;
-  const DESC_H = 17;
+  const DESC_H = 18;
   const DETAIL_H = 10;
   const PRICES_H = 18;
 
   const TEXT_AREA_H = CARD_H - IMG_H - 2; // 2 for border
 
   // Calculate which text blocks are enabled
-  const anyDetail = f.misure || f.produttore || f.paese || f.linea || f.collezione || f.confezione || f.iva;
-  const anyPrice = f.prezzoCosto || f.pvp;
+  const anyDetail = f.misure || f.linea || f.collezione || f.confezione || f.iva;
+  const anyPrice = f.prezzoCosto || f.pvp || f.produttore || f.paese;
 
   let usedTextH = TEXT_PAD * 2;
   if (f.codice) usedTextH += CODE_H;
@@ -670,13 +683,11 @@ function ProductCard({
     );
   }
 
-  const anyDetail = f.misure || f.produttore || f.paese || f.linea || f.collezione || f.confezione || f.iva;
-  const anyPrice = f.prezzoCosto || f.pvp;
+  const anyDetail = f.misure || f.linea || f.collezione || f.confezione || f.iva;
+  const anyPriceRow = f.prezzoCosto || f.pvp || f.produttore || f.paese;
 
   const details: string[] = [];
   if (f.misure && product.misura) details.push(product.misura);
-  if (f.produttore && product.produttore) details.push(product.produttore);
-  if (f.paese && product.paese) details.push(product.paese);
   if (f.linea && product.nomLinea) details.push(product.nomLinea);
   if (f.collezione && product.collezione) details.push(product.collezione);
   if (f.confezione && product.lotSize > 1) details.push(`Conf. ${product.lotSize}`);
@@ -776,9 +787,10 @@ function ProductCard({
               lineHeight: 1.25,
               overflow: 'hidden',
             }} {...({ numberOfLines: 2 } as any)}>
-              {cfs.descrizione.uppercase
-                ? (product.description || product.name).toUpperCase()
-                : (product.description || product.name)}
+              {(() => {
+                const raw = f.campoNome === 'nome' ? product.name : (product.description || product.name);
+                return cfs.descrizione.uppercase ? raw.toUpperCase() : raw;
+              })()}
             </Text>
           </View>
         )}
@@ -802,30 +814,60 @@ function ProductCard({
           <View style={{ height: layout.SPACER_H }} />
         )}
 
-        {anyPrice && (
+        {anyPriceRow && (
           <View style={[s.priceRow, { height: layout.PRICES_H }]}>
-            {f.prezzoCosto && (
-              <View style={[s.priceItem, { alignItems: alignToFlex(cfs.prezzoCosto.align) }]}>
-                <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Costo i.e.</Text>
-                <Text style={{
-                  fontSize: cfs.prezzoCosto.fontSize,
-                  fontFamily: fieldFont(cfs.prezzoCosto),
-                  color: cfs.prezzoCosto.color,
-                }}>
-                  {euro(product.costPrice)}
-                </Text>
+            {/* Left column: produttore + paese */}
+            {(f.produttore || f.paese) && (
+              <View style={[s.priceItem, { alignItems: 'flex-start', justifyContent: 'center' }]}>
+                {f.produttore && product.produttore ? (
+                  <Text style={{
+                    fontSize: cfs.produttore.fontSize,
+                    fontFamily: fieldFont(cfs.produttore),
+                    color: cfs.produttore.color,
+                    lineHeight: 1.3,
+                  }}>
+                    {cfs.produttore.uppercase ? product.produttore.toUpperCase() : product.produttore}
+                  </Text>
+                ) : null}
+                {f.paese && product.paese ? (
+                  <Text style={{
+                    fontSize: cfs.paese.fontSize,
+                    fontFamily: fieldFont(cfs.paese),
+                    color: cfs.paese.color,
+                    lineHeight: 1.3,
+                  }}>
+                    {cfs.paese.uppercase ? product.paese.toUpperCase() : product.paese}
+                  </Text>
+                ) : null}
               </View>
             )}
-            {f.pvp && (
-              <View style={[s.priceItem, { alignItems: alignToFlex(cfs.pvp.align) }]}>
-                <Text style={[s.priceLabel, { color: cfs.pvp.color }]}>PVP i.i.</Text>
-                <Text style={{
-                  fontSize: cfs.pvp.fontSize,
-                  fontFamily: fieldFont(cfs.pvp),
-                  color: cfs.pvp.color,
-                }}>
-                  {euro(product.retailPrice)}
-                </Text>
+            {/* Right column: prezzoCosto + pvp */}
+            {(f.prezzoCosto || f.pvp) && (
+              <View style={[s.priceItem, { alignItems: 'flex-end' }]}>
+                {f.prezzoCosto && (
+                  <View style={{ alignItems: alignToFlex(cfs.prezzoCosto.align) }}>
+                    <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Costo i.e.</Text>
+                    <Text style={{
+                      fontSize: cfs.prezzoCosto.fontSize,
+                      fontFamily: fieldFont(cfs.prezzoCosto),
+                      color: cfs.prezzoCosto.color,
+                    }}>
+                      {euro(product.costPrice)}
+                    </Text>
+                  </View>
+                )}
+                {f.pvp && (
+                  <View style={{ alignItems: alignToFlex(cfs.pvp.align) }}>
+                    <Text style={[s.priceLabel, { color: cfs.pvp.color }]}>PVP i.i.</Text>
+                    <Text style={{
+                      fontSize: cfs.pvp.fontSize,
+                      fontFamily: fieldFont(cfs.pvp),
+                      color: cfs.pvp.color,
+                    }}>
+                      {euro(product.retailPrice)}
+                    </Text>
+                  </View>
+                )}
               </View>
             )}
           </View>
@@ -906,17 +948,23 @@ function CoverPage({
   const imgOffsetY = cov.imgOffsetY ?? 0;
   const imgOpacity = (cov.imgOpacity ?? 100) / 100;
 
-  const titleFont = (typo.titoloBold && typo.titoloItalic) ? 'Helvetica-BoldOblique'
-    : typo.titoloBold ? 'Helvetica-Bold'
-    : typo.titoloItalic ? 'Helvetica-Oblique'
-    : 'Helvetica';
+  function coverFont(family: string | undefined, bold: boolean, italic: boolean) {
+    const base = family === 'Times-Roman' ? 'Times' : family === 'Courier' ? 'Courier' : 'Helvetica';
+    if (bold && italic) return base === 'Times' ? 'Times-BoldItalic' : base === 'Courier' ? 'Courier-BoldOblique' : 'Helvetica-BoldOblique';
+    if (bold) return base === 'Times' ? 'Times-Bold' : base === 'Courier' ? 'Courier-Bold' : 'Helvetica-Bold';
+    if (italic) return base === 'Times' ? 'Times-Italic' : base === 'Courier' ? 'Courier-Oblique' : 'Helvetica-Oblique';
+    return base === 'Times' ? 'Times-Roman' : base === 'Courier' ? 'Courier' : 'Helvetica';
+  }
 
-  const subtitleFont = (typo.sottotitoloBold && typo.sottotitoloItalic) ? 'Helvetica-BoldOblique'
-    : typo.sottotitoloBold ? 'Helvetica-Bold'
-    : typo.sottotitoloItalic ? 'Helvetica-Oblique'
-    : 'Helvetica';
+  const titleFont = coverFont(typo.titoloFontFamily, typo.titoloBold, typo.titoloItalic);
+  const subtitleFont = coverFont(typo.sottotitoloFontFamily, typo.sottotitoloBold, typo.sottotitoloItalic);
+  const subtitle2Font = coverFont(typo.sottotitolo2FontFamily, typo.sottotitolo2Bold ?? false, typo.sottotitolo2Italic ?? false);
 
   const titoloText = typo.titoloUppercase ? cov.titolo.toUpperCase() : cov.titolo;
+  const subtitle2 = cov.sottotitolo2 ?? '';
+  const subtitle2Align = cov.sottotitolo2Allineamento ?? 'center';
+  const spacingTS = typo.spacingTitoloSottotitolo ?? 6;
+  const spacingS2 = typo.spacingSottotitoloSottotitolo2 ?? 4;
 
   if (cov.layout === 'full-overlay') {
     const imgW = pageW * imgScale / 100;
@@ -976,15 +1024,22 @@ function CoverPage({
             paddingBottom: 44,
           }}
         >
-          <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: 6 }}>
+          <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: spacingTS }}>
             <Text style={{ fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 3 }}>
               {titoloText}
             </Text>
           </View>
           {cov.sottotitolo ? (
-            <View style={{ width: '100%', alignItems: alignToFlex(subtitleAlign) }}>
+            <View style={{ width: '100%', alignItems: alignToFlex(subtitleAlign), marginBottom: subtitle2 ? spacingS2 : 0 }}>
               <Text style={{ fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: typo.sottotitoloColor, letterSpacing: 1, opacity: 0.85 }}>
                 {cov.sottotitolo}
+              </Text>
+            </View>
+          ) : null}
+          {subtitle2 ? (
+            <View style={{ width: '100%', alignItems: alignToFlex(subtitle2Align) }}>
+              <Text style={{ fontSize: typo.sottotitolo2FontSize ?? 11, fontFamily: subtitle2Font, color: typo.sottotitolo2Color ?? typo.sottotitoloColor, letterSpacing: 1, opacity: 0.75 }}>
+                {subtitle2}
               </Text>
             </View>
           ) : null}
@@ -1048,15 +1103,22 @@ function CoverPage({
               <Image src={coverLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
             </View>
           )}
-          <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: 8 }}>
+          <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: spacingTS }}>
             <Text style={{ fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 3 }}>
               {titoloText}
             </Text>
           </View>
           {cov.sottotitolo ? (
-            <View style={{ width: '100%', alignItems: alignToFlex(subtitleAlign) }}>
+            <View style={{ width: '100%', alignItems: alignToFlex(subtitleAlign), marginBottom: subtitle2 ? spacingS2 : 0 }}>
               <Text style={{ fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: typo.sottotitoloColor, letterSpacing: 1 }}>
                 {cov.sottotitolo}
+              </Text>
+            </View>
+          ) : null}
+          {subtitle2 ? (
+            <View style={{ width: '100%', alignItems: alignToFlex(subtitle2Align) }}>
+              <Text style={{ fontSize: typo.sottotitolo2FontSize ?? 11, fontFamily: subtitle2Font, color: typo.sottotitolo2Color ?? typo.sottotitoloColor, letterSpacing: 1 }}>
+                {subtitle2}
               </Text>
             </View>
           ) : null}
@@ -1092,15 +1154,22 @@ function CoverPage({
           marginBottom: 20,
         }}
       />
-      <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: 12 }}>
+      <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: spacingTS }}>
         <Text style={{ fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 4 }}>
           {titoloText}
         </Text>
       </View>
       {cov.sottotitolo ? (
-        <View style={{ width: '100%', alignItems: alignToFlex(subtitleAlign) }}>
+        <View style={{ width: '100%', alignItems: alignToFlex(subtitleAlign), marginBottom: subtitle2 ? spacingS2 : 0 }}>
           <Text style={{ fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: typo.sottotitoloColor, letterSpacing: 1.5 }}>
             {cov.sottotitolo}
+          </Text>
+        </View>
+      ) : null}
+      {subtitle2 ? (
+        <View style={{ width: '100%', alignItems: alignToFlex(subtitle2Align) }}>
+          <Text style={{ fontSize: typo.sottotitolo2FontSize ?? 11, fontFamily: subtitle2Font, color: typo.sottotitolo2Color ?? typo.sottotitoloColor, letterSpacing: 1.5 }}>
+            {subtitle2}
           </Text>
         </View>
       ) : null}

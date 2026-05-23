@@ -4,12 +4,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRef, useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Languages, Loader2 } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
-import ManagedSelect from '@/components/admin/ManagedSelect';
 import PaeseSelect from '@/components/ui/PaeseSelect';
+import Combobox from '@/components/ui/Combobox';
 import toast from 'react-hot-toast';
 import type { Product } from '@/types';
 
@@ -82,42 +82,6 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CascadeSelect({
-  label,
-  value,
-  onChange,
-  options,
-  disabled,
-}: {
-  label: string;
-  value: string;
-  onChange: (nome: string, id: string) => void;
-  options: { id: string; nome: string }[];
-  disabled?: boolean;
-}) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <select
-        value={value}
-        disabled={disabled}
-        onChange={(e) => {
-          const selected = options.find((o) => o.nome === e.target.value);
-          onChange(e.target.value, selected?.id ?? '');
-        }}
-        className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
-      >
-        <option value="">—</option>
-        {options.map((o) => (
-          <option key={o.id} value={o.nome}>
-            {o.nome}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
 export default function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) {
   const isEdit = !!product;
   const queryClient = useQueryClient();
@@ -125,57 +89,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const [imagePreview, setImagePreview] = useState<string>(product?.imageUrl || '');
   const [isUploading, setIsUploading] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
-
-  // IDs for cascade filtering
-  const [gmId, setGmId] = useState('');
-  const [famId, setFamId] = useState('');
-  const [clsId, setClsId] = useState('');
-  const [scId, setScId] = useState('');
-
-  // ── Hierarchy queries ─────────────────────────────────────────
-  const { data: gmData } = useQuery({
-    queryKey: ['cls', 'gruppoMerceologico'],
-    queryFn: () =>
-      fetch('/api/classificazione/gruppoMerceologico').then((r) => r.json()) as Promise<{
-        data: { id: string; nome: string }[];
-      }>,
-  });
-
-  const { data: famData } = useQuery({
-    queryKey: ['cls', 'famiglia', gmId],
-    queryFn: () =>
-      fetch(`/api/classificazione/famiglia?parentId=${gmId}`).then((r) => r.json()) as Promise<{
-        data: { id: string; nome: string }[];
-      }>,
-    enabled: !!gmId,
-  });
-
-  const { data: clsData } = useQuery({
-    queryKey: ['cls', 'classe', famId],
-    queryFn: () =>
-      fetch(`/api/classificazione/classe?parentId=${famId}`).then((r) => r.json()) as Promise<{
-        data: { id: string; nome: string }[];
-      }>,
-    enabled: !!famId,
-  });
-
-  const { data: scData } = useQuery({
-    queryKey: ['cls', 'sottoclasse', clsId],
-    queryFn: () =>
-      fetch(`/api/classificazione/sottoclasse?parentId=${clsId}`).then((r) => r.json()) as Promise<{
-        data: { id: string; nome: string }[];
-      }>,
-    enabled: !!clsId,
-  });
-
-  const { data: goData } = useQuery({
-    queryKey: ['cls', 'gruppoOmogeneo', scId],
-    queryFn: () =>
-      fetch(`/api/classificazione/gruppoOmogeneo?parentId=${scId}`).then((r) => r.json()) as Promise<{
-        data: { id: string; nome: string }[];
-      }>,
-    enabled: !!scId,
-  });
 
   const {
     register,
@@ -217,62 +130,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         }
       : { isActive: true, lotSize: '1', iva: '22' },
   });
-
-  // ── Edit mode: resolve hierarchy IDs from stored names ────────
-  useEffect(() => {
-    if (!isEdit || !product?.gruppoMerceologico || !gmData?.data) return;
-    const found = gmData.data.find((g) => g.nome === product.gruppoMerceologico);
-    if (found) setGmId(found.id);
-  }, [gmData]);
-
-  useEffect(() => {
-    if (!isEdit || !product?.famiglia || !famData?.data) return;
-    const found = famData.data.find((f) => f.nome === product.famiglia);
-    if (found) setFamId(found.id);
-  }, [famData]);
-
-  useEffect(() => {
-    if (!isEdit || !product?.classe || !clsData?.data) return;
-    const found = clsData.data.find((c) => c.nome === product.classe);
-    if (found) setClsId(found.id);
-  }, [clsData]);
-
-  useEffect(() => {
-    if (!isEdit || !product?.sottoclasse || !scData?.data) return;
-    const found = scData.data.find((s) => s.nome === product.sottoclasse);
-    if (found) setScId(found.id);
-  }, [scData]);
-
-  // ── Cascade handlers ──────────────────────────────────────────
-  function handleGmChange(nome: string, id: string) {
-    setValue('gruppoMerceologico', nome);
-    setGmId(id);
-    setValue('famiglia', ''); setFamId('');
-    setValue('classe', '');   setClsId('');
-    setValue('sottoclasse', ''); setScId('');
-    setValue('gruppoOmogeneo', '');
-  }
-
-  function handleFamChange(nome: string, id: string) {
-    setValue('famiglia', nome);
-    setFamId(id);
-    setValue('classe', '');   setClsId('');
-    setValue('sottoclasse', ''); setScId('');
-    setValue('gruppoOmogeneo', '');
-  }
-
-  function handleClsChange(nome: string, id: string) {
-    setValue('classe', nome);
-    setClsId(id);
-    setValue('sottoclasse', ''); setScId('');
-    setValue('gruppoOmogeneo', '');
-  }
-
-  function handleScChange(nome: string, id: string) {
-    setValue('sottoclasse', nome);
-    setScId(id);
-    setValue('gruppoOmogeneo', '');
-  }
 
   // ── Image preview sync ────────────────────────────────────────
   const watchedImageUrl = watch('imageUrl');
@@ -411,9 +268,9 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           {...register('misura')}
           placeholder="es. 30x40 cm"
         />
-        <ManagedSelect
-          entita="produttore"
+        <Combobox
           label="Produttore"
+          field="produttore"
           value={watch('produttore') || ''}
           onChange={(v) => setValue('produttore', v)}
         />
@@ -427,75 +284,71 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       {/* ── Classificazione gerarchica ── */}
       <SectionLabel>Classificazione</SectionLabel>
       <div className="grid grid-cols-2 gap-4">
-        <CascadeSelect
+        <Combobox
           label="Gruppo merceologico"
+          field="gruppoMerceologico"
           value={watch('gruppoMerceologico') || ''}
-          onChange={handleGmChange}
-          options={gmData?.data || []}
+          onChange={(v) => setValue('gruppoMerceologico', v)}
         />
-        <CascadeSelect
+        <Combobox
           label="Famiglia"
+          field="famiglia"
           value={watch('famiglia') || ''}
-          onChange={handleFamChange}
-          options={famData?.data || []}
-          disabled={!gmId}
+          onChange={(v) => setValue('famiglia', v)}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <CascadeSelect
+        <Combobox
           label="Classe"
+          field="classe"
           value={watch('classe') || ''}
-          onChange={handleClsChange}
-          options={clsData?.data || []}
-          disabled={!famId}
+          onChange={(v) => setValue('classe', v)}
         />
-        <CascadeSelect
+        <Combobox
           label="Sottoclasse"
+          field="sottoclasse"
           value={watch('sottoclasse') || ''}
-          onChange={handleScChange}
-          options={scData?.data || []}
-          disabled={!clsId}
+          onChange={(v) => setValue('sottoclasse', v)}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <CascadeSelect
+        <Combobox
           label="Gruppo omogeneo"
+          field="gruppoOmogeneo"
           value={watch('gruppoOmogeneo') || ''}
-          onChange={(nome) => setValue('gruppoOmogeneo', nome)}
-          options={goData?.data || []}
-          disabled={!scId}
+          onChange={(v) => setValue('gruppoOmogeneo', v)}
         />
-        <ManagedSelect
-          entita="linea"
+        <Combobox
           label="Linea"
+          field="nomLinea"
           value={watch('nomLinea') || ''}
           onChange={(v) => setValue('nomLinea', v)}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <ManagedSelect
-          entita="stagione"
+        <Combobox
           label="Stagione"
+          field="stagione"
           value={watch('stagione') || ''}
           onChange={(v) => setValue('stagione', v)}
         />
-        <ManagedSelect
-          entita="collezione"
+        <Combobox
           label="Collezione"
+          field="collezione"
           value={watch('collezione') || ''}
           onChange={(v) => setValue('collezione', v)}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <ManagedSelect
-          entita="colore"
+        <Combobox
           label="Colore"
+          field="colore"
           value={watch('colore') || ''}
           onChange={(v) => setValue('colore', v)}
         />
-        <ManagedSelect
-          entita="temaColore"
+        <Combobox
           label="Tema colore"
+          field="temaColore"
           value={watch('temaColore') || ''}
           onChange={(v) => setValue('temaColore', v)}
         />
@@ -602,9 +455,9 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <ManagedSelect
-          entita="fasciaRicarico"
+        <Combobox
           label="Fascia di ricarico"
+          field="fasciaRicarico"
           value={watch('fasciaRicarico') || ''}
           onChange={(v) => setValue('fasciaRicarico', v)}
         />
@@ -633,9 +486,9 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <ManagedSelect
-          entita="tranche"
+        <Combobox
           label="Tranche"
+          field="tranche"
           value={watch('tranche') || ''}
           onChange={(v) => setValue('tranche', v)}
         />

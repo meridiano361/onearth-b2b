@@ -48,7 +48,7 @@ function SpotlightCard({ product }: { product: Product }) {
               isFavorited(product.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
             )}
           >
-            <Heart size={10} className={isFavorited(product.id) ? 'fill-[#D4C4B0] text-[#D4C4B0]' : 'text-gray-400'} />
+            <Heart size={10} className={isFavorited(product.id) ? 'fill-[#374151] text-[#374151]' : 'text-gray-400'} />
           </button>
           {inCart && (
             <div className="absolute top-1.5 right-1.5 bg-accent rounded-full p-0.5">
@@ -109,7 +109,8 @@ export default function CustomerHome() {
 
   const spotlightProducts = useMemo(() => {
     if (!productsData?.length) return [];
-    return shuffle(productsData).slice(0, 6);
+    const ca27 = productsData.filter((p) => p.collezione === 'CA27');
+    return shuffle(ca27.length > 0 ? ca27 : productsData).slice(0, 6);
   }, [productsData]);
 
   return (
@@ -129,9 +130,14 @@ export default function CustomerHome() {
 
         {/* ── Scopri la collezione ─────────────────────────────── */}
         <section>
-          <p className="font-display text-sm sm:text-2xl text-primary font-light tracking-wide mb-4 text-center mx-auto whitespace-nowrap">
-            {th('collectionTitle')}
-          </p>
+          <div className="mb-4 text-center">
+            <p className="font-display text-2xl sm:text-3xl text-primary font-light tracking-widest uppercase">
+              Terra e Luce
+            </p>
+            <p className="font-display text-sm sm:text-base text-primary font-light tracking-wide mt-1">
+              Scopri la collezione casa 2027
+            </p>
+          </div>
 
           {isLoading ? (
             <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">

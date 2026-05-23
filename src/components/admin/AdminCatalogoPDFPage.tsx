@@ -77,6 +77,8 @@ interface FormState {
     immagineUrl?: string | null; // persisted URL of uploaded cover image
     titolo: string;
     sottotitolo: string;
+    sottotitolo2: string;
+    sottotitolo2Allineamento: 'left' | 'center' | 'right';
     layout: 'full-overlay' | 'half' | 'solo-testo';
     logoTipo: 'onearth' | 'custom' | 'none';
     logoCustomBase64: string | null;
@@ -181,6 +183,7 @@ const DEFAULT_STATE: FormState = {
     collezione: false,
     confezione: false,
     iva: false,
+    campoNome: 'descrizione' as const,
   },
   titolo: 'Collezione CASA 2027',
   mostraLogo: true,
@@ -202,6 +205,8 @@ const DEFAULT_STATE: FormState = {
     immagineBase64: null,
     titolo: 'Collezione CASA 2027',
     sottotitolo: '',
+    sottotitolo2: '',
+    sottotitolo2Allineamento: 'center' as const,
     layout: 'full-overlay',
     logoTipo: 'onearth',
     logoCustomBase64: null,
@@ -263,8 +268,13 @@ const DEFAULT_STATE: FormState = {
   },
   copertinaTypo: {
     titoloFontSize: 28, titoloBold: true, titoloItalic: false, titoloColor: '#FFFFFF',
-    titoloUppercase: true, sottotitoloFontSize: 13, sottotitoloBold: false,
-    sottotitoloItalic: false, sottotitoloColor: '#FFFFFF', bgColor: '#E8DDD0',
+    titoloUppercase: true, titoloFontFamily: 'Helvetica' as const,
+    sottotitoloFontSize: 13, sottotitoloBold: false, sottotitoloItalic: false,
+    sottotitoloColor: '#FFFFFF', sottotitoloFontFamily: 'Helvetica' as const,
+    bgColor: '#E8DDD0',
+    sottotitolo2FontSize: 11, sottotitolo2Bold: false, sottotitolo2Italic: false,
+    sottotitolo2Color: '#FFFFFF', sottotitolo2FontFamily: 'Helvetica' as const,
+    spacingTitoloSottotitolo: 6, spacingSottotitoloSottotitolo2: 4,
   },
   paginaFinaleTypo: {
     titoloFontSize: 20, titoloBold: true, titoloItalic: false, titoloColor: '#1C1C1C',
@@ -1843,19 +1853,44 @@ export default function AdminCatalogoPDFPage() {
             Informazioni da mostrare
           </SectionTitle>
           {sections.campi && (
-            <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <CheckboxField label="Foto prodotto" checked={config.campi.foto} onChange={(v) => setField('foto', v)} />
-              <CheckboxField label="Codice" checked={config.campi.codice} onChange={(v) => setField('codice', v)} />
-              <CheckboxField label="Descrizione" checked={config.campi.descrizione} onChange={(v) => setField('descrizione', v)} />
-              <CheckboxField label="Misure" checked={config.campi.misure} onChange={(v) => setField('misure', v)} />
-              <CheckboxField label="Produttore" checked={config.campi.produttore} onChange={(v) => setField('produttore', v)} />
-              <CheckboxField label="Paese" checked={config.campi.paese} onChange={(v) => setField('paese', v)} />
-              <CheckboxField label="Prezzo costo i.e." checked={config.campi.prezzoCosto} onChange={(v) => setField('prezzoCosto', v)} />
-              <CheckboxField label="PVP i.i." checked={config.campi.pvp} onChange={(v) => setField('pvp', v)} />
-              <CheckboxField label="Linea" checked={config.campi.linea} onChange={(v) => setField('linea', v)} />
-              <CheckboxField label="Collezione" checked={config.campi.collezione} onChange={(v) => setField('collezione', v)} />
-              <CheckboxField label="Confezione" checked={config.campi.confezione} onChange={(v) => setField('confezione', v)} />
-              <CheckboxField label="IVA" checked={config.campi.iva} onChange={(v) => setField('iva', v)} />
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <CheckboxField label="Foto prodotto" checked={config.campi.foto} onChange={(v) => setField('foto', v)} />
+                <CheckboxField label="Codice" checked={config.campi.codice} onChange={(v) => setField('codice', v)} />
+                <CheckboxField label="Descrizione" checked={config.campi.descrizione} onChange={(v) => setField('descrizione', v)} />
+                <CheckboxField label="Misure" checked={config.campi.misure} onChange={(v) => setField('misure', v)} />
+                <CheckboxField label="Produttore" checked={config.campi.produttore} onChange={(v) => setField('produttore', v)} />
+                <CheckboxField label="Paese" checked={config.campi.paese} onChange={(v) => setField('paese', v)} />
+                <CheckboxField label="Prezzo costo i.e." checked={config.campi.prezzoCosto} onChange={(v) => setField('prezzoCosto', v)} />
+                <CheckboxField label="PVP i.i." checked={config.campi.pvp} onChange={(v) => setField('pvp', v)} />
+                <CheckboxField label="Linea" checked={config.campi.linea} onChange={(v) => setField('linea', v)} />
+                <CheckboxField label="Collezione" checked={config.campi.collezione} onChange={(v) => setField('collezione', v)} />
+                <CheckboxField label="Confezione" checked={config.campi.confezione} onChange={(v) => setField('confezione', v)} />
+                <CheckboxField label="IVA" checked={config.campi.iva} onChange={(v) => setField('iva', v)} />
+              </div>
+              {config.campi.descrizione && (
+                <div className="pt-1 border-t border-border">
+                  <p className="text-xs font-medium text-gray-600 mb-1.5">Campo nome</p>
+                  <div className="flex gap-4">
+                    {([
+                      { value: 'descrizione', label: 'Descrizione (preferita)' },
+                      { value: 'nome', label: 'Nome (codice interno)' },
+                    ] as const).map((opt) => (
+                      <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="campoNome"
+                          value={opt.value}
+                          checked={(config.campi.campoNome ?? 'descrizione') === opt.value}
+                          onChange={() => setConfig((c) => ({ ...c, campi: { ...c.campi, campoNome: opt.value } }))}
+                          className="accent-primary"
+                        />
+                        <span className="text-xs text-gray-700">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2309,12 +2344,31 @@ export default function AdminCatalogoPDFPage() {
                     />
                   </div>
 
+                  {/* Sottotitolo 2 */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-gray-600">
+                        Sottotitolo 2 <span className="text-gray-400 font-normal">(opzionale)</span>
+                      </label>
+                      <AlignToggle value={config.copertina.sottotitolo2Allineamento ?? 'center'} onChange={(v) => setCopertina('sottotitolo2Allineamento', v)} />
+                    </div>
+                    <input
+                      type="text"
+                      value={config.copertina.sottotitolo2 ?? ''}
+                      onChange={(e) => setCopertina('sottotitolo2', e.target.value)}
+                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      placeholder="es. Showroom Milano · Aprile 2027"
+                    />
+                  </div>
+
                   {/* Tipografia copertina */}
                   <div className="space-y-3 pt-1">
                     <p className="text-xs font-semibold text-gray-600">Tipografia</p>
+
+                    {/* Titolo */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Font titolo (pt)</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Titolo — font (pt)</label>
                         <input type="number" min={10} max={60} value={config.copertinaTypo.titoloFontSize}
                           onChange={(e) => setCopertinaTypo({ titoloFontSize: parseFloat(e.target.value) || 28 })}
                           className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
@@ -2325,11 +2379,23 @@ export default function AdminCatalogoPDFPage() {
                         <ToggleBtn active={config.copertinaTypo.titoloUppercase} onClick={() => setCopertinaTypo({ titoloUppercase: !config.copertinaTypo.titoloUppercase })} title="Tutto maiuscolo">AA</ToggleBtn>
                       </div>
                     </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Famiglia font titolo</label>
+                      <select value={config.copertinaTypo.titoloFontFamily ?? 'Helvetica'}
+                        onChange={(e) => setCopertinaTypo({ titoloFontFamily: e.target.value as 'Helvetica' | 'Times-Roman' | 'Courier' })}
+                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none">
+                        <option value="Helvetica">Helvetica (sans-serif)</option>
+                        <option value="Times-Roman">Times Roman (serif)</option>
+                        <option value="Courier">Courier (monospace)</option>
+                      </select>
+                    </div>
                     <MiniColorPicker value={config.copertinaTypo.titoloColor}
                       onChange={(v) => setCopertinaTypo({ titoloColor: v })} />
+
+                    {/* Sottotitolo */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Font sottotitolo (pt)</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Sottotitolo — font (pt)</label>
                         <input type="number" min={8} max={32} value={config.copertinaTypo.sottotitoloFontSize}
                           onChange={(e) => setCopertinaTypo({ sottotitoloFontSize: parseFloat(e.target.value) || 13 })}
                           className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
@@ -2339,8 +2405,58 @@ export default function AdminCatalogoPDFPage() {
                         <ToggleBtn active={config.copertinaTypo.sottotitoloItalic} onClick={() => setCopertinaTypo({ sottotitoloItalic: !config.copertinaTypo.sottotitoloItalic })}><span className="italic">I</span></ToggleBtn>
                       </div>
                     </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Famiglia font sottotitolo</label>
+                      <select value={config.copertinaTypo.sottotitoloFontFamily ?? 'Helvetica'}
+                        onChange={(e) => setCopertinaTypo({ sottotitoloFontFamily: e.target.value as 'Helvetica' | 'Times-Roman' | 'Courier' })}
+                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none">
+                        <option value="Helvetica">Helvetica (sans-serif)</option>
+                        <option value="Times-Roman">Times Roman (serif)</option>
+                        <option value="Courier">Courier (monospace)</option>
+                      </select>
+                    </div>
                     <MiniColorPicker value={config.copertinaTypo.sottotitoloColor}
                       onChange={(v) => setCopertinaTypo({ sottotitoloColor: v })} />
+
+                    {/* Sottotitolo 2 */}
+                    {config.copertina.sottotitolo2 && (
+                      <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Sottotitolo 2 — font (pt)</label>
+                            <input type="number" min={8} max={32} value={config.copertinaTypo.sottotitolo2FontSize ?? 11}
+                              onChange={(e) => setCopertinaTypo({ sottotitolo2FontSize: parseFloat(e.target.value) || 11 })}
+                              className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
+                          </div>
+                          <div className="flex items-end gap-1">
+                            <ToggleBtn active={config.copertinaTypo.sottotitolo2Bold ?? false} onClick={() => setCopertinaTypo({ sottotitolo2Bold: !(config.copertinaTypo.sottotitolo2Bold ?? false) })}><span className="font-bold">B</span></ToggleBtn>
+                            <ToggleBtn active={config.copertinaTypo.sottotitolo2Italic ?? false} onClick={() => setCopertinaTypo({ sottotitolo2Italic: !(config.copertinaTypo.sottotitolo2Italic ?? false) })}><span className="italic">I</span></ToggleBtn>
+                          </div>
+                        </div>
+                        <MiniColorPicker value={config.copertinaTypo.sottotitolo2Color ?? config.copertinaTypo.sottotitoloColor}
+                          onChange={(v) => setCopertinaTypo({ sottotitolo2Color: v })} />
+                      </>
+                    )}
+
+                    {/* Spacing sliders */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-gray-600">Spaziatura</p>
+                      <div>
+                        <label className="block text-2xs text-gray-500 mb-0.5">Titolo → Sottotitolo ({config.copertinaTypo.spacingTitoloSottotitolo ?? 6} pt)</label>
+                        <input type="range" min={0} max={40} value={config.copertinaTypo.spacingTitoloSottotitolo ?? 6}
+                          onChange={(e) => setCopertinaTypo({ spacingTitoloSottotitolo: parseInt(e.target.value) })}
+                          className="w-full" />
+                      </div>
+                      {config.copertina.sottotitolo2 && (
+                        <div>
+                          <label className="block text-2xs text-gray-500 mb-0.5">Sottotitolo → Sottotitolo 2 ({config.copertinaTypo.spacingSottotitoloSottotitolo2 ?? 4} pt)</label>
+                          <input type="range" min={0} max={40} value={config.copertinaTypo.spacingSottotitoloSottotitolo2 ?? 4}
+                            onChange={(e) => setCopertinaTypo({ spacingSottotitoloSottotitolo2: parseInt(e.target.value) })}
+                            className="w-full" />
+                        </div>
+                      )}
+                    </div>
+
                     {config.copertina.layout !== 'full-overlay' && (
                       <ColorSwatchPicker label="Colore sfondo (layout testo / metà)" value={config.copertinaTypo.bgColor}
                         onChange={(v) => setCopertinaTypo({ bgColor: v })} />
