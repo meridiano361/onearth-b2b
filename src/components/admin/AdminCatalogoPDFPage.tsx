@@ -108,6 +108,19 @@ interface FormState {
     immagineBase64?: string | null;
     immaginePosition?: 'top' | 'center' | 'bottom' | 'background';
     immagineDimensione?: 'small' | 'medium' | 'large' | 'full';
+    // Image controls
+    imgOffsetX: number;
+    imgOffsetY: number;
+    imgScale: number;
+    imgOpacity: number;
+    // Layout (sostituisce immaginePosition + immagineDimensione)
+    layout: 'full-overlay' | 'img-top' | 'img-bottom' | 'img-left' | 'background' | 'img-only';
+    // Logo system (sostituisce mostraLogo)
+    logoTipo: 'onearth' | 'custom' | 'none';
+    logoCustomBase64: string | null;
+    logoPosX: 'left' | 'center' | 'right';
+    logoPosY: 'top' | 'middle' | 'bottom';
+    logoDimensione: 'piccolo' | 'medio' | 'grande';
   };
   cardFieldStyles: CardFieldStyles;
   separatoreStyle: SeparatorStyle;
@@ -210,6 +223,16 @@ const DEFAULT_STATE: FormState = {
     mostraLogo: true,
     titoloAllineamento: 'center',
     testoAllineamento: 'center',
+    imgOffsetX: 0,
+    imgOffsetY: 0,
+    imgScale: 100,
+    imgOpacity: 100,
+    layout: 'img-top',
+    logoTipo: 'onearth',
+    logoCustomBase64: null,
+    logoPosX: 'center',
+    logoPosY: 'bottom',
+    logoDimensione: 'medio',
   },
   cardFieldStyles: {
     codice:      { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
@@ -854,6 +877,39 @@ function MiniRichTextEditor({
   );
 }
 
+function LogoPosGrid({
+  posX,
+  posY,
+  onChange,
+}: {
+  posX: 'left' | 'center' | 'right';
+  posY: 'top' | 'middle' | 'bottom';
+  onChange: (x: 'left' | 'center' | 'right', y: 'top' | 'middle' | 'bottom') => void;
+}) {
+  const rows: Array<'top' | 'middle' | 'bottom'> = ['top', 'middle', 'bottom'];
+  const cols: Array<'left' | 'center' | 'right'> = ['left', 'center', 'right'];
+  return (
+    <div className="inline-grid grid-cols-3 gap-0.5 border border-border rounded overflow-hidden bg-gray-100 p-0.5">
+      {rows.map((y) =>
+        cols.map((x) => {
+          const active = x === posX && y === posY;
+          return (
+            <button
+              key={`${y}-${x}`}
+              type="button"
+              onClick={() => onChange(x, y)}
+              className={`w-7 h-7 rounded-sm text-2xs flex items-center justify-center transition-colors ${active ? 'bg-primary text-white' : 'bg-white hover:bg-primary/10 text-gray-400'}`}
+              title={`${y === 'top' ? 'In alto' : y === 'middle' ? 'A metà' : 'In basso'} ${x === 'left' ? 'sinistra' : x === 'center' ? 'centro' : 'destra'}`}
+            >
+              ·
+            </button>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 function FinalPagePreview({ config }: { config: FormState }) {
   const pf = config.paginaFinale;
   if (!pf.attiva) return null;
@@ -865,71 +921,170 @@ function FinalPagePreview({ config }: { config: FormState }) {
   const bg = config.colori.sfondoPagina;
   const typo = config.paginaFinaleTypo;
   const imgSrc = pf.immagineBase64 ?? pf.immagineUrl ?? null;
-  const imgPos = pf.immaginePosition ?? 'top';
-  const imgDim = pf.immagineDimensione ?? 'medium';
-  const imgWidthMap: Record<string, string> = { small: '30%', medium: '50%', large: '75%', full: '100%' };
-  const imgWidth = imgWidthMap[imgDim] ?? '50%';
+  const layout = pf.layout ?? 'img-top';
+  const offsetX = pf.imgOffsetX ?? 0;
+  const offsetY = pf.imgOffsetY ?? 0;
+  const imgScale = pf.imgScale ?? 100;
+  const opacity = (pf.imgOpacity ?? 100) / 100;
+  const posX = pf.logoPosX ?? 'center';
+  const posY = pf.logoPosY ?? 'bottom';
+  const logoDim = pf.logoDimensione ?? 'medio';
+  const logoH = logoDim === 'piccolo' ? 8 : logoDim === 'medio' ? 12 : 18;
+  const logoTipo = pf.logoTipo ?? (pf.mostraLogo ? 'onearth' : 'none');
+  const logoSrc = logoTipo === 'onearth' ? '/logo-on-earth/onearth_solo.png'
+    : logoTipo === 'custom' ? pf.logoCustomBase64 : null;
+
+  const imgStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    opacity,
+    transform: `scale(${imgScale / 100}) translate(${offsetX}%, ${offsetY}%)`,
+    transformOrigin: 'center center',
+  };
+
+  // Logo position in the 3×3 grid
+  const logoStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: posY === 'top' ? 6 : posY === 'middle' ? '50%' : undefined,
+    bottom: posY === 'bottom' ? 6 : undefined,
+    left: posX === 'left' ? 8 : posX === 'center' ? '50%' : undefined,
+    right: posX === 'right' ? 8 : undefined,
+    transform: posX === 'center' && posY === 'middle' ? 'translate(-50%, -50%)'
+      : posX === 'center' ? 'translateX(-50%)'
+      : posY === 'middle' ? 'translateY(-50%)'
+      : undefined,
+    display: 'flex',
+    pointerEvents: 'none',
+  };
+
+  const titleEl = pf.titolo ? (
+    <div
+      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pf.titoloAllineamento, margin: '0 0 4px', letterSpacing: 0.5 }}
+      dangerouslySetInnerHTML={{ __html: pf.titolo }}
+    />
+  ) : null;
+
+  const textEl = pf.testo ? (
+    <div
+      style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, lineHeight: 1.5 }}
+      dangerouslySetInnerHTML={{ __html: pf.testo }}
+    />
+  ) : null;
+
+  const logoEl = logoSrc ? (
+    <div style={logoStyle}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
+    </div>
+  ) : null;
+
+  let inner: React.ReactNode;
+
+  if (layout === 'full-overlay') {
+    inner = (
+      <>
+        {imgSrc && (
+          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imgSrc} alt="" style={imgStyle} />
+          </div>
+        )}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.65))' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 10px 10px' }}>
+          {titleEl}
+          {textEl}
+        </div>
+        {logoEl}
+      </>
+    );
+  } else if (layout === 'background') {
+    inner = (
+      <>
+        {imgSrc && (
+          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imgSrc} alt="" style={imgStyle} />
+          </div>
+        )}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 12px' }}>
+          {titleEl}
+          {textEl}
+        </div>
+        {logoEl}
+      </>
+    );
+  } else if (layout === 'img-only') {
+    inner = (
+      <>
+        {imgSrc && (
+          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imgSrc} alt="" style={imgStyle} />
+          </div>
+        )}
+        {logoEl}
+      </>
+    );
+  } else if (layout === 'img-left') {
+    inner = (
+      <div style={{ display: 'flex', height: '100%' }}>
+        <div style={{ width: '45%', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+          {imgSrc && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imgSrc} alt="" style={{ ...imgStyle, position: 'absolute', width: '100%' }} />
+          )}
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 10px', position: 'relative' }}>
+          {titleEl}
+          {textEl}
+          {logoEl}
+        </div>
+      </div>
+    );
+  } else if (layout === 'img-bottom') {
+    inner = (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 12px' }}>
+          {titleEl}
+          {textEl}
+        </div>
+        <div style={{ height: '40%', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+          {imgSrc && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imgSrc} alt="" style={{ ...imgStyle, position: 'absolute', width: '100%' }} />
+          )}
+        </div>
+        {logoEl}
+      </div>
+    );
+  } else {
+    // img-top (default)
+    inner = (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ height: '40%', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+          {imgSrc && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imgSrc} alt="" style={{ ...imgStyle, position: 'absolute', width: '100%' }} />
+          )}
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 12px' }}>
+          {titleEl}
+          {textEl}
+        </div>
+        {logoEl}
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4">
       <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Anteprima pagina finale</p>
       <div
-        style={{ width: W, height: H, position: 'relative', overflow: 'hidden', backgroundColor: bg, border: '1px solid #e5e7eb', borderRadius: 4, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 16px' }}
+        style={{ width: W, height: H, position: 'relative', overflow: 'hidden', backgroundColor: bg, border: '1px solid #e5e7eb', borderRadius: 4 }}
         className="shadow-sm flex-shrink-0"
       >
-        {/* Background image */}
-        {imgSrc && imgPos === 'background' && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imgSrc} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25 }} />
-        )}
-
-        {/* Top image */}
-        {imgSrc && imgPos === 'top' && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imgSrc} alt="" style={{ width: imgWidth, objectFit: 'cover', maxHeight: H * 0.35 }} />
-          </div>
-        )}
-
-        {/* Title */}
-        {pf.titolo && (
-          <div
-            style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pf.titoloAllineamento, margin: '0 0 4px', letterSpacing: 0.5, position: 'relative' }}
-            dangerouslySetInnerHTML={{ __html: pf.titolo }}
-          />
-        )}
-
-        {/* Center image */}
-        {imgSrc && imgPos === 'center' && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imgSrc} alt="" style={{ width: imgWidth, objectFit: 'cover', maxHeight: H * 0.35 }} />
-          </div>
-        )}
-
-        {/* Body text */}
-        {pf.testo && (
-          <div
-            style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, lineHeight: 1.6, position: 'relative' }}
-            dangerouslySetInnerHTML={{ __html: pf.testo }}
-          />
-        )}
-
-        {/* Bottom image */}
-        {imgSrc && imgPos === 'bottom' && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imgSrc} alt="" style={{ width: imgWidth, objectFit: 'cover', maxHeight: H * 0.35 }} />
-          </div>
-        )}
-
-        {/* Logo ON EARTH at bottom center */}
-        {pf.mostraLogo && (
-          <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-on-earth/onearth_solo.png" alt="logo" style={{ height: 8, objectFit: 'contain', opacity: 0.5 }} />
-          </div>
-        )}
+        {inner}
       </div>
     </div>
   );
@@ -1031,6 +1186,8 @@ export default function AdminCatalogoPDFPage() {
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
+  const finalImgFileInputRef = useRef<HTMLInputElement>(null);
+  const finalLogoFileInputRef = useRef<HTMLInputElement>(null);
 
   // Section open/close
   const [sections, setSections] = useState({
@@ -2261,97 +2418,214 @@ export default function AdminCatalogoPDFPage() {
                   </div>
 
                   {/* Immagine pagina finale */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Immagine pagina finale <span className="text-gray-400 font-normal">(opzionale)</span>
-                    </label>
-                    <div className="flex items-center gap-2 mb-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          if (file.size > 10 * 1024 * 1024) {
-                            toast.error('Immagine troppo grande (max 10 MB)');
-                            e.target.value = '';
-                            return;
-                          }
-                          const fd = new FormData();
-                          fd.append('file', file);
-                          try {
-                            const res = await fetch('/api/admin/catalogo-pdf/upload-cover', { method: 'POST', body: fd });
-                            if (!res.ok) throw new Error((await res.json()).error);
-                            const { url } = await res.json();
-                            setPaginaFinale('immagineUrl', url);
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-gray-600">Immagine</p>
+                    <div>
+                      <p className="text-2xs text-gray-400 mb-2">
+                        Carica sul server (consigliato) o solo per la sessione corrente (max 10 MB).
+                      </p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 10 * 1024 * 1024) { toast.error('Immagine troppo grande (max 10 MB)'); e.target.value = ''; return; }
+                            const fd = new FormData();
+                            fd.append('file', file);
+                            try {
+                              const res = await fetch('/api/admin/catalogo-pdf/upload-cover', { method: 'POST', body: fd });
+                              if (!res.ok) throw new Error((await res.json()).error);
+                              const { url } = await res.json();
+                              setPaginaFinale('immagineUrl', url);
+                              const reader = new FileReader();
+                              reader.onload = (ev) => setPaginaFinale('immagineBase64', ev.target?.result as string);
+                              reader.readAsDataURL(file);
+                              e.target.value = '';
+                              toast.success('Immagine caricata sul server');
+                            } catch (err: unknown) {
+                              toast.error(err instanceof Error ? err.message : 'Errore upload');
+                              e.target.value = '';
+                            }
+                          }}
+                          className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                        />
+                        <span className="text-2xs text-gray-400 flex-shrink-0">Carica sul server</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          ref={finalImgFileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 10 * 1024 * 1024) { toast.error('Immagine troppo grande (max 10 MB)'); e.target.value = ''; return; }
                             const reader = new FileReader();
-                            reader.onload = (ev) => setPaginaFinale('immagineBase64', ev.target?.result as string);
+                            reader.onload = (ev) => {
+                              setPaginaFinale('immagineBase64', ev.target?.result as string);
+                              if (finalImgFileInputRef.current) finalImgFileInputRef.current.value = '';
+                            };
                             reader.readAsDataURL(file);
-                            e.target.value = '';
-                            toast.success('Immagine caricata sul server');
-                          } catch (err: unknown) {
-                            toast.error(err instanceof Error ? err.message : 'Errore upload');
-                            e.target.value = '';
-                          }
-                        }}
-                        className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                      />
-                    </div>
-                    {(config.paginaFinale.immagineUrl || config.paginaFinale.immagineBase64) && (
-                      <div className="mt-1 space-y-2">
-                        <div className="flex items-center gap-3">
+                          }}
+                          className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-600 hover:file:bg-gray-200 cursor-pointer"
+                        />
+                        <span className="text-2xs text-gray-400 flex-shrink-0">Solo sessione</span>
+                      </div>
+                      {(config.paginaFinale.immagineUrl || config.paginaFinale.immagineBase64) && (
+                        <div className="mt-2 flex items-center gap-3">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={config.paginaFinale.immagineBase64 ?? config.paginaFinale.immagineUrl ?? ''}
                             alt="Anteprima"
                             className="h-12 w-20 object-cover rounded border border-border"
                           />
-                          <button
-                            type="button"
-                            onClick={() => { setPaginaFinale('immagineBase64', null); setPaginaFinale('immagineUrl', null); }}
-                            className="text-2xs text-red-500 hover:text-red-700 underline"
-                          >
-                            Rimuovi
-                          </button>
+                          <div className="space-y-1">
+                            {config.paginaFinale.immagineUrl && (
+                              <p className="text-2xs text-green-600">Salvata sul server</p>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => { setPaginaFinale('immagineBase64', null); setPaginaFinale('immagineUrl', null); if (finalImgFileInputRef.current) finalImgFileInputRef.current.value = ''; }}
+                              className="text-2xs text-red-500 hover:text-red-700 underline"
+                            >
+                              Rimuovi immagine
+                            </button>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-2xs font-medium text-gray-600 mb-1">Posizione</label>
-                            <select
-                              value={config.paginaFinale.immaginePosition ?? 'top'}
-                              onChange={(e) => setPaginaFinale('immaginePosition', e.target.value)}
-                              className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
-                            >
-                              <option value="top">In alto</option>
-                              <option value="center">Al centro</option>
-                              <option value="bottom">In basso</option>
-                              <option value="background">Sfondo (semi-trasparente)</option>
-                            </select>
+                      )}
+                    </div>
+
+                    {/* Layout */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Layout pagina finale</label>
+                      <select
+                        value={config.paginaFinale.layout ?? 'img-top'}
+                        onChange={(e) => setPaginaFinale('layout', e.target.value)}
+                        className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      >
+                        <option value="img-top">Immagine in alto, testo in basso</option>
+                        <option value="img-bottom">Immagine in basso, testo in alto</option>
+                        <option value="img-left">Immagine a sinistra, testo a destra</option>
+                        <option value="full-overlay">Immagine piena con testo sovrapposto</option>
+                        <option value="background">Immagine a sfondo intera pagina</option>
+                        <option value="img-only">Solo immagine (nessun testo)</option>
+                      </select>
+                    </div>
+
+                    {/* Image controls */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-gray-600">Posizione e scala immagine</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Offset X (%)</label>
+                          <input type="range" min={-100} max={100} value={config.paginaFinale.imgOffsetX ?? 0}
+                            onChange={(e) => setPaginaFinale('imgOffsetX', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.paginaFinale.imgOffsetX ?? 0}%</span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Offset Y (%)</label>
+                          <input type="range" min={-100} max={100} value={config.paginaFinale.imgOffsetY ?? 0}
+                            onChange={(e) => setPaginaFinale('imgOffsetY', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.paginaFinale.imgOffsetY ?? 0}%</span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Scala (%)</label>
+                          <input type="range" min={50} max={200} value={config.paginaFinale.imgScale ?? 100}
+                            onChange={(e) => setPaginaFinale('imgScale', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.paginaFinale.imgScale ?? 100}%</span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Opacità (%)</label>
+                          <input type="range" min={10} max={100} value={config.paginaFinale.imgOpacity ?? 100}
+                            onChange={(e) => setPaginaFinale('imgOpacity', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.paginaFinale.imgOpacity ?? 100}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Logo */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-gray-600">Logo</p>
+                    {(
+                      [
+                        { value: 'onearth', label: 'Logo ON EARTH (automatico)' },
+                        { value: 'custom', label: 'Carica logo personalizzato' },
+                        { value: 'none', label: 'Nessun logo' },
+                      ] as const
+                    ).map((opt) => (
+                      <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="paginaFinaleLogoTipo"
+                          value={opt.value}
+                          checked={(config.paginaFinale.logoTipo ?? (config.paginaFinale.mostraLogo ? 'onearth' : 'none')) === opt.value}
+                          onChange={() => setPaginaFinale('logoTipo', opt.value)}
+                          className="accent-primary"
+                        />
+                        <span className="text-xs text-gray-700">{opt.label}</span>
+                      </label>
+                    ))}
+
+                    {config.paginaFinale.logoTipo === 'custom' && (
+                      <div className="pl-5 space-y-2">
+                        <input
+                          ref={finalLogoFileInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/svg+xml"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              setPaginaFinale('logoCustomBase64', ev.target?.result as string);
+                              if (finalLogoFileInputRef.current) finalLogoFileInputRef.current.value = '';
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                          className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                        />
+                        {config.paginaFinale.logoCustomBase64 && (
+                          <div className="flex items-center gap-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={config.paginaFinale.logoCustomBase64} alt="Logo" className="h-8 object-contain border border-border rounded bg-white px-2" />
+                            <button type="button" onClick={() => { setPaginaFinale('logoCustomBase64', null); if (finalLogoFileInputRef.current) finalLogoFileInputRef.current.value = ''; }} className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
                           </div>
-                          <div>
-                            <label className="block text-2xs font-medium text-gray-600 mb-1">Dimensione</label>
-                            <select
-                              value={config.paginaFinale.immagineDimensione ?? 'medium'}
-                              onChange={(e) => setPaginaFinale('immagineDimensione', e.target.value)}
-                              className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
-                            >
-                              <option value="small">Piccola (30%)</option>
-                              <option value="medium">Media (50%)</option>
-                              <option value="large">Grande (75%)</option>
-                              <option value="full">Piena larghezza</option>
-                            </select>
-                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {(config.paginaFinale.logoTipo ?? 'onearth') !== 'none' && (
+                      <div className="pl-5 space-y-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Posizione logo</label>
+                          <LogoPosGrid
+                            posX={config.paginaFinale.logoPosX ?? 'center'}
+                            posY={config.paginaFinale.logoPosY ?? 'bottom'}
+                            onChange={(x, y) => { setPaginaFinale('logoPosX', x); setPaginaFinale('logoPosY', y); }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione logo</label>
+                          <select
+                            value={config.paginaFinale.logoDimensione ?? 'medio'}
+                            onChange={(e) => setPaginaFinale('logoDimensione', e.target.value)}
+                            className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
+                          >
+                            <option value="piccolo">Piccolo</option>
+                            <option value="medio">Medio</option>
+                            <option value="grande">Grande</option>
+                          </select>
                         </div>
                       </div>
                     )}
                   </div>
-
-                  {/* Logo */}
-                  <CheckboxField
-                    label="Logo ON EARTH in fondo"
-                    checked={config.paginaFinale.mostraLogo}
-                    onChange={(v) => setPaginaFinale('mostraLogo', v)}
-                  />
 
                   {/* Preview */}
                   <FinalPagePreview config={config} />

@@ -176,6 +176,16 @@ export type CatalogConfig = {
     immagineBase64?: string | null;
     immaginePosition?: 'top' | 'center' | 'bottom' | 'background';
     immagineDimensione?: 'small' | 'medium' | 'large' | 'full';
+    imgOffsetX?: number;
+    imgOffsetY?: number;
+    imgScale?: number;
+    imgOpacity?: number;
+    layout?: 'full-overlay' | 'img-top' | 'img-bottom' | 'img-left' | 'background' | 'img-only';
+    logoTipo?: 'onearth' | 'custom' | 'none';
+    logoCustomBase64?: string | null;
+    logoPosX?: 'left' | 'center' | 'right';
+    logoPosY?: 'top' | 'middle' | 'bottom';
+    logoDimensione?: 'piccolo' | 'medio' | 'grande';
   };
   // Typography customization
   cardFieldStyles: CardFieldStyles;
@@ -1128,6 +1138,15 @@ function renderTitleInlines(inlines: HtmlInline[], typo: { titoloFontSize: numbe
   );
 }
 
+function resolveFinalLogo(pf: CatalogConfig['paginaFinale'], headerLogoBase64: string | null): string | null {
+  const logoTipo = pf.logoTipo ?? (pf.mostraLogo ? 'onearth' : 'none');
+  if (logoTipo === 'none') return null;
+  if (logoTipo === 'custom') return pf.logoCustomBase64 ?? null;
+  return headerLogoBase64;
+}
+
+const FINAL_LOGO_H: Record<string, number> = { piccolo: 14, medio: 22, grande: 34 };
+
 function FinalPage({
   config,
   layout,
@@ -1145,80 +1164,203 @@ function FinalPage({
   const bodyBlocks = parseHtmlToPdf(pf.testo ?? '');
 
   const imgSrc = pf.immagineBase64 ?? null;
-  const imgPos = pf.immaginePosition ?? 'top';
-  const imgDim = pf.immagineDimensione ?? 'medium';
 
-  const IMG_DIM_MAP: Record<string, number> = { small: pageW * 0.3, medium: pageW * 0.5, large: pageW * 0.75, full: pageW };
-  const imgWidth = IMG_DIM_MAP[imgDim] ?? pageW * 0.5;
-  const imgHeight = imgDim === 'full' ? pageH : imgWidth * 0.65;
+  // Resolve layout — new field takes precedence, fall back to legacy immaginePosition
+  const legacyLayoutMap: Record<string, string> = {
+    top: 'img-top',
+    center: 'img-top',
+    bottom: 'img-bottom',
+    background: 'background',
+  };
+  const resolvedLayout: string = pf.layout ?? legacyLayoutMap[pf.immaginePosition ?? ''] ?? 'img-top';
 
-  if (imgSrc && imgPos === 'background') {
+  // Image transform parameters
+  const imgScale = pf.imgScale ?? 100;
+  const imgOffsetX = pf.imgOffsetX ?? 0;
+  const imgOffsetY = pf.imgOffsetY ?? 0;
+  const imgOpacity = (pf.imgOpacity ?? 100) / 100;
+
+  // Logo parameters
+  const finalLogoBase64 = resolveFinalLogo(pf, config.logoBase64);
+  const logoDim = pf.logoDimensione ?? 'medio';
+  const logoH = FINAL_LOGO_H[logoDim] ?? 22;
+  const logoPosX = pf.logoPosX ?? 'center';
+  const logoPosY = pf.logoPosY ?? 'bottom';
+  const logoJustify: 'flex-start' | 'center' | 'flex-end' =
+    logoPosX === 'center' ? 'center' : logoPosX === 'right' ? 'flex-end' : 'flex-start';
+  const LOGO_MARGIN = 30;
+  const logoVertical: Record<string, number> = {
+    top: LOGO_MARGIN,
+    middle: pageH / 2 - logoH / 2,
+    bottom: pageH - logoH - LOGO_MARGIN,
+  };
+  const logoTop = logoVertical[logoPosY] ?? (pageH - logoH - LOGO_MARGIN);
+
+  // Helper: render logo absolutely positioned
+  const logoView = finalLogoBase64 ? (
+    <View
+      style={{
+        position: 'absolute',
+        top: logoTop,
+        left: LOGO_MARGIN,
+        right: LOGO_MARGIN,
+        flexDirection: 'row',
+        justifyContent: logoJustify,
+      }}
+    >
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <Image src={finalLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
+    </View>
+  ) : null;
+
+  // Helper: compute img position/size for absolute placement (full-area img)
+  function fullImgStyle(areaW: number, areaH: number) {
+    const imgW = areaW * imgScale / 100;
+    const imgH = areaH * imgScale / 100;
+    const left = (areaW - imgW) / 2 + (areaW * imgOffsetX / 100);
+    const top = (areaH - imgH) / 2 + (areaH * imgOffsetY / 100);
+    return { position: 'absolute' as const, top, left, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }; // eslint-disable-line @typescript-eslint/no-explicit-any
+  }
+
+  const PAD_H = 60;
+  const PAD_V = 48;
+
+  // ── full-overlay ─────────────────────────────────────────────────────────────
+  if (resolvedLayout === 'full-overlay') {
     return (
-      <Page
-        size={[pageW, pageH] as [number, number]}
-        style={{ fontFamily: 'Helvetica', justifyContent: 'center', paddingHorizontal: 60 }}
-      >
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <Image src={imgSrc} style={{ position: 'absolute', top: 0, left: 0, width: pageW, height: pageH, objectFit: 'cover' as any, opacity: 0.25 }} />
-        {renderTitleInlines(titleInlines, typo, titleAlign)}
-        {bodyBlocks.length > 0 ? (
-          <View style={{ width: '100%', marginBottom: 24 }}>
-            {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
-          </View>
-        ) : null}
-        {pf.mostraLogo && config.logoBase64 && (
-          <View style={{ alignItems: 'center' }}>
-            <Image src={config.logoBase64} style={{ height: 20, width: 130, marginTop: 10 }} />
-          </View>
-        )}
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+        {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
+        {/* Gradient overlay */}
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: '#000000', opacity: 0.55 }} />
+        {/* Text on top */}
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V }}>
+          {renderTitleInlines(titleInlines, typo, titleAlign, 8)}
+          {bodyBlocks.length > 0 ? (
+            <View style={{ width: '100%' }}>
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+            </View>
+          ) : null}
+        </View>
+        {logoView}
       </Page>
     );
   }
 
+  // ── background ───────────────────────────────────────────────────────────────
+  if (resolvedLayout === 'background') {
+    return (
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+        {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingVertical: PAD_V }}>
+          {renderTitleInlines(titleInlines, typo, titleAlign)}
+          {bodyBlocks.length > 0 ? (
+            <View style={{ width: '100%' }}>
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+            </View>
+          ) : null}
+        </View>
+        {logoView}
+      </Page>
+    );
+  }
+
+  // ── img-only ─────────────────────────────────────────────────────────────────
+  if (resolvedLayout === 'img-only') {
+    return (
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+        {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
+        {logoView}
+      </Page>
+    );
+  }
+
+  // ── img-left ─────────────────────────────────────────────────────────────────
+  if (resolvedLayout === 'img-left') {
+    const imgAreaW = pageW * 0.45;
+    const imgW = imgAreaW * imgScale / 100;
+    const imgH = pageH * imgScale / 100;
+    const imgLeft = (imgAreaW - imgW) / 2 + (imgAreaW * imgOffsetX / 100);
+    const imgTop = (pageH - imgH) / 2 + (pageH * imgOffsetY / 100);
+    return (
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina, flexDirection: 'row' }}>
+        {/* Left image area */}
+        <View style={{ width: imgAreaW, height: pageH, overflow: 'hidden' }}>
+          {imgSrc && (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
+          )}
+        </View>
+        {/* Right text area */}
+        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingVertical: PAD_V }}>
+          {renderTitleInlines(titleInlines, typo, titleAlign)}
+          {bodyBlocks.length > 0 ? (
+            <View style={{ width: '100%' }}>
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+            </View>
+          ) : null}
+        </View>
+        {logoView}
+      </Page>
+    );
+  }
+
+  // ── img-bottom ───────────────────────────────────────────────────────────────
+  if (resolvedLayout === 'img-bottom') {
+    const imgAreaH = pageH * 0.4;
+    const textAreaH = pageH - imgAreaH;
+    const imgW = pageW * imgScale / 100;
+    const imgH = imgAreaH * imgScale / 100;
+    const imgLeft = (pageW - imgW) / 2 + (pageW * imgOffsetX / 100);
+    const imgTop = (imgAreaH - imgH) / 2 + (imgAreaH * imgOffsetY / 100);
+    return (
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+        {/* Top text area */}
+        <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingVertical: PAD_V }}>
+          {renderTitleInlines(titleInlines, typo, titleAlign)}
+          {bodyBlocks.length > 0 ? (
+            <View style={{ width: '100%' }}>
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+            </View>
+          ) : null}
+        </View>
+        {/* Bottom image area */}
+        <View style={{ height: imgAreaH, overflow: 'hidden' }}>
+          {imgSrc && (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
+          )}
+        </View>
+        {logoView}
+      </Page>
+    );
+  }
+
+  // ── img-top (default) ────────────────────────────────────────────────────────
+  const imgAreaH = pageH * 0.4;
+  const textAreaH = pageH - imgAreaH;
+  const imgW = pageW * imgScale / 100;
+  const imgH = imgAreaH * imgScale / 100;
+  const imgLeft = (pageW - imgW) / 2 + (pageW * imgOffsetX / 100);
+  const imgTop = (imgAreaH - imgH) / 2 + (imgAreaH * imgOffsetY / 100);
   return (
-    <Page
-      size={[pageW, pageH] as [number, number]}
-      style={{
-        fontFamily: 'Helvetica',
-        backgroundColor: config.colori.sfondoPagina,
-        justifyContent: 'center',
-        paddingHorizontal: 60,
-      }}
-    >
-      {imgSrc && imgPos === 'top' && (
-        <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <Image src={imgSrc} style={{ width: imgWidth, height: imgHeight, objectFit: 'cover' as any }} />
-        </View>
-      )}
-
-      {renderTitleInlines(titleInlines, typo, titleAlign)}
-
-      {imgSrc && imgPos === 'center' && (
-        <View style={{ alignItems: 'center', marginBottom: 16 }}>
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <Image src={imgSrc} style={{ width: imgWidth, height: imgHeight, objectFit: 'cover' as any }} />
-        </View>
-      )}
-
-      {bodyBlocks.length > 0 ? (
-        <View style={{ width: '100%', marginBottom: 24 }}>
-          {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
-        </View>
-      ) : null}
-
-      {imgSrc && imgPos === 'bottom' && (
-        <View style={{ alignItems: 'center', marginTop: 16 }}>
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <Image src={imgSrc} style={{ width: imgWidth, height: imgHeight, objectFit: 'cover' as any }} />
-        </View>
-      )}
-
-      {pf.mostraLogo && config.logoBase64 && (
-        <View style={{ alignItems: 'center' }}>
-          <Image src={config.logoBase64} style={{ height: 20, width: 130, marginTop: 10 }} />
-        </View>
-      )}
+    <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+      {/* Top image area */}
+      <View style={{ height: imgAreaH, overflow: 'hidden' }}>
+        {imgSrc && (
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
+        )}
+      </View>
+      {/* Bottom text area */}
+      <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingVertical: PAD_V }}>
+        {renderTitleInlines(titleInlines, typo, titleAlign)}
+        {bodyBlocks.length > 0 ? (
+          <View style={{ width: '100%' }}>
+            {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+          </View>
+        ) : null}
+      </View>
+      {logoView}
     </Page>
   );
 }
