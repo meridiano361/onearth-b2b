@@ -17,7 +17,7 @@ import type { Product } from '@/types';
 import toast from 'react-hot-toast';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
-type SortField = 'code' | 'name' | 'produttore' | 'costPrice' | 'retailPrice';
+type SortField = 'code' | 'name' | 'produttore' | 'collezione' | 'costPrice' | 'retailPrice';
 type SortDir = 'asc' | 'desc';
 
 interface BulkEditValues {
@@ -545,6 +545,7 @@ export default function AdminProductsPage() {
               <th>{thBtn('code', 'Codice')}</th>
               <th>{thBtn('name', 'Descrizione')}</th>
               <th>{thBtn('produttore', 'Produttore')}</th>
+              <th className="hidden sm:table-cell">{thBtn('collezione', 'Collezione')}</th>
               <th>{thBtn('costPrice', 'Costo i.e.')}</th>
               <th>{thBtn('retailPrice', 'Vendita i.i.')}</th>
               <th>%SC</th>
@@ -555,9 +556,9 @@ export default function AdminProductsPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={10} className="py-12 text-center"><LoadingSpinner className="mx-auto" /></td></tr>
+              <tr><td colSpan={11} className="py-12 text-center"><LoadingSpinner className="mx-auto" /></td></tr>
             ) : products.length === 0 ? (
-              <tr><td colSpan={10} className="py-12 text-center text-gray-400 text-sm">Nessun prodotto trovato</td></tr>
+              <tr><td colSpan={11} className="py-12 text-center text-gray-400 text-sm">Nessun prodotto trovato</td></tr>
             ) : (
               products.map((product) => {
                 const ivaFactor = 1 + (product.iva ?? 22) / 100;
@@ -569,6 +570,7 @@ export default function AdminProductsPage() {
                     <td><span className="font-mono text-xs text-gray-500">{product.code}</span></td>
                     <td><p className="font-medium text-primary text-xs">{product.name}</p></td>
                     <td><span className="text-xs text-gray-500">{product.produttore || '—'}</span></td>
+                    <td className="hidden sm:table-cell"><span className="text-xs text-gray-500">{product.collezione || '—'}</span></td>
                     <td className="font-medium text-xs">{formatCurrency(product.costPrice)}</td>
                     <td className="text-xs text-gray-500">{formatCurrency(product.retailPrice)}</td>
                     <td className="text-xs text-center">
