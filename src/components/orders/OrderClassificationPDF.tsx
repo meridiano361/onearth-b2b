@@ -104,7 +104,7 @@ const s = StyleSheet.create({
   imgArea: { width: CARD_W, height: IMG_H, backgroundColor: C.placeholder },
   img: { width: CARD_W, height: IMG_H, objectFit: 'cover' },
   placeholderBox: { width: CARD_W, height: IMG_H, justifyContent: 'center', alignItems: 'center', backgroundColor: C.placeholder },
-  placeholderCode: { fontSize: 6.5, color: C.white, fontFamily: 'Helvetica-Bold', letterSpacing: 0.8, textAlign: 'center' },
+  placeholderCode: { fontSize: 6.5, color: C.white, fontFamily: 'Helvetica-Bold', letterSpacing: 0.8 },
   cardBody: { padding: 7, height: BODY_H, justifyContent: 'space-between' },
   cardCode: { fontSize: 6, color: C.muted, fontFamily: 'Helvetica-Bold', letterSpacing: 1 },
   cardName: { fontSize: 7.5, color: C.primary, lineHeight: 1.35, marginTop: 2 },
@@ -131,7 +131,7 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   subtotalLabel: { fontSize: 7, color: C.muted, letterSpacing: 1, marginRight: 10, textTransform: 'uppercase' },
-  subtotalValue: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', width: 72, textAlign: 'right' },
+  subtotalValue: { fontSize: 8.5, fontFamily: 'Helvetica-Bold' },
   notesBox: {
     marginTop: 10,
     padding: 8,
@@ -153,7 +153,7 @@ const s = StyleSheet.create({
     alignItems: 'baseline',
   },
   totalLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', letterSpacing: 2, textTransform: 'uppercase', marginRight: 12, color: C.primary },
-  totalValue: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: C.primary, width: 88, textAlign: 'right' },
+  totalValue: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: C.primary },
   footer: {
     position: 'absolute',
     bottom: 18,
@@ -211,7 +211,7 @@ const ss = StyleSheet.create({
     paddingBottom: 5,
   },
   colGruppo: { flex: 1, paddingLeft: 10 },
-  colNum: { width: 64, textAlign: 'right', paddingRight: 10 },
+  colNum: { width: 64, alignItems: 'flex-end', paddingRight: 10 },
   thText: { fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: C.muted, letterSpacing: 1 },
   tdText: { fontSize: 7.5, color: C.primary },
   tdTotal: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: C.primary },
@@ -399,7 +399,9 @@ export function OrderClassificationPDF({
             {/* Group subtotal */}
             <View style={s.subtotalRow}>
               <Text style={s.subtotalLabel}>Subtotale {group.key}</Text>
-              <Text style={s.subtotalValue}>{euro(group.subtotal)}</Text>
+              <View style={{ width: 72, alignItems: 'flex-end' }}>
+                <Text style={s.subtotalValue}>{euro(group.subtotal)}</Text>
+              </View>
             </View>
           </View>
         ))}
@@ -415,7 +417,9 @@ export function OrderClassificationPDF({
         {/* Grand total */}
         <View style={s.totalBox} wrap={false}>
           <Text style={s.totalLabel}>Totale Ordine</Text>
-          <Text style={s.totalValue}>{euro(grandTotal)}</Text>
+          <View style={{ width: 88, alignItems: 'flex-end' }}>
+            <Text style={s.totalValue}>{euro(grandTotal)}</Text>
+          </View>
         </View>
 
         {/* Footer — repeats on every page */}

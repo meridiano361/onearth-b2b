@@ -420,7 +420,6 @@ const s = StyleSheet.create({
   },
   separatorCount: {
     fontSize: 10,
-    textAlign: 'center',
     letterSpacing: 1.5,
   },
 });
@@ -465,12 +464,11 @@ function CatalogHeader({
           <Text style={[s.headerBrand, { color: textColor }]}>ON EARTH</Text>
         )}
       </View>
-      <Text style={[s.headerTitle, {
-        fontSize: hs.titleFontSize,
-        fontFamily: titleFont,
-        color: textColor,
-        textAlign: hs.titleAlign as any,
-      }]}>{config.titolo}</Text>
+      <View style={{ flex: 1, paddingHorizontal: 8, alignItems: alignToFlex(hs.titleAlign) }}>
+        <Text style={{ fontSize: hs.titleFontSize, fontFamily: titleFont, color: textColor, letterSpacing: 0.5 }}>
+          {config.titolo}
+        </Text>
+      </View>
       <View style={s.headerRight}>
         {config.mostraData && (
           <Text style={[s.headerDate, { color: mutedColor }]}>{today}</Text>
@@ -500,14 +498,16 @@ function CatalogFooter({
       }]}
       fixed
     >
-      <Text
-        style={{ fontSize: fs.fontSize, color: fs.color, textAlign: fs.align as any }}
-        render={({ pageNumber, totalPages }) =>
-          fs.customText
-            ? `${fs.customText} — ${pageNumber} / ${totalPages}`
-            : `${pageNumber} / ${totalPages}`
-        }
-      />
+      <View style={{ width: '100%', alignItems: alignToFlex(fs.align) }}>
+        <Text
+          style={{ fontSize: fs.fontSize, color: fs.color }}
+          render={({ pageNumber, totalPages }) =>
+            fs.customText
+              ? `${fs.customText} — ${pageNumber} / ${totalPages}`
+              : `${pageNumber} / ${totalPages}`
+          }
+        />
+      </View>
     </View>
   );
 }
@@ -846,29 +846,17 @@ function CoverPage({
             paddingBottom: 44,
           }}
         >
-          <Text
-            style={{
-              fontSize: typo.titoloFontSize,
-              fontFamily: titleFont,
-              color: typo.titoloColor,
-              letterSpacing: 3,
-              marginBottom: 6,
-              textAlign: titleAlign,
-            }}
-          >
-            {titoloText}
-          </Text>
-          {cov.sottotitolo ? (
-            <Text style={{
-              fontSize: typo.sottotitoloFontSize,
-              fontFamily: subtitleFont,
-              color: typo.sottotitoloColor,
-              letterSpacing: 1,
-              opacity: 0.85,
-              textAlign: subtitleAlign,
-            }}>
-              {cov.sottotitolo}
+          <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: 6 }}>
+            <Text style={{ fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 3 }}>
+              {titoloText}
             </Text>
+          </View>
+          {cov.sottotitolo ? (
+            <View style={{ width: '100%', alignItems: alignToFlex(subtitleAlign) }}>
+              <Text style={{ fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: typo.sottotitoloColor, letterSpacing: 1, opacity: 0.85 }}>
+                {cov.sottotitolo}
+              </Text>
+            </View>
           ) : null}
         </View>
       </Page>
@@ -930,30 +918,17 @@ function CoverPage({
               <Image src={coverLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
             </View>
           )}
-          <Text
-            style={{
-              fontSize: typo.titoloFontSize,
-              fontFamily: titleFont,
-              color: typo.titoloColor,
-              letterSpacing: 3,
-              textAlign: titleAlign,
-              marginBottom: 8,
-            }}
-          >
-            {titoloText}
-          </Text>
-          {cov.sottotitolo ? (
-            <Text
-              style={{
-                fontSize: typo.sottotitoloFontSize,
-                fontFamily: subtitleFont,
-                color: typo.sottotitoloColor,
-                letterSpacing: 1,
-                textAlign: subtitleAlign,
-              }}
-            >
-              {cov.sottotitolo}
+          <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: 8 }}>
+            <Text style={{ fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 3 }}>
+              {titoloText}
             </Text>
+          </View>
+          {cov.sottotitolo ? (
+            <View style={{ width: '100%', alignItems: alignToFlex(subtitleAlign) }}>
+              <Text style={{ fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: typo.sottotitoloColor, letterSpacing: 1 }}>
+                {cov.sottotitolo}
+              </Text>
+            </View>
           ) : null}
         </View>
       </Page>
@@ -987,30 +962,17 @@ function CoverPage({
           marginBottom: 20,
         }}
       />
-      <Text
-        style={{
-          fontSize: typo.titoloFontSize,
-          fontFamily: titleFont,
-          color: typo.titoloColor,
-          letterSpacing: 4,
-          textAlign: titleAlign,
-          marginBottom: 12,
-        }}
-      >
-        {titoloText}
-      </Text>
-      {cov.sottotitolo ? (
-        <Text
-          style={{
-            fontSize: typo.sottotitoloFontSize,
-            fontFamily: subtitleFont,
-            color: typo.sottotitoloColor,
-            letterSpacing: 1.5,
-            textAlign: subtitleAlign,
-          }}
-        >
-          {cov.sottotitolo}
+      <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: 12 }}>
+        <Text style={{ fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 4 }}>
+          {titoloText}
         </Text>
+      </View>
+      {cov.sottotitolo ? (
+        <View style={{ width: '100%', alignItems: alignToFlex(subtitleAlign) }}>
+          <Text style={{ fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: typo.sottotitoloColor, letterSpacing: 1.5 }}>
+            {cov.sottotitolo}
+          </Text>
+        </View>
       ) : null}
     </Page>
   );
@@ -1057,18 +1019,22 @@ function FinalPage({
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <Image src={imgSrc} style={{ position: 'absolute', top: 0, left: 0, width: pageW, height: pageH, objectFit: 'cover' as any, opacity: 0.25 }} />
         {pf.titolo ? (
-          <Text style={{ fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 2, textAlign: titleAlign, marginBottom: 18 }}>
-            {pf.titolo}
-          </Text>
+          <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: 18 }}>
+            <Text style={{ fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 2 }}>
+              {pf.titolo}
+            </Text>
+          </View>
         ) : null}
         {pf.testo ? (
-          <Text style={{ fontSize: typo.testoFontSize, color: typo.testoColor, textAlign: textAlign, lineHeight: 1.6, marginBottom: 24 }}>
-            {segments.map((seg, i) => (
-              <Text key={i} style={{ fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique' : seg.bold ? 'Helvetica-Bold' : seg.italic ? 'Helvetica-Oblique' : 'Helvetica' }}>
-                {seg.text}
-              </Text>
-            ))}
-          </Text>
+          <View style={{ width: '100%', alignItems: alignToFlex(textAlign), marginBottom: 24 }}>
+            <Text style={{ fontSize: typo.testoFontSize, color: typo.testoColor, lineHeight: 1.6 }}>
+              {segments.map((seg, i) => (
+                <Text key={i} style={{ fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique' : seg.bold ? 'Helvetica-Bold' : seg.italic ? 'Helvetica-Oblique' : 'Helvetica' }}>
+                  {seg.text}
+                </Text>
+              ))}
+            </Text>
+          </View>
         ) : null}
         {pf.mostraLogo && config.logoBase64 && (
           <View style={{ alignItems: 'center' }}>
@@ -1098,18 +1064,11 @@ function FinalPage({
       )}
 
       {pf.titolo ? (
-        <Text
-          style={{
-            fontSize: typo.titoloFontSize,
-            fontFamily: titleFont,
-            color: typo.titoloColor,
-            letterSpacing: 2,
-            textAlign: titleAlign,
-            marginBottom: 18,
-          }}
-        >
-          {pf.titolo}
-        </Text>
+        <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: 18 }}>
+          <Text style={{ fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 2 }}>
+            {pf.titolo}
+          </Text>
+        </View>
       ) : null}
 
       {/* Image at center (between title and body text) */}
@@ -1121,29 +1080,23 @@ function FinalPage({
       )}
 
       {pf.testo ? (
-        <Text
-          style={{
-            fontSize: typo.testoFontSize,
-            color: typo.testoColor,
-            textAlign: textAlign,
-            lineHeight: 1.6,
-            marginBottom: 24,
-          }}
-        >
-          {segments.map((seg, i) => (
-            <Text
-              key={i}
-              style={{
-                fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique'
-                  : seg.bold ? 'Helvetica-Bold'
-                  : seg.italic ? 'Helvetica-Oblique'
-                  : 'Helvetica',
-              }}
-            >
-              {seg.text}
-            </Text>
-          ))}
-        </Text>
+        <View style={{ width: '100%', alignItems: alignToFlex(textAlign), marginBottom: 24 }}>
+          <Text style={{ fontSize: typo.testoFontSize, color: typo.testoColor, lineHeight: 1.6 }}>
+            {segments.map((seg, i) => (
+              <Text
+                key={i}
+                style={{
+                  fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique'
+                    : seg.bold ? 'Helvetica-Bold'
+                    : seg.italic ? 'Helvetica-Oblique'
+                    : 'Helvetica',
+                }}
+              >
+                {seg.text}
+              </Text>
+            ))}
+          </Text>
+        </View>
       ) : null}
 
       {/* Image at bottom */}
@@ -1194,16 +1147,11 @@ function SeparatorPageFull({
       <CatalogHeader config={config} today={today} layout={layout} />
       <View style={s.separatorContent}>
         <View style={[s.separatorAccentLine, { backgroundColor: sep.color }]} />
-        <Text style={{
-          fontSize: sep.fontSize,
-          fontFamily: sepFont,
-          color: sep.color,
-          letterSpacing: 3,
-          textAlign: sep.align as any,
-          marginBottom: 12,
-        }}>
-          {displayKey}
-        </Text>
+        <View style={{ width: '100%', alignItems: alignToFlex(sep.align), marginBottom: 12 }}>
+          <Text style={{ fontSize: sep.fontSize, fontFamily: sepFont, color: sep.color, letterSpacing: 3 }}>
+            {displayKey}
+          </Text>
+        </View>
         <Text style={[s.separatorCount, { color: sep.color }]}>
           {productCount} {productCount === 1 ? 'prodotto' : 'prodotti'}
         </Text>
@@ -1240,15 +1188,11 @@ function InlineGroupHeader({
         width: layout.CARD_W * layout.COLS,
       }}
     >
-      <Text style={{
-        fontSize: Math.max(6, sep.fontSize * 0.6),
-        fontFamily: sepFont,
-        color: sep.color,
-        letterSpacing: 1,
-        textAlign: sep.align as any,
-      }}>
-        {displayKey}
-      </Text>
+      <View style={{ width: '100%', alignItems: alignToFlex(sep.align) }}>
+        <Text style={{ fontSize: Math.max(6, sep.fontSize * 0.6), fontFamily: sepFont, color: sep.color, letterSpacing: 1 }}>
+          {displayKey}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -1282,15 +1226,11 @@ function NewRowGroupHeader({
         marginTop: 6,
       }}
     >
-      <Text style={{
-        fontSize: sep.fontSize,
-        fontFamily: sepFont,
-        color: sep.color,
-        letterSpacing: 1.5,
-        textAlign: sep.align as any,
-      }}>
-        {displayKey}
-      </Text>
+      <View style={{ width: '100%', alignItems: alignToFlex(sep.align) }}>
+        <Text style={{ fontSize: sep.fontSize, fontFamily: sepFont, color: sep.color, letterSpacing: 1.5 }}>
+          {displayKey}
+        </Text>
+      </View>
     </View>
   );
 }

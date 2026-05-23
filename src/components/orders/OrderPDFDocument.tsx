@@ -98,9 +98,9 @@ const s = StyleSheet.create({
   },
   cCode: { width: 62, paddingRight: 6 },
   cName: { flex: 1, paddingRight: 6 },
-  cQty: { width: 28, paddingRight: 6 },
-  cPrice: { width: 52, paddingRight: 6 },
-  cTotal: { width: 56 },
+  cQty: { width: 28, paddingRight: 6, alignItems: 'flex-end' },
+  cPrice: { width: 52, paddingRight: 6, alignItems: 'flex-end' },
+  cTotal: { width: 56, alignItems: 'flex-end' },
   codeCell: { fontSize: 7.5, color: C.muted },
   nameCell: { fontSize: 8, color: C.primary },
   subCell: { fontSize: 6.5, color: C.muted, marginTop: 1.5 },
@@ -122,8 +122,6 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
   },
   subtotalValue: {
-    width: 56,
-    textAlign: 'right',
     fontSize: 8,
     fontFamily: 'Helvetica-Bold',
   },
@@ -143,8 +141,6 @@ const s = StyleSheet.create({
     marginRight: 8,
   },
   totalValue: {
-    width: 56,
-    textAlign: 'right',
     fontSize: 12,
     fontFamily: 'Helvetica-Bold',
   },
@@ -201,9 +197,9 @@ function TableHeader() {
     <View style={s.tableHead}>
       <View style={s.cCode}><Text style={s.thText}>Codice</Text></View>
       <View style={s.cName}><Text style={s.thText}>Prodotto</Text></View>
-      <View style={s.cQty}><Text style={[s.thText, { textAlign: 'right' }]}>Qtà</Text></View>
-      <View style={s.cPrice}><Text style={[s.thText, { textAlign: 'right' }]}>Prezzo</Text></View>
-      <View style={s.cTotal}><Text style={[s.thText, { textAlign: 'right' }]}>Totale</Text></View>
+      <View style={s.cQty}><Text style={s.thText}>Qtà</Text></View>
+      <View style={s.cPrice}><Text style={s.thText}>Prezzo</Text></View>
+      <View style={s.cTotal}><Text style={s.thText}>Totale</Text></View>
     </View>
   );
 }
@@ -227,13 +223,13 @@ function ItemRow({ item }: { item: OrderItem }) {
         )}
       </View>
       <View style={s.cQty}>
-        <Text style={[s.numCell, { textAlign: 'right' }]}>{item.quantity}</Text>
+        <Text style={s.numCell}>{item.quantity}</Text>
       </View>
       <View style={s.cPrice}>
-        <Text style={[s.numCell, { textAlign: 'right' }]}>{euro(item.unitPrice)}</Text>
+        <Text style={s.numCell}>{euro(item.unitPrice)}</Text>
       </View>
       <View style={s.cTotal}>
-        <Text style={[s.boldCell, { textAlign: 'right' }]}>{euro(item.subtotal)}</Text>
+        <Text style={s.boldCell}>{euro(item.subtotal)}</Text>
       </View>
     </View>
   );
@@ -281,9 +277,11 @@ export function OrderPDFDocument({ order, grouping, customerName }: OrderPDFDocu
             {group.key !== '' && (
               <View style={s.subtotalRow}>
                 <Text style={s.subtotalLabel}>Subtotale {group.key}</Text>
-                <Text style={s.subtotalValue}>
-                  {euro(group.items.reduce((acc, it) => acc + it.subtotal, 0))}
-                </Text>
+                <View style={{ width: 56, alignItems: 'flex-end' }}>
+                  <Text style={s.subtotalValue}>
+                    {euro(group.items.reduce((acc, it) => acc + it.subtotal, 0))}
+                  </Text>
+                </View>
               </View>
             )}
           </View>
@@ -292,7 +290,9 @@ export function OrderPDFDocument({ order, grouping, customerName }: OrderPDFDocu
         {/* Grand total */}
         <View style={s.totalRow} wrap={false}>
           <Text style={s.totalLabel}>Totale Ordine</Text>
-          <Text style={s.totalValue}>{euro(order.totalValue)}</Text>
+          <View style={{ width: 56, alignItems: 'flex-end' }}>
+            <Text style={s.totalValue}>{euro(order.totalValue)}</Text>
+          </View>
         </View>
 
         {/* Fixed footer on every page */}
