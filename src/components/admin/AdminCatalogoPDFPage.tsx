@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   BookOpen,
@@ -33,6 +33,10 @@ import type {
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -684,17 +688,170 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
   );
 }
 
-function parseMiniText(raw: string): { text: string; bold: boolean; italic: boolean }[] {
-  if (!raw) return [];
-  const segs: { text: string; bold: boolean; italic: boolean }[] = [];
-  const re = /(\*\*(.+?)\*\*|\*(.+?)\*|([^*]+))/g;
-  let m;
-  while ((m = re.exec(raw)) !== null) {
-    if (m[2]) segs.push({ text: m[2], bold: true, italic: false });
-    else if (m[3]) segs.push({ text: m[3], bold: false, italic: true });
-    else if (m[4]) segs.push({ text: m[4], bold: false, italic: false });
-  }
-  return segs.length > 0 ? segs : [{ text: raw, bold: false, italic: false }];
+// ── TipTap Rich Text Editor ───────────────────────────────────────────────────
+
+function TBtn({
+  active, onClick, title, children, disabled,
+}: {
+  active: boolean; onClick: () => void; title?: string; children: React.ReactNode; disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      disabled={disabled}
+      className={`h-6 min-w-[22px] px-1 rounded text-2xs flex items-center justify-center transition-colors ${active ? 'bg-primary/15 text-primary' : 'hover:bg-gray-100 text-gray-600'} disabled:opacity-35 disabled:cursor-not-allowed`}
+    >
+      {children}
+    </button>
+  );
+}
+
+const TIPTAP_STYLES = `
+  .tiptap-editor { padding: 8px 12px; min-height: 96px; font-size: 12px; color: #374151; outline: none; }
+  .tiptap-editor p { margin: 0 0 3px; }
+  .tiptap-editor h1 { font-size: 18px; font-weight: bold; margin: 0 0 6px; }
+  .tiptap-editor h2 { font-size: 14px; font-weight: bold; margin: 0 0 4px; }
+  .tiptap-editor ul { list-style-type: disc; padding-left: 18px; margin: 0 0 3px; }
+  .tiptap-editor ol { list-style-type: decimal; padding-left: 18px; margin: 0 0 3px; }
+  .tiptap-editor li { margin-bottom: 2px; }
+  .tiptap-editor u { text-decoration: underline; }
+  .tiptap-editor s { text-decoration: line-through; }
+  .tiptap-mini-editor { padding: 6px 12px; min-height: 36px; font-size: 12px; color: #374151; outline: none; }
+  .tiptap-mini-editor p { margin: 0; }
+  .tiptap-mini-editor u { text-decoration: underline; }
+`;
+
+function RichTextEditor({
+  content, onChange, placeholder,
+}: {
+  content: string; onChange: (html: string) => void; placeholder?: string;
+}) {
+  const lastSynced = useRef(content);
+  const suppress = useRef(false);
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    ],
+    content: content || '',
+    onUpdate: ({ editor: e }) => {
+      if (suppress.current) return;
+      const html = e.getHTML();
+      lastSynced.current = html;
+      onChange(html);
+    },
+    editorProps: { attributes: { class: 'tiptap-editor' } },
+    immediatelyRender: false,
+  });
+
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    if (content !== lastSynced.current) {
+      lastSynced.current = content;
+      suppress.current = true;
+      editor.commands.setContent(content || '');
+      suppress.current = false;
+    }
+  }, [editor, content]);
+
+  if (!editor) return <div className="border border-border rounded h-24 bg-white" />;
+
+  return (
+    <div className="border border-border rounded overflow-hidden bg-white focus-within:ring-1 focus-within:ring-primary/30">
+      <style>{TIPTAP_STYLES}</style>
+      <div className="flex items-center gap-0.5 px-1.5 py-1 border-b border-border bg-gray-50 flex-wrap">
+        <select
+          value={editor.isActive('heading', { level: 1 }) ? 'h1' : editor.isActive('heading', { level: 2 }) ? 'h2' : 'p'}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === 'h1') editor.chain().focus().toggleHeading({ level: 1 }).run();
+            else if (v === 'h2') editor.chain().focus().toggleHeading({ level: 2 }).run();
+            else editor.chain().focus().setParagraph().run();
+          }}
+          className="h-6 border border-border rounded text-2xs px-1 bg-white mr-1 focus:outline-none"
+        >
+          <option value="p">Normale</option>
+          <option value="h1">H1</option>
+          <option value="h2">H2</option>
+        </select>
+        <TBtn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="Grassetto"><span className="font-bold">B</span></TBtn>
+        <TBtn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="Corsivo"><span className="italic">I</span></TBtn>
+        <TBtn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Sottolineato"><span className="underline">U</span></TBtn>
+        <TBtn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} title="Barrato"><span className="line-through">S</span></TBtn>
+        <div className="w-px h-4 bg-border mx-0.5" />
+        <TBtn active={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Sinistra"><AlignLeft size={10} /></TBtn>
+        <TBtn active={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Centro"><AlignCenter size={10} /></TBtn>
+        <TBtn active={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()} title="Destra"><AlignRight size={10} /></TBtn>
+        <div className="w-px h-4 bg-border mx-0.5" />
+        <TBtn active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Elenco puntato">•≡</TBtn>
+        <TBtn active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Elenco numerato">1≡</TBtn>
+        <div className="w-px h-4 bg-border mx-0.5" />
+        <TBtn active={false} onClick={() => editor.chain().focus().undo().run()} title="Annulla" disabled={!editor.can().undo()}>↩</TBtn>
+        <TBtn active={false} onClick={() => editor.chain().focus().redo().run()} title="Ripristina" disabled={!editor.can().redo()}>↪</TBtn>
+      </div>
+      <EditorContent editor={editor} />
+      {placeholder && !editor.getText() && (
+        <p className="absolute top-9 left-3 text-2xs text-gray-400 pointer-events-none">{placeholder}</p>
+      )}
+    </div>
+  );
+}
+
+function MiniRichTextEditor({
+  content, onChange, placeholder,
+}: {
+  content: string; onChange: (html: string) => void; placeholder?: string;
+}) {
+  const lastSynced = useRef(content);
+  const suppress = useRef(false);
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: false, bulletList: false, orderedList: false,
+        blockquote: false, codeBlock: false, horizontalRule: false, code: false,
+      }),
+      Underline,
+    ],
+    content: content || '',
+    onUpdate: ({ editor: e }) => {
+      if (suppress.current) return;
+      const html = e.getHTML();
+      lastSynced.current = html;
+      onChange(html);
+    },
+    editorProps: { attributes: { class: 'tiptap-mini-editor' } },
+    immediatelyRender: false,
+  });
+
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    if (content !== lastSynced.current) {
+      lastSynced.current = content;
+      suppress.current = true;
+      editor.commands.setContent(content || '');
+      suppress.current = false;
+    }
+  }, [editor, content]);
+
+  if (!editor) return <div className="border border-border rounded h-9 bg-white" />;
+
+  return (
+    <div className="border border-border rounded overflow-hidden bg-white focus-within:ring-1 focus-within:ring-primary/30">
+      <style>{TIPTAP_STYLES}</style>
+      <div className="flex items-center gap-0.5 px-1.5 py-0.5 border-b border-border bg-gray-50">
+        <TBtn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="Grassetto"><span className="font-bold">B</span></TBtn>
+        <TBtn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="Corsivo"><span className="italic">I</span></TBtn>
+        <TBtn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Sottolineato"><span className="underline">U</span></TBtn>
+      </div>
+      <EditorContent editor={editor} />
+      {placeholder && !editor.getText() && (
+        <p className="absolute top-8 left-3 text-2xs text-gray-400 pointer-events-none">{placeholder}</p>
+      )}
+    </div>
+  );
 }
 
 function FinalPagePreview({ config }: { config: FormState }) {
@@ -712,7 +869,6 @@ function FinalPagePreview({ config }: { config: FormState }) {
   const imgDim = pf.immagineDimensione ?? 'medium';
   const imgWidthMap: Record<string, string> = { small: '30%', medium: '50%', large: '75%', full: '100%' };
   const imgWidth = imgWidthMap[imgDim] ?? '50%';
-  const segs = parseMiniText(pf.testo);
 
   return (
     <div className="mt-4">
@@ -737,9 +893,10 @@ function FinalPagePreview({ config }: { config: FormState }) {
 
         {/* Title */}
         {pf.titolo && (
-          <p style={{ fontSize: typo.titoloFontSize * scale, fontWeight: typo.titoloBold ? 'bold' : 'normal', fontStyle: typo.titoloItalic ? 'italic' : 'normal', color: typo.titoloColor, textAlign: pf.titoloAllineamento, margin: '0 0 4px', letterSpacing: 0.5, position: 'relative' }}>
-            {pf.titolo}
-          </p>
+          <div
+            style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pf.titoloAllineamento, margin: '0 0 4px', letterSpacing: 0.5, position: 'relative' }}
+            dangerouslySetInnerHTML={{ __html: pf.titolo }}
+          />
         )}
 
         {/* Center image */}
@@ -752,13 +909,10 @@ function FinalPagePreview({ config }: { config: FormState }) {
 
         {/* Body text */}
         {pf.testo && (
-          <p style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, textAlign: pf.testoAllineamento, margin: 0, lineHeight: 1.6, position: 'relative' }}>
-            {segs.map((seg, i) => (
-              <span key={i} style={{ fontWeight: seg.bold ? 'bold' : undefined, fontStyle: seg.italic ? 'italic' : undefined }}>
-                {seg.text}
-              </span>
-            ))}
-          </p>
+          <div
+            style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, lineHeight: 1.6, position: 'relative' }}
+            dangerouslySetInnerHTML={{ __html: pf.testo }}
+          />
         )}
 
         {/* Bottom image */}
@@ -2066,29 +2220,19 @@ export default function AdminCatalogoPDFPage() {
                       </label>
                       <AlignToggle value={config.paginaFinale.titoloAllineamento} onChange={(v) => setPaginaFinale('titoloAllineamento', v)} />
                     </div>
-                    <input
-                      type="text"
-                      value={config.paginaFinale.titolo}
-                      onChange={(e) => setPaginaFinale('titolo', e.target.value)}
-                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    <MiniRichTextEditor
+                      content={config.paginaFinale.titolo}
+                      onChange={(html) => setPaginaFinale('titolo', html)}
                       placeholder="es. Grazie per la tua scelta"
                     />
                   </div>
 
                   {/* Testo libero */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-gray-600">
-                        Testo libero{' '}
-                        <span className="text-gray-400 font-normal">({config.paginaFinale.testo.length}/1000)</span>
-                      </label>
-                      <AlignToggle value={config.paginaFinale.testoAllineamento} onChange={(v) => setPaginaFinale('testoAllineamento', v)} />
-                    </div>
-                    <textarea
-                      value={config.paginaFinale.testo}
-                      onChange={(e) => setPaginaFinale('testo', e.target.value.slice(0, 1000))}
-                      rows={4}
-                      className="w-full border border-border rounded px-3 py-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Testo libero</label>
+                    <RichTextEditor
+                      content={config.paginaFinale.testo}
+                      onChange={(html) => setPaginaFinale('testo', html)}
                       placeholder="Testo da mostrare nella pagina finale del catalogo…"
                     />
                   </div>
@@ -2096,17 +2240,11 @@ export default function AdminCatalogoPDFPage() {
                   {/* Tipografia pagina finale */}
                   <div className="space-y-3 pt-1">
                     <p className="text-xs font-semibold text-gray-600">Tipografia</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Font titolo (pt)</label>
-                        <input type="number" min={10} max={48} value={config.paginaFinaleTypo.titoloFontSize}
-                          onChange={(e) => setPaginaFinaleTypo({ titoloFontSize: parseFloat(e.target.value) || 20 })}
-                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
-                      </div>
-                      <div className="flex items-end gap-1">
-                        <ToggleBtn active={config.paginaFinaleTypo.titoloBold} onClick={() => setPaginaFinaleTypo({ titoloBold: !config.paginaFinaleTypo.titoloBold })}><span className="font-bold">B</span></ToggleBtn>
-                        <ToggleBtn active={config.paginaFinaleTypo.titoloItalic} onClick={() => setPaginaFinaleTypo({ titoloItalic: !config.paginaFinaleTypo.titoloItalic })}><span className="italic">I</span></ToggleBtn>
-                      </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Font titolo (pt)</label>
+                      <input type="number" min={10} max={48} value={config.paginaFinaleTypo.titoloFontSize}
+                        onChange={(e) => setPaginaFinaleTypo({ titoloFontSize: parseFloat(e.target.value) || 20 })}
+                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
                     </div>
                     <MiniColorPicker value={config.paginaFinaleTypo.titoloColor}
                       onChange={(v) => setPaginaFinaleTypo({ titoloColor: v })} />
@@ -2120,7 +2258,6 @@ export default function AdminCatalogoPDFPage() {
                     </div>
                     <MiniColorPicker value={config.paginaFinaleTypo.testoColor}
                       onChange={(v) => setPaginaFinaleTypo({ testoColor: v })} />
-                    <p className="text-2xs text-gray-400">Usa **testo** per grassetto e *testo* per corsivo nel campo testo libero</p>
                   </div>
 
                   {/* Immagine pagina finale */}

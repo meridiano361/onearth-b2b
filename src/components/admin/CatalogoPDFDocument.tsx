@@ -266,17 +266,137 @@ function fieldFont(fs: FieldStyle): string {
 
 type Segment = { text: string; bold: boolean; italic: boolean };
 
-function parseInlineText(raw: string): Segment[] {
-  if (!raw) return [];
-  const segments: Segment[] = [];
-  const re = /(\*\*(.+?)\*\*|\*(.+?)\*|([^*]+))/g;
+// ── HTML → react-pdf parser ────────────────────────────────────────────────────
+
+type HtmlInline = { text: string; bold: boolean; italic: boolean };
+type HtmlBlock =
+  | { type: 'paragraph' | 'h1' | 'h2'; align: 'left' | 'center' | 'right'; inlines: HtmlInline[] }
+  | { type: 'bullet' | 'ordered'; items: HtmlInline[][] };
+
+function decodeHtmlEntities(s: string): string {
+  return s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
+}
+
+function extractAlignFromStyle(attrs: string): 'left' | 'center' | 'right' {
+  const m = attrs.match(/text-align\s*:\s*(left|center|right)/);
+  return (m?.[1] as 'left' | 'center' | 'right') ?? 'left';
+}
+
+function parseHtmlInlines(inner: string): HtmlInline[] {
+  const result: HtmlInline[] = [];
+  const re = /<(strong|em|b|i|u|s)>([\s\S]*?)<\/\1>|([^<]+)|<[^>]+>/g;
   let m;
-  while ((m = re.exec(raw)) !== null) {
-    if (m[2]) segments.push({ text: m[2], bold: true, italic: false });
-    else if (m[3]) segments.push({ text: m[3], bold: false, italic: true });
-    else if (m[4]) segments.push({ text: m[4], bold: false, italic: false });
+  while ((m = re.exec(inner)) !== null) {
+    if (m[1]) {
+      const tag = m[1].toLowerCase();
+      const text = decodeHtmlEntities(m[2].replace(/<[^>]+>/g, ''));
+      if (text) result.push({ text, bold: tag === 'strong' || tag === 'b', italic: tag === 'em' || tag === 'i' });
+    } else if (m[3]) {
+      const text = decodeHtmlEntities(m[3]);
+      if (text.trim() || text === ' ') result.push({ text, bold: false, italic: false });
+    }
   }
-  return segments.length > 0 ? segments : [{ text: raw, bold: false, italic: false }];
+  return result;
+}
+
+function parseHtmlToPdf(html: string): HtmlBlock[] {
+  if (!html || html.trim() === '' || html.trim() === '<p></p>') return [];
+  const blocks: HtmlBlock[] = [];
+  const blockRe = /<(p|h1|h2)([^>]*)>([\s\S]*?)<\/\1>|<(ul|ol)>([\s\S]*?)<\/\4>/gi;
+  let m;
+  while ((m = blockRe.exec(html)) !== null) {
+    if (m[1]) {
+      const tag = m[1].toLowerCase();
+      const inner = (m[3] ?? '').replace(/<br\s*\/?>/gi, '\n');
+      const align = extractAlignFromStyle(m[2] ?? '');
+      const inlines = parseHtmlInlines(inner);
+      if (inlines.length > 0) {
+        blocks.push({
+          type: tag === 'h1' ? 'h1' : tag === 'h2' ? 'h2' : 'paragraph',
+          align,
+          inlines,
+        });
+      }
+    } else if (m[4]) {
+      const listTag = m[4].toLowerCase();
+      const items: HtmlInline[][] = [];
+      const liRe = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+      let li;
+      while ((li = liRe.exec(m[5] ?? '')) !== null) {
+        const item = parseHtmlInlines(li[1]);
+        if (item.length > 0) items.push(item);
+      }
+      if (items.length > 0) blocks.push({ type: listTag === 'ul' ? 'bullet' : 'ordered', items });
+    }
+  }
+  if (blocks.length === 0) {
+    const plain = html.replace(/<[^>]+>/g, '').trim();
+    if (plain) blocks.push({ type: 'paragraph', align: 'left', inlines: [{ text: plain, bold: false, italic: false }] });
+  }
+  return blocks;
+}
+
+function getBlockAlign(block: HtmlBlock, defaultAlign: 'left' | 'center' | 'right'): 'left' | 'center' | 'right' {
+  if (block.type === 'paragraph' || block.type === 'h1' || block.type === 'h2') {
+    return block.align !== 'left' ? block.align : defaultAlign;
+  }
+  return defaultAlign;
+}
+
+function renderHtmlBlocks(
+  blocks: HtmlBlock[],
+  opts: { fontSize: number; color: string; defaultAlign: 'left' | 'center' | 'right' },
+): React.ReactNode[] {
+  const { fontSize, color, defaultAlign } = opts;
+  return blocks.map((block, i) => {
+    const blockAlign = getBlockAlign(block, defaultAlign);
+
+    const inlineText = (inlines: HtmlInline[]) =>
+      inlines.map((seg, j) => (
+        <Text key={j} style={{
+          fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique' : seg.bold ? 'Helvetica-Bold' : seg.italic ? 'Helvetica-Oblique' : 'Helvetica',
+        }}>{seg.text}</Text>
+      ));
+
+    if (block.type === 'paragraph') {
+      return (
+        <View key={i} style={{ width: '100%', alignItems: alignToFlex(blockAlign), marginBottom: 3 }}>
+          <Text style={{ fontSize, color, lineHeight: 1.6 }}>{inlineText(block.inlines)}</Text>
+        </View>
+      );
+    }
+    if (block.type === 'h1') {
+      return (
+        <View key={i} style={{ width: '100%', alignItems: alignToFlex(blockAlign), marginBottom: 6 }}>
+          <Text style={{ fontSize: fontSize * 1.6, fontFamily: 'Helvetica-Bold', color, lineHeight: 1.4 }}>{inlineText(block.inlines)}</Text>
+        </View>
+      );
+    }
+    if (block.type === 'h2') {
+      return (
+        <View key={i} style={{ width: '100%', alignItems: alignToFlex(blockAlign), marginBottom: 4 }}>
+          <Text style={{ fontSize: fontSize * 1.3, fontFamily: 'Helvetica-Bold', color, lineHeight: 1.4 }}>{inlineText(block.inlines)}</Text>
+        </View>
+      );
+    }
+    if (block.type === 'bullet' || block.type === 'ordered') {
+      return (
+        <View key={i} style={{ width: '100%', marginBottom: 3 }}>
+          {block.items.map((item, j) => (
+            <View key={j} style={{ flexDirection: 'row', marginBottom: 2 }}>
+              <View style={{ width: 12 }}>
+                <Text style={{ fontSize, color }}>{block.type === 'bullet' ? '•' : `${j + 1}.`}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize, color, lineHeight: 1.6 }}>{inlineText(item)}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      );
+    }
+    return null;
+  });
 }
 
 // ── Layout computation ────────────────────────────────────────────────────────
@@ -980,6 +1100,34 @@ function CoverPage({
 
 // ── Final page ────────────────────────────────────────────────────────────────
 
+function parseTitleInlines(titolo: string, typo: { titoloBold: boolean; titoloItalic: boolean }): HtmlInline[] {
+  if (!titolo) return [];
+  if (titolo.trimStart().startsWith('<')) {
+    const blocks = parseHtmlToPdf(titolo);
+    if (blocks.length > 0 && (blocks[0].type === 'paragraph' || blocks[0].type === 'h1' || blocks[0].type === 'h2')) {
+      return blocks[0].inlines;
+    }
+    const plain = titolo.replace(/<[^>]+>/g, '').trim();
+    return plain ? [{ text: plain, bold: false, italic: false }] : [];
+  }
+  return [{ text: titolo, bold: typo.titoloBold, italic: typo.titoloItalic }];
+}
+
+function renderTitleInlines(inlines: HtmlInline[], typo: { titoloFontSize: number; titoloColor: string }, titleAlign: 'left' | 'center' | 'right', mb = 18) {
+  if (inlines.length === 0) return null;
+  return (
+    <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: mb }}>
+      <Text style={{ fontSize: typo.titoloFontSize, color: typo.titoloColor, letterSpacing: 2 }}>
+        {inlines.map((seg, i) => (
+          <Text key={i} style={{
+            fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique' : seg.bold ? 'Helvetica-Bold' : seg.italic ? 'Helvetica-Oblique' : 'Helvetica',
+          }}>{seg.text}</Text>
+        ))}
+      </Text>
+    </View>
+  );
+}
+
 function FinalPage({
   config,
   layout,
@@ -993,18 +1141,13 @@ function FinalPage({
   const titleAlign = pf.titoloAllineamento ?? 'center';
   const textAlign = pf.testoAllineamento ?? 'center';
 
-  const titleFont = (typo.titoloBold && typo.titoloItalic) ? 'Helvetica-BoldOblique'
-    : typo.titoloBold ? 'Helvetica-Bold'
-    : typo.titoloItalic ? 'Helvetica-Oblique'
-    : 'Helvetica';
-
-  const segments = pf.testo ? parseInlineText(pf.testo) : [];
+  const titleInlines = parseTitleInlines(pf.titolo, typo);
+  const bodyBlocks = parseHtmlToPdf(pf.testo ?? '');
 
   const imgSrc = pf.immagineBase64 ?? null;
   const imgPos = pf.immaginePosition ?? 'top';
   const imgDim = pf.immagineDimensione ?? 'medium';
 
-  // Dimension map: fraction of page width
   const IMG_DIM_MAP: Record<string, number> = { small: pageW * 0.3, medium: pageW * 0.5, large: pageW * 0.75, full: pageW };
   const imgWidth = IMG_DIM_MAP[imgDim] ?? pageW * 0.5;
   const imgHeight = imgDim === 'full' ? pageH : imgWidth * 0.65;
@@ -1015,25 +1158,12 @@ function FinalPage({
         size={[pageW, pageH] as [number, number]}
         style={{ fontFamily: 'Helvetica', justifyContent: 'center', paddingHorizontal: 60 }}
       >
-        {/* Background image */}
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <Image src={imgSrc} style={{ position: 'absolute', top: 0, left: 0, width: pageW, height: pageH, objectFit: 'cover' as any, opacity: 0.25 }} />
-        {pf.titolo ? (
-          <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: 18 }}>
-            <Text style={{ fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 2 }}>
-              {pf.titolo}
-            </Text>
-          </View>
-        ) : null}
-        {pf.testo ? (
-          <View style={{ width: '100%', alignItems: alignToFlex(textAlign), marginBottom: 24 }}>
-            <Text style={{ fontSize: typo.testoFontSize, color: typo.testoColor, lineHeight: 1.6 }}>
-              {segments.map((seg, i) => (
-                <Text key={i} style={{ fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique' : seg.bold ? 'Helvetica-Bold' : seg.italic ? 'Helvetica-Oblique' : 'Helvetica' }}>
-                  {seg.text}
-                </Text>
-              ))}
-            </Text>
+        {renderTitleInlines(titleInlines, typo, titleAlign)}
+        {bodyBlocks.length > 0 ? (
+          <View style={{ width: '100%', marginBottom: 24 }}>
+            {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
           </View>
         ) : null}
         {pf.mostraLogo && config.logoBase64 && (
@@ -1055,7 +1185,6 @@ function FinalPage({
         paddingHorizontal: 60,
       }}
     >
-      {/* Image at top */}
       {imgSrc && imgPos === 'top' && (
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -1063,15 +1192,8 @@ function FinalPage({
         </View>
       )}
 
-      {pf.titolo ? (
-        <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: 18 }}>
-          <Text style={{ fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 2 }}>
-            {pf.titolo}
-          </Text>
-        </View>
-      ) : null}
+      {renderTitleInlines(titleInlines, typo, titleAlign)}
 
-      {/* Image at center (between title and body text) */}
       {imgSrc && imgPos === 'center' && (
         <View style={{ alignItems: 'center', marginBottom: 16 }}>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -1079,27 +1201,12 @@ function FinalPage({
         </View>
       )}
 
-      {pf.testo ? (
-        <View style={{ width: '100%', alignItems: alignToFlex(textAlign), marginBottom: 24 }}>
-          <Text style={{ fontSize: typo.testoFontSize, color: typo.testoColor, lineHeight: 1.6 }}>
-            {segments.map((seg, i) => (
-              <Text
-                key={i}
-                style={{
-                  fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique'
-                    : seg.bold ? 'Helvetica-Bold'
-                    : seg.italic ? 'Helvetica-Oblique'
-                    : 'Helvetica',
-                }}
-              >
-                {seg.text}
-              </Text>
-            ))}
-          </Text>
+      {bodyBlocks.length > 0 ? (
+        <View style={{ width: '100%', marginBottom: 24 }}>
+          {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
         </View>
       ) : null}
 
-      {/* Image at bottom */}
       {imgSrc && imgPos === 'bottom' && (
         <View style={{ alignItems: 'center', marginTop: 16 }}>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
