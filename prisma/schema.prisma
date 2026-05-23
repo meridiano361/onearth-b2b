@@ -402,3 +402,12 @@ model CatalogTemplate {
 
   @@map("catalog_templates")
 }
+
+model AppSettings {
+  id          String   @id @default("singleton")
+  catalogFont String   @default("inter")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("app_settings")
+}

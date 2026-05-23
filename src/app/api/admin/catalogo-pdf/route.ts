@@ -306,11 +306,34 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
       titoloFontSize: 20, titoloBold: true, titoloItalic: false, titoloColor: '#1C1C1C',
       testoFontSize: 10, testoColor: '#9CA3AF',
     },
+    nuovoBadge: fullConfig?.nuovoBadge ?? {
+      attivo: true,
+      testo: 'NUOVO',
+      bgColor: '#000000',
+      textColor: '#FFFFFF',
+      posizione: 'image-top-right',
+    },
   };
 
   // If a cover image was provided separately (e.g. from GET route), inject it
   if (coverImgBase64 && config.copertina) {
     config.copertina = { ...config.copertina, immagineBase64: coverImgBase64 };
+  }
+
+  // If no base64 cover image but a URL is available, fetch and convert it
+  if (config.copertina && !config.copertina.immagineBase64 && config.copertina.immagineUrl) {
+    const fetched = await fetchImageAsJpegBase64(config.copertina.immagineUrl);
+    if (fetched) {
+      config.copertina = { ...config.copertina, immagineBase64: fetched };
+    }
+  }
+
+  // If no base64 final-page image but a URL is available, fetch and convert it
+  if (config.paginaFinale && !config.paginaFinale.immagineBase64 && config.paginaFinale.immagineUrl) {
+    const fetched = await fetchImageAsJpegBase64(config.paginaFinale.immagineUrl);
+    if (fetched) {
+      config.paginaFinale = { ...config.paginaFinale, immagineBase64: fetched };
+    }
   }
 
   return { groups, config };
@@ -462,6 +485,7 @@ export async function POST(req: NextRequest) {
         useSezioniPersonalizzate: body.useSezioniPersonalizzate,
         sezioniPersonalizzate: body.sezioniPersonalizzate,
         includiProdottiNonAssegnati: body.includiProdottiNonAssegnati,
+        nuovoBadge: body.nuovoBadge,
       },
     });
 

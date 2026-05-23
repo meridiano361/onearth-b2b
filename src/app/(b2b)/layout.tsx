@@ -3,11 +3,19 @@ import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { authOptions } from '@/lib/auth';
 import { getPreviewFromSession } from '@/lib/preview';
+import { prisma } from '@/lib/prisma';
 import Header from '@/components/layout/Header';
 import CartSidebar from '@/components/cart/CartSidebar';
 import MobileNav from '@/components/layout/MobileNav';
 import PreviewBanner from '@/components/layout/PreviewBanner';
 import { PreviewProvider } from '@/contexts/PreviewContext';
+
+const CATALOG_FONT_MAP: Record<string, string> = {
+  inter: "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+  playfair: "'Playfair Display', Georgia, 'Times New Roman', serif",
+  montserrat: "'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+  lato: "'Lato', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+};
 
 // Paths where the cart sidebar should not be shown
 const SIDEBAR_HIDDEN_PATHS = ['/catalog/orders', '/orders', '/catalog/destinazioni'];
@@ -22,6 +30,16 @@ export default async function B2BLayout({
   if (!session) {
     redirect('/login');
   }
+
+  // Fetch catalog font setting
+  let catalogFontKey = 'inter';
+  try {
+    const settings = await prisma.appSettings.findUnique({ where: { id: 'singleton' } });
+    if (settings?.catalogFont) catalogFontKey = settings.catalogFont;
+  } catch {
+    // fallback to inter
+  }
+  const catalogFontFamily = CATALOG_FONT_MAP[catalogFontKey] ?? CATALOG_FONT_MAP.inter;
 
   const pathname = headers().get('x-pathname') ?? '';
   const hideSidebar = SIDEBAR_HIDDEN_PATHS.some(
@@ -40,7 +58,7 @@ export default async function B2BLayout({
 
   return (
     <PreviewProvider value={previewInfo}>
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="min-h-screen bg-background flex flex-col" style={{ fontFamily: catalogFontFamily }}>
         {previewInfo && (
           <PreviewBanner orgName={previewInfo.orgName} operatorName={previewInfo.operatorName} />
         )}

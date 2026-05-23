@@ -15,6 +15,7 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  Pencil,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type {
@@ -69,6 +70,7 @@ interface FormState {
   copertina: {
     attiva: boolean;
     immagineBase64: string | null;
+    immagineUrl?: string | null; // persisted URL of uploaded cover image
     titolo: string;
     sottotitolo: string;
     layout: 'full-overlay' | 'half' | 'solo-testo';
@@ -98,6 +100,10 @@ interface FormState {
     mostraLogo: boolean;
     titoloAllineamento: 'left' | 'center' | 'right';
     testoAllineamento: 'left' | 'center' | 'right';
+    immagineUrl?: string | null;
+    immagineBase64?: string | null;
+    immaginePosition?: 'top' | 'center' | 'bottom' | 'background';
+    immagineDimensione?: 'small' | 'medium' | 'large' | 'full';
   };
   cardFieldStyles: CardFieldStyles;
   separatoreStyle: SeparatorStyle;
@@ -106,6 +112,13 @@ interface FormState {
   cardBoxStyle: CardBoxStyle;
   copertinaTypo: CoverTypography;
   paginaFinaleTypo: FinalPageTypography;
+  nuovoBadge: {
+    attivo: boolean;
+    testo: string;
+    bgColor: string;
+    textColor: string;
+    posizione: 'image-top-right' | 'next-to-code';
+  };
 }
 
 interface Template {
@@ -233,6 +246,13 @@ const DEFAULT_STATE: FormState = {
   useSezioniPersonalizzate: false,
   sezioniPersonalizzate: [],
   includiProdottiNonAssegnati: true,
+  nuovoBadge: {
+    attivo: true,
+    testo: 'NUOVO',
+    bgColor: '#000000',
+    textColor: '#FFFFFF',
+    posizione: 'image-top-right',
+  },
 };
 
 // ── ON EARTH palette ──────────────────────────────────────────────────────────
@@ -757,6 +777,7 @@ export default function AdminCatalogoPDFPage() {
   const [templateName, setTemplateName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showTemplates, setShowTemplates] = useState(true);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -776,6 +797,7 @@ export default function AdminCatalogoPDFPage() {
     copertina: false,
     paginaFinale: false,
     sezioniPersonalizzate: false,
+    nuovoBadge: false,
   });
 
   // Custom sections editing state
@@ -919,6 +941,12 @@ export default function AdminCatalogoPDFPage() {
   const setSezioniPersonalizzate = useCallback(
     (sezioni: CustomSection[]) =>
       setConfig((c) => ({ ...c, sezioniPersonalizzate: sezioni })),
+    []
+  );
+
+  const setNuovoBadge = useCallback(
+    (patch: Partial<FormState['nuovoBadge']>) =>
+      setConfig((c) => ({ ...c, nuovoBadge: { ...c.nuovoBadge, ...patch } })),
     []
   );
 
@@ -1098,6 +1126,39 @@ export default function AdminCatalogoPDFPage() {
     });
     if (res.ok) { toast.success('Duplicato'); refetchTemplates(); }
     else toast.error('Errore duplica');
+  }
+
+  function handleEditTemplate(t: Template) {
+    setConfig(t.configurazione);
+    setEditingTemplateId(t.id);
+    setTemplateName(t.nome);
+    setPreview(null);
+    toast.success(`Modifica: "${t.nome}"`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function handleSaveEditingTemplate() {
+    if (!editingTemplateId) return;
+    setIsSaving(true);
+    try {
+      const configToSave = {
+        ...config,
+        copertina: { ...config.copertina, immagineBase64: null, logoCustomBase64: null },
+      };
+      const res = await fetch(`/api/admin/catalogo-pdf/templates/${editingTemplateId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: templateName.trim() || undefined, configurazione: configToSave }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Template aggiornato');
+      setEditingTemplateId(null);
+      refetchTemplates();
+    } catch {
+      toast.error('Errore aggiornamento');
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -1593,33 +1654,82 @@ export default function AdminCatalogoPDFPage() {
                   {/* Image upload */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Immagine di copertina (max 2 MB)
+                      Immagine di copertina
                     </label>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                    />
-                    {config.copertina.immagineBase64 && (
+                    <p className="text-2xs text-gray-400 mb-2">
+                      Carica sul server (consigliato — l&apos;immagine viene salvata con il template) oppure scegli un file locale per la sessione corrente (max 2 MB).
+                    </p>
+                    {/* Upload to server */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 10 * 1024 * 1024) {
+                            toast.error('Immagine troppo grande (max 10 MB)');
+                            e.target.value = '';
+                            return;
+                          }
+                          const fd = new FormData();
+                          fd.append('file', file);
+                          try {
+                            const res = await fetch('/api/admin/catalogo-pdf/upload-cover', { method: 'POST', body: fd });
+                            if (!res.ok) throw new Error((await res.json()).error);
+                            const { url } = await res.json();
+                            setCopertina('immagineUrl', url);
+                            // Also load as base64 for live preview
+                            const reader = new FileReader();
+                            reader.onload = (ev) => setCopertina('immagineBase64', ev.target?.result as string);
+                            reader.readAsDataURL(file);
+                            e.target.value = '';
+                            toast.success('Immagine caricata sul server');
+                          } catch (err: unknown) {
+                            toast.error(err instanceof Error ? err.message : 'Errore upload');
+                            e.target.value = '';
+                          }
+                        }}
+                        className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                      />
+                      <span className="text-2xs text-gray-400 flex-shrink-0">Carica sul server</span>
+                    </div>
+                    {/* Or local only (no persistence) */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-600 hover:file:bg-gray-200 cursor-pointer"
+                      />
+                      <span className="text-2xs text-gray-400 flex-shrink-0">Solo sessione</span>
+                    </div>
+                    {/* Preview: server URL takes priority over base64 */}
+                    {(config.copertina.immagineUrl || config.copertina.immagineBase64) && (
                       <div className="mt-2 flex items-center gap-3">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={config.copertina.immagineBase64}
+                          src={config.copertina.immagineBase64 ?? config.copertina.immagineUrl ?? ''}
                           alt="Anteprima copertina"
                           className="h-16 w-24 object-cover rounded border border-border"
                         />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCopertina('immagineBase64', null);
-                            if (fileInputRef.current) fileInputRef.current.value = '';
-                          }}
-                          className="text-2xs text-red-500 hover:text-red-700 underline"
-                        >
-                          Rimuovi immagine
-                        </button>
+                        <div className="space-y-1">
+                          {config.copertina.immagineUrl && (
+                            <p className="text-2xs text-green-600">Immagine salvata sul server</p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCopertina('immagineBase64', null);
+                              setCopertina('immagineUrl', null);
+                              if (fileInputRef.current) fileInputRef.current.value = '';
+                            }}
+                            className="text-2xs text-red-500 hover:text-red-700 underline"
+                          >
+                            Rimuovi immagine
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1916,12 +2026,142 @@ export default function AdminCatalogoPDFPage() {
                     <p className="text-2xs text-gray-400">Usa **testo** per grassetto e *testo* per corsivo nel campo testo libero</p>
                   </div>
 
+                  {/* Immagine pagina finale */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Immagine pagina finale <span className="text-gray-400 font-normal">(opzionale)</span>
+                    </label>
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 10 * 1024 * 1024) {
+                            toast.error('Immagine troppo grande (max 10 MB)');
+                            e.target.value = '';
+                            return;
+                          }
+                          const fd = new FormData();
+                          fd.append('file', file);
+                          try {
+                            const res = await fetch('/api/admin/catalogo-pdf/upload-cover', { method: 'POST', body: fd });
+                            if (!res.ok) throw new Error((await res.json()).error);
+                            const { url } = await res.json();
+                            setPaginaFinale('immagineUrl', url);
+                            const reader = new FileReader();
+                            reader.onload = (ev) => setPaginaFinale('immagineBase64', ev.target?.result as string);
+                            reader.readAsDataURL(file);
+                            e.target.value = '';
+                            toast.success('Immagine caricata sul server');
+                          } catch (err: unknown) {
+                            toast.error(err instanceof Error ? err.message : 'Errore upload');
+                            e.target.value = '';
+                          }
+                        }}
+                        className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                      />
+                    </div>
+                    {(config.paginaFinale.immagineUrl || config.paginaFinale.immagineBase64) && (
+                      <div className="mt-1 space-y-2">
+                        <div className="flex items-center gap-3">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={config.paginaFinale.immagineBase64 ?? config.paginaFinale.immagineUrl ?? ''}
+                            alt="Anteprima"
+                            className="h-12 w-20 object-cover rounded border border-border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => { setPaginaFinale('immagineBase64', null); setPaginaFinale('immagineUrl', null); }}
+                            className="text-2xs text-red-500 hover:text-red-700 underline"
+                          >
+                            Rimuovi
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-2xs font-medium text-gray-600 mb-1">Posizione</label>
+                            <select
+                              value={config.paginaFinale.immaginePosition ?? 'top'}
+                              onChange={(e) => setPaginaFinale('immaginePosition', e.target.value)}
+                              className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
+                            >
+                              <option value="top">In alto</option>
+                              <option value="center">Al centro</option>
+                              <option value="bottom">In basso</option>
+                              <option value="background">Sfondo (semi-trasparente)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-2xs font-medium text-gray-600 mb-1">Dimensione</label>
+                            <select
+                              value={config.paginaFinale.immagineDimensione ?? 'medium'}
+                              onChange={(e) => setPaginaFinale('immagineDimensione', e.target.value)}
+                              className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
+                            >
+                              <option value="small">Piccola (30%)</option>
+                              <option value="medium">Media (50%)</option>
+                              <option value="large">Grande (75%)</option>
+                              <option value="full">Piena larghezza</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Logo */}
                   <CheckboxField
                     label="Logo ON EARTH in fondo"
                     checked={config.paginaFinale.mostraLogo}
                     onChange={(v) => setPaginaFinale('mostraLogo', v)}
                   />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Badge NUOVO ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.nuovoBadge} onToggle={() => toggleSection('nuovoBadge')}>
+            Badge NUOVO (prodotti CA27)
+          </SectionTitle>
+          {sections.nuovoBadge && (
+            <div className="p-4 space-y-3">
+              <CheckboxField
+                label="Mostra badge NUOVO sui prodotti della collezione CA27"
+                checked={config.nuovoBadge.attivo}
+                onChange={(v) => setNuovoBadge({ attivo: v })}
+              />
+              {config.nuovoBadge.attivo && (
+                <div className="space-y-3 pl-2 border-l-2 border-border">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Testo badge</label>
+                    <input
+                      type="text"
+                      value={config.nuovoBadge.testo}
+                      onChange={(e) => setNuovoBadge({ testo: e.target.value })}
+                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      placeholder="es. NUOVO"
+                      maxLength={20}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Posizione nel PDF</label>
+                    <select
+                      value={config.nuovoBadge.posizione}
+                      onChange={(e) => setNuovoBadge({ posizione: e.target.value as 'image-top-right' | 'next-to-code' })}
+                      className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none"
+                    >
+                      <option value="image-top-right">In alto a destra sull&apos;immagine</option>
+                      <option value="next-to-code">Accanto al codice prodotto</option>
+                    </select>
+                  </div>
+                  <ColorSwatchPicker label="Colore sfondo badge" value={config.nuovoBadge.bgColor} onChange={(v) => setNuovoBadge({ bgColor: v })} />
+                  <ColorSwatchPicker label="Colore testo badge" value={config.nuovoBadge.textColor} onChange={(v) => setNuovoBadge({ textColor: v })} />
                 </div>
               )}
             </div>
@@ -2085,7 +2325,26 @@ export default function AdminCatalogoPDFPage() {
 
         {/* ── Salva configurazione ── */}
         <div className="border border-border rounded p-4 space-y-3">
-          <p className="text-xs font-semibold tracking-widest uppercase text-gray-500">Salva configurazione</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold tracking-widest uppercase text-gray-500">Salva configurazione</p>
+            {editingTemplateId && (
+              <button
+                type="button"
+                onClick={() => { setEditingTemplateId(null); setTemplateName(''); }}
+                className="text-2xs text-gray-500 hover:text-primary underline"
+              >
+                Annulla modifica
+              </button>
+            )}
+          </div>
+
+          {editingTemplateId && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
+              <Pencil size={11} className="flex-shrink-0" />
+              <span>Stai modificando: <strong>{templateName}</strong></span>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <input
               type="text"
@@ -2093,18 +2352,47 @@ export default function AdminCatalogoPDFPage() {
               onChange={(e) => setTemplateName(e.target.value)}
               placeholder="Nome template (es. Catalogo Linea Braided)"
               className="flex-1 h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-              onKeyDown={(e) => e.key === 'Enter' && handleSaveTemplate()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (editingTemplateId) handleSaveEditingTemplate();
+                  else handleSaveTemplate();
+                }
+              }}
             />
+            {editingTemplateId ? (
+              <button
+                type="button"
+                onClick={handleSaveEditingTemplate}
+                disabled={isSaving}
+                className="flex items-center gap-1.5 px-3 h-9 rounded text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                Salva modifiche
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSaveTemplate}
+                disabled={isSaving || !templateName.trim()}
+                className="flex items-center gap-1.5 px-3 h-9 rounded text-xs font-medium bg-primary text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                Salva
+              </button>
+            )}
+          </div>
+
+          {editingTemplateId && (
             <button
               type="button"
               onClick={handleSaveTemplate}
               disabled={isSaving || !templateName.trim()}
-              className="flex items-center gap-1.5 px-3 h-9 rounded text-xs font-medium bg-primary text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-1.5 px-3 h-8 rounded text-xs font-medium border border-border text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full justify-center"
             >
-              {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-              Salva
+              <Save size={11} />
+              Salva come nuovo template
             </button>
-          </div>
+          )}
         </div>
       </div>
 
@@ -2227,6 +2515,19 @@ export default function AdminCatalogoPDFPage() {
                       >
                         <FolderOpen size={11} />
                         Carica
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleEditTemplate(t)}
+                        title="Modifica configurazione"
+                        className={`flex items-center gap-1 px-2 py-1 text-2xs font-medium border rounded transition-colors ${
+                          editingTemplateId === t.id
+                            ? 'border-amber-400 bg-amber-50 text-amber-700'
+                            : 'border-border hover:bg-white hover:text-primary text-gray-600'
+                        }`}
+                      >
+                        <Pencil size={11} />
+                        Modifica
                       </button>
                       <button
                         type="button"

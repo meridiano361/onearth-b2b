@@ -94,6 +94,13 @@ export default function ProductCard({ product }: ProductCardProps) {
               <span className="text-2xs text-gray-600 font-medium">CONF {product.lotSize}</span>
             </div>
           )}
+
+          {/* NUOVO badge — CA27 collection */}
+          {product.collezione === 'CA27' && (
+            <div className="absolute bottom-2 right-2 bg-black text-white text-2xs font-bold px-2 py-0.5 rounded-full tracking-wide">
+              NUOVO
+            </div>
+          )}
         </div>
 
         {/* Code + Name */}

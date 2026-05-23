@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Power, X, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Plus, Pencil, Trash2, Power, X, Eye, EyeOff, RefreshCw, Type } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatDate } from '@/lib/utils';
 
@@ -210,6 +210,91 @@ function UserModal({ user, onClose, onSaved }: ModalProps) {
   );
 }
 
+// ─── Font Selector ────────────────────────────────────────────────────────────
+
+const FONT_OPTIONS = [
+  { value: 'inter', label: 'Inter (predefinito)', sample: 'Inter — Pulito e leggibile' },
+  { value: 'playfair', label: 'Playfair Display', sample: 'Playfair — Elegante e serif' },
+  { value: 'montserrat', label: 'Montserrat', sample: 'Montserrat — Geometrico e moderno' },
+  { value: 'lato', label: 'Lato', sample: 'Lato — Umanistico e caldo' },
+];
+
+function CatalogFontSection() {
+  const [saving, setSaving] = useState(false);
+  const { data, refetch } = useQuery<{ catalogFont: string }>({
+    queryKey: ['app-settings'],
+    queryFn: () => fetch('/api/admin/impostazioni').then((r) => r.json()),
+  });
+  const [selected, setSelected] = useState<string | null>(null);
+  const current = selected ?? data?.catalogFont ?? 'inter';
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/impostazioni', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ catalogFont: current }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Font catalogo aggiornato');
+      refetch();
+    } catch {
+      toast.error('Errore salvataggio');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="mt-10">
+      <div className="flex items-center gap-2 mb-4">
+        <Type size={16} className="text-accent" />
+        <div>
+          <h2 className="text-sm font-semibold text-primary">Font catalogo digitale</h2>
+          <p className="text-2xs text-gray-400 mt-0.5">Scegli il font principale per il catalogo cliente</p>
+        </div>
+      </div>
+      <div className="bg-white border border-border rounded p-4 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {FONT_OPTIONS.map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex items-start gap-3 p-3 border rounded cursor-pointer transition-colors ${
+                current === opt.value ? 'border-primary bg-cream/30' : 'border-border hover:bg-gray-50'
+              }`}
+            >
+              <input
+                type="radio"
+                name="catalogFont"
+                value={opt.value}
+                checked={current === opt.value}
+                onChange={() => setSelected(opt.value)}
+                className="mt-0.5 accent-primary"
+              />
+              <div>
+                <p className="text-xs font-medium text-primary">{opt.label}</p>
+                <p className="text-2xs text-gray-400 mt-0.5">{opt.sample}</p>
+              </div>
+            </label>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || selected === null || selected === data?.catalogFont}
+          className="flex items-center gap-1.5 text-xs bg-primary text-white px-4 py-2 rounded hover:bg-warm-darker disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {saving ? 'Salvataggio...' : 'Salva font'}
+        </button>
+        <p className="text-2xs text-gray-400">
+          Il cambiamento sarà visibile al prossimo caricamento della pagina catalogo.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminImpostazioniPage({ currentUserId }: { currentUserId: string }) {
@@ -385,6 +470,9 @@ export default function AdminImpostazioniPage({ currentUserId }: { currentUserId
           ))}
         </div>
       </section>
+
+      {/* Section: Font catalogo */}
+      <CatalogFontSection />
 
       {/* Modal */}
       {modalUser !== undefined && (

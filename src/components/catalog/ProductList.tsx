@@ -66,7 +66,12 @@ function ProductRow({ product }: { product: Product }) {
 
       {/* Info */}
       <Link href={`/catalog/${product.id}`} className="flex-1 min-w-0">
-        <p className="text-2xs font-mono text-gray-400 tracking-wide leading-none mb-0.5">{product.code}</p>
+        <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+          <p className="text-2xs font-mono text-gray-400 tracking-wide leading-none">{product.code}</p>
+          {product.collezione === 'CA27' && (
+            <span className="bg-black text-white text-2xs font-bold px-1.5 py-0.5 rounded-full tracking-wide leading-none">NUOVO</span>
+          )}
+        </div>
         <p className="text-sm font-medium text-primary leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {product.name}
         </p>

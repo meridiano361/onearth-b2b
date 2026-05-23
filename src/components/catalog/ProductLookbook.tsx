@@ -67,6 +67,13 @@ function LookbookCard({ product }: { product: Product }) {
         />
       </button>
 
+      {/* NUOVO badge — CA27 collection */}
+      {product.collezione === 'CA27' && (
+        <div className="absolute top-2 right-2 bg-black text-white text-2xs font-bold px-2 py-0.5 rounded-full tracking-wide">
+          NUOVO
+        </div>
+      )}
+
       {/* Add button (+) — always visible on mobile, hover on desktop */}
       <button
         onClick={handleAdd}

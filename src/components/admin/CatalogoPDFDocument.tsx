@@ -145,6 +145,7 @@ export type CatalogConfig = {
   copertina: {
     attiva: boolean;
     immagineBase64: string | null;
+    immagineUrl?: string | null; // persisted URL of uploaded cover image
     titolo: string;
     sottotitolo: string;
     layout: 'full-overlay' | 'half' | 'solo-testo';
@@ -171,6 +172,10 @@ export type CatalogConfig = {
     mostraLogo: boolean;
     titoloAllineamento: 'left' | 'center' | 'right';
     testoAllineamento: 'left' | 'center' | 'right';
+    immagineUrl?: string | null;
+    immagineBase64?: string | null;
+    immaginePosition?: 'top' | 'center' | 'bottom' | 'background';
+    immagineDimensione?: 'small' | 'medium' | 'large' | 'full';
   };
   // Typography customization
   cardFieldStyles: CardFieldStyles;
@@ -180,6 +185,13 @@ export type CatalogConfig = {
   cardBoxStyle: CardBoxStyle;
   copertinaTypo: CoverTypography;
   paginaFinaleTypo: FinalPageTypography;
+  nuovoBadge?: {
+    attivo: boolean;
+    testo: string;
+    bgColor: string;
+    textColor: string;
+    posizione: 'image-top-right' | 'next-to-code';
+  };
 };
 
 export type ProductForPDF = {
@@ -381,7 +393,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  priceItem: { alignItems: 'flex-start' },
+  priceItem: { flex: 1 },
   priceLabel: {
     fontSize: 5.5,
     textTransform: 'uppercase',
@@ -583,6 +595,15 @@ function ProductCard({
               src={config.logoBase64}
             />
           ) : null}
+
+          {/* NUOVO badge — image-top-right position */}
+          {config.nuovoBadge?.attivo && product.collezione === 'CA27' && config.nuovoBadge.posizione === 'image-top-right' && (
+            <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: config.nuovoBadge.bgColor, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 3 }}>
+              <Text style={{ fontSize: 5, color: config.nuovoBadge.textColor, fontFamily: 'Helvetica-Bold' }}>
+                {config.nuovoBadge.testo}
+              </Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -594,28 +615,34 @@ function ProductCard({
         }]}
       >
         {f.codice && (
-          <View style={{ height: layout.CODE_H, overflow: 'hidden' }}>
+          <View style={{ height: layout.CODE_H, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 3 }}>
             <Text style={{
               fontSize: cfs.codice.fontSize,
               fontFamily: fieldFont(cfs.codice),
               color: cfs.codice.color,
-              textAlign: cfs.codice.align as any,
               letterSpacing: 0.3,
               overflow: 'hidden',
             }}>
               {cfs.codice.uppercase ? product.code.toUpperCase() : product.code}
             </Text>
+            {/* NUOVO badge — next-to-code position */}
+            {config.nuovoBadge?.attivo && product.collezione === 'CA27' && config.nuovoBadge.posizione === 'next-to-code' && (
+              <View style={{ backgroundColor: config.nuovoBadge.bgColor, paddingHorizontal: 3, paddingVertical: 1, borderRadius: 2 }}>
+                <Text style={{ fontSize: 4.5, color: config.nuovoBadge.textColor, fontFamily: 'Helvetica-Bold' }}>
+                  {config.nuovoBadge.testo}
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
         {f.descrizione && (
-          <View style={{ height: layout.DESC_H, overflow: 'hidden' }}>
+          <View style={{ height: layout.DESC_H, overflow: 'hidden', alignItems: alignToFlex(cfs.descrizione.align) }}>
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <Text style={{
               fontSize: cfs.descrizione.fontSize,
               fontFamily: fieldFont(cfs.descrizione),
               color: cfs.descrizione.color,
-              textAlign: cfs.descrizione.align as any,
               lineHeight: 1.25,
               overflow: 'hidden',
             }} {...({ numberOfLines: 2 } as any)}>
@@ -627,13 +654,12 @@ function ProductCard({
         )}
 
         {anyDetail && (
-          <View style={{ height: layout.DETAIL_H, overflow: 'hidden' }}>
+          <View style={{ height: layout.DETAIL_H, overflow: 'hidden', alignItems: alignToFlex(misureStyle.align) }}>
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <Text style={{
               fontSize: misureStyle.fontSize,
               fontFamily: fieldFont(misureStyle),
               color: misureStyle.color,
-              textAlign: misureStyle.align as any,
               overflow: 'hidden',
             }} {...({ numberOfLines: 1 } as any)}>
               {detailText}
@@ -650,12 +676,11 @@ function ProductCard({
           <View style={[s.priceRow, { height: layout.PRICES_H }]}>
             {f.prezzoCosto && (
               <View style={[s.priceItem, { alignItems: alignToFlex(cfs.prezzoCosto.align) }]}>
-                <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color, textAlign: cfs.prezzoCosto.align as any }]}>Costo i.e.</Text>
+                <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Costo i.e.</Text>
                 <Text style={{
                   fontSize: cfs.prezzoCosto.fontSize,
                   fontFamily: fieldFont(cfs.prezzoCosto),
                   color: cfs.prezzoCosto.color,
-                  textAlign: cfs.prezzoCosto.align as any,
                 }}>
                   {euro(product.costPrice)}
                 </Text>
@@ -663,12 +688,11 @@ function ProductCard({
             )}
             {f.pvp && (
               <View style={[s.priceItem, { alignItems: alignToFlex(cfs.pvp.align) }]}>
-                <Text style={[s.priceLabel, { color: cfs.pvp.color, textAlign: cfs.pvp.align as any }]}>PVP i.i.</Text>
+                <Text style={[s.priceLabel, { color: cfs.pvp.color }]}>PVP i.i.</Text>
                 <Text style={{
                   fontSize: cfs.pvp.fontSize,
                   fontFamily: fieldFont(cfs.pvp),
                   color: cfs.pvp.color,
-                  textAlign: cfs.pvp.align as any,
                 }}>
                   {euro(product.retailPrice)}
                 </Text>
@@ -1014,6 +1038,47 @@ function FinalPage({
 
   const segments = pf.testo ? parseInlineText(pf.testo) : [];
 
+  const imgSrc = pf.immagineBase64 ?? null;
+  const imgPos = pf.immaginePosition ?? 'top';
+  const imgDim = pf.immagineDimensione ?? 'medium';
+
+  // Dimension map: fraction of page width
+  const IMG_DIM_MAP: Record<string, number> = { small: pageW * 0.3, medium: pageW * 0.5, large: pageW * 0.75, full: pageW };
+  const imgWidth = IMG_DIM_MAP[imgDim] ?? pageW * 0.5;
+  const imgHeight = imgDim === 'full' ? pageH : imgWidth * 0.65;
+
+  if (imgSrc && imgPos === 'background') {
+    return (
+      <Page
+        size={[pageW, pageH] as [number, number]}
+        style={{ fontFamily: 'Helvetica', justifyContent: 'center', paddingHorizontal: 60 }}
+      >
+        {/* Background image */}
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <Image src={imgSrc} style={{ position: 'absolute', top: 0, left: 0, width: pageW, height: pageH, objectFit: 'cover' as any, opacity: 0.25 }} />
+        {pf.titolo ? (
+          <Text style={{ fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 2, textAlign: titleAlign, marginBottom: 18 }}>
+            {pf.titolo}
+          </Text>
+        ) : null}
+        {pf.testo ? (
+          <Text style={{ fontSize: typo.testoFontSize, color: typo.testoColor, textAlign: textAlign, lineHeight: 1.6, marginBottom: 24 }}>
+            {segments.map((seg, i) => (
+              <Text key={i} style={{ fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique' : seg.bold ? 'Helvetica-Bold' : seg.italic ? 'Helvetica-Oblique' : 'Helvetica' }}>
+                {seg.text}
+              </Text>
+            ))}
+          </Text>
+        ) : null}
+        {pf.mostraLogo && config.logoBase64 && (
+          <View style={{ alignItems: 'center' }}>
+            <Image src={config.logoBase64} style={{ height: 20, width: 130, marginTop: 10 }} />
+          </View>
+        )}
+      </Page>
+    );
+  }
+
   return (
     <Page
       size={[pageW, pageH] as [number, number]}
@@ -1024,6 +1089,14 @@ function FinalPage({
         paddingHorizontal: 60,
       }}
     >
+      {/* Image at top */}
+      {imgSrc && imgPos === 'top' && (
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <Image src={imgSrc} style={{ width: imgWidth, height: imgHeight, objectFit: 'cover' as any }} />
+        </View>
+      )}
+
       {pf.titolo ? (
         <Text
           style={{
@@ -1038,6 +1111,14 @@ function FinalPage({
           {pf.titolo}
         </Text>
       ) : null}
+
+      {/* Image at center (between title and body text) */}
+      {imgSrc && imgPos === 'center' && (
+        <View style={{ alignItems: 'center', marginBottom: 16 }}>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <Image src={imgSrc} style={{ width: imgWidth, height: imgHeight, objectFit: 'cover' as any }} />
+        </View>
+      )}
 
       {pf.testo ? (
         <Text
@@ -1064,6 +1145,14 @@ function FinalPage({
           ))}
         </Text>
       ) : null}
+
+      {/* Image at bottom */}
+      {imgSrc && imgPos === 'bottom' && (
+        <View style={{ alignItems: 'center', marginTop: 16 }}>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <Image src={imgSrc} style={{ width: imgWidth, height: imgHeight, objectFit: 'cover' as any }} />
+        </View>
+      )}
 
       {pf.mostraLogo && config.logoBase64 && (
         <View style={{ alignItems: 'center' }}>
