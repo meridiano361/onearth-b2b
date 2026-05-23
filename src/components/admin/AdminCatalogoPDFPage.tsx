@@ -335,6 +335,31 @@ const DEFAULT_STATE: FormState = {
   },
 };
 
+// Merge a saved (possibly old) template config with DEFAULT_STATE so that
+// fields added after the template was saved always have safe default values.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mergeWithDefaults(saved: any): FormState {
+  return {
+    ...DEFAULT_STATE,
+    ...saved,
+    campi: { ...DEFAULT_STATE.campi, ...saved?.campi },
+    colori: { ...DEFAULT_STATE.colori, ...saved?.colori },
+    copertina: { ...DEFAULT_STATE.copertina, ...saved?.copertina },
+    paginaFinale: { ...DEFAULT_STATE.paginaFinale, ...saved?.paginaFinale },
+    paginaPenultima: { ...DEFAULT_STATE.paginaPenultima, ...saved?.paginaPenultima },
+    cardFieldStyles: { ...DEFAULT_STATE.cardFieldStyles, ...saved?.cardFieldStyles },
+    separatoreStyle: { ...DEFAULT_STATE.separatoreStyle, ...saved?.separatoreStyle },
+    headerStyle: { ...DEFAULT_STATE.headerStyle, ...saved?.headerStyle },
+    footerStyle: { ...DEFAULT_STATE.footerStyle, ...saved?.footerStyle },
+    cardBoxStyle: { ...DEFAULT_STATE.cardBoxStyle, ...saved?.cardBoxStyle },
+    copertinaTypo: { ...DEFAULT_STATE.copertinaTypo, ...saved?.copertinaTypo },
+    paginaFinaleTypo: { ...DEFAULT_STATE.paginaFinaleTypo, ...saved?.paginaFinaleTypo },
+    paginaPenultimaTypo: { ...DEFAULT_STATE.paginaPenultimaTypo, ...saved?.paginaPenultimaTypo },
+    nuovoBadge: { ...DEFAULT_STATE.nuovoBadge, ...saved?.nuovoBadge },
+    sezioniPersonalizzate: saved?.sezioniPersonalizzate ?? DEFAULT_STATE.sezioniPersonalizzate,
+  };
+}
+
 // ── ON EARTH palette ──────────────────────────────────────────────────────────
 
 const PALETTE = [
@@ -1145,14 +1170,14 @@ function FinalPagePreview({ config }: { config: FormState }) {
 
 function PenultimaPagePreview({ config }: { config: FormState }) {
   const pp = config.paginaPenultima;
-  if (!pp.attiva) return null;
+  if (!pp?.attiva) return null;
 
   const W = 160;
   const H = Math.round(W * 842 / 595);
   const scale = W / 595;
 
   const bg = config.colori.sfondoPagina;
-  const typo = config.paginaPenultimaTypo;
+  const typo = config.paginaPenultimaTypo ?? DEFAULT_STATE.paginaPenultimaTypo;
   const imgSrc = pp.immagineBase64 ?? pp.immagineUrl ?? null;
   const layout = pp.layout ?? 'img-top';
   const offsetX = pp.imgOffsetX ?? 0;
@@ -1745,7 +1770,7 @@ export default function AdminCatalogoPDFPage() {
   }
 
   function handleLoadTemplate(t: Template) {
-    setConfig(t.configurazione);
+    setConfig(mergeWithDefaults(t.configurazione));
     setPreview(null);
     toast.success(`Template "${t.nome}" caricato`);
   }
@@ -1785,7 +1810,7 @@ export default function AdminCatalogoPDFPage() {
   }
 
   function handleEditTemplate(t: Template) {
-    setConfig(t.configurazione);
+    setConfig(mergeWithDefaults(t.configurazione));
     setEditingTemplateId(t.id);
     setTemplateName(t.nome);
     setPreview(null);
