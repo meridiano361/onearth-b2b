@@ -51,7 +51,7 @@ export default function CatalogView() {
   const [showFilters, setShowFilters]     = useState(false);
   const [filters, setFilters]             = useState<Filters>(EMPTY_FILTERS);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
-  const [sortBy, setSortBy]               = useState<'default' | 'az' | 'za' | 'price-asc' | 'price-desc' | 'collection-az' | 'collection-za'>('default');
+  const [sortBy, setSortBy]               = useState<'az' | 'za' | 'price-asc' | 'price-desc' | 'novita' | 'continuativi'>('az');
   const { favoriteIds } = useFavorites();
   const { mode: viewMode, changeMode: setViewMode } = useViewMode();
   const tn = useTranslations('nav');
@@ -131,10 +131,21 @@ export default function CatalogView() {
 
     if (sortBy === 'az')         result = [...result].sort((a, b) => a.name.localeCompare(b.name, 'it'));
     else if (sortBy === 'za')    result = [...result].sort((a, b) => b.name.localeCompare(a.name, 'it'));
-    else if (sortBy === 'price-asc')       result = [...result].sort((a, b) => Number(a.costPrice) - Number(b.costPrice));
-    else if (sortBy === 'price-desc')      result = [...result].sort((a, b) => Number(b.costPrice) - Number(a.costPrice));
-    else if (sortBy === 'collection-az')   result = [...result].sort((a, b) => (a.collezione ?? '').localeCompare(b.collezione ?? '', 'it'));
-    else if (sortBy === 'collection-za')   result = [...result].sort((a, b) => (b.collezione ?? '').localeCompare(a.collezione ?? '', 'it'));
+    else if (sortBy === 'price-asc')  result = [...result].sort((a, b) => Number(a.costPrice) - Number(b.costPrice));
+    else if (sortBy === 'price-desc') result = [...result].sort((a, b) => Number(b.costPrice) - Number(a.costPrice));
+    else if (sortBy === 'novita') result = [...result].sort((a, b) => {
+      const aNew = a.collezione === 'CA27' ? 0 : 1;
+      const bNew = b.collezione === 'CA27' ? 0 : 1;
+      if (aNew !== bNew) return aNew - bNew;
+      return a.code.localeCompare(b.code, 'it');
+    });
+    else if (sortBy === 'continuativi') result = [...result].sort((a, b) => {
+      const aCont = a.collezione && a.collezione !== 'CA27' ? 0 : 1;
+      const bCont = b.collezione && b.collezione !== 'CA27' ? 0 : 1;
+      if (aCont !== bCont) return aCont - bCont;
+      if (aCont === 0 && bCont === 0) return (b.collezione ?? '').localeCompare(a.collezione ?? '', 'it');
+      return 0;
+    });
 
     return result;
   }, [products, debouncedSearch, filters, onlyFavorites, favoriteIds, sortBy]);
@@ -290,13 +301,12 @@ export default function CatalogView() {
               className="text-xs border border-border rounded px-2 py-2 bg-white text-gray-600 focus:outline-none focus:border-accent transition-colors flex-shrink-0"
             >
               <option value="" disabled>Ordina per...</option>
-              <option value="default">Rilevanza</option>
               <option value="az">A → Z</option>
               <option value="za">Z → A</option>
               <option value="price-asc">Prezzo crescente</option>
               <option value="price-desc">Prezzo decrescente</option>
-              <option value="collection-az">Collezione A → Z</option>
-              <option value="collection-za">Collezione Z → A</option>
+              <option value="novita">Novità (CA27 prima)</option>
+              <option value="continuativi">Continuativi (CA02–CA26 prima)</option>
             </select>
 
             {/* View mode toggle */}
