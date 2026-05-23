@@ -26,6 +26,20 @@ export async function POST(req: NextRequest) {
 
   const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
 
+  // Ensure bucket exists (creates it if absent)
+  const { data: buckets } = await supabase.storage.listBuckets();
+  const bucketExists = buckets?.some((b) => b.name === BUCKET);
+  if (!bucketExists) {
+    const { error: createErr } = await supabase.storage.createBucket(BUCKET, {
+      public: true,
+      fileSizeLimit: MAX_SIZE,
+      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+    });
+    if (createErr) {
+      return NextResponse.json({ error: `Cannot create bucket: ${createErr.message}` }, { status: 500 });
+    }
+  }
+
   const formData = await req.formData();
   const file = formData.get('file') as File | null;
   if (!file) return NextResponse.json({ error: 'No file' }, { status: 400 });

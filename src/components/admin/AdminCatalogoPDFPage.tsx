@@ -684,6 +684,103 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
   );
 }
 
+function parseMiniText(raw: string): { text: string; bold: boolean; italic: boolean }[] {
+  if (!raw) return [];
+  const segs: { text: string; bold: boolean; italic: boolean }[] = [];
+  const re = /(\*\*(.+?)\*\*|\*(.+?)\*|([^*]+))/g;
+  let m;
+  while ((m = re.exec(raw)) !== null) {
+    if (m[2]) segs.push({ text: m[2], bold: true, italic: false });
+    else if (m[3]) segs.push({ text: m[3], bold: false, italic: true });
+    else if (m[4]) segs.push({ text: m[4], bold: false, italic: false });
+  }
+  return segs.length > 0 ? segs : [{ text: raw, bold: false, italic: false }];
+}
+
+function FinalPagePreview({ config }: { config: FormState }) {
+  const pf = config.paginaFinale;
+  if (!pf.attiva) return null;
+
+  const W = 160;
+  const H = Math.round(W * 842 / 595);
+  const scale = W / 595;
+
+  const bg = config.colori.sfondoPagina;
+  const typo = config.paginaFinaleTypo;
+  const imgSrc = pf.immagineBase64 ?? pf.immagineUrl ?? null;
+  const imgPos = pf.immaginePosition ?? 'top';
+  const imgDim = pf.immagineDimensione ?? 'medium';
+  const imgWidthMap: Record<string, string> = { small: '30%', medium: '50%', large: '75%', full: '100%' };
+  const imgWidth = imgWidthMap[imgDim] ?? '50%';
+  const segs = parseMiniText(pf.testo);
+
+  return (
+    <div className="mt-4">
+      <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Anteprima pagina finale</p>
+      <div
+        style={{ width: W, height: H, position: 'relative', overflow: 'hidden', backgroundColor: bg, border: '1px solid #e5e7eb', borderRadius: 4, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 16px' }}
+        className="shadow-sm flex-shrink-0"
+      >
+        {/* Background image */}
+        {imgSrc && imgPos === 'background' && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={imgSrc} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25 }} />
+        )}
+
+        {/* Top image */}
+        {imgSrc && imgPos === 'top' && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imgSrc} alt="" style={{ width: imgWidth, objectFit: 'cover', maxHeight: H * 0.35 }} />
+          </div>
+        )}
+
+        {/* Title */}
+        {pf.titolo && (
+          <p style={{ fontSize: typo.titoloFontSize * scale, fontWeight: typo.titoloBold ? 'bold' : 'normal', fontStyle: typo.titoloItalic ? 'italic' : 'normal', color: typo.titoloColor, textAlign: pf.titoloAllineamento, margin: '0 0 4px', letterSpacing: 0.5, position: 'relative' }}>
+            {pf.titolo}
+          </p>
+        )}
+
+        {/* Center image */}
+        {imgSrc && imgPos === 'center' && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imgSrc} alt="" style={{ width: imgWidth, objectFit: 'cover', maxHeight: H * 0.35 }} />
+          </div>
+        )}
+
+        {/* Body text */}
+        {pf.testo && (
+          <p style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, textAlign: pf.testoAllineamento, margin: 0, lineHeight: 1.6, position: 'relative' }}>
+            {segs.map((seg, i) => (
+              <span key={i} style={{ fontWeight: seg.bold ? 'bold' : undefined, fontStyle: seg.italic ? 'italic' : undefined }}>
+                {seg.text}
+              </span>
+            ))}
+          </p>
+        )}
+
+        {/* Bottom image */}
+        {imgSrc && imgPos === 'bottom' && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imgSrc} alt="" style={{ width: imgWidth, objectFit: 'cover', maxHeight: H * 0.35 }} />
+          </div>
+        )}
+
+        {/* Logo ON EARTH at bottom center */}
+        {pf.mostraLogo && (
+          <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-on-earth/onearth_solo.png" alt="logo" style={{ height: 8, objectFit: 'contain', opacity: 0.5 }} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Custom Sections UI Components ─────────────────────────────────────────────
 
 function MultiSelectCriteria({
@@ -2118,6 +2215,9 @@ export default function AdminCatalogoPDFPage() {
                     checked={config.paginaFinale.mostraLogo}
                     onChange={(v) => setPaginaFinale('mostraLogo', v)}
                   />
+
+                  {/* Preview */}
+                  <FinalPagePreview config={config} />
                 </div>
               )}
             </div>
