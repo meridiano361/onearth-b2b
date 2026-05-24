@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
@@ -20,6 +20,43 @@ function shuffle<T>(arr: T[]): T[] {
   }
   return a;
 }
+
+const FONT_FAMILIES: Record<string, string> = {
+  system: 'Nunito, system-ui, sans-serif',
+  nova: '"Cormorant Garamond", Georgia, serif',
+  playfair: '"Playfair Display", Georgia, serif',
+  montserrat: 'Montserrat, "Helvetica Neue", sans-serif',
+  lato: 'Lato, "Helvetica Neue", sans-serif',
+  georgia: 'Georgia, "Times New Roman", serif',
+  futura: '"Futura", "Trebuchet MS", sans-serif',
+};
+
+const FONT_WEIGHTS: Record<string, number> = {
+  light: 300, normal: 400, medium: 500, semibold: 600, bold: 700, extrabold: 800,
+};
+
+const SOCIAL_SVGS: Record<string, ReactNode> = {
+  instagram: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-[22px] h-[22px]">
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+    </svg>
+  ),
+  facebook: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-[22px] h-[22px]">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+    </svg>
+  ),
+  pinterest: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-[22px] h-[22px]">
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 01.083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/>
+    </svg>
+  ),
+  tiktok: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-[22px] h-[22px]">
+      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.79 1.54V6.78a4.85 4.85 0 01-1.02-.09z"/>
+    </svg>
+  ),
+};
 
 function SpotlightCard({ product }: { product: Product }) {
   const { addItem, getItemQuantity } = useCartStore();
@@ -102,7 +139,7 @@ function SpotlightCard({ product }: { product: Product }) {
 
 export default function CustomerHome() {
   const th = useTranslations('home');
-  const { home: hs, card: cs } = useSettings();
+  const { home: hs, social: ss } = useSettings();
 
   const { data: productsData, isLoading } = useQuery({
     queryKey: ['home-products'],
@@ -123,7 +160,24 @@ export default function CustomerHome() {
     return shuffle(filtered.length > 0 ? filtered : productsData).slice(0, hs.scrollNumero);
   }, [productsData, hs.scrollCollezione, hs.scrollNumero]);
 
-  const titolo1 = hs.titolo1Maiuscolo ? hs.titolo1.toUpperCase() : hs.titolo1;
+  const titolo1Style: CSSProperties = {
+    fontFamily: FONT_FAMILIES[hs.titolo1Font] ?? FONT_FAMILIES.system,
+    fontWeight: FONT_WEIGHTS[hs.titolo1Weight] ?? 300,
+    fontSize: hs.titolo1Size,
+    lineHeight: hs.titolo1LineHeight,
+    letterSpacing: `${hs.titolo1LetterSpacing}px`,
+    textTransform: hs.titolo1Transform as CSSProperties['textTransform'],
+    color: hs.titolo1Colore,
+  };
+  const titolo2Style: CSSProperties = {
+    fontFamily: FONT_FAMILIES[hs.titolo2Font] ?? FONT_FAMILIES.system,
+    fontWeight: FONT_WEIGHTS[hs.titolo2Weight] ?? 300,
+    fontSize: hs.titolo2Size,
+    lineHeight: hs.titolo2LineHeight,
+    letterSpacing: `${hs.titolo2LetterSpacing}px`,
+    textTransform: hs.titolo2Transform as CSSProperties['textTransform'],
+    color: hs.titolo2Colore,
+  };
 
   return (
     <div className="min-h-screen bg-cream">
@@ -143,18 +197,8 @@ export default function CustomerHome() {
         {hs.scrollAttivo && (
         <section>
           <div className="mb-4 text-center">
-            <p
-              className="font-display font-light tracking-widest"
-              style={{ fontSize: hs.titolo1Size, color: hs.titolo1Colore }}
-            >
-              {titolo1}
-            </p>
-            <p
-              className="font-display font-light tracking-wide mt-1"
-              style={{ fontSize: hs.titolo2Size, color: hs.titolo2Colore }}
-            >
-              {hs.titolo2}
-            </p>
+            <p style={titolo1Style}>{hs.titolo1}</p>
+            <p style={{ ...titolo2Style, marginTop: '0.25rem' }}>{hs.titolo2}</p>
           </div>
 
           {isLoading ? (
@@ -179,79 +223,39 @@ export default function CustomerHome() {
         <section>
           <div className="bg-white border border-gray-200 shadow-sm rounded-xl px-5 py-4">
             <div className="flex items-center justify-center gap-5 flex-wrap">
-              {/* Instagram */}
-              <a
-                href="https://www.instagram.com/onearth_official/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-black hover:text-gray-600 transition-colors"
-                aria-label="Instagram"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-[22px] h-[22px]">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
-                </svg>
-              </a>
-
-              {/* Facebook */}
-              <a
-                href="https://www.facebook.com/onearthofficial/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-black hover:text-gray-600 transition-colors"
-                aria-label="Facebook"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-[22px] h-[22px]">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-              </a>
-
-              {/* Pinterest */}
-              <a
-                href="https://it.pinterest.com/OnEarth_official/"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Pinterest"
-                className="hover:opacity-75 transition-opacity"
-              >
-                <svg viewBox="0 0 24 24" fill="#000000" className="w-[22px] h-[22px]">
-                  <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 01.083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/>
-                </svg>
-              </a>
-
-              {/* TikTok */}
-              <a
-                href="https://www.tiktok.com/@onearth_official"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="TikTok"
-                className="hover:opacity-75 transition-opacity"
-              >
-                <svg viewBox="0 0 24 24" fill="#000000" className="w-[22px] h-[22px]">
-                  <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.79 1.54V6.78a4.85 4.85 0 01-1.02-.09z"/>
-                </svg>
-              </a>
-
-              {/* Website */}
-              <a
-                href="https://www.on-earth.it"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-black hover:text-gray-600 transition-colors whitespace-nowrap"
-              >
-                <Globe size={16} />
-                on-earth.it
-              </a>
-
-              {/* Podcast */}
-              <a
-                href="https://open.spotify.com/show/3MjWJeGlQFAy2D2D2awo4t"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 text-sm text-black bg-white border-2 border-black rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Mic size={16} />
-                Podcast MATERIA
-              </a>
+              {ss.ordine
+                .filter((key) => ss.items[key]?.visibile)
+                .map((key) => {
+                  const url = ss.items[key].url;
+                  if (key === 'website') {
+                    let domain = url;
+                    try { domain = new URL(url).hostname.replace('www.', ''); } catch {}
+                    return (
+                      <a key={key} href={url} target="_blank" rel="noopener noreferrer"
+                         className="flex items-center gap-2 text-sm text-black hover:text-gray-600 transition-colors whitespace-nowrap">
+                        <Globe size={16} />
+                        {domain}
+                      </a>
+                    );
+                  }
+                  if (key === 'podcast') {
+                    return (
+                      <a key={key} href={url} target="_blank" rel="noopener noreferrer"
+                         className="flex items-center gap-2 px-4 py-2 text-sm text-black bg-white border-2 border-black rounded-lg hover:bg-gray-50 transition-colors">
+                        <Mic size={16} />
+                        Podcast MATERIA
+                      </a>
+                    );
+                  }
+                  const svg = SOCIAL_SVGS[key];
+                  if (!svg) return null;
+                  return (
+                    <a key={key} href={url} target="_blank" rel="noopener noreferrer"
+                       className="text-black hover:text-gray-600 transition-colors" aria-label={key}>
+                      {svg}
+                    </a>
+                  );
+                })}
             </div>
           </div>
         </section>

@@ -53,6 +53,9 @@ model Product {
   retailPrice   Decimal  @db.Decimal(10, 2)
   lotSize       Int      @default(1)
   imageUrl      String?
+  imageUrl2     String?
+  imageUrl3     String?
+  imageUrl4     String?
   notes         String?
   categoryId    String?
   collectionId  String?

@@ -6,13 +6,27 @@ export interface AppSettingsData {
     titolo1Maiuscolo: boolean;
     titolo1Colore: string;
     titolo1Size: number;
+    titolo1Font: string;
+    titolo1Weight: string;
+    titolo1LineHeight: number;
+    titolo1LetterSpacing: number;
+    titolo1Transform: string;
     titolo2: string;
     titolo2Colore: string;
     titolo2Size: number;
+    titolo2Font: string;
+    titolo2Weight: string;
+    titolo2LineHeight: number;
+    titolo2LetterSpacing: number;
+    titolo2Transform: string;
     cta: string;
     scrollAttivo: boolean;
     scrollNumero: number;
     scrollCollezione: string;
+  };
+  social: {
+    ordine: string[];
+    items: Record<string, { visibile: boolean; url: string }>;
   };
   menu: {
     ordine: string[];
@@ -54,19 +68,47 @@ export interface AppSettingsData {
   };
 }
 
+export const SOCIAL_KEYS = ['instagram', 'facebook', 'pinterest', 'tiktok', 'website', 'podcast'] as const;
+export type SocialKey = (typeof SOCIAL_KEYS)[number];
+
+export const DEFAULT_SOCIAL_URLS: Record<string, string> = {
+  instagram: 'https://www.instagram.com/onearth_official/',
+  facebook:  'https://www.facebook.com/onearthofficial/',
+  pinterest: 'https://it.pinterest.com/OnEarth_official/',
+  tiktok:    'https://www.tiktok.com/@onearth_official',
+  website:   'https://www.on-earth.it',
+  podcast:   'https://open.spotify.com/show/3MjWJeGlQFAy2D2D2awo4t',
+};
+
 export const DEFAULT_APP_SETTINGS: AppSettingsData = {
   home: {
     titolo1: 'TERRA E LUCE',
     titolo1Maiuscolo: true,
     titolo1Colore: '#1C1C1C',
     titolo1Size: 28,
+    titolo1Font: 'system',
+    titolo1Weight: 'light',
+    titolo1LineHeight: 1.25,
+    titolo1LetterSpacing: 2,
+    titolo1Transform: 'uppercase',
     titolo2: 'Scopri la collezione casa 2027',
     titolo2Colore: '#1C1C1C',
     titolo2Size: 16,
+    titolo2Font: 'system',
+    titolo2Weight: 'light',
+    titolo2LineHeight: 1.25,
+    titolo2LetterSpacing: 1,
+    titolo2Transform: 'none',
     cta: 'Apri il catalogo e crea un ordine',
     scrollAttivo: true,
     scrollNumero: 6,
     scrollCollezione: 'CA27',
+  },
+  social: {
+    ordine: [...SOCIAL_KEYS],
+    items: Object.fromEntries(
+      SOCIAL_KEYS.map((k) => [k, { visibile: true, url: DEFAULT_SOCIAL_URLS[k] }])
+    ),
   },
   menu: {
     ordine: ['catalogo', 'preferiti', 'ordini', 'destinazioni', 'assistenza'],
@@ -131,19 +173,47 @@ export function parseSettingsFromDb(records: { chiave: string; valore: string }[
     if (raw) ordine = JSON.parse(raw);
   } catch { /* keep default */ }
 
+  let socialOrdine = [...SOCIAL_KEYS] as string[];
+  try {
+    const raw = m['social.ordine'];
+    if (raw) socialOrdine = JSON.parse(raw);
+  } catch { /* keep default */ }
+
   return {
     home: {
       titolo1: str('home.titolo1', 'TERRA E LUCE'),
       titolo1Maiuscolo: bool('home.titolo1.maiuscolo', true),
       titolo1Colore: str('home.titolo1.colore', '#1C1C1C'),
       titolo1Size: num('home.titolo1.size', 28),
+      titolo1Font: str('home.titolo1.font', 'system'),
+      titolo1Weight: str('home.titolo1.weight', 'light'),
+      titolo1LineHeight: num('home.titolo1.lineHeight', 1.25),
+      titolo1LetterSpacing: num('home.titolo1.letterSpacing', 2),
+      titolo1Transform: str('home.titolo1.transform', 'uppercase'),
       titolo2: str('home.titolo2', 'Scopri la collezione casa 2027'),
       titolo2Colore: str('home.titolo2.colore', '#1C1C1C'),
       titolo2Size: num('home.titolo2.size', 16),
+      titolo2Font: str('home.titolo2.font', 'system'),
+      titolo2Weight: str('home.titolo2.weight', 'light'),
+      titolo2LineHeight: num('home.titolo2.lineHeight', 1.25),
+      titolo2LetterSpacing: num('home.titolo2.letterSpacing', 1),
+      titolo2Transform: str('home.titolo2.transform', 'none'),
       cta: str('home.cta', 'Apri il catalogo e crea un ordine'),
       scrollAttivo: bool('home.scrollAttivo', true),
       scrollNumero: num('home.scrollNumero', 6),
       scrollCollezione: str('home.scrollCollezione', 'CA27'),
+    },
+    social: {
+      ordine: socialOrdine,
+      items: Object.fromEntries(
+        SOCIAL_KEYS.map((k) => [
+          k,
+          {
+            visibile: bool(`social.${k}.visibile`, true),
+            url: str(`social.${k}.url`, DEFAULT_SOCIAL_URLS[k]),
+          },
+        ])
+      ),
     },
     menu: {
       ordine,

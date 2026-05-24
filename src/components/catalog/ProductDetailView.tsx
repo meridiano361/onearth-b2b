@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ShoppingBag, Check } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import { formatCurrency, isValidLotQuantity } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
@@ -12,6 +12,71 @@ import QuantitySelector from './QuantitySelector';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useSettings } from '@/contexts/SettingsContext';
 import type { Product } from '@/types';
+
+function ProductGallery({ product }: { product: Product }) {
+  const photos = [product.imageUrl, product.imageUrl2, product.imageUrl3, product.imageUrl4].filter(Boolean) as string[];
+  const [active, setActive] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+
+  if (photos.length === 0) {
+    return (
+      <div className="aspect-square bg-cream rounded overflow-hidden border border-border flex items-center justify-center">
+        <span className="text-gray-300 text-xs">Nessuna immagine</span>
+      </div>
+    );
+  }
+
+  function prev() { setActive((i) => (i === 0 ? photos.length - 1 : i - 1)); }
+  function next() { setActive((i) => (i === photos.length - 1 ? 0 : i + 1)); }
+
+  return (
+    <div className="space-y-2">
+      {/* Main image */}
+      <div
+        className="relative aspect-square bg-cream rounded overflow-hidden border border-border"
+        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          if (touchStartX.current === null) return;
+          const dx = e.changedTouches[0].clientX - touchStartX.current;
+          if (Math.abs(dx) > 40) { dx < 0 ? next() : prev(); }
+          touchStartX.current = null;
+        }}
+      >
+        <ProductImage src={photos[active]} alt={product.name} className="w-full h-full object-cover" />
+        {photos.length > 1 && (
+          <>
+            <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors">
+              <ChevronLeft size={16} />
+            </button>
+            <button onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors">
+              <ChevronRight size={16} />
+            </button>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+              {photos.map((_, i) => (
+                <button key={i} onClick={() => setActive(i)} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === active ? 'bg-gray-900' : 'bg-gray-300'}`} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+      {/* Thumbnails */}
+      {photos.length > 1 && (
+        <div className="flex gap-2">
+          {photos.map((url, i) => (
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              className={`w-16 h-16 flex-shrink-0 rounded overflow-hidden border-2 transition-colors ${i === active ? 'border-gray-900' : 'border-border hover:border-gray-400'}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt={`foto ${i + 1}`} className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   id: string;
@@ -131,14 +196,8 @@ export default function ProductDetailView({ id }: Props) {
       </button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 mb-10">
-        {/* Image */}
-        <div className="aspect-square bg-cream rounded overflow-hidden border border-border">
-          <ProductImage
-            src={product.imageUrl}
-            alt={product.name}
-            className="w-full h-full object-cover"
-          />
-        </div>
+        {/* Image / Gallery */}
+        <ProductGallery product={product} />
 
         {/* Info */}
         <div className="flex flex-col">

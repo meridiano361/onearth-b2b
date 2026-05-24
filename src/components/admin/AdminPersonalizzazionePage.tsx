@@ -21,6 +21,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { parseSettingsFromDb, DEFAULT_APP_SETTINGS } from '@/contexts/SettingsContext';
 import type { AppSettingsData } from '@/contexts/SettingsContext';
+import { SOCIAL_KEYS, DEFAULT_SOCIAL_URLS } from '@/lib/settingsHelpers';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,13 +34,29 @@ function settingsToFlat(s: AppSettingsData): SettingsFlat {
   f['home.titolo1.maiuscolo'] = String(s.home.titolo1Maiuscolo);
   f['home.titolo1.colore'] = s.home.titolo1Colore;
   f['home.titolo1.size'] = String(s.home.titolo1Size);
+  f['home.titolo1.font'] = s.home.titolo1Font;
+  f['home.titolo1.weight'] = s.home.titolo1Weight;
+  f['home.titolo1.lineHeight'] = String(s.home.titolo1LineHeight);
+  f['home.titolo1.letterSpacing'] = String(s.home.titolo1LetterSpacing);
+  f['home.titolo1.transform'] = s.home.titolo1Transform;
   f['home.titolo2'] = s.home.titolo2;
   f['home.titolo2.colore'] = s.home.titolo2Colore;
   f['home.titolo2.size'] = String(s.home.titolo2Size);
+  f['home.titolo2.font'] = s.home.titolo2Font;
+  f['home.titolo2.weight'] = s.home.titolo2Weight;
+  f['home.titolo2.lineHeight'] = String(s.home.titolo2LineHeight);
+  f['home.titolo2.letterSpacing'] = String(s.home.titolo2LetterSpacing);
+  f['home.titolo2.transform'] = s.home.titolo2Transform;
   f['home.cta'] = s.home.cta;
   f['home.scrollAttivo'] = String(s.home.scrollAttivo);
   f['home.scrollNumero'] = String(s.home.scrollNumero);
   f['home.scrollCollezione'] = s.home.scrollCollezione;
+  // social
+  f['social.ordine'] = JSON.stringify(s.social.ordine);
+  for (const [k, v] of Object.entries(s.social.items)) {
+    f[`social.${k}.visibile`] = String(v.visibile);
+    f[`social.${k}.url`] = v.url;
+  }
   // menu
   f['menu.ordine'] = JSON.stringify(s.menu.ordine);
   for (const [k, v] of Object.entries(s.menu.items)) {
@@ -158,6 +175,59 @@ function SortableMenuItem({
   );
 }
 
+// ─── DnD sortable social item ─────────────────────────────────────────────────
+
+const SOCIAL_LABELS: Record<string, string> = {
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  pinterest: 'Pinterest',
+  tiktok: 'TikTok',
+  website: 'Website',
+  podcast: 'Podcast',
+};
+
+interface SocialItemDef {
+  key: string;
+  visibile: boolean;
+  url: string;
+}
+
+function SortableSocialItem({
+  item,
+  onChange,
+}: {
+  item: SocialItemDef;
+  onChange: (key: string, field: 'visibile' | 'url', value: string | boolean) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.key });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} className="bg-gray-50 border border-border rounded-lg px-3 py-2.5 space-y-1.5">
+      <div className="flex items-center gap-3">
+        <button {...attributes} {...listeners} type="button" className="cursor-grab text-gray-400 hover:text-gray-600">
+          <GripVertical size={14} />
+        </button>
+        <span className="text-sm font-medium text-gray-700 flex-1">{SOCIAL_LABELS[item.key] ?? item.key}</span>
+        <button
+          type="button"
+          onClick={() => onChange(item.key, 'visibile', !item.visibile)}
+          className={`relative w-9 h-[18px] rounded-full transition-colors flex-shrink-0 ${item.visibile ? 'bg-gray-900' : 'bg-gray-300'}`}
+        >
+          <span className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-transform ${item.visibile ? 'translate-x-[18px]' : ''}`} />
+        </button>
+      </div>
+      <input
+        type="url"
+        value={item.url}
+        onChange={(e) => onChange(item.key, 'url', e.target.value)}
+        placeholder="https://..."
+        className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-gray-900 text-gray-600 ml-5"
+      />
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function AdminPersonalizzazionePage() {
@@ -224,15 +294,35 @@ export default function AdminPersonalizzazionePage() {
     });
   }
 
+  function handleSocialDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = settings.social.ordine.indexOf(String(active.id));
+    const newIndex = settings.social.ordine.indexOf(String(over.id));
+    update('social', { ordine: arrayMove(settings.social.ordine, oldIndex, newIndex) });
+  }
+
+  function handleSocialItemChange(key: string, field: 'visibile' | 'url', value: string | boolean) {
+    update('social', {
+      items: {
+        ...settings.social.items,
+        [key]: { ...settings.social.items[key], [field]: value },
+      },
+    });
+  }
+
   const homeKeys = [
     'home.titolo1', 'home.titolo1.maiuscolo', 'home.titolo1.colore', 'home.titolo1.size',
+    'home.titolo1.font', 'home.titolo1.weight', 'home.titolo1.lineHeight', 'home.titolo1.letterSpacing', 'home.titolo1.transform',
     'home.titolo2', 'home.titolo2.colore', 'home.titolo2.size',
+    'home.titolo2.font', 'home.titolo2.weight', 'home.titolo2.lineHeight', 'home.titolo2.letterSpacing', 'home.titolo2.transform',
     'home.cta', 'home.scrollAttivo', 'home.scrollNumero', 'home.scrollCollezione',
   ];
   const menuKeys = ['menu.ordine', ...settings.menu.ordine.flatMap((k) => [`menu.${k}.label`, `menu.${k}.visibile`])];
   const schedaKeys = Object.keys(settings.scheda).map((k) => `scheda.${k}`);
   const cardKeys = Object.keys(settings.card).map((k) => `card.${k}`);
   const coloriKeys = ['colori.sfondo', 'colori.pulsanti', 'colori.testoPulsanti', 'colori.testo'];
+  const socialKeys = ['social.ordine', ...SOCIAL_KEYS.flatMap((k) => [`social.${k}.visibile`, `social.${k}.url`])];
 
   if (isLoading) {
     return <div className="p-8 text-sm text-gray-400">Caricamento impostazioni…</div>;
@@ -242,134 +332,150 @@ export default function AdminPersonalizzazionePage() {
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-lg font-semibold text-primary">Personalizzazione</h1>
 
-      {/* ── 3a: Homepage ─────────────────────────────────────── */}
+      {/* ── Homepage ─────────────────────────────────────── */}
       <SectionCard title="Homepage">
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Titolo 1</label>
+        <div className="space-y-4">
+
+          {/* Titolo 1 */}
+          <div className="space-y-2">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Titolo 1</p>
             <input
               type="text"
               value={settings.home.titolo1}
               onChange={(e) => update('home', { titolo1: e.target.value })}
               className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
             />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Dimensione (px)</label>
-              <input
-                type="number"
-                value={settings.home.titolo1Size}
-                onChange={(e) => update('home', { titolo1Size: Number(e.target.value) })}
-                className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
-                min={10} max={60}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Colore</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={settings.home.titolo1Colore}
-                  onChange={(e) => update('home', { titolo1Colore: e.target.value })}
-                  className="w-8 h-8 rounded border border-border cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={settings.home.titolo1Colore}
-                  onChange={(e) => update('home', { titolo1Colore: e.target.value })}
-                  className="flex-1 border border-border rounded px-2 py-1.5 text-xs outline-none"
-                />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Font</label>
+                <select value={settings.home.titolo1Font} onChange={(e) => update('home', { titolo1Font: e.target.value })} className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none bg-white">
+                  {[['system','System (Nunito)'],['nova','Nova'],['playfair','Playfair Display'],['montserrat','Montserrat'],['lato','Lato'],['georgia','Georgia'],['futura','Futura']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Peso</label>
+                <select value={settings.home.titolo1Weight} onChange={(e) => update('home', { titolo1Weight: e.target.value })} className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none bg-white">
+                  {[['light','Light'],['normal','Normal'],['medium','Medium'],['semibold','Semibold'],['bold','Bold'],['extrabold','Extrabold']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
               </div>
             </div>
-            <div className="flex flex-col justify-end">
-              <ToggleRow
-                label="Maiuscolo"
-                checked={settings.home.titolo1Maiuscolo}
-                onChange={(v) => update('home', { titolo1Maiuscolo: v })}
-              />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Trasformazione</label>
+                <select value={settings.home.titolo1Transform} onChange={(e) => update('home', { titolo1Transform: e.target.value })} className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none bg-white">
+                  <option value="none">Nessuna</option>
+                  <option value="uppercase">MAIUSCOLO</option>
+                  <option value="lowercase">minuscolo</option>
+                  <option value="capitalize">Prima Lettera</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Colore</label>
+                <div className="flex items-center gap-1.5">
+                  <input type="color" value={settings.home.titolo1Colore} onChange={(e) => update('home', { titolo1Colore: e.target.value })} className="w-8 h-8 rounded border border-border cursor-pointer flex-shrink-0" />
+                  <input type="text" value={settings.home.titolo1Colore} onChange={(e) => update('home', { titolo1Colore: e.target.value })} className="flex-1 border border-border rounded px-2 py-1.5 text-xs outline-none" />
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Dimensione (px)</label>
+                <input type="range" min={12} max={60} value={settings.home.titolo1Size} onChange={(e) => update('home', { titolo1Size: Number(e.target.value) })} className="w-full" />
+                <p className="text-2xs text-gray-400 text-center">{settings.home.titolo1Size}px</p>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Interlinea</label>
+                <input type="range" min={1} max={2} step={0.05} value={settings.home.titolo1LineHeight} onChange={(e) => update('home', { titolo1LineHeight: Number(e.target.value) })} className="w-full" />
+                <p className="text-2xs text-gray-400 text-center">{settings.home.titolo1LineHeight.toFixed(2)}</p>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Spaziatura (px)</label>
+                <input type="range" min={-2} max={10} step={0.5} value={settings.home.titolo1LetterSpacing} onChange={(e) => update('home', { titolo1LetterSpacing: Number(e.target.value) })} className="w-full" />
+                <p className="text-2xs text-gray-400 text-center">{settings.home.titolo1LetterSpacing}px</p>
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Titolo 2</label>
+          {/* Titolo 2 */}
+          <div className="space-y-2 pt-2 border-t border-border">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Titolo 2</p>
             <input
               type="text"
               value={settings.home.titolo2}
               onChange={(e) => update('home', { titolo2: e.target.value })}
               className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
             />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Dimensione (px)</label>
-              <input
-                type="number"
-                value={settings.home.titolo2Size}
-                onChange={(e) => update('home', { titolo2Size: Number(e.target.value) })}
-                className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
-                min={10} max={40}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Colore</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={settings.home.titolo2Colore}
-                  onChange={(e) => update('home', { titolo2Colore: e.target.value })}
-                  className="w-8 h-8 rounded border border-border cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={settings.home.titolo2Colore}
-                  onChange={(e) => update('home', { titolo2Colore: e.target.value })}
-                  className="flex-1 border border-border rounded px-2 py-1.5 text-xs outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Testo CTA</label>
-            <input
-              type="text"
-              value={settings.home.cta}
-              onChange={(e) => update('home', { cta: e.target.value })}
-              className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
-            />
-          </div>
-
-          <ToggleRow
-            label="Mostra scroll prodotti"
-            checked={settings.home.scrollAttivo}
-            onChange={(v) => update('home', { scrollAttivo: v })}
-          />
-
-          {settings.home.scrollAttivo && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Numero prodotti</label>
-                <input
-                  type="number"
-                  value={settings.home.scrollNumero}
-                  onChange={(e) => update('home', { scrollNumero: Number(e.target.value) })}
-                  className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
-                  min={1} max={50}
-                />
+                <label className="text-xs text-gray-500 mb-1 block">Font</label>
+                <select value={settings.home.titolo2Font} onChange={(e) => update('home', { titolo2Font: e.target.value })} className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none bg-white">
+                  {[['system','System (Nunito)'],['nova','Nova'],['playfair','Playfair Display'],['montserrat','Montserrat'],['lato','Lato'],['georgia','Georgia'],['futura','Futura']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
               </div>
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Filtra per collezione</label>
-                <input
-                  type="text"
-                  value={settings.home.scrollCollezione}
-                  onChange={(e) => update('home', { scrollCollezione: e.target.value })}
-                  placeholder="es. CA27"
-                  className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
-                />
+                <label className="text-xs text-gray-500 mb-1 block">Peso</label>
+                <select value={settings.home.titolo2Weight} onChange={(e) => update('home', { titolo2Weight: e.target.value })} className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none bg-white">
+                  {[['light','Light'],['normal','Normal'],['medium','Medium'],['semibold','Semibold'],['bold','Bold'],['extrabold','Extrabold']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
               </div>
             </div>
-          )}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Trasformazione</label>
+                <select value={settings.home.titolo2Transform} onChange={(e) => update('home', { titolo2Transform: e.target.value })} className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none bg-white">
+                  <option value="none">Nessuna</option>
+                  <option value="uppercase">MAIUSCOLO</option>
+                  <option value="lowercase">minuscolo</option>
+                  <option value="capitalize">Prima Lettera</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Colore</label>
+                <div className="flex items-center gap-1.5">
+                  <input type="color" value={settings.home.titolo2Colore} onChange={(e) => update('home', { titolo2Colore: e.target.value })} className="w-8 h-8 rounded border border-border cursor-pointer flex-shrink-0" />
+                  <input type="text" value={settings.home.titolo2Colore} onChange={(e) => update('home', { titolo2Colore: e.target.value })} className="flex-1 border border-border rounded px-2 py-1.5 text-xs outline-none" />
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Dimensione (px)</label>
+                <input type="range" min={12} max={40} value={settings.home.titolo2Size} onChange={(e) => update('home', { titolo2Size: Number(e.target.value) })} className="w-full" />
+                <p className="text-2xs text-gray-400 text-center">{settings.home.titolo2Size}px</p>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Interlinea</label>
+                <input type="range" min={1} max={2} step={0.05} value={settings.home.titolo2LineHeight} onChange={(e) => update('home', { titolo2LineHeight: Number(e.target.value) })} className="w-full" />
+                <p className="text-2xs text-gray-400 text-center">{settings.home.titolo2LineHeight.toFixed(2)}</p>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Spaziatura (px)</label>
+                <input type="range" min={-2} max={10} step={0.5} value={settings.home.titolo2LetterSpacing} onChange={(e) => update('home', { titolo2LetterSpacing: Number(e.target.value) })} className="w-full" />
+                <p className="text-2xs text-gray-400 text-center">{settings.home.titolo2LetterSpacing}px</p>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA + scroll */}
+          <div className="space-y-3 pt-2 border-t border-border">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Testo CTA</label>
+              <input type="text" value={settings.home.cta} onChange={(e) => update('home', { cta: e.target.value })} className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900" />
+            </div>
+            <ToggleRow label="Mostra scroll prodotti" checked={settings.home.scrollAttivo} onChange={(v) => update('home', { scrollAttivo: v })} />
+            {settings.home.scrollAttivo && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Numero prodotti (3–20)</label>
+                  <input type="number" value={settings.home.scrollNumero} onChange={(e) => update('home', { scrollNumero: Number(e.target.value) })} className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900" min={3} max={20} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Filtra per collezione</label>
+                  <input type="text" value={settings.home.scrollCollezione} onChange={(e) => update('home', { scrollCollezione: e.target.value })} placeholder="es. CA27 (vuoto = tutti)" className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900" />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         <SaveButton onClick={() => saveSection(homeKeys, 'Homepage')} loading={saving === 'Homepage'} />
       </SectionCard>
@@ -482,6 +588,25 @@ export default function AdminPersonalizzazionePage() {
           ))}
         </div>
         <SaveButton onClick={() => saveSection(coloriKeys, 'Colori')} loading={saving === 'Colori'} />
+      </SectionCard>
+
+      {/* ── Social media ─────────────────────────────────────── */}
+      <SectionCard title="Social media">
+        <p className="text-xs text-gray-400">Trascina per riordinare · usa il toggle per mostrare/nascondere · modifica il link per personalizzare l'URL.</p>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSocialDragEnd}>
+          <SortableContext items={settings.social.ordine} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {settings.social.ordine.map((key) => (
+                <SortableSocialItem
+                  key={key}
+                  item={{ key, ...settings.social.items[key] }}
+                  onChange={handleSocialItemChange}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+        <SaveButton onClick={() => saveSection(socialKeys, 'Social')} loading={saving === 'Social'} />
       </SectionCard>
     </div>
   );

@@ -42,6 +42,9 @@ export interface Product {
   retailPrice: number;
   lotSize: number;
   imageUrl: string | null;
+  imageUrl2: string | null;
+  imageUrl3: string | null;
+  imageUrl4: string | null;
   notes: string | null;
   categoryId: string | null;
   collectionId: string | null;

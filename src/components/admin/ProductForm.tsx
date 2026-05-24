@@ -42,6 +42,9 @@ const schema = z
     paese: z.string().optional(),
     notes: z.string().optional(),
     imageUrl: z.string().optional(),
+    imageUrl2: z.string().optional(),
+    imageUrl3: z.string().optional(),
+    imageUrl4: z.string().optional(),
     isActive: z.boolean().default(true),
   })
   .refine(
@@ -86,8 +89,14 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const isEdit = !!product;
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef2 = useRef<HTMLInputElement>(null);
+  const fileInputRef3 = useRef<HTMLInputElement>(null);
+  const fileInputRef4 = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string>(product?.imageUrl || '');
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploading2, setIsUploading2] = useState(false);
+  const [isUploading3, setIsUploading3] = useState(false);
+  const [isUploading4, setIsUploading4] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
 
   const {
@@ -126,6 +135,9 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           paese: product.paese || '',
           notes: product.notes || '',
           imageUrl: product.imageUrl || '',
+          imageUrl2: product.imageUrl2 || '',
+          imageUrl3: product.imageUrl3 || '',
+          imageUrl4: product.imageUrl4 || '',
           isActive: product.isActive,
         }
       : { isActive: true, lotSize: '1', iva: '22' },
@@ -160,10 +172,13 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const ivaReg = register('iva');
   const fasciaScReg = register('fasciaSconto');
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsUploading(true);
+  async function uploadFile(
+    file: File,
+    field: 'imageUrl' | 'imageUrl2' | 'imageUrl3' | 'imageUrl4',
+    setLoading: (v: boolean) => void,
+    inputRef: React.RefObject<HTMLInputElement>
+  ) {
+    setLoading(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -173,14 +188,31 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         throw new Error(err.error || 'Caricamento fallito');
       }
       const { url } = await res.json();
-      setValue('imageUrl', url, { shouldDirty: true });
+      setValue(field, url, { shouldDirty: true });
       toast.success('Immagine caricata');
     } catch (err: any) {
       toast.error(err.message || 'Errore durante il caricamento');
     } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      setLoading(false);
+      if (inputRef.current) inputRef.current.value = '';
     }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) uploadFile(file, 'imageUrl', setIsUploading, fileInputRef);
+  }
+  function handleFileChange2(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) uploadFile(file, 'imageUrl2', setIsUploading2, fileInputRef2);
+  }
+  function handleFileChange3(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) uploadFile(file, 'imageUrl3', setIsUploading3, fileInputRef3);
+  }
+  function handleFileChange4(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) uploadFile(file, 'imageUrl4', setIsUploading4, fileInputRef4);
   }
 
   async function onSubmit(values: FormValues) {
@@ -214,6 +246,9 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           paese: v.paese || null,
           notes: v.notes || null,
           imageUrl: v.imageUrl || null,
+          imageUrl2: v.imageUrl2 || null,
+          imageUrl3: v.imageUrl3 || null,
+          imageUrl4: v.imageUrl4 || null,
         }),
       });
 
@@ -504,61 +539,40 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
 
       {/* ── Foto ── */}
       <SectionLabel>Foto</SectionLabel>
-      <div className="flex gap-4 items-start">
-        <div className="w-24 h-24 flex-shrink-0 border border-border rounded bg-gray-50 overflow-hidden flex items-center justify-center">
-          {imagePreview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={imagePreview}
-              src={imagePreview}
-              alt="Anteprima prodotto"
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          ) : (
-            <span className="text-gray-300 text-xs text-center leading-tight px-1">
-              Nessuna
-              <br />
-              immagine
-            </span>
-          )}
+      {(
+        [
+          { label: 'Foto 1 (principale)', field: 'imageUrl' as const, ref: fileInputRef, onChange: handleFileChange, loading: isUploading, preview: imagePreview },
+          { label: 'Foto 2', field: 'imageUrl2' as const, ref: fileInputRef2, onChange: handleFileChange2, loading: isUploading2, preview: watch('imageUrl2') || '' },
+          { label: 'Foto 3', field: 'imageUrl3' as const, ref: fileInputRef3, onChange: handleFileChange3, loading: isUploading3, preview: watch('imageUrl3') || '' },
+          { label: 'Foto 4', field: 'imageUrl4' as const, ref: fileInputRef4, onChange: handleFileChange4, loading: isUploading4, preview: watch('imageUrl4') || '' },
+        ] as const
+      ).map(({ label, field, ref, onChange, loading, preview }) => (
+        <div key={field} className="flex gap-3 items-start">
+          <div className="w-16 h-16 flex-shrink-0 border border-border rounded bg-gray-50 overflow-hidden flex items-center justify-center">
+            {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={preview} alt={label} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            ) : (
+              <span className="text-gray-300 text-2xs text-center leading-tight px-1">{label.split(' ').slice(-1)}</span>
+            )}
+          </div>
+          <div className="flex-1 space-y-1.5">
+            <p className="text-2xs font-medium text-gray-500">{label}</p>
+            <input ref={ref} type="file" accept="image/*" className="hidden" onChange={onChange} />
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" loading={loading} onClick={() => ref.current?.click()}>
+                {loading ? 'Caricamento…' : preview ? 'Cambia' : 'Carica'}
+              </Button>
+              {preview && (
+                <button type="button" onClick={() => setValue(field, '', { shouldDirty: true })} className="text-xs text-red-500 hover:text-red-700">
+                  Rimuovi
+                </button>
+              )}
+            </div>
+            <Input {...register(field)} placeholder="oppure incolla URL esterno…" />
+          </div>
         </div>
-
-        <div className="flex-1 flex flex-col gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            loading={isUploading}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {isUploading ? 'Caricamento...' : imagePreview ? 'Cambia immagine' : 'Carica immagine'}
-          </Button>
-          {imagePreview && (
-            <button
-              type="button"
-              onClick={() => setValue('imageUrl', '', { shouldDirty: true })}
-              className="text-xs text-red-500 hover:text-red-700 text-left"
-            >
-              Rimuovi immagine
-            </button>
-          )}
-          <Input
-            {...register('imageUrl')}
-            placeholder="oppure incolla un URL esterno..."
-            hint="JPG, PNG, WebP — max 5MB"
-          />
-        </div>
-      </div>
+      ))}
 
       {/* ── Stato ── */}
       <div className="flex items-center gap-2 pt-1">
