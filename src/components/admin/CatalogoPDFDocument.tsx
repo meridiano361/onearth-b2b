@@ -1,5 +1,6 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { parse as parseHtmlNode } from 'node-html-parser';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -312,7 +313,7 @@ type Segment = { text: string; bold: boolean; italic: boolean };
 
 // ── HTML → react-pdf parser ────────────────────────────────────────────────────
 
-type HtmlInline = { text: string; bold: boolean; italic: boolean };
+type HtmlInline = { text: string; bold: boolean; italic: boolean; underline?: boolean; strike?: boolean };
 type HtmlBlock =
   | { type: 'paragraph' | 'h1' | 'h2'; align: 'left' | 'center' | 'right'; inlines: HtmlInline[] }
   | { type: 'bullet' | 'ordered'; items: HtmlInline[][] };
@@ -321,39 +322,39 @@ function decodeHtmlEntities(s: string): string {
   return s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
 }
 
-function extractAlignFromStyle(attrs: string): 'left' | 'center' | 'right' {
-  const m = attrs.match(/text-align\s*:\s*(left|center|right)/);
-  return (m?.[1] as 'left' | 'center' | 'right') ?? 'left';
-}
+type InlineCtx = { bold: boolean; italic: boolean; underline: boolean; strike: boolean };
+const BASE_CTX: InlineCtx = { bold: false, italic: false, underline: false, strike: false };
 
-function parseHtmlInlines(inner: string): HtmlInline[] {
-  const result: HtmlInline[] = [];
-  const re = /<(strong|em|b|i|u|s)>([\s\S]*?)<\/\1>|([^<]+)|<[^>]+>/g;
-  let m;
-  while ((m = re.exec(inner)) !== null) {
-    if (m[1]) {
-      const tag = m[1].toLowerCase();
-      const text = decodeHtmlEntities(m[2].replace(/<[^>]+>/g, ''));
-      if (text) result.push({ text, bold: tag === 'strong' || tag === 'b', italic: tag === 'em' || tag === 'i' });
-    } else if (m[3]) {
-      const text = decodeHtmlEntities(m[3]);
-      if (text.trim() || text === ' ') result.push({ text, bold: false, italic: false });
-    }
+function collectInlines(node: any, ctx: InlineCtx = BASE_CTX): HtmlInline[] {
+  if (node.nodeType === 3) {
+    const text = decodeHtmlEntities(node.rawText ?? '');
+    if (!text) return [];
+    return [{ text, ...ctx }];
   }
-  return result;
+  const tag = ((node.tagName as string) ?? '').toLowerCase();
+  if (tag === 'br') return [{ text: '\n', ...ctx }];
+  const next: InlineCtx = {
+    bold: ctx.bold || tag === 'strong' || tag === 'b',
+    italic: ctx.italic || tag === 'em' || tag === 'i',
+    underline: ctx.underline || tag === 'u',
+    strike: ctx.strike || tag === 's',
+  };
+  return (node.childNodes ?? []).flatMap((child: any) => collectInlines(child, next));
 }
 
 function parseHtmlToPdf(html: string): HtmlBlock[] {
-  if (!html || html.trim() === '' || html.trim() === '<p></p>') return [];
+  if (!html?.trim() || html.trim() === '<p></p>') return [];
+  const root = parseHtmlNode(html);
   const blocks: HtmlBlock[] = [];
-  const blockRe = /<(p|h1|h2)([^>]*)>([\s\S]*?)<\/\1>|<(ul|ol)>([\s\S]*?)<\/\4>/gi;
-  let m;
-  while ((m = blockRe.exec(html)) !== null) {
-    if (m[1]) {
-      const tag = m[1].toLowerCase();
-      const inner = (m[3] ?? '').replace(/<br\s*\/?>/gi, '\n');
-      const align = extractAlignFromStyle(m[2] ?? '');
-      const inlines = parseHtmlInlines(inner);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const node of root.childNodes as any[]) {
+    const tag = ((node.tagName as string) ?? '').toLowerCase();
+    if (tag === 'p' || tag === 'h1' || tag === 'h2') {
+      const styleAttr = node.getAttribute?.('style') ?? '';
+      const alignMatch = styleAttr.match(/text-align\s*:\s*(left|center|right)/);
+      const align = (alignMatch?.[1] ?? 'left') as 'left' | 'center' | 'right';
+      const inlines = collectInlines(node);
       if (inlines.length > 0) {
         blocks.push({
           type: tag === 'h1' ? 'h1' : tag === 'h2' ? 'h2' : 'paragraph',
@@ -361,18 +362,18 @@ function parseHtmlToPdf(html: string): HtmlBlock[] {
           inlines,
         });
       }
-    } else if (m[4]) {
-      const listTag = m[4].toLowerCase();
+    } else if (tag === 'ul' || tag === 'ol') {
       const items: HtmlInline[][] = [];
-      const liRe = /<li[^>]*>([\s\S]*?)<\/li>/gi;
-      let li;
-      while ((li = liRe.exec(m[5] ?? '')) !== null) {
-        const item = parseHtmlInlines(li[1]);
-        if (item.length > 0) items.push(item);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const child of (node.childNodes ?? []) as any[]) {
+        if (((child.tagName as string) ?? '').toLowerCase() !== 'li') continue;
+        const inlines = collectInlines(child);
+        if (inlines.length > 0) items.push(inlines);
       }
-      if (items.length > 0) blocks.push({ type: listTag === 'ul' ? 'bullet' : 'ordered', items });
+      if (items.length > 0) blocks.push({ type: tag === 'ul' ? 'bullet' : 'ordered', items });
     }
   }
+
   if (blocks.length === 0) {
     const plain = html.replace(/<[^>]+>/g, '').trim();
     if (plain) blocks.push({ type: 'paragraph', align: 'left', inlines: [{ text: plain, bold: false, italic: false }] });
@@ -396,11 +397,16 @@ function renderHtmlBlocks(
     const blockAlign = getBlockAlign(block, defaultAlign);
 
     const inlineText = (inlines: HtmlInline[]) =>
-      inlines.map((seg, j) => (
-        <Text key={j} style={{
-          fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique' : seg.bold ? 'Helvetica-Bold' : seg.italic ? 'Helvetica-Oblique' : 'Helvetica',
-        }}>{seg.text}</Text>
-      ));
+      inlines.map((seg, j) => {
+        const decoration = seg.underline ? 'underline' : seg.strike ? 'line-through' : undefined;
+        return (
+          <Text key={j} style={{
+            fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique' : seg.bold ? 'Helvetica-Bold' : seg.italic ? 'Helvetica-Oblique' : 'Helvetica',
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...(decoration ? { textDecoration: decoration as any } : {}),
+          }}>{seg.text}</Text>
+        );
+      });
 
     if (block.type === 'paragraph') {
       return (

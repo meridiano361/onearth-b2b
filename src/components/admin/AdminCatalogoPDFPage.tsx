@@ -699,18 +699,24 @@ function CardPreview({ config }: { config: FormState }) {
   );
 }
 
-function CoverPreview({ config }: { config: { copertina: FormState['copertina']; colori: FormState['colori'] } }) {
+const PREVIEW_SCALE = 200 / 595; // PDF A4 = 595pt wide
+
+function CoverPreview({ config }: { config: { copertina: FormState['copertina']; colori: FormState['colori']; copertinaTypo: FormState['copertinaTypo'] } }) {
   const cov = config.copertina;
+  const typo = config.copertinaTypo;
   if (!cov.attiva) return null;
 
-  const W = 160;
+  const W = 200;
   const H = Math.round(W * 842 / 595);
+  const S = PREVIEW_SCALE;
 
   const justifyLogo = (cov.logoPosX ?? 'left') === 'left' ? 'flex-start'
     : (cov.logoPosX ?? 'left') === 'center' ? 'center'
     : 'flex-end';
 
-  const logoH = cov.logoDimensione === 'piccolo' ? 10 : cov.logoDimensione === 'medio' ? 16 : 24;
+  // PDF uses COVER_LOGO_H = { piccolo: 18, medio: 28, grande: 42 } pt → scale
+  const COVER_LOGO_H_PT: Record<string, number> = { piccolo: 18, medio: 28, grande: 42 };
+  const logoH = Math.round((COVER_LOGO_H_PT[cov.logoDimensione] ?? 28) * S);
 
   const logoSrc = cov.logoTipo === 'onearth' ? '/logo-on-earth/onearth_solo.png'
     : cov.logoTipo === 'custom' ? cov.logoCustomBase64
@@ -719,6 +725,17 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
   const bg = config.colori.sfondoPagina;
   const textColor = config.colori.testoPrimario;
   const mutedColor = config.colori.testoSecondario;
+
+  const titleFontSize = typo.titoloFontSize * S;
+  const titleColor = typo.titoloColor;
+  const titleUppercase = typo.titoloUppercase ? 'uppercase' as const : 'none' as const;
+  const titleBold = typo.titoloBold;
+  const subtitleFontSize = typo.sottotitoloFontSize * S;
+  const subtitleColor = typo.sottotitoloColor;
+  const subtitle2FontSize = (typo.sottotitolo2FontSize ?? 11) * S;
+  const subtitle2Color = typo.sottotitolo2Color ?? typo.sottotitoloColor;
+  const spacingTS = ((typo.spacingTitoloSottotitolo ?? 6) * S);
+  const spacingSS2 = ((typo.spacingSottotitoloSottotitolo2 ?? 4) * S);
 
   return (
     <div className="mt-4">
@@ -741,33 +758,32 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
 
         {cov.layout === 'full-overlay' && (
           <>
-            {/* Dark overlay */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '42%', background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.65))' }} />
-            {/* Logo top */}
             {logoSrc && (
               <div style={{ position: 'absolute', top: 8, left: 8, right: 8, display: 'flex', justifyContent: justifyLogo }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
               </div>
             )}
-            {/* Text */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 10px 10px', textAlign: cov.titoloAllineamento }}>
-              {cov.titolo && <p style={{ color: '#fff', fontSize: 7, fontWeight: 'bold', margin: 0, textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'pre-wrap' }}>{cov.titolo}</p>}
-              {cov.sottotitolo && <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 5.5, margin: '2px 0 0', textAlign: cov.sottotitoloAllineamento, whiteSpace: 'pre-wrap' }}>{cov.sottotitolo}</p>}
+              {cov.titolo && <p style={{ color: titleColor, fontSize: titleFontSize, fontWeight: titleBold ? 'bold' : 'normal', margin: 0, textTransform: titleUppercase, letterSpacing: 1, whiteSpace: 'pre-wrap', marginBottom: spacingTS }}>{cov.titolo}</p>}
+              {cov.sottotitolo && <p style={{ color: subtitleColor, fontSize: subtitleFontSize, margin: 0, textAlign: cov.sottotitoloAllineamento, whiteSpace: 'pre-wrap', marginBottom: cov.sottotitolo2 ? spacingSS2 : 0 }}>{cov.sottotitolo}</p>}
+              {cov.sottotitolo2 && <p style={{ color: subtitle2Color, fontSize: subtitle2FontSize, margin: 0, textAlign: (cov.sottotitolo2Allineamento ?? 'center'), whiteSpace: 'pre-wrap' }}>{cov.sottotitolo2}</p>}
             </div>
           </>
         )}
 
         {cov.layout === 'half' && (
-          <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, bottom: 0, backgroundColor: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '6px 10px' }}>
+          <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, bottom: 0, backgroundColor: typo.bgColor ?? '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '6px 10px' }}>
             {logoSrc && (
               <div style={{ display: 'flex', justifyContent: justifyLogo, marginBottom: 4 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
               </div>
             )}
-            {cov.titolo && <p style={{ color: textColor, fontSize: 7, fontWeight: 'bold', margin: 0, textTransform: 'uppercase', textAlign: cov.titoloAllineamento, whiteSpace: 'pre-wrap' }}>{cov.titolo}</p>}
-            {cov.sottotitolo && <p style={{ color: mutedColor, fontSize: 5.5, margin: '2px 0 0', textAlign: cov.sottotitoloAllineamento, whiteSpace: 'pre-wrap' }}>{cov.sottotitolo}</p>}
+            {cov.titolo && <p style={{ color: titleColor, fontSize: titleFontSize, fontWeight: titleBold ? 'bold' : 'normal', margin: 0, textTransform: titleUppercase, textAlign: cov.titoloAllineamento, whiteSpace: 'pre-wrap', marginBottom: spacingTS }}>{cov.titolo}</p>}
+            {cov.sottotitolo && <p style={{ color: subtitleColor, fontSize: subtitleFontSize, margin: 0, textAlign: cov.sottotitoloAllineamento, whiteSpace: 'pre-wrap', marginBottom: cov.sottotitolo2 ? spacingSS2 : 0 }}>{cov.sottotitolo}</p>}
+            {cov.sottotitolo2 && <p style={{ color: subtitle2Color, fontSize: subtitle2FontSize, margin: 0, textAlign: (cov.sottotitolo2Allineamento ?? 'center'), whiteSpace: 'pre-wrap' }}>{cov.sottotitolo2}</p>}
           </div>
         )}
 
@@ -780,8 +796,9 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
               </div>
             )}
             <div style={{ width: 16, height: 1, backgroundColor: '#8B7355', marginBottom: 6, alignSelf: 'center' }} />
-            {cov.titolo && <p style={{ color: textColor, fontSize: 7, fontWeight: 'bold', margin: 0, textTransform: 'uppercase', textAlign: cov.titoloAllineamento, whiteSpace: 'pre-wrap' }}>{cov.titolo}</p>}
-            {cov.sottotitolo && <p style={{ color: mutedColor, fontSize: 5.5, margin: '3px 0 0', textAlign: cov.sottotitoloAllineamento, whiteSpace: 'pre-wrap' }}>{cov.sottotitolo}</p>}
+            {cov.titolo && <p style={{ color: titleColor, fontSize: titleFontSize, fontWeight: titleBold ? 'bold' : 'normal', margin: 0, textTransform: titleUppercase, textAlign: cov.titoloAllineamento, whiteSpace: 'pre-wrap', marginBottom: spacingTS }}>{cov.titolo}</p>}
+            {cov.sottotitolo && <p style={{ color: subtitleColor, fontSize: subtitleFontSize, margin: 0, textAlign: cov.sottotitoloAllineamento, whiteSpace: 'pre-wrap', marginBottom: cov.sottotitolo2 ? spacingSS2 : 0 }}>{cov.sottotitolo}</p>}
+            {cov.sottotitolo2 && <p style={{ color: subtitle2Color, fontSize: subtitle2FontSize, margin: 0, textAlign: (cov.sottotitolo2Allineamento ?? 'center'), whiteSpace: 'pre-wrap' }}>{cov.sottotitolo2}</p>}
           </div>
         )}
       </div>
@@ -992,9 +1009,9 @@ function FinalPagePreview({ config }: { config: FormState }) {
   const pf = config.paginaFinale;
   if (!pf.attiva) return null;
 
-  const W = 160;
+  const W = 200;
   const H = Math.round(W * 842 / 595);
-  const scale = W / 595;
+  const scale = PREVIEW_SCALE;
 
   const bg = config.colori.sfondoPagina;
   const typo = config.paginaFinaleTypo;
@@ -1172,9 +1189,9 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
   const pp = config.paginaPenultima;
   if (!pp?.attiva) return null;
 
-  const W = 160;
+  const W = 200;
   const H = Math.round(W * 842 / 595);
-  const scale = W / 595;
+  const scale = PREVIEW_SCALE;
 
   const bg = config.colori.sfondoPagina;
   const typo = config.paginaPenultimaTypo ?? DEFAULT_STATE.paginaPenultimaTypo;
