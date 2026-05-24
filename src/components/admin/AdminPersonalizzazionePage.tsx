@@ -82,6 +82,10 @@ function settingsToFlat(s: AppSettingsData): SettingsFlat {
   f['colori.pulsanti'] = s.colori.pulsanti;
   f['colori.testoPulsanti'] = s.colori.testoPulsanti;
   f['colori.testo'] = s.colori.testo;
+  // ordine
+  for (const [k, v] of Object.entries(s.ordine)) {
+    f[`ordine.${k}`] = String(v);
+  }
   return f;
 }
 
@@ -404,6 +408,7 @@ export default function AdminPersonalizzazionePage() {
   const menuKeys = ['menu.ordine', ...settings.menu.ordine.flatMap((k) => [`menu.${k}.label`, `menu.${k}.visibile`])];
   const schedaKeys = Object.keys(settings.scheda).map((k) => `scheda.${k}`);
   const cardKeys = Object.keys(settings.card).map((k) => `card.${k}`);
+  const ordineKeys = Object.keys(settings.ordine).map((k) => `ordine.${k}`);
   const coloriKeys = ['colori.sfondo', 'colori.pulsanti', 'colori.testoPulsanti', 'colori.testo'];
   const socialKeys = ['social.ordine', ...SOCIAL_KEYS.flatMap((k) => [`social.${k}.visibile`, `social.${k}.url`])];
 
@@ -666,7 +671,32 @@ export default function AdminPersonalizzazionePage() {
         <SaveButton onClick={() => saveSection(cardKeys, 'Card')} loading={saving === 'Card'} />
       </SectionCard>
 
-      {/* ── 3e: Colori tema ───────────────────────────────────── */}
+      {/* ── 3e: Dati finanziari ordine ──────────────────────── */}
+      <SectionCard title="Dati finanziari ordine">
+        <p className="text-xs text-gray-400">Scegli quali campi finanziari mostrare al cliente nella barra ordine e nella pagina ordini.</p>
+        <div className="space-y-2">
+          {(
+            [
+              ['mostraBudget',    'Budget destinazione'],
+              ['mostraCosto',     'Costo ordine (prezzo costo i.e. totale)'],
+              ['mostraVendite',   'Vendite potenziali (PVP totale i.i.)'],
+              ['mostraGuadagno',  'Guadagno potenziale'],
+              ['mostraMargine',   'Margine medio %'],
+              ['mostraRimanente', 'Rimangono (budget residuo)'],
+            ] as [keyof AppSettingsData['ordine'], string][]
+          ).map(([k, label]) => (
+            <ToggleRow
+              key={k}
+              label={label}
+              checked={settings.ordine[k]}
+              onChange={(v) => update('ordine', { [k]: v } as Partial<AppSettingsData['ordine']>)}
+            />
+          ))}
+        </div>
+        <SaveButton onClick={() => saveSection(ordineKeys, 'Ordine')} loading={saving === 'Ordine'} />
+      </SectionCard>
+
+      {/* ── 3f: Colori tema ───────────────────────────────────── */}
       <SectionCard title="Colori tema">
         <div className="space-y-3">
           {(

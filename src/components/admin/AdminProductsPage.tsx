@@ -345,11 +345,16 @@ export default function AdminProductsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: Array.from(selectedIds), data: payload }),
       });
-      if (!res.ok) throw new Error('Failed');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed');
+      }
       const { updated } = await res.json();
       setShowBulkEdit(false);
       setBulkEditValues(EMPTY_BULK);
       setSelectedIds(new Set());
+      // Se tranche era nel payload, reset del filtro tranche per mostrare i prodotti aggiornati
+      if (payload.tranche !== undefined) setFilterTranche('');
       await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success(`${updated} prodott${updated === 1 ? 'o aggiornato' : 'i aggiornati'}`);
     } catch {

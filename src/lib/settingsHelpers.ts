@@ -73,6 +73,14 @@ export interface AppSettingsData {
     sfondoUrl: string;
     caption: string;
   };
+  ordine: {
+    mostraBudget: boolean;
+    mostraCosto: boolean;
+    mostraVendite: boolean;
+    mostraGuadagno: boolean;
+    mostraMargine: boolean;
+    mostraRimanente: boolean;
+  };
 }
 
 export const SOCIAL_KEYS = ['instagram', 'facebook', 'pinterest', 'tiktok', 'website', 'podcast'] as const;
@@ -149,6 +157,14 @@ export const DEFAULT_APP_SETTINGS: AppSettingsData = {
     margine: false,
     guadagnoPotenziale: true,
     note: false,
+  },
+  ordine: {
+    mostraBudget: true,
+    mostraCosto: true,
+    mostraVendite: true,
+    mostraGuadagno: false,
+    mostraMargine: true,
+    mostraRimanente: true,
   },
   card: {
     codice: true,
@@ -281,6 +297,14 @@ export function parseSettingsFromDb(records: { chiave: string; valore: string }[
     login: {
       sfondoUrl: str('login.sfondoUrl', ''),
       caption: str('login.caption', 'Collezione CASA 2027'),
+    },
+    ordine: {
+      mostraBudget:   bool('ordine.mostraBudget',   true),
+      mostraCosto:    bool('ordine.mostraCosto',     true),
+      mostraVendite:  bool('ordine.mostraVendite',   true),
+      mostraGuadagno: bool('ordine.mostraGuadagno',  false),
+      mostraMargine:  bool('ordine.mostraMargine',   true),
+      mostraRimanente:bool('ordine.mostraRimanente', true),
     },
   };
 }

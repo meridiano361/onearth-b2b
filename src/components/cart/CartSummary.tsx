@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
+import { useSettings } from '@/contexts/SettingsContext';
 
 export function computeProjections(items: ReturnType<typeof useCartStore.getState>['items']) {
   let costTotal = 0;
@@ -26,6 +27,7 @@ export function computeProjections(items: ReturnType<typeof useCartStore.getStat
 export default function CartSummary() {
   const { items, getTotalItems, getTotalLines } = useCartStore();
   const t = useTranslations('cartSummary');
+  const { ordine } = useSettings();
 
   const totalItems = getTotalItems();
   const totalLines = getTotalLines();
@@ -43,34 +45,42 @@ export default function CartSummary() {
         <div className="h-px bg-border/60 mb-2" />
 
         {/* Costo ordine */}
-        <div className="flex justify-between text-xs">
-          <span className="text-gray-500 uppercase tracking-wide text-2xs">{t('costOrder')}</span>
-          <span className="font-semibold text-primary">{formatCurrency(costTotal)}</span>
-        </div>
+        {ordine.mostraCosto && (
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500 uppercase tracking-wide text-2xs">{t('costOrder')}</span>
+            <span className="font-semibold text-primary">{formatCurrency(costTotal)}</span>
+          </div>
+        )}
 
-        <div className="h-px bg-border/40 my-2" />
+        {ordine.mostraCosto && ordine.mostraVendite && <div className="h-px bg-border/40 my-2" />}
 
         {/* Vendite potenziali */}
-        <div className="flex justify-between text-xs">
-          <span className="text-gray-500 uppercase tracking-wide text-2xs">{t('potentialSales')}</span>
-          <span className="font-medium text-primary">
-            {formatCurrency(venditeII)} <span className="text-gray-400 text-2xs">(i.i.)</span>
-          </span>
-        </div>
+        {ordine.mostraVendite && (
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500 uppercase tracking-wide text-2xs">{t('potentialSales')}</span>
+            <span className="font-medium text-primary">
+              {formatCurrency(venditeII)} <span className="text-gray-400 text-2xs">(i.i.)</span>
+            </span>
+          </div>
+        )}
 
         {/* Guadagno */}
-        <div className="flex justify-between text-xs">
-          <span className="text-gray-500 uppercase tracking-wide text-2xs">{t('potentialGain')}</span>
-          <span className={`font-medium ${guadagno >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-            {formatCurrency(guadagno)}
-          </span>
-        </div>
+        {ordine.mostraGuadagno && (
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500 uppercase tracking-wide text-2xs">{t('potentialGain')}</span>
+            <span className={`font-medium ${guadagno >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+              {formatCurrency(guadagno)}
+            </span>
+          </div>
+        )}
 
         {/* Margine */}
-        <div className="flex justify-between text-xs">
-          <span className="text-gray-500 uppercase tracking-wide text-2xs">{t('avgMargin')}</span>
-          <span className="font-medium text-primary">{margine.toFixed(1)}%</span>
-        </div>
+        {ordine.mostraMargine && (
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500 uppercase tracking-wide text-2xs">{t('avgMargin')}</span>
+            <span className="font-medium text-primary">{margine.toFixed(1)}%</span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import { usePreview } from '@/contexts/PreviewContext';
+import { useSettings } from '@/contexts/SettingsContext';
 import { computeProjections } from './CartSummary';
 import CartItem from './CartItem';
 import CartSummary from './CartSummary';
@@ -23,6 +24,7 @@ export default function CartSidebar() {
   const router = useRouter();
   const { data: session } = useSession();
   const preview = usePreview();
+  const { ordine } = useSettings();
   const { items, collectionId, notes, clearCart, getTotalItems, hasLotWarnings, addItem } = useCartStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [destinazioni, setDestinazioni] = useState<Destinazione[]>([]);
@@ -238,15 +240,19 @@ export default function CartSidebar() {
         {!isEmpty && (
           <>
             {/* Budget section */}
-            {budget != null && (
+            {ordine.mostraBudget && budget != null && (
               <div className="px-4 pt-3 pb-0 border-t border-border bg-cream/20">
                 <div className="flex justify-between text-2xs text-gray-400 mb-1">
                   <span className="uppercase tracking-wide">{ts('budgetChannel')}</span>
                   <span className="font-semibold text-primary">{formatCurrency(budget)}</span>
                 </div>
                 <div className="flex justify-between text-2xs text-gray-400 mb-1.5">
-                  <span>{ts('budgetUsed')}: <span className="font-medium text-primary">{formatCurrency(costTotal)}</span></span>
-                  <span>{ts('budgetRemaining')}: <span className={`font-medium ${budgetRemaining! < 0 ? 'text-red-500' : 'text-primary'}`}>{formatCurrency(budgetRemaining ?? 0)}</span></span>
+                  {ordine.mostraCosto && (
+                    <span>{ts('budgetUsed')}: <span className="font-medium text-primary">{formatCurrency(costTotal)}</span></span>
+                  )}
+                  {ordine.mostraRimanente && (
+                    <span>{ts('budgetRemaining')}: <span className={`font-medium ${budgetRemaining! < 0 ? 'text-red-500' : 'text-primary'}`}>{formatCurrency(budgetRemaining ?? 0)}</span></span>
+                  )}
                 </div>
                 {/* Progress bar */}
                 <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
