@@ -23,6 +23,9 @@ export interface AppSettingsData {
     scrollAttivo: boolean;
     scrollNumero: number;
     scrollCollezione: string;
+    editorialAttivo: boolean;
+    editorialUrl: string;
+    editorialCaption: string;
   };
   social: {
     ordine: string[];
@@ -66,6 +69,10 @@ export interface AppSettingsData {
     testoPulsanti: string;
     testo: string;
   };
+  login: {
+    sfondoUrl: string;
+    caption: string;
+  };
 }
 
 export const SOCIAL_KEYS = ['instagram', 'facebook', 'pinterest', 'tiktok', 'website', 'podcast'] as const;
@@ -103,6 +110,9 @@ export const DEFAULT_APP_SETTINGS: AppSettingsData = {
     scrollAttivo: true,
     scrollNumero: 6,
     scrollCollezione: 'CA27',
+    editorialAttivo: false,
+    editorialUrl: '',
+    editorialCaption: '',
   },
   social: {
     ordine: [...SOCIAL_KEYS],
@@ -154,6 +164,10 @@ export const DEFAULT_APP_SETTINGS: AppSettingsData = {
     testoPulsanti: '#FFFFFF',
     testo: '#000000',
   },
+  login: {
+    sfondoUrl: '',
+    caption: 'Collezione CASA 2027',
+  },
 };
 
 export function parseSettingsFromDb(records: { chiave: string; valore: string }[]): AppSettingsData {
@@ -202,6 +216,9 @@ export function parseSettingsFromDb(records: { chiave: string; valore: string }[
       scrollAttivo: bool('home.scrollAttivo', true),
       scrollNumero: num('home.scrollNumero', 6),
       scrollCollezione: str('home.scrollCollezione', 'CA27'),
+      editorialAttivo: bool('home.editorialAttivo', false),
+      editorialUrl: str('home.editorialUrl', ''),
+      editorialCaption: str('home.editorialCaption', ''),
     },
     social: {
       ordine: socialOrdine,
@@ -260,6 +277,10 @@ export function parseSettingsFromDb(records: { chiave: string; valore: string }[
       pulsanti: str('colori.pulsanti', '#000000'),
       testoPulsanti: str('colori.testoPulsanti', '#FFFFFF'),
       testo: str('colori.testo', '#000000'),
+    },
+    login: {
+      sfondoUrl: str('login.sfondoUrl', ''),
+      caption: str('login.caption', 'Collezione CASA 2027'),
     },
   };
 }

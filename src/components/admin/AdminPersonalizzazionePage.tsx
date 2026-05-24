@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, ImageIcon } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -51,6 +51,12 @@ function settingsToFlat(s: AppSettingsData): SettingsFlat {
   f['home.scrollAttivo'] = String(s.home.scrollAttivo);
   f['home.scrollNumero'] = String(s.home.scrollNumero);
   f['home.scrollCollezione'] = s.home.scrollCollezione;
+  f['home.editorialAttivo'] = String(s.home.editorialAttivo);
+  f['home.editorialUrl'] = s.home.editorialUrl;
+  f['home.editorialCaption'] = s.home.editorialCaption;
+  // login
+  f['login.sfondoUrl'] = s.login.sfondoUrl;
+  f['login.caption'] = s.login.caption;
   // social
   f['social.ordine'] = JSON.stringify(s.social.ordine);
   for (const [k, v] of Object.entries(s.social.items)) {
@@ -171,6 +177,81 @@ function SortableMenuItem({
           className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-transform ${item.visibile ? 'translate-x-[18px]' : ''}`}
         />
       </button>
+    </div>
+  );
+}
+
+// ─── Image upload input ────────────────────────────────────────────────────────
+
+function ImageUploadInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (url: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const json = await res.json();
+      if (json.url) onChange(json.url);
+      else toast.error(json.error ?? 'Upload fallito');
+    } catch {
+      toast.error("Errore durante l'upload");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div>
+      <label className="text-xs text-gray-500 mb-1.5 block">{label}</label>
+      <div className="flex gap-3 items-start">
+        <div className="w-16 h-16 rounded border border-border overflow-hidden flex-shrink-0 bg-gray-50 flex items-center justify-center">
+          {value ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={value} alt={label} className="w-full h-full object-cover" />
+          ) : (
+            <ImageIcon size={20} className="text-gray-300" />
+          )}
+        </div>
+        <div className="flex-1 space-y-1.5">
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="https://..."
+            className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-gray-900 text-gray-600"
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="px-3 py-1.5 bg-gray-100 text-xs font-medium rounded hover:bg-gray-200 disabled:opacity-50 transition-colors"
+          >
+            {uploading ? 'Caricamento…' : 'Carica immagine'}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleFile(file);
+              e.target.value = '';
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -317,7 +398,9 @@ export default function AdminPersonalizzazionePage() {
     'home.titolo2', 'home.titolo2.colore', 'home.titolo2.size',
     'home.titolo2.font', 'home.titolo2.weight', 'home.titolo2.lineHeight', 'home.titolo2.letterSpacing', 'home.titolo2.transform',
     'home.cta', 'home.scrollAttivo', 'home.scrollNumero', 'home.scrollCollezione',
+    'home.editorialAttivo', 'home.editorialUrl', 'home.editorialCaption',
   ];
+  const loginKeys = ['login.sfondoUrl', 'login.caption'];
   const menuKeys = ['menu.ordine', ...settings.menu.ordine.flatMap((k) => [`menu.${k}.label`, `menu.${k}.visibile`])];
   const schedaKeys = Object.keys(settings.scheda).map((k) => `scheda.${k}`);
   const cardKeys = Object.keys(settings.card).map((k) => `card.${k}`);
@@ -476,6 +559,30 @@ export default function AdminPersonalizzazionePage() {
               </div>
             )}
           </div>
+
+          {/* Foto editoriale */}
+          <div className="space-y-3 pt-2 border-t border-border">
+            <ToggleRow label="Mostra foto editoriale" checked={settings.home.editorialAttivo} onChange={(v) => update('home', { editorialAttivo: v })} />
+            {settings.home.editorialAttivo && (
+              <>
+                <ImageUploadInput
+                  label="Foto editoriale"
+                  value={settings.home.editorialUrl}
+                  onChange={(url) => update('home', { editorialUrl: url })}
+                />
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Didascalia (opzionale)</label>
+                  <input
+                    type="text"
+                    value={settings.home.editorialCaption}
+                    onChange={(e) => update('home', { editorialCaption: e.target.value })}
+                    placeholder="Es. Collezione CASA 2027"
+                    className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                  />
+                </div>
+              </>
+            )}
+          </div>
         </div>
         <SaveButton onClick={() => saveSection(homeKeys, 'Homepage')} loading={saving === 'Homepage'} />
       </SectionCard>
@@ -607,6 +714,27 @@ export default function AdminPersonalizzazionePage() {
           </SortableContext>
         </DndContext>
         <SaveButton onClick={() => saveSection(socialKeys, 'Social')} loading={saving === 'Social'} />
+      </SectionCard>
+
+      {/* ── Pagina di accesso ─────────────────────────────────── */}
+      <SectionCard title="Pagina di accesso">
+        <p className="text-xs text-gray-400">Personalizza il pannello visivo della pagina di login (visibile solo su desktop, lato sinistro).</p>
+        <ImageUploadInput
+          label="Immagine di sfondo"
+          value={settings.login.sfondoUrl}
+          onChange={(url) => update('login', { sfondoUrl: url })}
+        />
+        <div>
+          <label className="text-xs text-gray-500 mb-1 block">Didascalia</label>
+          <input
+            type="text"
+            value={settings.login.caption}
+            onChange={(e) => update('login', { caption: e.target.value })}
+            placeholder="Es. Collezione CASA 2027"
+            className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+          />
+        </div>
+        <SaveButton onClick={() => saveSection(loginKeys, 'Login')} loading={saving === 'Login'} />
       </SectionCard>
     </div>
   );

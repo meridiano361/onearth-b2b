@@ -219,6 +219,25 @@ export default function CustomerHome() {
         </section>
         )}
 
+        {/* ── Foto editoriale ──────────────────────────────────── */}
+        {hs.editorialAttivo && hs.editorialUrl && (
+          <section>
+            <div className="relative rounded-xl overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={hs.editorialUrl}
+                alt={hs.editorialCaption || 'Editorial'}
+                className="w-full h-52 sm:h-72 object-cover"
+              />
+              {hs.editorialCaption && (
+                <div className="absolute bottom-0 left-0 right-0 px-5 py-4 bg-gradient-to-t from-black/60 to-transparent">
+                  <p className="text-white text-sm font-light tracking-wide">{hs.editorialCaption}</p>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* ── Social links ───────────────────────────────────── */}
         <section>
           <div className="bg-white border border-gray-200 shadow-sm rounded-xl px-5 py-4">

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
+import { prisma } from '@/lib/prisma';
+import { parseSettingsFromDb, DEFAULT_APP_SETTINGS } from '@/lib/settingsHelpers';
 import LoginForm from '@/components/auth/LoginForm';
 import RequestAccessButton from '@/components/auth/RequestAccessButton';
 import Image from 'next/image';
@@ -21,25 +23,44 @@ export default async function LoginPage() {
     redirect(isAdminRole(session.user.role) ? '/admin' : '/catalog');
   }
 
-  const t = await getTranslations('login');
+  const [t, settingsRecords] = await Promise.all([
+    getTranslations('login'),
+    prisma.appSettings.findMany().catch(() => []),
+  ]);
+
+  const { login: ls } = settingsRecords.length
+    ? parseSettingsFromDb(settingsRecords)
+    : DEFAULT_APP_SETTINGS;
+
+  const hasImage = !!ls.sfondoUrl;
 
   return (
     <div className="min-h-screen bg-background flex">
       {/* Left Panel — Brand */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary flex-col justify-between p-16 relative overflow-hidden">
-        {/* Texture overlay */}
-        <div
-          className="absolute inset-0 opacity-5"
-          style={{
-            backgroundImage: `repeating-linear-gradient(
-              45deg,
-              #ACA39A 0px,
-              #ACA39A 1px,
-              transparent 1px,
-              transparent 60px
-            )`,
-          }}
-        />
+      <div
+        className="hidden lg:flex lg:w-1/2 bg-primary flex-col justify-between p-16 relative overflow-hidden"
+        style={hasImage
+          ? { backgroundImage: `url(${ls.sfondoUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+          : undefined
+        }
+      >
+        {/* Overlay/texture */}
+        {hasImage ? (
+          <div className="absolute inset-0 bg-black/45" />
+        ) : (
+          <div
+            className="absolute inset-0 opacity-5"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                45deg,
+                #ACA39A 0px,
+                #ACA39A 1px,
+                transparent 1px,
+                transparent 60px
+              )`,
+            }}
+          />
+        )}
 
         <div className="relative z-10">
           <Link href="/">
@@ -58,8 +79,8 @@ export default async function LoginPage() {
         </div>
 
         <div className="relative z-10">
-          <p className="text-gray-400 text-sm font-light leading-relaxed max-w-xs">
-            Collezione <span className="text-accent">CASA 2027</span>
+          <p className="text-white/70 text-sm font-light leading-relaxed max-w-xs">
+            {ls.caption}
           </p>
         </div>
       </div>
