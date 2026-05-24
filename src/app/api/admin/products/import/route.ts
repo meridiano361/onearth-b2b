@@ -87,6 +87,37 @@ function buildFieldValue(campo: string, row: any): unknown {
   }
 }
 
+// Fields imported for new products when no selection restriction applies
+const ALL_CREATE_OPTIONAL = [
+  'produttore', 'paese', 'misura', 'gruppoMerceologico', 'famiglia', 'classe',
+  'sottoclasse', 'gruppoOmogeneo', 'nomLinea', 'stagione', 'collezione', 'colore',
+  'temaColore', 'tranche', 'lotSize', 'iva', 'fasciaRicarico', 'fasciaSconto',
+  'notes', 'imageUrl',
+];
+
+function buildCreateData(
+  codice: string,
+  row: any,
+  campiDaAggiornare: string[],
+  applicaSelezioneCampiAiNuovi: boolean
+): Record<string, any> {
+  const data: Record<string, any> = {
+    code: codice,
+    name: str(row.name) || codice,
+    costPrice: parseDecimal(row.costPrice) ?? 0,
+    retailPrice: parseDecimal(row.retailPrice) ?? 0,
+    isActive: false,
+  };
+  const fieldsToCheck = applicaSelezioneCampiAiNuovi
+    ? campiDaAggiornare.filter((f) => !['code', 'name', 'costPrice', 'retailPrice', 'isActive'].includes(f))
+    : ALL_CREATE_OPTIONAL;
+  for (const campo of fieldsToCheck) {
+    const val = buildFieldValue(campo, row);
+    if (val !== undefined) data[campo] = val;
+  }
+  return data;
+}
+
 // Normalise Prisma Decimal → plain number/string for JSON comparison
 function toDisplay(v: any): any {
   if (v === null || v === undefined) return null;
@@ -120,10 +151,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { rows, campiDaAggiornare, dryRun = false } = body as {
+    const {
+      rows,
+      campiDaAggiornare,
+      dryRun = false,
+      modalita = 'upsert',
+      applicaSelezioneCampiAiNuovi = false,
+    } = body as {
       rows: any[];
       campiDaAggiornare: string[];
       dryRun?: boolean;
+      modalita?: 'upsert' | 'solo-aggiorna' | 'solo-crea';
+      applicaSelezioneCampiAiNuovi?: boolean;
     };
 
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -151,29 +190,77 @@ export async function POST(req: NextRequest) {
 
       const existingSet = new Set(allExisting.map((p) => p.code));
       const previewMap = new Map(previewProducts.map((p) => [p.code, p]));
-      const nonTrovatiCodes = allCodes.filter((c) => !existingSet.has(c)).slice(0, 100);
 
+      // Count over ALL rows
+      let aggiornamenti = 0, nuovi = 0, ignorati = 0;
+      const nonTrovatiCodes: string[] = [];
+      for (const row of rows) {
+        const codice = row.code ? String(row.code).toUpperCase().trim() : null;
+        if (!codice) { ignorati++; continue; }
+        if (existingSet.has(codice)) {
+          if (modalita === 'solo-crea') { ignorati++; continue; }
+          aggiornamenti++;
+        } else {
+          if (modalita === 'solo-aggiorna') {
+            ignorati++;
+            if (nonTrovatiCodes.length < 100) nonTrovatiCodes.push(codice);
+            continue;
+          }
+          nuovi++;
+          if (nonTrovatiCodes.length < 100) nonTrovatiCodes.push(codice);
+        }
+      }
+
+      // Preview rows with azione
       const preview = previewRows.map((row) => {
         const codice = row.code ? String(row.code).toUpperCase().trim() : null;
-        const prodotto = codice ? previewMap.get(codice) : undefined;
-        const campi: Record<string, { corrente: any; nuovo: any }> = {};
-
-        for (const campo of campiDaAggiornare) {
-          const nuovo = buildFieldValue(campo, row);
-          if (nuovo !== undefined) {
-            const corrente = prodotto ? toDisplay((prodotto as any)[campo]) : null;
-            campi[campo] = { corrente, nuovo };
-          }
+        if (!codice) {
+          return { codice: null, trovato: false, azione: 'ignora' as const, motivoIgnora: 'Codice mancante', campi: {} };
         }
+        const prodotto = previewMap.get(codice);
 
-        return { codice, trovato: !!prodotto, campi };
+        if (prodotto) {
+          if (modalita === 'solo-crea') {
+            return { codice, trovato: true, azione: 'ignora' as const, motivoIgnora: 'Prodotto già esistente', campi: {} };
+          }
+          const campi: Record<string, { corrente: any; nuovo: any }> = {};
+          for (const campo of campiDaAggiornare) {
+            const nuovo = buildFieldValue(campo, row);
+            if (nuovo !== undefined) {
+              campi[campo] = { corrente: toDisplay((prodotto as any)[campo]), nuovo };
+            }
+          }
+          return { codice, trovato: true, azione: 'aggiorna' as const, campi };
+        } else {
+          if (modalita === 'solo-aggiorna') {
+            return { codice, trovato: false, azione: 'ignora' as const, motivoIgnora: 'Prodotto non trovato', campi: {} };
+          }
+          const campi: Record<string, { corrente: any; nuovo: any }> = {};
+          const previewFields = applicaSelezioneCampiAiNuovi
+            ? campiDaAggiornare
+            : ['name', 'costPrice', 'retailPrice', ...ALL_CREATE_OPTIONAL];
+          for (const campo of previewFields) {
+            const val =
+              campo === 'name' ? (str(row.name) || codice) :
+              campo === 'costPrice' ? (parseDecimal(row.costPrice) ?? 0) :
+              campo === 'retailPrice' ? (parseDecimal(row.retailPrice) ?? 0) :
+              buildFieldValue(campo, row);
+            if (val !== undefined && val !== null) {
+              campi[campo] = { corrente: null, nuovo: val };
+            }
+          }
+          return { codice, trovato: false, azione: 'nuovo' as const, campi };
+        }
       });
 
       return NextResponse.json({
         preview,
-        trovati: existingSet.size,
-        nonTrovati: allCodes.length - existingSet.size,
+        aggiornamenti,
+        nuovi,
+        ignorati,
         nonTrovatiCodes,
+        trovati: aggiornamenti,
+        nonTrovati: nuovi,
       });
     }
 
@@ -185,49 +272,63 @@ export async function POST(req: NextRequest) {
     const existingMap = new Map(existing.map((p) => [p.code, p]));
 
     let updated = 0;
+    let created = 0;
+    let skipped = 0;
     const notFound: string[] = [];
     const errors: Array<{ codice: string; message: string }> = [];
+    const newProductIds: string[] = [];
     const syncFields: Parameters<typeof syncManyProductClassifications>[0] = [];
     const touchesClassification = campiDaAggiornare.some((f) => CLASSIFICATION_FIELDS.has(f));
 
     for (const row of rows) {
       const codice = row.code ? String(row.code).toUpperCase().trim() : null;
-      if (!codice) continue;
+      if (!codice) { skipped++; continue; }
 
       const prodotto = existingMap.get(codice);
-      if (!prodotto) {
-        notFound.push(codice);
-        continue;
-      }
 
-      try {
-        const updateData: Record<string, any> = {};
-        for (const campo of campiDaAggiornare) {
-          const val = buildFieldValue(campo, row);
-          if (val !== undefined) updateData[campo] = val;
+      if (prodotto) {
+        if (modalita === 'solo-crea') { skipped++; continue; }
+        try {
+          const updateData: Record<string, any> = {};
+          for (const campo of campiDaAggiornare) {
+            const val = buildFieldValue(campo, row);
+            if (val !== undefined) updateData[campo] = val;
+          }
+          if (Object.keys(updateData).length > 0) {
+            await prisma.product.update({ where: { id: prodotto.id }, data: updateData });
+            updated++;
+            if (touchesClassification) {
+              syncFields.push({
+                nomLinea: updateData.nomLinea, collezione: updateData.collezione,
+                colore: updateData.colore, temaColore: updateData.temaColore,
+                stagione: updateData.stagione, gruppoMerceologico: updateData.gruppoMerceologico,
+                famiglia: updateData.famiglia, classe: updateData.classe,
+                sottoclasse: updateData.sottoclasse, gruppoOmogeneo: updateData.gruppoOmogeneo,
+              });
+            }
+          }
+        } catch (err: any) {
+          errors.push({ codice, message: err.message ?? 'Errore sconosciuto' });
         }
-
-        if (Object.keys(updateData).length > 0) {
-          await prisma.product.update({ where: { id: prodotto.id }, data: updateData });
-          updated++;
-
-          if (touchesClassification) {
+      } else {
+        if (modalita === 'solo-aggiorna') { notFound.push(codice); continue; }
+        try {
+          const createData = buildCreateData(codice, row, campiDaAggiornare, applicaSelezioneCampiAiNuovi);
+          const newProduct = await prisma.product.create({ data: createData as any });
+          created++;
+          newProductIds.push(newProduct.id);
+          if (Object.keys(createData).some((k) => CLASSIFICATION_FIELDS.has(k))) {
             syncFields.push({
-              nomLinea: updateData.nomLinea,
-              collezione: updateData.collezione,
-              colore: updateData.colore,
-              temaColore: updateData.temaColore,
-              stagione: updateData.stagione,
-              gruppoMerceologico: updateData.gruppoMerceologico,
-              famiglia: updateData.famiglia,
-              classe: updateData.classe,
-              sottoclasse: updateData.sottoclasse,
-              gruppoOmogeneo: updateData.gruppoOmogeneo,
+              nomLinea: createData.nomLinea, collezione: createData.collezione,
+              colore: createData.colore, temaColore: createData.temaColore,
+              stagione: createData.stagione, gruppoMerceologico: createData.gruppoMerceologico,
+              famiglia: createData.famiglia, classe: createData.classe,
+              sottoclasse: createData.sottoclasse, gruppoOmogeneo: createData.gruppoOmogeneo,
             });
           }
+        } catch (err: any) {
+          errors.push({ codice, message: err.message ?? 'Errore sconosciuto' });
         }
-      } catch (err: any) {
-        errors.push({ codice, message: err.message ?? 'Errore sconosciuto' });
       }
     }
 
@@ -235,7 +336,7 @@ export async function POST(req: NextRequest) {
       void syncManyProductClassifications(syncFields);
     }
 
-    return NextResponse.json({ updated, notFound, campiAggiornati: campiDaAggiornare, errors });
+    return NextResponse.json({ updated, created, skipped, notFound, campiAggiornati: campiDaAggiornare, errors, newProductIds });
   } catch (err) {
     console.error('[import/selettivo]', err);
     return NextResponse.json({ error: 'Import failed' }, { status: 500 });

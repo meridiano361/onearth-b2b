@@ -214,9 +214,13 @@ function formatVal(v: any): string {
 
 type Step = 'upload' | 'select' | 'preview' | 'done';
 
+type Azione = 'aggiorna' | 'nuovo' | 'ignora';
+
 interface PreviewRow {
   codice: string | null;
   trovato: boolean;
+  azione: Azione;
+  motivoIgnora?: string;
   campi: Record<string, { corrente: any; nuovo: any }>;
 }
 
@@ -225,13 +229,19 @@ interface PreviewData {
   trovati: number;
   nonTrovati: number;
   nonTrovatiCodes: string[];
+  aggiornamenti: number;
+  nuovi: number;
+  ignorati: number;
 }
 
 interface ImportResult {
   updated: number;
+  created: number;
+  skipped: number;
   notFound: string[];
   campiAggiornati: string[];
   errors: Array<{ codice: string; message: string }>;
+  newProductIds?: string[];
 }
 
 interface RecognitionLog {
@@ -255,6 +265,8 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
   const [result, setResult] = useState<ImportResult | null>(null);
   const [recognitionLog, setRecognitionLog] = useState<RecognitionLog | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [modalita, setModalita] = useState<'upsert' | 'solo-aggiorna' | 'solo-crea'>('upsert');
+  const [applicaSelezioneCampiAiNuovi, setApplicaSelezioneCampiAiNuovi] = useState(false);
 
   useEffect(() => {
     try {
@@ -404,7 +416,7 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
       const res = await fetch('/api/admin/products/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: mappedRows, campiDaAggiornare: activeFields, dryRun: true }),
+        body: JSON.stringify({ rows: mappedRows, campiDaAggiornare: activeFields, dryRun: true, modalita, applicaSelezioneCampiAiNuovi }),
       });
       if (!res.ok) throw new Error('Errore nel caricamento anteprima');
       setPreviewData(await res.json());
@@ -423,15 +435,18 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
       const res = await fetch('/api/admin/products/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: mappedRows, campiDaAggiornare: activeFields, dryRun: false }),
+        body: JSON.stringify({ rows: mappedRows, campiDaAggiornare: activeFields, dryRun: false, modalita, applicaSelezioneCampiAiNuovi }),
       });
       if (!res.ok) throw new Error('Importazione fallita');
       const data: ImportResult = await res.json();
       setResult(data);
       setRecognitionLog(buildRecognitionLog());
       setStep('done');
-      if (data.updated > 0) {
-        toast.success(`${data.updated} prodotti aggiornati`);
+      if (data.updated > 0 || (data.created ?? 0) > 0) {
+        const parts: string[] = [];
+        if (data.updated > 0) parts.push(`${data.updated} aggiornati`);
+        if ((data.created ?? 0) > 0) parts.push(`${data.created} creati`);
+        toast.success(parts.join(', '));
         onSuccess();
       }
     } catch (err: any) {
@@ -492,6 +507,33 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
             </p>
           </div>
           <button onClick={reset} className="text-gray-400 hover:text-primary"><X size={16} /></button>
+        </div>
+
+        {/* ── Modalità importazione ────────────────────────────────────── */}
+        <div className="mb-4 p-3 bg-cream rounded border border-border">
+          <p className="text-xs font-medium text-primary mb-2">Modalità importazione</p>
+          <div className="space-y-1.5">
+            {([
+              { value: 'upsert',       label: 'Aggiorna + Crea',  desc: 'Aggiorna i prodotti esistenti e crea quelli nuovi' },
+              { value: 'solo-aggiorna', label: 'Solo aggiorna',   desc: 'Aggiorna solo i prodotti già nel database, ignora i nuovi codici' },
+              { value: 'solo-crea',    label: 'Solo crea',        desc: 'Crea solo i nuovi prodotti, ignora i codici già esistenti' },
+            ] as const).map(({ value, label, desc }) => (
+              <label key={value} className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="modalita"
+                  value={value}
+                  checked={modalita === value}
+                  onChange={() => setModalita(value)}
+                  className="mt-0.5 accent-gray-900 flex-shrink-0"
+                />
+                <div>
+                  <span className="text-xs font-medium text-primary">{label}</span>
+                  <span className="text-xs text-gray-400 ml-1.5">{desc}</span>
+                </div>
+              </label>
+            ))}
+          </div>
         </div>
 
         {/* ── Column detection panel ────────────────────────────────────── */}
@@ -583,6 +625,22 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
           Verranno aggiornati solo i campi selezionati per i prodotti trovati tramite codice.
           I campi grigi non sono presenti nel file caricato.
         </p>
+
+        {(modalita === 'upsert' || modalita === 'solo-crea') && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+            <p className="font-medium mb-1">Per i nuovi prodotti:</p>
+            <p>Verranno importati tutti i campi presenti nel file, indipendentemente dalla selezione qui sotto. La selezione si applica solo agli aggiornamenti.</p>
+            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={applicaSelezioneCampiAiNuovi}
+                onChange={(e) => setApplicaSelezioneCampiAiNuovi(e.target.checked)}
+                className="accent-blue-600"
+              />
+              <span>Applica la selezione anche ai nuovi prodotti</span>
+            </label>
+          </div>
+        )}
 
         {/* Quick-select */}
         <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-border">
@@ -695,7 +753,7 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
             <Button
               onClick={loadPreview}
               loading={isLoadingPreview}
-              disabled={activeFields.length === 0}
+              disabled={modalita !== 'solo-crea' && activeFields.length === 0}
               icon={<ArrowRight size={13} />}
             >
               Anteprima
@@ -713,33 +771,30 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
 
     return (
       <div>
-        {/* Badges */}
+        {/* Counters */}
         <div className="flex flex-wrap gap-2 mb-4">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 text-xs rounded-full border border-green-200">
-            <CheckCircle size={12} />
-            {previewData.trovati} prodotti trovati
-          </span>
-          {previewData.nonTrovati > 0 && (
+          {previewData.aggiornamenti > 0 && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 text-xs rounded-full border border-amber-200">
+              <CheckCircle size={12} />
+              {previewData.aggiornamenti} da aggiornare
+            </span>
+          )}
+          {previewData.nuovi > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 text-xs rounded-full border border-green-200">
+              <CheckCircle size={12} />
+              {previewData.nuovi} nuovi da creare
+            </span>
+          )}
+          {previewData.ignorati > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 text-gray-500 text-xs rounded-full border border-border">
               <AlertCircle size={12} />
-              {previewData.nonTrovati} codici non trovati
+              {previewData.ignorati} da ignorare
             </span>
           )}
           <span className="inline-flex items-center px-3 py-1 bg-gray-50 text-gray-500 text-xs rounded-full border border-border">
             Anteprima prime 10 righe
           </span>
         </div>
-
-        {/* Non trovati */}
-        {previewData.nonTrovatiCodes.length > 0 && (
-          <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs">
-            <p className="font-medium text-amber-800 mb-1">Codici non trovati nel database (verranno ignorati):</p>
-            <p className="text-amber-700 font-mono break-all">
-              {previewData.nonTrovatiCodes.slice(0, 20).join(', ')}
-              {previewData.nonTrovatiCodes.length > 20 ? ` +${previewData.nonTrovatiCodes.length - 20} altri` : ''}
-            </p>
-          </div>
-        )}
 
         {/* Preview table */}
         <div className="overflow-auto max-h-72 border border-border rounded mb-4">
@@ -758,16 +813,39 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
             </thead>
             <tbody>
               {previewData.preview.map((row, i) => (
-                <tr key={i} className={`border-b border-border/50 last:border-0 ${!row.trovato ? 'opacity-40' : ''}`}>
+                <tr
+                  key={i}
+                  className={`border-b border-border/50 last:border-0 ${
+                    row.azione === 'nuovo' ? 'bg-green-50/30' :
+                    row.azione === 'ignora' ? 'opacity-40' : ''
+                  }`}
+                >
                   <td className="px-3 py-2 font-mono text-gray-500 whitespace-nowrap">
-                    {row.codice ?? '—'}
-                    {!row.trovato && <span className="ml-1 text-2xs text-amber-500">(non trovato)</span>}
+                    <div className="flex items-center gap-1.5">
+                      <span>{row.codice ?? '—'}</span>
+                      {row.azione === 'nuovo' && (
+                        <span className="text-2xs font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">NUOVO</span>
+                      )}
+                      {row.azione === 'aggiorna' && (
+                        <span className="text-2xs font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">AGGIORNA</span>
+                      )}
+                      {row.azione === 'ignora' && (
+                        <span className="text-2xs font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">IGNORA</span>
+                      )}
+                    </div>
                   </td>
                   {visibleFields.map((f) => {
                     const diff = row.campi[f];
                     if (!diff) return <td key={f} className="px-3 py-2 text-gray-300">—</td>;
-                    const corrStr = formatVal(diff.corrente);
                     const nuovoStr = formatVal(diff.nuovo);
+                    if (row.azione === 'nuovo') {
+                      return (
+                        <td key={f} className="px-3 py-2 bg-green-50/50">
+                          <span className="font-medium text-green-800">{nuovoStr}</span>
+                        </td>
+                      );
+                    }
+                    const corrStr = formatVal(diff.corrente);
                     const changed = corrStr !== nuovoStr;
                     return (
                       <td key={f} className={`px-3 py-2 ${changed ? 'bg-amber-50' : 'bg-green-50/40'}`}>
@@ -791,15 +869,19 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
 
         <div className="flex items-center justify-between">
           <p className="text-xs text-gray-400">
-            Verranno aggiornati <strong className="text-primary">{previewData.trovati}</strong> prodotti
-            su {rawRows.length} righe · {visibleFields.length} campi
+            {rawRows.length} righe ·{' '}
+            {[
+              previewData.aggiornamenti > 0 ? `${previewData.aggiornamenti} da aggiornare` : null,
+              previewData.nuovi > 0 ? `${previewData.nuovi} da creare` : null,
+              previewData.ignorati > 0 ? `${previewData.ignorati} ignorati` : null,
+            ].filter(Boolean).join(' · ')}
           </p>
           <div className="flex gap-3">
             <Button variant="ghost" onClick={() => setStep('select')}>← Modifica selezione</Button>
             <Button
               onClick={handleImport}
               loading={isImporting}
-              disabled={previewData.trovati === 0}
+              disabled={previewData.aggiornamenti === 0 && previewData.nuovi === 0}
             >
               Conferma e importa
             </Button>
@@ -812,10 +894,11 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
   // ─── Step 4: Done ───────────────────────────────────────────────────────────
 
   if (step === 'done' && result) {
+    const hasSuccess = result.updated > 0 || (result.created ?? 0) > 0;
     return (
       <div>
         <div className="flex items-center gap-3 mb-5">
-          {result.updated > 0 ? (
+          {hasSuccess ? (
             <CheckCircle size={24} className="text-green-500 flex-shrink-0" />
           ) : (
             <AlertCircle size={24} className="text-amber-500 flex-shrink-0" />
@@ -823,10 +906,54 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
           <div>
             <p className="font-medium text-primary">Importazione completata</p>
             <p className="text-sm text-gray-500">
-              {result.updated} aggiornati · {result.notFound.length} non trovati · {result.errors.length} errori
+              {[
+                result.updated > 0 ? `${result.updated} aggiornati` : null,
+                (result.created ?? 0) > 0 ? `${result.created} creati` : null,
+                result.notFound.length > 0 ? `${result.notFound.length} non trovati` : null,
+                result.errors.length > 0 ? `${result.errors.length} errori` : null,
+              ].filter(Boolean).join(' · ')}
             </p>
           </div>
         </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          {result.updated > 0 && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded">
+              <p className="text-2xl font-light text-amber-700">{result.updated}</p>
+              <p className="text-xs text-amber-600 mt-0.5">Prodotti aggiornati</p>
+            </div>
+          )}
+          {(result.created ?? 0) > 0 && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded">
+              <p className="text-2xl font-light text-green-700">{result.created}</p>
+              <p className="text-xs text-green-600 mt-0.5">Nuovi prodotti creati</p>
+              <p className="text-2xs text-green-400 mt-0.5">Attivi: No — attivali manualmente</p>
+            </div>
+          )}
+          {(result.skipped ?? 0) > 0 && (
+            <div className="p-3 bg-gray-50 border border-border rounded">
+              <p className="text-2xl font-light text-gray-500">{result.skipped}</p>
+              <p className="text-xs text-gray-400 mt-0.5">Righe ignorate</p>
+            </div>
+          )}
+          {result.errors.length > 0 && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded">
+              <p className="text-2xl font-light text-red-600">{result.errors.length}</p>
+              <p className="text-xs text-red-500 mt-0.5">Errori</p>
+            </div>
+          )}
+        </div>
+
+        {/* Activation link */}
+        {(result.created ?? 0) > 0 && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+            Vuoi attivare i nuovi prodotti?{' '}
+            <a href="/admin/prodotti?attivi=false" className="underline font-medium hover:text-blue-900">
+              Vai ai prodotti non attivi →
+            </a>
+          </div>
+        )}
 
         {/* Campi aggiornati */}
         <div className="mb-4 p-3 bg-gray-50 border border-border rounded">
