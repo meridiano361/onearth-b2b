@@ -1,44 +1,154 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, CheckCircle, AlertCircle, X, ArrowRight } from 'lucide-react';
+import { Upload, CheckCircle, AlertCircle, X, ArrowRight, Check } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import Button from '@/components/ui/Button';
 import toast from 'react-hot-toast';
 
+// ─── Column recognition ───────────────────────────────────────────────────────
+
+// Flat map: normalized header → internal field name
+const COLUMN_MAP: Record<string, string> = {
+  // Codice
+  'codice': 'code', 'code': 'code', 'cod': 'code',
+  'codice prodotto': 'code', 'product code': 'code', 'article': 'code', 'sku': 'code',
+
+  // Descrizione / Nome
+  'nome': 'name', 'name': 'name', 'descrizione': 'name',
+  'description': 'name', 'nome prodotto': 'name', 'product name': 'name',
+  'desc': 'name', 'description short': 'name', 'title': 'name',
+
+  // Produttore
+  'produttore': 'produttore', 'manufacturer': 'produttore', 'brand': 'produttore',
+  'fornitore': 'produttore', 'supplier': 'produttore',
+
+  // Paese
+  'paese': 'paese', 'country': 'paese', 'paese origine': 'paese',
+  'paese di origine': 'paese', 'origin': 'paese', 'nazione': 'paese',
+
+  // Misure
+  'misure': 'misura', 'misura': 'misura', 'size': 'misura',
+  'dimensioni': 'misura', 'dimensions': 'misura', 'dim': 'misura', 'taglia': 'misura',
+
+  // Linea
+  'linea': 'nomLinea', 'line': 'nomLinea', 'nome linea': 'nomLinea',
+  'linea prodotto': 'nomLinea', 'nomlinea': 'nomLinea',
+
+  // Colore
+  'colore': 'colore', 'color': 'colore', 'colour': 'colore',
+
+  // Tema colore
+  'tema colore': 'temaColore', 'temacolore': 'temaColore',
+  'tema': 'temaColore', 'color theme': 'temaColore',
+
+  // Collezione
+  'collezione': 'collezione', 'collection': 'collezione', 'coll': 'collezione',
+
+  // Stagione
+  'stagione': 'stagione', 'season': 'stagione',
+
+  // Gruppo merceologico
+  'gruppo merceologico': 'gruppoMerceologico', 'gruppomerceologico': 'gruppoMerceologico',
+  'gruppo merc': 'gruppoMerceologico', 'product group': 'gruppoMerceologico',
+
+  // Famiglia
+  'famiglia': 'famiglia', 'family': 'famiglia',
+
+  // Classe
+  'classe': 'classe', 'class': 'classe',
+
+  // Sottoclasse
+  'sottoclasse': 'sottoclasse', 'subclass': 'sottoclasse',
+  'sotto classe': 'sottoclasse', 'sub class': 'sottoclasse',
+  'sottofamiglia': 'sottoclasse', 'sub family': 'sottoclasse',
+
+  // Gruppo omogeneo
+  'gruppo omogeneo': 'gruppoOmogeneo', 'gruppoomogeneo': 'gruppoOmogeneo',
+  'omogeneo': 'gruppoOmogeneo', 'homogeneous group': 'gruppoOmogeneo',
+
+  // Confezione / lotto
+  'confezione': 'lotSize', 'conf': 'lotSize', 'lotto': 'lotSize',
+  'lot size': 'lotSize', 'lotsize': 'lotSize', 'pz per collo': 'lotSize',
+  'quantita minima': 'lotSize', 'qty': 'lotSize', 'moq': 'lotSize',
+  'min qty': 'lotSize', 'minimum': 'lotSize',
+
+  // Tranche
+  'tranche': 'tranche',
+
+  // Prezzo costo
+  'prezzo costo ie': 'costPrice', 'prezzo costo i e': 'costPrice',
+  'prezzo costo': 'costPrice', 'costo': 'costPrice', 'costo ie': 'costPrice',
+  'cost price': 'costPrice', 'cost': 'costPrice', 'prezzo acquisto': 'costPrice',
+  'p costo': 'costPrice', 'prezzo netto': 'costPrice', 'wholesale': 'costPrice',
+
+  // Prezzo vendita
+  'prezzo vendita ii': 'retailPrice', 'prezzo vendita i i': 'retailPrice',
+  'prezzo vendita': 'retailPrice', 'vendita': 'retailPrice', 'pvp': 'retailPrice',
+  'retail price': 'retailPrice', 'prezzo consigliato': 'retailPrice', 'msrp': 'retailPrice',
+  'p vendita': 'retailPrice', 'retail': 'retailPrice',
+
+  // IVA
+  'iva': 'iva', 'vat': 'iva', 'tax': 'iva',
+
+  // Fascia ricarico
+  'fascia ricarico': 'fasciaRicarico', 'fasciaricarico': 'fasciaRicarico',
+  'ricarico': 'fasciaRicarico', 'markup': 'fasciaRicarico',
+
+  // Fascia sconto
+  'fascia sconto': 'fasciaSconto', 'fasciasconto': 'fasciaSconto',
+  'sconto': 'fasciaSconto', 'discount': 'fasciaSconto',
+
+  // Note
+  'note': 'notes', 'notes': 'notes', 'note prodotto': 'notes',
+  'comments': 'notes', 'info': 'notes',
+
+  // Attivo
+  'attivo': 'isActive', 'active': 'isActive', 'visibile': 'isActive', 'is active': 'isActive',
+
+  // Immagine
+  'immagine': 'imageUrl', 'image': 'imageUrl', 'foto': 'imageUrl',
+  'url immagine': 'imageUrl', 'imageurl': 'imageUrl', 'image url': 'imageUrl',
+  'img': 'imageUrl', 'photo url': 'imageUrl',
+};
+
+function normalizeHeader(h: string): string {
+  return h
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\./g, '')
+    .replace(/[/_-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function mapHeader(h: string): string | null {
+  return COLUMN_MAP[normalizeHeader(h)] ?? null;
+}
+
+function detectColumns(headers: string[]): {
+  mapping: Record<string, string>;
+  unrecognized: string[];
+} {
+  const mapping: Record<string, string> = {};
+  const unrecognized: string[] = [];
+  for (const h of headers) {
+    const field = mapHeader(h);
+    if (field) {
+      if (!mapping[field]) mapping[field] = h; // first match wins
+    } else {
+      unrecognized.push(h);
+    }
+  }
+  return { mapping, unrecognized };
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const LS_KEY = 'import-fields-v1';
-
-const COLUMN_ALIASES: Record<string, string[]> = {
-  code:               ['codice', 'code', 'sku', 'cod', 'product_code', 'article'],
-  name:               ['descrizione', 'nome', 'name', 'description_short', 'title'],
-  produttore:         ['produttore', 'manufacturer', 'brand', 'supplier', 'fornitore'],
-  paese:              ['paese', 'country', 'paese_origine', 'nazione'],
-  misura:             ['misure', 'misura', 'size', 'dimensions', 'dimension', 'taglia'],
-  gruppoMerceologico: ['gruppomerceologico', 'gruppo merceologico', 'product group', 'gruppo_merceologico'],
-  famiglia:           ['famiglia', 'family', 'product_family', 'macro_categoria'],
-  classe:             ['classe', 'class'],
-  sottoclasse:        ['sottoclasse', 'subclass', 'sub_classe'],
-  gruppoOmogeneo:     ['gruppoomogeneo', 'gruppo omogeneo', 'gruppo_omogeneo'],
-  nomLinea:           ['linea', 'line', 'nomlinea', 'nom_linea', 'nome_linea', 'nome linea'],
-  stagione:           ['stagione', 'season'],
-  collezione:         ['collezione', 'collection'],
-  colore:             ['colore', 'color', 'colour', 'col'],
-  temaColore:         ['temacolore', 'tema colore', 'tema_colore'],
-  lotSize:            ['confezione', 'lotsize', 'lot_size', 'moq', 'min_qty', 'lot', 'minimum'],
-  iva:                ['iva'],
-  costPrice:          ['prezzocosto', 'prezzo costo', 'cost price', 'cost_price', 'cost', 'prezzo_costo', 'wholesale'],
-  retailPrice:        ['prezzovendita', 'prezzo vendita', 'retail price', 'retail_price', 'retail', 'prezzo', 'msrp'],
-  fasciaRicarico:     ['fasciaricarico', 'fascia ricarico', 'fascia_ricarico'],
-  fasciaSconto:       ['fasciasconto', 'fascia sconto', 'fascia_sconto'],
-  tranche:            ['tranche'],
-  notes:              ['note', 'notes', 'comments', 'info'],
-  isActive:           ['attivo', 'active', 'is_active'],
-  imageUrl:           ['image_url', 'image', 'img', 'photo_url', 'foto', 'imageurl'],
-};
 
 const FIELD_LABELS: Record<string, string> = {
   name:               'Descrizione / Nome',
@@ -85,15 +195,6 @@ const PRESETS: { label: string; fields: string[] }[] = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function mapColumn(headers: string[]): Record<string, string> {
-  const mapping: Record<string, string> = {};
-  for (const [field, aliases] of Object.entries(COLUMN_ALIASES)) {
-    const found = headers.find((h) => aliases.some((a) => h.toLowerCase().trim() === a));
-    if (found) mapping[field] = found;
-  }
-  return mapping;
-}
-
 function applyMapping(row: any, mapping: Record<string, string>): Record<string, any> {
   const result: any = {};
   for (const [field, header] of Object.entries(mapping)) {
@@ -132,17 +233,26 @@ interface ImportResult {
   errors: Array<{ codice: string; message: string }>;
 }
 
+interface RecognitionLog {
+  auto: Array<{ header: string; field: string; label: string }>;
+  manual: Array<{ header: string; field: string; label: string }>;
+  ignored: string[];
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ProductImport({ onSuccess }: { onSuccess: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [rawRows, setRawRows] = useState<any[]>([]);
-  const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
+  const [autoMapping, setAutoMapping] = useState<Record<string, string>>({});
+  const [unrecognizedHeaders, setUnrecognizedHeaders] = useState<string[]>([]);
+  const [manualOverrides, setManualOverrides] = useState<Record<string, string>>({});
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set(['collezione', 'tranche']));
   const [step, setStep] = useState<Step>('upload');
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [recognitionLog, setRecognitionLog] = useState<RecognitionLog | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
@@ -155,6 +265,20 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
     } catch { /* ignore */ }
   }, []);
 
+  // Combined mapping: auto-detected + manual overrides for fields not already auto-detected
+  const effectiveMapping = useMemo(() => {
+    const m = { ...autoMapping };
+    for (const [header, field] of Object.entries(manualOverrides)) {
+      if (field && !m[field]) m[field] = header;
+    }
+    return m;
+  }, [autoMapping, manualOverrides]);
+
+  const activeFields = useMemo(
+    () => [...selectedFields].filter((f) => effectiveMapping[f]),
+    [selectedFields, effectiveMapping]
+  );
+
   function savePrefs(fields: Set<string>) {
     try { localStorage.setItem(LS_KEY, JSON.stringify([...fields])); } catch { /* ignore */ }
   }
@@ -164,7 +288,7 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
     if (!f) return;
     setFile(f);
     parseFile(f);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -176,6 +300,13 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
     maxFiles: 1,
   });
 
+  function initFromHeaders(headers: string[]) {
+    const { mapping, unrecognized } = detectColumns(headers);
+    setAutoMapping(mapping);
+    setUnrecognizedHeaders(unrecognized);
+    setManualOverrides({});
+  }
+
   function parseFile(f: File) {
     const ext = f.name.split('.').pop()?.toLowerCase();
     if (ext === 'csv') {
@@ -183,8 +314,9 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
+          const headers = results.meta.fields ?? [];
           setRawRows(results.data as any[]);
-          setColumnMapping(mapColumn(results.meta.fields ?? []));
+          initFromHeaders(headers);
           setStep('select');
         },
         error: () => toast.error('Impossibile leggere il file CSV'),
@@ -198,7 +330,7 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
           const rows = XLSX.utils.sheet_to_json(ws) as any[];
           if (rows.length === 0) { toast.error('File vuoto'); return; }
           setRawRows(rows);
-          setColumnMapping(mapColumn(Object.keys(rows[0])));
+          initFromHeaders(Object.keys(rows[0]));
           setStep('select');
         } catch {
           toast.error('Impossibile leggere il file Excel');
@@ -218,13 +350,13 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
   }
 
   function applyPreset(fields: string[]) {
-    const next = new Set(fields.filter((f) => columnMapping[f]));
+    const next = new Set(fields.filter((f) => effectiveMapping[f]));
     setSelectedFields(next);
     savePrefs(next);
   }
 
   function selectAll() {
-    const next = new Set(ALL_UPDATABLE.filter((f) => columnMapping[f]));
+    const next = new Set(ALL_UPDATABLE.filter((f) => effectiveMapping[f]));
     setSelectedFields(next);
     savePrefs(next);
   }
@@ -237,18 +369,37 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
   function reset() {
     setFile(null);
     setRawRows([]);
-    setColumnMapping({});
+    setAutoMapping({});
+    setUnrecognizedHeaders([]);
+    setManualOverrides({});
     setPreviewData(null);
     setResult(null);
+    setRecognitionLog(null);
     setStep('upload');
   }
 
-  const activeFields = [...selectedFields].filter((f) => columnMapping[f]);
+  function buildRecognitionLog(): RecognitionLog {
+    const auto = Object.entries(autoMapping)
+      .filter(([field]) => field !== 'code' && ALL_UPDATABLE.includes(field))
+      .map(([field, header]) => ({ header, field, label: FIELD_LABELS[field] ?? field }));
+
+    // Manual overrides that are actually effective (field not already auto-detected)
+    const manual = Object.entries(manualOverrides)
+      .filter(([_, field]) => !!field && !autoMapping[field])
+      .map(([header, field]) => ({ header, field, label: FIELD_LABELS[field] ?? field }));
+
+    const manualMappedHeaders = new Set(
+      Object.entries(manualOverrides).filter(([_, f]) => !!f && !autoMapping[f]).map(([h]) => h)
+    );
+    const ignored = unrecognizedHeaders.filter((h) => !manualMappedHeaders.has(h));
+
+    return { auto, manual, ignored };
+  }
 
   async function loadPreview() {
     setIsLoadingPreview(true);
     try {
-      const mappedRows = rawRows.map((r) => applyMapping(r, columnMapping));
+      const mappedRows = rawRows.map((r) => applyMapping(r, effectiveMapping));
       const res = await fetch('/api/admin/products/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -267,7 +418,7 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
   async function handleImport() {
     setIsImporting(true);
     try {
-      const mappedRows = rawRows.map((r) => applyMapping(r, columnMapping));
+      const mappedRows = rawRows.map((r) => applyMapping(r, effectiveMapping));
       const res = await fetch('/api/admin/products/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -276,6 +427,7 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
       if (!res.ok) throw new Error('Importazione fallita');
       const data: ImportResult = await res.json();
       setResult(data);
+      setRecognitionLog(buildRecognitionLog());
       setStep('done');
       if (data.updated > 0) {
         toast.success(`${data.updated} prodotti aggiornati`);
@@ -311,13 +463,11 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
         </div>
 
         <div className="mt-4 p-4 bg-cream rounded border border-border">
-          <p className="text-xs font-medium text-primary mb-1.5">Colonne riconosciute automaticamente:</p>
-          <div className="flex flex-wrap gap-1">
-            {['codice *', 'descrizione', 'produttore', 'paese', 'misure', 'linea', 'stagione', 'collezione', 'colore', 'temaColore', 'tranche', 'confezione', 'iva', 'prezzoCosto', 'prezzoVendita', 'fasciaRicarico', 'fasciaSconto', 'note', 'attivo'].map((col) => (
-              <span key={col} className="px-2 py-0.5 bg-white border border-border rounded text-2xs text-gray-600 font-mono">{col}</span>
-            ))}
-          </div>
-          <p className="text-2xs text-gray-400 mt-2">Le intestazioni vengono rilevate automaticamente. Dopo il caricamento sceglierai quali campi aggiornare.</p>
+          <p className="text-xs font-medium text-primary mb-1.5">Riconoscimento colonne automatico</p>
+          <p className="text-2xs text-gray-400">
+            Le intestazioni vengono rilevate in modo flessibile (case-insensitive, con tutti gli alias comuni: "Prezzo costo i.e.", "cost price", "costo", ecc.).
+            Le colonne non riconosciute potranno essere mappate manualmente nel passo successivo.
+          </p>
         </div>
       </div>
     );
@@ -326,18 +476,107 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
   // ─── Step 2: Select fields ──────────────────────────────────────────────────
 
   if (step === 'select') {
-    const detectedCount = ALL_UPDATABLE.filter((f) => columnMapping[f]).length;
+    const autoUpdatable = Object.entries(autoMapping).filter(([f]) => f !== 'code' && ALL_UPDATABLE.includes(f));
+    const hasUnrecognized = unrecognizedHeaders.length > 0;
 
     return (
       <div>
+        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="text-sm font-medium text-primary">{file?.name}</p>
-            <p className="text-xs text-gray-400">{rawRows.length} righe · {detectedCount} colonne rilevate</p>
+            <p className="text-xs text-gray-400">
+              {rawRows.length} righe · {autoUpdatable.length} colonne rilevate
+              {hasUnrecognized && ` · ${unrecognizedHeaders.length} non riconosciute`}
+            </p>
           </div>
           <button onClick={reset} className="text-gray-400 hover:text-primary"><X size={16} /></button>
         </div>
 
+        {/* ── Column detection panel ────────────────────────────────────── */}
+        <div className="mb-4 border border-border rounded-lg overflow-hidden">
+          <div className="px-3 py-2 bg-gray-50 border-b border-border flex items-center gap-2">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-gray-500 flex-1">
+              Colonne rilevate nel file
+            </p>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded text-2xs text-green-700">
+              <Check size={9} />
+              {autoUpdatable.length} auto
+            </span>
+            {hasUnrecognized && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 border border-red-200 rounded text-2xs text-red-600">
+                <AlertCircle size={9} />
+                {unrecognizedHeaders.length} non riconosciute
+              </span>
+            )}
+          </div>
+
+          {/* Auto-recognized */}
+          {autoUpdatable.length > 0 && (
+            <div className="px-3 py-2.5 border-b border-border/50">
+              <div className="flex flex-wrap gap-1.5">
+                {autoUpdatable.map(([field, header]) => (
+                  <span
+                    key={field}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded text-2xs"
+                    title={`"${header}" → ${field}`}
+                  >
+                    <Check size={9} className="text-green-600 flex-shrink-0" />
+                    <span className="text-gray-500 font-mono max-w-[80px] truncate">{header}</span>
+                    <span className="text-gray-300">→</span>
+                    <span className="text-green-700 font-medium">{FIELD_LABELS[field] ?? field}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Unrecognized — manual mapping */}
+          {hasUnrecognized && (
+            <div className="px-3 py-2.5">
+              <p className="text-2xs font-medium text-red-600 uppercase tracking-wide mb-2">
+                Non riconosciute — mappa manualmente o ignora:
+              </p>
+              <div className="space-y-1.5">
+                {unrecognizedHeaders.map((header) => {
+                  const currentVal = manualOverrides[header] ?? '';
+                  const isEffective = !!currentVal && !autoMapping[currentVal];
+                  return (
+                    <div key={header} className="flex items-center gap-2">
+                      <AlertCircle size={12} className={`flex-shrink-0 ${isEffective ? 'text-green-500' : 'text-red-400'}`} />
+                      <span
+                        className="text-xs font-mono text-gray-600 flex-none max-w-[140px] truncate"
+                        title={header}
+                      >
+                        {header}
+                      </span>
+                      <ArrowRight size={10} className="text-gray-300 flex-shrink-0" />
+                      <select
+                        value={currentVal}
+                        onChange={(e) =>
+                          setManualOverrides((prev) => ({ ...prev, [header]: e.target.value }))
+                        }
+                        className="flex-1 text-xs border border-border rounded px-2 py-1 bg-white outline-none focus:ring-1 focus:ring-gray-900 min-w-0"
+                      >
+                        <option value="">— Ignora questa colonna —</option>
+                        {ALL_UPDATABLE.map((f) => {
+                          const alreadyAuto = !!autoMapping[f];
+                          return (
+                            <option key={f} value={f} disabled={alreadyAuto}>
+                              {FIELD_LABELS[f] ?? f}{alreadyAuto ? ' (già rilevata)' : ''}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Field selection ───────────────────────────────────────────── */}
         <p className="text-sm font-semibold text-primary mb-1">Scegli cosa aggiornare</p>
         <p className="text-xs text-gray-400 mb-3">
           Verranno aggiornati solo i campi selezionati per i prodotti trovati tramite codice.
@@ -366,7 +605,8 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
               <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">{group.label}</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {group.fields.map((field) => {
-                  const available = !!columnMapping[field];
+                  const available = !!effectiveMapping[field];
+                  const isManual = available && !autoMapping[field];
                   const checked = available && selectedFields.has(field);
                   return (
                     <label
@@ -388,8 +628,11 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
                       />
                       <span className="text-xs text-primary flex-1 truncate">{FIELD_LABELS[field] ?? field}</span>
                       {available && (
-                        <span className="text-2xs text-gray-400 font-mono truncate max-w-[72px]" title={columnMapping[field]}>
-                          {columnMapping[field]}
+                        <span
+                          className={`text-2xs font-mono truncate max-w-[72px] ${isManual ? 'text-blue-400' : 'text-gray-400'}`}
+                          title={`${effectiveMapping[field]}${isManual ? ' (manuale)' : ''}`}
+                        >
+                          {isManual ? '✎ manuale' : effectiveMapping[field]}
                         </span>
                       )}
                     </label>
@@ -553,6 +796,41 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
             ))}
           </div>
         </div>
+
+        {/* Recognition log */}
+        {recognitionLog && (
+          <div className="mb-4 p-3 border border-border rounded space-y-2">
+            <p className="text-xs font-medium text-gray-600">Log riconoscimento colonne:</p>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2 bg-green-50 border border-green-100 rounded">
+                <p className="text-lg font-semibold text-green-700">{recognitionLog.auto.length}</p>
+                <p className="text-2xs text-green-600">Riconosciute auto</p>
+              </div>
+              <div className="p-2 bg-blue-50 border border-blue-100 rounded">
+                <p className="text-lg font-semibold text-blue-700">{recognitionLog.manual.length}</p>
+                <p className="text-2xs text-blue-600">Mappate manualmente</p>
+              </div>
+              <div className="p-2 bg-gray-50 border border-border rounded">
+                <p className="text-lg font-semibold text-gray-500">{recognitionLog.ignored.length}</p>
+                <p className="text-2xs text-gray-400">Ignorate</p>
+              </div>
+            </div>
+            {recognitionLog.manual.length > 0 && (
+              <div className="text-xs text-blue-600 space-y-0.5">
+                {recognitionLog.manual.map((m) => (
+                  <p key={m.header} className="font-mono">
+                    "{m.header}" → {m.label}
+                  </p>
+                ))}
+              </div>
+            )}
+            {recognitionLog.ignored.length > 0 && (
+              <p className="text-2xs text-gray-400">
+                Ignorate: {recognitionLog.ignored.map((h) => `"${h}"`).join(', ')}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Codici non trovati */}
         {result.notFound.length > 0 && (
