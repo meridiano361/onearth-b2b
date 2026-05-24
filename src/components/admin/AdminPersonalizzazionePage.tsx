@@ -143,7 +143,7 @@ function SortableMenuItem({
         type="text"
         value={item.label}
         onChange={(e) => onChange(item.key, 'label', e.target.value)}
-        className="flex-1 text-sm bg-transparent border-none outline-none text-primary"
+        className="flex-1 text-sm bg-white border border-border rounded px-2 py-1 outline-none focus:ring-1 focus:ring-gray-900 text-primary"
       />
       <button
         type="button"
@@ -376,7 +376,7 @@ export default function AdminPersonalizzazionePage() {
 
       {/* ── 3b: Menu navigazione ─────────────────────────────── */}
       <SectionCard title="Menu navigazione">
-        <p className="text-xs text-gray-400">Trascina per riordinare. Usa il toggle per mostrare/nascondere.</p>
+        <p className="text-xs text-gray-400">Trascina per riordinare · modifica il nome direttamente nel campo · usa il toggle per mostrare/nascondere.</p>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleMenuDragEnd}>
           <SortableContext items={settings.menu.ordine} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">

@@ -9,6 +9,15 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import LanguageSelector from '@/components/layout/LanguageSelector';
+import { useSettings } from '@/contexts/SettingsContext';
+
+const NAV_CONFIG: Record<string, { href: string; isActive: (p: string) => boolean }> = {
+  catalogo:     { href: '/catalog/products',    isActive: (p) => p.startsWith('/catalog/products') },
+  preferiti:    { href: '/catalog/preferiti',   isActive: (p) => p.startsWith('/catalog/preferiti') },
+  ordini:       { href: '/catalog/orders',      isActive: (p) => p.startsWith('/catalog/orders') },
+  destinazioni: { href: '/catalog/destinazioni',isActive: (p) => p.startsWith('/catalog/destinazioni') },
+  assistenza:   { href: '/catalog/assistenza',  isActive: (p) => p.startsWith('/catalog/assistenza') },
+};
 
 interface HeaderProps {
   session: Session;
@@ -17,6 +26,7 @@ interface HeaderProps {
 export default function Header({ session }: HeaderProps) {
   const pathname = usePathname();
   const t = useTranslations('nav');
+  const { menu } = useSettings();
 
   return (
     <header className="h-14 bg-white border-b border-border flex items-center px-4 sm:px-6 gap-3 sm:gap-6 flex-shrink-0 z-10">
@@ -34,61 +44,26 @@ export default function Header({ session }: HeaderProps) {
 
       {/* Nav links — desktop */}
       <nav className="hidden md:flex items-center gap-1">
-        <Link
-          href="/catalog/products"
-          className={cn(
-            'text-xs px-3 py-1.5 rounded transition-colors',
-            pathname.startsWith('/catalog/products')
-              ? 'text-primary font-semibold bg-cream'
-              : 'text-gray-400 hover:text-primary hover:bg-cream'
-          )}
-        >
-          {t('catalog')}
-        </Link>
-        <Link
-          href="/catalog/preferiti"
-          className={cn(
-            'text-xs px-3 py-1.5 rounded transition-colors',
-            pathname.startsWith('/catalog/preferiti')
-              ? 'text-primary font-semibold bg-cream'
-              : 'text-gray-400 hover:text-primary hover:bg-cream'
-          )}
-        >
-          {t('favorites')}
-        </Link>
-        <Link
-          href="/catalog/orders"
-          className={cn(
-            'text-xs px-3 py-1.5 rounded transition-colors',
-            pathname.startsWith('/catalog/orders')
-              ? 'text-primary font-semibold bg-cream'
-              : 'text-gray-400 hover:text-primary hover:bg-cream'
-          )}
-        >
-          {t('orders')}
-        </Link>
-        <Link
-          href="/catalog/destinazioni"
-          className={cn(
-            'text-xs px-3 py-1.5 rounded transition-colors',
-            pathname.startsWith('/catalog/destinazioni')
-              ? 'text-primary font-semibold bg-cream'
-              : 'text-gray-400 hover:text-primary hover:bg-cream'
-          )}
-        >
-          {t('channels')}
-        </Link>
-        <Link
-          href="/catalog/assistenza"
-          className={cn(
-            'text-xs px-3 py-1.5 rounded transition-colors',
-            pathname.startsWith('/catalog/assistenza')
-              ? 'text-primary font-semibold bg-cream'
-              : 'text-gray-400 hover:text-primary hover:bg-cream'
-          )}
-        >
-          {t('assistance')}
-        </Link>
+        {menu.ordine
+          .filter((key) => menu.items[key]?.visibile && NAV_CONFIG[key])
+          .map((key) => {
+            const config = NAV_CONFIG[key];
+            const label = menu.items[key]?.label ?? key;
+            return (
+              <Link
+                key={key}
+                href={config.href}
+                className={cn(
+                  'text-xs px-3 py-1.5 rounded transition-colors',
+                  config.isActive(pathname)
+                    ? 'text-primary font-semibold bg-cream'
+                    : 'text-gray-400 hover:text-primary hover:bg-cream'
+                )}
+              >
+                {label}
+              </Link>
+            );
+          })}
       </nav>
 
       {/* Spacer */}
