@@ -1,5 +1,7 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Image, Link } from '@react-pdf/renderer';
+
+const APP_BASE_URL = 'https://app.b2b.on-earth.it';
 import { parse as parseHtmlNode } from 'node-html-parser';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -111,6 +113,11 @@ export type FinalPageTypography = {
   titoloColor: string;
   testoFontSize: number;
   testoColor: string;
+  // Spaziatura
+  titoloMarginBottom?: number;
+  sezione1MarginBottom?: number;
+  sezione2MarginBottom?: number;
+  marginTop?: number;
 };
 
 export type CustomSection = {
@@ -200,6 +207,11 @@ export type CatalogConfig = {
     logoPosX?: 'left' | 'center' | 'right';
     logoPosY?: 'top' | 'middle' | 'bottom';
     logoDimensione?: 'piccolo' | 'medio' | 'grande';
+    sezioneFinale3Attiva?: boolean;
+    sezioneFinale3Html?: string;
+    sezioneFinale3FontSize?: number;
+    sezioneFinale3Colore?: string;
+    sezioneFinale3Align?: 'left' | 'center' | 'right';
   };
   paginaPenultima?: {
     attiva: boolean;
@@ -220,6 +232,11 @@ export type CatalogConfig = {
     logoPosX?: 'left' | 'center' | 'right';
     logoPosY?: 'top' | 'middle' | 'bottom';
     logoDimensione?: 'piccolo' | 'medio' | 'grande';
+    sezioneFinale3Attiva?: boolean;
+    sezioneFinale3Html?: string;
+    sezioneFinale3FontSize?: number;
+    sezioneFinale3Colore?: string;
+    sezioneFinale3Align?: 'left' | 'center' | 'right';
   };
   // Typography customization
   cardFieldStyles: CardFieldStyles;
@@ -351,9 +368,18 @@ function parseHtmlToPdf(html: string): HtmlBlock[] {
   for (const node of root.childNodes as any[]) {
     const tag = ((node.tagName as string) ?? '').toLowerCase();
     if (tag === 'p' || tag === 'h1' || tag === 'h2') {
-      const styleAttr = node.getAttribute?.('style') ?? '';
-      const alignMatch = styleAttr.match(/text-align\s*:\s*(left|center|right)/);
-      const align = (alignMatch?.[1] ?? 'left') as 'left' | 'center' | 'right';
+      const styleAttr: string = node.getAttribute?.('style') ?? '';
+      const classAttr: string = node.getAttribute?.('class') ?? '';
+      const dataAlign: string = node.getAttribute?.('data-text-align') ?? '';
+      let align: 'left' | 'center' | 'right' = 'left';
+      const styleMatch = styleAttr.match(/text-align\s*:\s*(left|center|right)/);
+      if (styleMatch) {
+        align = styleMatch[1] as 'left' | 'center' | 'right';
+      } else if (classAttr.includes('text-right') || dataAlign === 'right') {
+        align = 'right';
+      } else if (classAttr.includes('text-center') || dataAlign === 'center') {
+        align = 'center';
+      }
       const inlines = collectInlines(node);
       if (inlines.length > 0) {
         blocks.push({
@@ -748,15 +774,17 @@ function ProductCard({
           }}
         >
           {product.imageDataUri ? (
-            <Image
-              style={{
-                width: layout.CARD_W - box.borderWidth,
-                height: layout.IMG_H,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                objectFit: 'contain' as any,
-              }}
-              src={product.imageDataUri}
-            />
+            <Link src={`${APP_BASE_URL}/catalog/${product.id}`}>
+              <Image
+                style={{
+                  width: layout.CARD_W - box.borderWidth,
+                  height: layout.IMG_H,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  objectFit: 'contain' as any,
+                }}
+                src={product.imageDataUri}
+              />
+            </Link>
           ) : config.logoBase64 ? (
             <Image
               style={{ width: 55, height: 12, opacity: 0.25 }}
@@ -784,15 +812,17 @@ function ProductCard({
       >
         {f.codice && (
           <View style={{ height: layout.CODE_H, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-            <Text style={{
-              fontSize: cfs.codice.fontSize,
-              fontFamily: fieldFont(cfs.codice),
-              color: cfs.codice.color,
-              letterSpacing: 0.3,
-              overflow: 'hidden',
-            }}>
-              {cfs.codice.uppercase ? product.code.toUpperCase() : product.code}
-            </Text>
+            <Link src={`${APP_BASE_URL}/catalog/${product.id}`}>
+              <Text style={{
+                fontSize: cfs.codice.fontSize,
+                fontFamily: fieldFont(cfs.codice),
+                color: cfs.codice.color,
+                letterSpacing: 0.3,
+                overflow: 'hidden',
+              }}>
+                {cfs.codice.uppercase ? product.code.toUpperCase() : product.code}
+              </Text>
+            </Link>
             {/* NUOVO badge — next-to-code position */}
             {config.nuovoBadge?.attivo && product.collezione === 'CA27' && config.nuovoBadge.posizione === 'next-to-code' && (
               <View style={{ backgroundColor: config.nuovoBadge.bgColor, paddingHorizontal: 3, paddingVertical: 1, borderRadius: 2 }}>
@@ -1211,10 +1241,11 @@ function parseTitleInlines(titolo: string, typo: { titoloBold: boolean; titoloIt
   return [{ text: titolo, bold: typo.titoloBold, italic: typo.titoloItalic }];
 }
 
-function renderTitleInlines(inlines: HtmlInline[], typo: { titoloFontSize: number; titoloColor: string }, titleAlign: 'left' | 'center' | 'right', mb = 18) {
+function renderTitleInlines(inlines: HtmlInline[], typo: { titoloFontSize: number; titoloColor: string; titoloMarginBottom?: number }, titleAlign: 'left' | 'center' | 'right', mb = 18) {
   if (inlines.length === 0) return null;
+  const marginBottom = typo.titoloMarginBottom ?? mb;
   return (
-    <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: mb }}>
+    <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom }}>
       <Text style={{ fontSize: typo.titoloFontSize, color: typo.titoloColor, letterSpacing: 2 }}>
         {inlines.map((seg, i) => (
           <Text key={i} style={{
@@ -1234,6 +1265,18 @@ function resolveFinalLogo(pf: CatalogConfig['paginaFinale'], headerLogoBase64: s
 }
 
 const FINAL_LOGO_H: Record<string, number> = { piccolo: 14, medio: 22, grande: 34 };
+
+function renderSezione3(page: { sezioneFinale3Attiva?: boolean; sezioneFinale3Html?: string; sezioneFinale3FontSize?: number; sezioneFinale3Colore?: string; sezioneFinale3Align?: 'left' | 'center' | 'right' }, padH: number) {
+  if (!page.sezioneFinale3Attiva || !page.sezioneFinale3Html?.trim()) return null;
+  const blocks = parseHtmlToPdf(page.sezioneFinale3Html);
+  if (blocks.length === 0) return null;
+  const align = page.sezioneFinale3Align ?? 'center';
+  return (
+    <View style={{ position: 'absolute', bottom: 20, left: padH, right: padH }}>
+      {renderHtmlBlocks(blocks, { fontSize: page.sezioneFinale3FontSize ?? 8, color: page.sezioneFinale3Colore ?? '#9CA3AF', defaultAlign: align })}
+    </View>
+  );
+}
 
 function FinalPage({
   config,
@@ -1313,23 +1356,25 @@ function FinalPage({
   const PAD_H = 60;
   const PAD_V = 48;
 
+  const mt = typo.marginTop ?? PAD_V;
+  const s1mb = typo.sezione1MarginBottom ?? 0;
+
   // ── full-overlay ─────────────────────────────────────────────────────────────
   if (resolvedLayout === 'full-overlay') {
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
-        {/* Gradient overlay */}
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: '#000000', opacity: 0.55 }} />
-        {/* Text on top */}
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V }}>
           {renderTitleInlines(titleInlines, typo, titleAlign, 8)}
           {bodyBlocks.length > 0 ? (
-            <View style={{ width: '100%' }}>
+            <View style={{ width: '100%', marginBottom: s1mb }}>
               {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
             </View>
           ) : null}
         </View>
         {logoView}
+        {renderSezione3(pf, PAD_H)}
       </Page>
     );
   }
@@ -1339,15 +1384,16 @@ function FinalPage({
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingVertical: PAD_V }}>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
-            <View style={{ width: '100%' }}>
+            <View style={{ width: '100%', marginBottom: s1mb }}>
               {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
             </View>
           ) : null}
         </View>
         {logoView}
+        {renderSezione3(pf, PAD_H)}
       </Page>
     );
   }
@@ -1358,6 +1404,7 @@ function FinalPage({
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         {logoView}
+        {renderSezione3(pf, PAD_H)}
       </Page>
     );
   }
@@ -1371,23 +1418,22 @@ function FinalPage({
     const imgTop = (pageH - imgH) / 2 + (pageH * imgOffsetY / 100);
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina, flexDirection: 'row' }}>
-        {/* Left image area */}
         <View style={{ width: imgAreaW, height: pageH, overflow: 'hidden' }}>
           {imgSrc && (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
           )}
         </View>
-        {/* Right text area */}
-        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingVertical: PAD_V }}>
+        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingTop: mt, paddingBottom: PAD_V }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
-            <View style={{ width: '100%' }}>
+            <View style={{ width: '100%', marginBottom: s1mb }}>
               {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
             </View>
           ) : null}
         </View>
         {logoView}
+        {renderSezione3(pf, 32)}
       </Page>
     );
   }
@@ -1402,16 +1448,14 @@ function FinalPage({
     const imgTop = (imgAreaH - imgH) / 2 + (imgAreaH * imgOffsetY / 100);
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
-        {/* Top text area */}
-        <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingVertical: PAD_V }}>
+        <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
-            <View style={{ width: '100%' }}>
+            <View style={{ width: '100%', marginBottom: s1mb }}>
               {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
             </View>
           ) : null}
         </View>
-        {/* Bottom image area */}
         <View style={{ height: imgAreaH, overflow: 'hidden' }}>
           {imgSrc && (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1419,6 +1463,7 @@ function FinalPage({
           )}
         </View>
         {logoView}
+        {renderSezione3(pf, PAD_H)}
       </Page>
     );
   }
@@ -1432,23 +1477,22 @@ function FinalPage({
   const imgTop = (imgAreaH - imgH) / 2 + (imgAreaH * imgOffsetY / 100);
   return (
     <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
-      {/* Top image area */}
       <View style={{ height: imgAreaH, overflow: 'hidden' }}>
         {imgSrc && (
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
         )}
       </View>
-      {/* Bottom text area */}
-      <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingVertical: PAD_V }}>
+      <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
         {renderTitleInlines(titleInlines, typo, titleAlign)}
         {bodyBlocks.length > 0 ? (
-          <View style={{ width: '100%' }}>
+          <View style={{ width: '100%', marginBottom: s1mb }}>
             {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
           </View>
         ) : null}
       </View>
       {logoView}
+      {renderSezione3(pf, PAD_H)}
     </Page>
   );
 }
@@ -1526,6 +1570,8 @@ function PenultimaPage({
 
   const PAD_H = 60;
   const PAD_V = 48;
+  const mt = typo.marginTop ?? PAD_V;
+  const s1mb = typo.sezione1MarginBottom ?? 0;
 
   if (resolvedLayout === 'full-overlay') {
     return (
@@ -1535,12 +1581,13 @@ function PenultimaPage({
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V }}>
           {renderTitleInlines(titleInlines, typo, titleAlign, 8)}
           {bodyBlocks.length > 0 ? (
-            <View style={{ width: '100%' }}>
+            <View style={{ width: '100%', marginBottom: s1mb }}>
               {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
             </View>
           ) : null}
         </View>
         {logoView}
+        {renderSezione3(pp, PAD_H)}
       </Page>
     );
   }
@@ -1549,15 +1596,16 @@ function PenultimaPage({
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingVertical: PAD_V }}>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
-            <View style={{ width: '100%' }}>
+            <View style={{ width: '100%', marginBottom: s1mb }}>
               {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
             </View>
           ) : null}
         </View>
         {logoView}
+        {renderSezione3(pp, PAD_H)}
       </Page>
     );
   }
@@ -1567,6 +1615,7 @@ function PenultimaPage({
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         {logoView}
+        {renderSezione3(pp, PAD_H)}
       </Page>
     );
   }
@@ -1585,15 +1634,16 @@ function PenultimaPage({
             <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
           )}
         </View>
-        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingVertical: PAD_V }}>
+        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingTop: mt, paddingBottom: PAD_V }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
-            <View style={{ width: '100%' }}>
+            <View style={{ width: '100%', marginBottom: s1mb }}>
               {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
             </View>
           ) : null}
         </View>
         {logoView}
+        {renderSezione3(pp, 32)}
       </Page>
     );
   }
@@ -1607,10 +1657,10 @@ function PenultimaPage({
     const imgTop = (imgAreaH - imgH) / 2 + (imgAreaH * imgOffsetY / 100);
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
-        <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingVertical: PAD_V }}>
+        <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
-            <View style={{ width: '100%' }}>
+            <View style={{ width: '100%', marginBottom: s1mb }}>
               {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
             </View>
           ) : null}
@@ -1622,6 +1672,7 @@ function PenultimaPage({
           )}
         </View>
         {logoView}
+        {renderSezione3(pp, PAD_H)}
       </Page>
     );
   }
@@ -1641,15 +1692,16 @@ function PenultimaPage({
           <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
         )}
       </View>
-      <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingVertical: PAD_V }}>
+      <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
         {renderTitleInlines(titleInlines, typo, titleAlign)}
         {bodyBlocks.length > 0 ? (
-          <View style={{ width: '100%' }}>
+          <View style={{ width: '100%', marginBottom: s1mb }}>
             {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
           </View>
         ) : null}
       </View>
       {logoView}
+      {renderSezione3(pp, PAD_H)}
     </Page>
   );
 }

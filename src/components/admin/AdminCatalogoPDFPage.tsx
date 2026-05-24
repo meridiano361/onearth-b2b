@@ -110,19 +110,21 @@ interface FormState {
     immagineBase64?: string | null;
     immaginePosition?: 'top' | 'center' | 'bottom' | 'background';
     immagineDimensione?: 'small' | 'medium' | 'large' | 'full';
-    // Image controls
     imgOffsetX: number;
     imgOffsetY: number;
     imgScale: number;
     imgOpacity: number;
-    // Layout (sostituisce immaginePosition + immagineDimensione)
     layout: 'full-overlay' | 'img-top' | 'img-bottom' | 'img-left' | 'background' | 'img-only';
-    // Logo system (sostituisce mostraLogo)
     logoTipo: 'onearth' | 'custom' | 'none';
     logoCustomBase64: string | null;
     logoPosX: 'left' | 'center' | 'right';
     logoPosY: 'top' | 'middle' | 'bottom';
     logoDimensione: 'piccolo' | 'medio' | 'grande';
+    sezioneFinale3Attiva: boolean;
+    sezioneFinale3Html: string;
+    sezioneFinale3FontSize: number;
+    sezioneFinale3Colore: string;
+    sezioneFinale3Align: 'left' | 'center' | 'right';
   };
   paginaPenultima: {
     attiva: boolean;
@@ -143,6 +145,11 @@ interface FormState {
     logoPosX: 'left' | 'center' | 'right';
     logoPosY: 'top' | 'middle' | 'bottom';
     logoDimensione: 'piccolo' | 'medio' | 'grande';
+    sezioneFinale3Attiva: boolean;
+    sezioneFinale3Html: string;
+    sezioneFinale3FontSize: number;
+    sezioneFinale3Colore: string;
+    sezioneFinale3Align: 'left' | 'center' | 'right';
   };
   cardFieldStyles: CardFieldStyles;
   separatoreStyle: SeparatorStyle;
@@ -259,6 +266,11 @@ const DEFAULT_STATE: FormState = {
     logoPosX: 'center',
     logoPosY: 'bottom',
     logoDimensione: 'medio',
+    sezioneFinale3Attiva: false,
+    sezioneFinale3Html: '',
+    sezioneFinale3FontSize: 8,
+    sezioneFinale3Colore: '#9CA3AF',
+    sezioneFinale3Align: 'center',
   },
   paginaPenultima: {
     attiva: false,
@@ -277,6 +289,11 @@ const DEFAULT_STATE: FormState = {
     logoPosX: 'center',
     logoPosY: 'bottom',
     logoDimensione: 'medio',
+    sezioneFinale3Attiva: false,
+    sezioneFinale3Html: '',
+    sezioneFinale3FontSize: 8,
+    sezioneFinale3Colore: '#9CA3AF',
+    sezioneFinale3Align: 'center',
   },
   cardFieldStyles: {
     codice:      { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
@@ -318,10 +335,12 @@ const DEFAULT_STATE: FormState = {
   paginaFinaleTypo: {
     titoloFontSize: 20, titoloBold: true, titoloItalic: false, titoloColor: '#1C1C1C',
     testoFontSize: 10, testoColor: '#9CA3AF',
+    titoloMarginBottom: 12, sezione1MarginBottom: 16, sezione2MarginBottom: 16, marginTop: 20,
   },
   paginaPenultimaTypo: {
     titoloFontSize: 20, titoloBold: true, titoloItalic: false, titoloColor: '#1C1C1C',
     testoFontSize: 10, testoColor: '#9CA3AF',
+    titoloMarginBottom: 12, sezione1MarginBottom: 16, sezione2MarginBottom: 16, marginTop: 20,
   },
   useSezioniPersonalizzate: false,
   sezioniPersonalizzate: [],
@@ -2811,6 +2830,73 @@ export default function AdminCatalogoPDFPage() {
                     </div>
                     <MiniColorPicker value={config.paginaPenultimaTypo.testoColor}
                       onChange={(v) => setPaginaPenultimaTypo({ testoColor: v })} />
+
+                    {/* Spaziatura */}
+                    <p className="text-xs font-semibold text-gray-600 pt-1">Spaziatura</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Margine superiore (pt)</label>
+                        <input type="range" min={0} max={80} value={config.paginaPenultimaTypo.marginTop ?? 20}
+                          onChange={(e) => setPaginaPenultimaTypo({ marginTop: parseInt(e.target.value) })}
+                          className="w-full" />
+                        <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.marginTop ?? 20}pt</span>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo titolo (pt)</label>
+                        <input type="range" min={0} max={40} value={config.paginaPenultimaTypo.titoloMarginBottom ?? 12}
+                          onChange={(e) => setPaginaPenultimaTypo({ titoloMarginBottom: parseInt(e.target.value) })}
+                          className="w-full" />
+                        <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.titoloMarginBottom ?? 12}pt</span>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo sez. 1 (pt)</label>
+                        <input type="range" min={0} max={40} value={config.paginaPenultimaTypo.sezione1MarginBottom ?? 16}
+                          onChange={(e) => setPaginaPenultimaTypo({ sezione1MarginBottom: parseInt(e.target.value) })}
+                          className="w-full" />
+                        <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.sezione1MarginBottom ?? 16}pt</span>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo sez. 2 (pt)</label>
+                        <input type="range" min={0} max={40} value={config.paginaPenultimaTypo.sezione2MarginBottom ?? 16}
+                          onChange={(e) => setPaginaPenultimaTypo({ sezione2MarginBottom: parseInt(e.target.value) })}
+                          className="w-full" />
+                        <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.sezione2MarginBottom ?? 16}pt</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sezione in fondo (sezione 3) */}
+                  <div className="space-y-3 pt-1">
+                    <p className="text-xs font-semibold text-gray-600">Sezione in fondo alla pagina</p>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={config.paginaPenultima.sezioneFinale3Attiva}
+                        onChange={(e) => setPaginaPenultima('sezioneFinale3Attiva', e.target.checked)}
+                        className="accent-primary" />
+                      <span className="text-xs text-gray-700">Includi sezione in fondo</span>
+                    </label>
+                    {config.paginaPenultima.sezioneFinale3Attiva && (
+                      <div className="space-y-2 pl-2 border-l-2 border-border">
+                        <RichTextEditor
+                          content={config.paginaPenultima.sezioneFinale3Html}
+                          onChange={(html) => setPaginaPenultima('sezioneFinale3Html', html)}
+                          placeholder="es. www.on-earth.it | info@on-earth.it | Tel. +39 XXX"
+                        />
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Font (pt)</label>
+                            <input type="range" min={8} max={20} value={config.paginaPenultima.sezioneFinale3FontSize}
+                              onChange={(e) => setPaginaPenultima('sezioneFinale3FontSize', parseInt(e.target.value))}
+                              className="w-full" />
+                            <span className="text-2xs text-gray-400">{config.paginaPenultima.sezioneFinale3FontSize}pt</span>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Allineamento</label>
+                            <AlignToggle value={config.paginaPenultima.sezioneFinale3Align} onChange={(v) => setPaginaPenultima('sezioneFinale3Align', v)} />
+                          </div>
+                        </div>
+                        <ColorSwatchPicker label="Colore testo" value={config.paginaPenultima.sezioneFinale3Colore} onChange={(v) => setPaginaPenultima('sezioneFinale3Colore', v)} />
+                      </div>
+                    )}
                   </div>
 
                   {/* Immagine */}
@@ -3091,6 +3177,73 @@ export default function AdminCatalogoPDFPage() {
                     </div>
                     <MiniColorPicker value={config.paginaFinaleTypo.testoColor}
                       onChange={(v) => setPaginaFinaleTypo({ testoColor: v })} />
+
+                    {/* Spaziatura */}
+                    <p className="text-xs font-semibold text-gray-600 pt-1">Spaziatura</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Margine superiore (pt)</label>
+                        <input type="range" min={0} max={80} value={config.paginaFinaleTypo.marginTop ?? 20}
+                          onChange={(e) => setPaginaFinaleTypo({ marginTop: parseInt(e.target.value) })}
+                          className="w-full" />
+                        <span className="text-2xs text-gray-400">{config.paginaFinaleTypo.marginTop ?? 20}pt</span>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo titolo (pt)</label>
+                        <input type="range" min={0} max={40} value={config.paginaFinaleTypo.titoloMarginBottom ?? 12}
+                          onChange={(e) => setPaginaFinaleTypo({ titoloMarginBottom: parseInt(e.target.value) })}
+                          className="w-full" />
+                        <span className="text-2xs text-gray-400">{config.paginaFinaleTypo.titoloMarginBottom ?? 12}pt</span>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo sez. 1 (pt)</label>
+                        <input type="range" min={0} max={40} value={config.paginaFinaleTypo.sezione1MarginBottom ?? 16}
+                          onChange={(e) => setPaginaFinaleTypo({ sezione1MarginBottom: parseInt(e.target.value) })}
+                          className="w-full" />
+                        <span className="text-2xs text-gray-400">{config.paginaFinaleTypo.sezione1MarginBottom ?? 16}pt</span>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo sez. 2 (pt)</label>
+                        <input type="range" min={0} max={40} value={config.paginaFinaleTypo.sezione2MarginBottom ?? 16}
+                          onChange={(e) => setPaginaFinaleTypo({ sezione2MarginBottom: parseInt(e.target.value) })}
+                          className="w-full" />
+                        <span className="text-2xs text-gray-400">{config.paginaFinaleTypo.sezione2MarginBottom ?? 16}pt</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sezione in fondo (sezione 3) */}
+                  <div className="space-y-3 pt-1">
+                    <p className="text-xs font-semibold text-gray-600">Sezione in fondo alla pagina</p>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={config.paginaFinale.sezioneFinale3Attiva}
+                        onChange={(e) => setPaginaFinale('sezioneFinale3Attiva', e.target.checked)}
+                        className="accent-primary" />
+                      <span className="text-xs text-gray-700">Includi sezione in fondo</span>
+                    </label>
+                    {config.paginaFinale.sezioneFinale3Attiva && (
+                      <div className="space-y-2 pl-2 border-l-2 border-border">
+                        <RichTextEditor
+                          content={config.paginaFinale.sezioneFinale3Html}
+                          onChange={(html) => setPaginaFinale('sezioneFinale3Html', html)}
+                          placeholder="es. www.on-earth.it | info@on-earth.it | Tel. +39 XXX"
+                        />
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Font (pt)</label>
+                            <input type="range" min={8} max={20} value={config.paginaFinale.sezioneFinale3FontSize}
+                              onChange={(e) => setPaginaFinale('sezioneFinale3FontSize', parseInt(e.target.value))}
+                              className="w-full" />
+                            <span className="text-2xs text-gray-400">{config.paginaFinale.sezioneFinale3FontSize}pt</span>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Allineamento</label>
+                            <AlignToggle value={config.paginaFinale.sezioneFinale3Align} onChange={(v) => setPaginaFinale('sezioneFinale3Align', v)} />
+                          </div>
+                        </div>
+                        <ColorSwatchPicker label="Colore testo" value={config.paginaFinale.sezioneFinale3Colore} onChange={(v) => setPaginaFinale('sezioneFinale3Colore', v)} />
+                      </div>
+                    )}
                   </div>
 
                   {/* Immagine pagina finale */}
