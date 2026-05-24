@@ -14,34 +14,24 @@ export function titleCase(s: string): string {
 // Lookup entities normalized to UPPERCASE
 const UPPER_ENTITIES = new Set(['linea', 'nomLinea', 'collezione']);
 
-// Lookup entities normalized to Title Case
-const TITLE_ENTITIES = new Set<string>();
-
-// Lookup entities normalized to capFirst
-const CAP_ENTITIES = new Set([
-  'stagione', 'collezione', 'colore', 'temaColore', 'tranche',
-  'gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo',
-]);
-
 export function normalizeLookupValue(entita: string, nome: string): string {
   const t = nome.trim();
   if (!t) return t;
   if (UPPER_ENTITIES.has(entita)) return t.toUpperCase();
-  if (TITLE_ENTITIES.has(entita)) return titleCase(t);
-  if (CAP_ENTITIES.has(entita)) return capFirst(t);
+  // All other entities: preserve the admin's exact casing (only trim)
   return t;
 }
 
-// Product model classification fields that are UPPERCASE
+// Product model fields normalized to UPPERCASE (catalog codes)
 const PRODUCT_UPPER_FIELDS = ['nomLinea', 'collezione'] as const;
 
-// Product model classification fields that are Title Case (none currently)
-const PRODUCT_TITLE_FIELDS: string[] = [];
-
-// Product model classification fields that are capFirst
-const PRODUCT_CAP_FIELDS = [
+// All other classification fields: save exactly as typed by the admin (only trim).
+// capFirst was removed because it silently converts "AI"→"Ai", "PE"→"Pe",
+// "CA27"→"Ca27", making case-only edits impossible to save.
+const PRODUCT_TRIM_FIELDS = [
   'gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo',
   'colore', 'temaColore', 'stagione', 'tranche',
+  'produttore', 'misura', 'paese', 'fasciaRicarico', 'notes',
 ] as const;
 
 export function normalizeProductClassificationFields<T extends Record<string, any>>(data: T): T {
@@ -49,11 +39,10 @@ export function normalizeProductClassificationFields<T extends Record<string, an
   for (const field of PRODUCT_UPPER_FIELDS) {
     if (result[field]) result[field] = (result[field] as string).trim().toUpperCase() || null;
   }
-  for (const field of PRODUCT_TITLE_FIELDS) {
-    if (result[field]) result[field] = titleCase(result[field] as string) || null;
-  }
-  for (const field of PRODUCT_CAP_FIELDS) {
-    if (result[field]) result[field] = capFirst(result[field] as string) || null;
+  for (const field of PRODUCT_TRIM_FIELDS) {
+    if (result[field] !== undefined && result[field] !== null) {
+      result[field] = (result[field] as string).trim() || null;
+    }
   }
   return result as T;
 }

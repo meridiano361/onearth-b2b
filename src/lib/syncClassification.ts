@@ -1,5 +1,11 @@
 import { prisma } from './prisma';
-import { capFirst, upperAll } from './normalizeClassification';
+import { upperAll } from './normalizeClassification';
+
+function trimOrNull(s: string | null | undefined): string | null {
+  if (!s) return null;
+  const t = s.trim();
+  return t || null;
+}
 
 type ClassFields = {
   nomLinea?: string | null;
@@ -26,27 +32,29 @@ export async function syncProductClassification(f: ClassFields): Promise<void> {
       flat.push(prisma.collezione.upsert({ where: { nome: n }, update: {}, create: { nome: n } }));
     }
     if (f.colore) {
-      const n = capFirst(f.colore);
-      flat.push(prisma.colore.upsert({ where: { nome: n }, update: {}, create: { nome: n } }));
+      const n = trimOrNull(f.colore);
+      if (n) flat.push(prisma.colore.upsert({ where: { nome: n }, update: {}, create: { nome: n } }));
     }
     if (f.temaColore) {
-      const n = capFirst(f.temaColore);
-      flat.push(prisma.temaColore.upsert({ where: { nome: n }, update: {}, create: { nome: n } }));
+      const n = trimOrNull(f.temaColore);
+      if (n) flat.push(prisma.temaColore.upsert({ where: { nome: n }, update: {}, create: { nome: n } }));
     }
     if (f.stagione) {
-      const n = capFirst(f.stagione);
-      flat.push(prisma.stagione.upsert({ where: { nome: n }, update: {}, create: { nome: n } }));
+      const n = trimOrNull(f.stagione);
+      if (n) flat.push(prisma.stagione.upsert({ where: { nome: n }, update: {}, create: { nome: n } }));
     }
     await Promise.all(flat);
 
     if (!f.gruppoMerceologico) return;
-    const gmN = capFirst(f.gruppoMerceologico);
+    const gmN = trimOrNull(f.gruppoMerceologico);
+    if (!gmN) return;
     const gm = await prisma.gruppoMerceologico.upsert({
       where: { nome: gmN }, update: {}, create: { nome: gmN },
     });
 
     if (!f.famiglia) return;
-    const famN = capFirst(f.famiglia);
+    const famN = trimOrNull(f.famiglia);
+    if (!famN) return;
     const fam = await prisma.famiglia.upsert({
       where: { nome_gruppoMerceologicoId: { nome: famN, gruppoMerceologicoId: gm.id } },
       update: {},
@@ -54,7 +62,8 @@ export async function syncProductClassification(f: ClassFields): Promise<void> {
     });
 
     if (!f.classe) return;
-    const clsN = capFirst(f.classe);
+    const clsN = trimOrNull(f.classe);
+    if (!clsN) return;
     const cls = await prisma.classe.upsert({
       where: { nome_famigliaId: { nome: clsN, famigliaId: fam.id } },
       update: {},
@@ -62,7 +71,8 @@ export async function syncProductClassification(f: ClassFields): Promise<void> {
     });
 
     if (!f.sottoclasse) return;
-    const subN = capFirst(f.sottoclasse);
+    const subN = trimOrNull(f.sottoclasse);
+    if (!subN) return;
     const sub = await prisma.sottoclasse.upsert({
       where: { nome_classeId: { nome: subN, classeId: cls.id } },
       update: {},
@@ -70,7 +80,8 @@ export async function syncProductClassification(f: ClassFields): Promise<void> {
     });
 
     if (!f.gruppoOmogeneo) return;
-    const goN = capFirst(f.gruppoOmogeneo);
+    const goN = trimOrNull(f.gruppoOmogeneo);
+    if (!goN) return;
     await prisma.gruppoOmogeneo.upsert({
       where: { nome_sottoclasseId: { nome: goN, sottoclasseId: sub.id } },
       update: {},
