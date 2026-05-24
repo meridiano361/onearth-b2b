@@ -81,6 +81,8 @@ function buildFieldValue(campo: string, row: any): unknown {
       return b !== undefined ? b : undefined;
     }
     case 'imageUrl': return str(row.imageUrl);
+    case 'code':
+      return row.code !== undefined ? (String(row.code).toUpperCase().trim() || null) : undefined;
     default: return undefined;
   }
 }

@@ -151,6 +151,7 @@ function detectColumns(headers: string[]): {
 const LS_KEY = 'import-fields-v1';
 
 const FIELD_LABELS: Record<string, string> = {
+  code:               'Codice prodotto',
   name:               'Descrizione / Nome',
   produttore:         'Produttore',
   paese:              'Paese',
@@ -178,7 +179,7 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 const FIELD_GROUPS: { label: string; fields: string[] }[] = [
-  { label: 'Dati base',       fields: ['name', 'produttore', 'paese', 'misura'] },
+  { label: 'Dati base',       fields: ['code', 'name', 'produttore', 'paese', 'misura'] },
   { label: 'Classificazione', fields: ['gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo', 'nomLinea', 'stagione', 'collezione', 'colore', 'temaColore', 'tranche'] },
   { label: 'Prezzi',          fields: ['costPrice', 'retailPrice', 'fasciaRicarico', 'fasciaSconto'] },
   { label: 'Logistica',       fields: ['lotSize', 'iva'] },
@@ -356,7 +357,7 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
   }
 
   function selectAll() {
-    const next = new Set(ALL_UPDATABLE.filter((f) => effectiveMapping[f]));
+    const next = new Set(ALL_UPDATABLE.filter((f) => f !== 'code' && effectiveMapping[f]));
     setSelectedFields(next);
     savePrefs(next);
   }
@@ -608,6 +609,48 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
                   const available = !!effectiveMapping[field];
                   const isManual = available && !autoMapping[field];
                   const checked = available && selectedFields.has(field);
+
+                  if (field === 'code') {
+                    return (
+                      <div key="code" className="col-span-2">
+                        <label className={`flex items-start gap-2 px-3 py-2.5 rounded border transition-colors ${
+                          !available
+                            ? 'border-border/40 opacity-35 cursor-not-allowed select-none'
+                            : checked
+                              ? 'border-orange-400 bg-orange-50 cursor-pointer'
+                              : 'border-border hover:border-gray-400 hover:bg-cream/30 cursor-pointer'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={!available}
+                            onChange={() => available && toggleField(field)}
+                            className="w-3.5 h-3.5 accent-orange-500 flex-shrink-0 mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs text-primary font-medium">{FIELD_LABELS[field]}</span>
+                              <span className="text-2xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded font-medium">Chiave di ricerca</span>
+                              {available && (
+                                <span className={`text-2xs font-mono ${isManual ? 'text-blue-400' : 'text-gray-400'}`}>
+                                  {isManual ? '✎ manuale' : effectiveMapping[field]}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-2xs text-gray-400 mt-0.5">
+                              Sempre usato come chiave di ricerca. Seleziona solo se vuoi aggiornare il codice nel database.
+                            </p>
+                            {checked && (
+                              <p className="text-2xs text-orange-600 font-medium mt-1">
+                                Attenzione: modificare il codice prodotto può causare incongruenze con ordini esistenti. Procedi solo se necessario.
+                              </p>
+                            )}
+                          </div>
+                        </label>
+                      </div>
+                    );
+                  }
+
                   return (
                     <label
                       key={field}
