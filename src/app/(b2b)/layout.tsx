@@ -9,7 +9,8 @@ import CartSidebar from '@/components/cart/CartSidebar';
 import MobileNav from '@/components/layout/MobileNav';
 import PreviewBanner from '@/components/layout/PreviewBanner';
 import { PreviewProvider } from '@/contexts/PreviewContext';
-import { SettingsProvider, parseSettingsFromDb } from '@/contexts/SettingsContext';
+import { SettingsProvider } from '@/contexts/SettingsContext';
+import { parseSettingsFromDb, DEFAULT_APP_SETTINGS } from '@/lib/settingsHelpers';
 
 const CATALOG_FONT_MAP: Record<string, string> = {
   inter: "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif",
@@ -32,13 +33,15 @@ export default async function B2BLayout({
     redirect('/login');
   }
 
-  // Fetch all app settings
+  // Fetch all app settings — double-guarded: DB miss + parse error both fall back to defaults
+  let appSettings = DEFAULT_APP_SETTINGS;
   let settingsRecords: { chiave: string; valore: string }[] = [];
   try {
     settingsRecords = await prisma.appSettings.findMany();
-  } catch { /* fallback to defaults */ }
-
-  const appSettings = parseSettingsFromDb(settingsRecords);
+    appSettings = parseSettingsFromDb(settingsRecords);
+  } catch (e) {
+    console.error('[B2BLayout] AppSettings load failed, using defaults:', e);
+  }
 
   // Catalog font for web interface
   const catalogFontKey = settingsRecords.find((r) => r.chiave === 'catalogo.font')?.valore ?? 'inter';
