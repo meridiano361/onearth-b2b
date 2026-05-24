@@ -9,6 +9,19 @@ import { useQuery } from '@tanstack/react-query';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import CartSidebar from '@/components/cart/CartSidebar';
+import { useSettings } from '@/contexts/SettingsContext';
+
+const MENU_CONFIG: Record<string, {
+  icon: React.ElementType;
+  href?: string;
+  isActive: (pathname: string, ordersOpen: boolean) => boolean;
+}> = {
+  catalogo: { icon: LayoutGrid, href: '/catalog/products', isActive: (p) => p.startsWith('/catalog/products') },
+  preferiti: { icon: Heart, href: '/catalog/preferiti', isActive: (p) => p.startsWith('/catalog/preferiti') },
+  ordini: { icon: Package, isActive: (p, open) => p.startsWith('/catalog/orders') || open },
+  destinazioni: { icon: MapPin, href: '/catalog/destinazioni', isActive: (p) => p.startsWith('/catalog/destinazioni') },
+  assistenza: { icon: HelpCircle, href: '/catalog/assistenza', isActive: (p) => p.startsWith('/catalog/assistenza') },
+};
 
 export default function MobileNav() {
   const [ordersOpen, setOrdersOpen] = useState(false);
@@ -17,17 +30,14 @@ export default function MobileNav() {
   const { getTotalItems } = useCartStore();
   const totalItems = getTotalItems();
   const tn = useTranslations('nav');
+  const { menu } = useSettings();
 
   useEffect(() => {
     setOrdersOpen(false);
   }, [pathname]);
 
   const isHome = pathname === '/catalog' || pathname === '/home';
-  const isCatalog = pathname.startsWith('/catalog/products');
-  const isFavorites = pathname.startsWith('/catalog/preferiti');
   const isOrders = pathname.startsWith('/catalog/orders') || ordersOpen;
-  const isDestinazioni = pathname.startsWith('/catalog/destinazioni');
-  const isAssistenza = pathname.startsWith('/catalog/assistenza');
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['mobile-saved-orders'],
@@ -69,40 +79,51 @@ export default function MobileNav() {
             <span className="text-2xs">Home</span>
           </Link>
 
-          <Link href="/catalog/products" className={navCls(isCatalog)}>
-            <LayoutGrid size={20} />
-            <span className="text-2xs">{tn('catalog')}</span>
-          </Link>
+          {menu.ordine
+            .filter((key) => menu.items[key]?.visibile)
+            .map((key) => {
+              const cfg = MENU_CONFIG[key];
+              if (!cfg) return null;
+              const { icon: Icon, href, isActive } = cfg;
+              const active = isActive(pathname, ordersOpen);
+              const label = menu.items[key]?.label ?? key;
 
-          <Link href="/catalog/preferiti" className={navCls(isFavorites)}>
-            <Heart size={20} className={isFavorites ? 'fill-gray-900' : ''} />
-            <span className="text-2xs">{tn('favorites')}</span>
-          </Link>
+              if (key === 'ordini') {
+                return (
+                  <button
+                    key={key}
+                    onClick={() => { setOrdersOpen(true); setActiveTab('current'); }}
+                    className={navCls(active)}
+                  >
+                    <div className="relative">
+                      <Icon size={20} />
+                      {totalItems > 0 && (
+                        <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-2xs font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
+                          {totalItems > 99 ? '99+' : totalItems}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-2xs">{label}</span>
+                  </button>
+                );
+              }
 
-          <button
-            onClick={() => { setOrdersOpen(true); setActiveTab('current'); }}
-            className={navCls(isOrders)}
-          >
-            <div className="relative">
-              <Package size={20} />
-              {totalItems > 0 && (
-                <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-2xs font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
-                  {totalItems > 99 ? '99+' : totalItems}
-                </span>
-              )}
-            </div>
-            <span className="text-2xs">{tn('orders')}</span>
-          </button>
+              if (key === 'preferiti') {
+                return (
+                  <Link key={key} href={href!} className={navCls(active)}>
+                    <Icon size={20} className={active ? 'fill-gray-900' : ''} />
+                    <span className="text-2xs">{label}</span>
+                  </Link>
+                );
+              }
 
-          <Link href="/catalog/destinazioni" className={navCls(isDestinazioni)}>
-            <MapPin size={20} />
-            <span className="text-2xs">{tn('channels')}</span>
-          </Link>
-
-          <Link href="/catalog/assistenza" className={navCls(isAssistenza)}>
-            <HelpCircle size={20} />
-            <span className="text-2xs">{tn('assistance')}</span>
-          </Link>
+              return (
+                <Link key={key} href={href!} className={navCls(active)}>
+                  <Icon size={20} />
+                  <span className="text-2xs">{label}</span>
+                </Link>
+              );
+            })}
         </div>
       </nav>
 

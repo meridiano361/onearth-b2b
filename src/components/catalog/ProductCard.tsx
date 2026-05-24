@@ -9,6 +9,7 @@ import { useCartStore } from '@/store/cartStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import QuantitySelector from './QuantitySelector';
 import { ProductImage } from '@/components/ui/ProductImage';
+import { useSettings } from '@/contexts/SettingsContext';
 import type { Product } from '@/types';
 
 interface ProductCardProps {
@@ -19,6 +20,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { getItemQuantity, updateQuantity, addItem } = useCartStore();
   const { isFavorited, toggle: toggleFavorite } = useFavorites();
   const t = useTranslations('product');
+  const { card: cs } = useSettings();
   const cartQty = getItemQuantity(product.id);
   const [localQty, setLocalQty] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
@@ -59,7 +61,8 @@ export default function ProductCard({ product }: ProductCardProps) {
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
 
-          {/* Heart / favorite — always visible, top-left, 44px touch area */}
+          {/* Heart / favorite */}
+          {cs.cuoricino && (
           <button
             onClick={(e) => {
               e.preventDefault();
@@ -79,6 +82,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               style={{ filter: isFavorited(product.id) ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.8))' }}
             />
           </button>
+          )}
 
           {/* In-cart overlay — top-right */}
           {inCart && (
@@ -96,7 +100,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
 
           {/* NUOVO badge — CA27 collection */}
-          {product.collezione === 'CA27' && (
+          {cs.badgeNuovo && product.collezione === 'CA27' && (
             <div className="absolute bottom-2 right-2 bg-black text-white text-2xs font-bold px-2 py-0.5 rounded-full tracking-wide">
               NUOVO
             </div>
@@ -105,9 +109,11 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Code + Name */}
         <div className="px-3 pt-3 pb-1">
+          {cs.codice && (
           <p className="text-2xs font-medium tracking-widest uppercase text-gray-600 mb-0.5">
             {product.code}
           </p>
+          )}
           <h3
             className="text-sm font-medium text-primary"
             style={{
@@ -131,20 +137,26 @@ export default function ProductCard({ product }: ProductCardProps) {
       <div className="px-3 pb-3 pt-1 flex flex-col flex-1">
         <div className="flex-1" />
         {/* Prices */}
+        {(cs.prezzoCosto || cs.pvp) && (
         <div className="flex items-end justify-between mb-3">
+          {cs.prezzoCosto && (
           <div>
             <p className="text-2xs text-gray-400 uppercase tracking-wide">{t('cost')}</p>
             <p className="text-sm font-semibold text-primary">
               {formatCurrency(product.costPrice)}
             </p>
           </div>
+          )}
+          {cs.pvp && (
           <div className="text-right">
             <p className="text-2xs text-gray-400 uppercase tracking-wide">{t('sale')}</p>
             <p className="text-xs text-gray-500">
               {formatCurrency(product.retailPrice)}
             </p>
           </div>
+          )}
         </div>
+        )}
 
 
         {/* Lot warning */}
@@ -158,7 +170,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         )}
 
         {/* Cart controls */}
-        {inCart ? (
+        {cs.aggiungi && (inCart ? (
           <QuantitySelector
             value={cartQty}
             onChange={handleQuantityChange}
@@ -186,7 +198,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               </span>
             )}
           </button>
-        )}
+        ))}
       </div>
     </div>
   );

@@ -41,6 +41,7 @@ import TextAlign from '@tiptap/extension-text-align';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface FormState {
+  fontFamiglia: string;
   gruppoMerceologico: string;
   famiglia: string;
   classe: string;
@@ -185,6 +186,7 @@ interface PreviewResult {
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
 const DEFAULT_STATE: FormState = {
+  fontFamiglia: 'helvetica',
   gruppoMerceologico: '',
   famiglia: '',
   classe: '',
@@ -1486,6 +1488,7 @@ export default function AdminCatalogoPDFPage() {
 
   // Section open/close
   const [sections, setSections] = useState({
+    font: false,
     filtri: true,
     formato: true,
     colori: false,
@@ -1890,6 +1893,45 @@ export default function AdminCatalogoPDFPage() {
             <h1 className="text-lg font-bold text-primary">Generatore Catalogo PDF</h1>
             <p className="text-xs text-gray-500">Configura e scarica il catalogo prodotti in formato PDF</p>
           </div>
+        </div>
+
+        {/* ── Font ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.font} onToggle={() => toggleSection('font')}>
+            Font
+          </SectionTitle>
+          {sections.font && (
+            <div className="p-4 space-y-2">
+              {[
+                { value: 'helvetica', label: 'Helvetica (predefinito)', sample: 'Sans-serif classico' },
+                { value: 'nova',      label: 'Nova Flat',               sample: 'Geometrico decorativo' },
+                { value: 'inter',     label: 'Inter',                   sample: 'Sans-serif moderno' },
+                { value: 'playfair',  label: 'Playfair Display',        sample: 'Serif elegante' },
+                { value: 'montserrat', label: 'Montserrat',             sample: 'Geometrico pulito' },
+                { value: 'lato',      label: 'Lato',                    sample: 'Umanistico e caldo' },
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex items-start gap-3 p-2.5 border rounded cursor-pointer transition-colors ${
+                    config.fontFamiglia === opt.value ? 'border-primary bg-cream/30' : 'border-border hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="fontFamiglia"
+                    value={opt.value}
+                    checked={config.fontFamiglia === opt.value}
+                    onChange={() => set('fontFamiglia', opt.value)}
+                    className="mt-0.5 accent-primary"
+                  />
+                  <div>
+                    <p className="text-xs font-medium text-primary">{opt.label}</p>
+                    <p className="text-2xs text-gray-400">{opt.sample}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Filtri ── */}

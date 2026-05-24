@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { ProductImage } from '@/components/ui/ProductImage';
+import { useSettings } from '@/contexts/SettingsContext';
 import type { Product } from '@/types';
 
 function shuffle<T>(arr: T[]): T[] {
@@ -95,6 +96,7 @@ function SpotlightCard({ product }: { product: Product }) {
 
 export default function CustomerHome() {
   const th = useTranslations('home');
+  const { home: hs, card: cs } = useSettings();
 
   const { data: productsData, isLoading } = useQuery({
     queryKey: ['home-products'],
@@ -109,13 +111,16 @@ export default function CustomerHome() {
 
   const spotlightProducts = useMemo(() => {
     if (!productsData?.length) return [];
-    const ca27 = productsData.filter((p) => p.collezione === 'CA27');
-    return shuffle(ca27.length > 0 ? ca27 : productsData).slice(0, 6);
-  }, [productsData]);
+    const filtered = hs.scrollCollezione
+      ? productsData.filter((p) => p.collezione === hs.scrollCollezione)
+      : productsData;
+    return shuffle(filtered.length > 0 ? filtered : productsData).slice(0, hs.scrollNumero);
+  }, [productsData, hs.scrollCollezione, hs.scrollNumero]);
+
+  const titolo1 = hs.titolo1Maiuscolo ? hs.titolo1.toUpperCase() : hs.titolo1;
 
   return (
     <div className="min-h-screen bg-cream">
-      {/* Uniform vertical spacing: py-10 top/bottom + space-y-10 between sections = 40px everywhere */}
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10 space-y-10">
 
         {/* ── Top CTA ─────────────────────────────────────────── */}
@@ -124,24 +129,31 @@ export default function CustomerHome() {
             href="/catalog/products"
             className="bg-black text-white rounded-xl px-8 py-3 text-sm font-semibold hover:bg-gray-800 transition-all duration-150"
           >
-            Apri il catalogo e crea un ordine
+            {hs.cta}
           </Link>
         </div>
 
         {/* ── Scopri la collezione ─────────────────────────────── */}
+        {hs.scrollAttivo && (
         <section>
           <div className="mb-4 text-center">
-            <p className="font-display text-2xl sm:text-3xl text-primary font-light tracking-widest uppercase">
-              Terra e Luce
+            <p
+              className="font-display font-light tracking-widest"
+              style={{ fontSize: hs.titolo1Size, color: hs.titolo1Colore }}
+            >
+              {titolo1}
             </p>
-            <p className="font-display text-sm sm:text-base text-primary font-light tracking-wide mt-1">
-              Scopri la collezione casa 2027
+            <p
+              className="font-display font-light tracking-wide mt-1"
+              style={{ fontSize: hs.titolo2Size, color: hs.titolo2Colore }}
+            >
+              {hs.titolo2}
             </p>
           </div>
 
           {isLoading ? (
             <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-              {[0, 1, 2, 3, 4, 5].map((i) => (
+              {Array.from({ length: hs.scrollNumero }).map((_, i) => (
                 <div key={i} className="flex-none w-36 h-52 bg-white rounded-lg animate-pulse" />
               ))}
             </div>
@@ -155,6 +167,7 @@ export default function CustomerHome() {
             </div>
           )}
         </section>
+        )}
 
         {/* ── Social links ───────────────────────────────────── */}
         <section>

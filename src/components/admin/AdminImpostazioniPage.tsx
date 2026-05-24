@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Power, X, Eye, EyeOff, RefreshCw, Type } from 'lucide-react';
+import { Plus, Pencil, Trash2, Power, X, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatDate } from '@/lib/utils';
 
@@ -93,8 +93,8 @@ function UserModal({ user, onClose, onSaved }: ModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-lg shadow-luxury-xl w-full max-w-md">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg shadow-luxury-xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h2 className="text-sm font-semibold text-primary">
             {isEdit ? 'Modifica utente' : 'Nuovo utente admin'}
@@ -210,91 +210,6 @@ function UserModal({ user, onClose, onSaved }: ModalProps) {
   );
 }
 
-// ─── Font Selector ────────────────────────────────────────────────────────────
-
-const FONT_OPTIONS = [
-  { value: 'inter', label: 'Inter (predefinito)', sample: 'Inter — Pulito e leggibile' },
-  { value: 'playfair', label: 'Playfair Display', sample: 'Playfair — Elegante e serif' },
-  { value: 'montserrat', label: 'Montserrat', sample: 'Montserrat — Geometrico e moderno' },
-  { value: 'lato', label: 'Lato', sample: 'Lato — Umanistico e caldo' },
-];
-
-function CatalogFontSection() {
-  const [saving, setSaving] = useState(false);
-  const { data, refetch } = useQuery<{ catalogFont: string }>({
-    queryKey: ['app-settings'],
-    queryFn: () => fetch('/api/admin/impostazioni').then((r) => r.json()),
-  });
-  const [selected, setSelected] = useState<string | null>(null);
-  const current = selected ?? data?.catalogFont ?? 'inter';
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      const res = await fetch('/api/admin/impostazioni', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ catalogFont: current }),
-      });
-      if (!res.ok) throw new Error();
-      toast.success('Font catalogo aggiornato');
-      refetch();
-    } catch {
-      toast.error('Errore salvataggio');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <section className="mt-10">
-      <div className="flex items-center gap-2 mb-4">
-        <Type size={16} className="text-accent" />
-        <div>
-          <h2 className="text-sm font-semibold text-primary">Font catalogo digitale</h2>
-          <p className="text-2xs text-gray-400 mt-0.5">Scegli il font principale per il catalogo cliente</p>
-        </div>
-      </div>
-      <div className="bg-white border border-border rounded p-4 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {FONT_OPTIONS.map((opt) => (
-            <label
-              key={opt.value}
-              className={`flex items-start gap-3 p-3 border rounded cursor-pointer transition-colors ${
-                current === opt.value ? 'border-primary bg-cream/30' : 'border-border hover:bg-gray-50'
-              }`}
-            >
-              <input
-                type="radio"
-                name="catalogFont"
-                value={opt.value}
-                checked={current === opt.value}
-                onChange={() => setSelected(opt.value)}
-                className="mt-0.5 accent-primary"
-              />
-              <div>
-                <p className="text-xs font-medium text-primary">{opt.label}</p>
-                <p className="text-2xs text-gray-400 mt-0.5">{opt.sample}</p>
-              </div>
-            </label>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving || selected === null || selected === data?.catalogFont}
-          className="flex items-center gap-1.5 text-xs bg-primary text-white px-4 py-2 rounded hover:bg-warm-darker disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {saving ? 'Salvataggio...' : 'Salva font'}
-        </button>
-        <p className="text-2xs text-gray-400">
-          Il cambiamento sarà visibile al prossimo caricamento della pagina catalogo.
-        </p>
-      </div>
-    </section>
-  );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminImpostazioniPage({ currentUserId }: { currentUserId: string }) {
@@ -356,14 +271,16 @@ export default function AdminImpostazioniPage({ currentUserId }: { currentUserId
 
       {/* Section: Utenti Admin */}
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-sm font-semibold text-primary">Utenti Admin</h2>
-            <p className="text-2xs text-gray-400 mt-0.5">{users.length} utenti con accesso al pannello</p>
+        <div className="mb-4">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <h2 className="text-sm font-semibold text-primary">Utenti Admin</h2>
+              <p className="text-2xs text-gray-400 mt-0.5">{users.length} utenti con accesso al pannello</p>
+            </div>
           </div>
           <button
             onClick={() => setModalUser(null)}
-            className="flex items-center gap-1.5 text-xs bg-primary text-white px-3 py-2 rounded hover:bg-warm-darker transition-colors"
+            className="flex items-center justify-center gap-1.5 w-full text-xs bg-primary text-white px-3 py-2.5 rounded hover:bg-warm-darker transition-colors sm:w-auto sm:self-start"
           >
             <Plus size={13} />
             Aggiungi utente
@@ -375,87 +292,112 @@ export default function AdminImpostazioniPage({ currentUserId }: { currentUserId
         ) : users.length === 0 ? (
           <p className="text-sm text-gray-400 py-8 text-center">Nessun utente trovato</p>
         ) : (
-          <div className="bg-white border border-border rounded overflow-hidden">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border bg-cream/40">
-                  <th className="text-left px-4 py-3 text-2xs font-medium uppercase tracking-wide text-gray-400">Nome</th>
-                  <th className="text-left px-4 py-3 text-2xs font-medium uppercase tracking-wide text-gray-400">Email</th>
-                  <th className="text-left px-4 py-3 text-2xs font-medium uppercase tracking-wide text-gray-400">Ruolo</th>
-                  <th className="text-left px-4 py-3 text-2xs font-medium uppercase tracking-wide text-gray-400 hidden sm:table-cell">Creato</th>
-                  <th className="text-left px-4 py-3 text-2xs font-medium uppercase tracking-wide text-gray-400">Stato</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b border-border/50 last:border-0 hover:bg-cream/20 transition-colors">
-                    <td className="px-4 py-3 font-medium text-primary">{user.companyName}</td>
-                    <td className="px-4 py-3 text-gray-500">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-2xs font-semibold px-2 py-0.5 rounded ${ROLE_BADGE[user.role]}`}>
-                        {ROLE_LABELS[user.role]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-400 hidden sm:table-cell">{formatDate(user.createdAt)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`flex items-center gap-1 w-fit text-2xs font-medium px-2 py-0.5 rounded ${
-                        user.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
-                        {user.isActive ? 'Attivo' : 'Disattivo'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 justify-end">
-                        <button
-                          onClick={() => setModalUser(user)}
-                          className="p-1.5 text-gray-400 hover:text-primary hover:bg-cream rounded transition-colors"
-                          title="Modifica"
-                        >
-                          <Pencil size={13} />
-                        </button>
-                        <button
-                          onClick={() => handleToggleActive(user)}
-                          disabled={togglingId === user.id || user.id === currentUserId}
-                          className="p-1.5 text-gray-400 hover:text-primary hover:bg-cream rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          title={user.isActive ? 'Disattiva' : 'Attiva'}
-                        >
-                          <Power size={13} />
-                        </button>
-                        {confirmDeleteId === user.id ? (
-                          <span className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleDelete(user.id)}
-                              disabled={deletingId === user.id}
-                              className="text-2xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
-                            >
-                              {deletingId === user.id ? '...' : 'Conferma'}
-                            </button>
-                            <button
-                              onClick={() => setConfirmDeleteId(null)}
-                              className="text-2xs px-2 py-1 border border-border rounded hover:bg-cream text-gray-500"
-                            >
-                              No
-                            </button>
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => setConfirmDeleteId(user.id)}
-                            disabled={user.id === currentUserId}
-                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Elimina"
-                          >
-                            <Trash2 size={13} />
+          <>
+            {/* Mobile: card list */}
+            <div className="sm:hidden space-y-3">
+              {users.map((user) => (
+                <div key={user.id} className="bg-white border border-border rounded-lg p-4">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-primary truncate">{user.companyName}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                    </div>
+                    <span className={`text-2xs font-semibold px-2 py-0.5 rounded flex-shrink-0 ${ROLE_BADGE[user.role]}`}>
+                      {ROLE_LABELS[user.role]}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className={`flex items-center gap-1 text-2xs font-medium px-2 py-0.5 rounded ${
+                      user.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                      {user.isActive ? 'Attivo' : 'Disattivo'}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setModalUser(user)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-cream rounded transition-colors" title="Modifica">
+                        <Pencil size={13} />
+                      </button>
+                      <button onClick={() => handleToggleActive(user)} disabled={togglingId === user.id || user.id === currentUserId} className="p-1.5 text-gray-400 hover:text-primary hover:bg-cream rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={user.isActive ? 'Disattiva' : 'Attiva'}>
+                        <Power size={13} />
+                      </button>
+                      {confirmDeleteId === user.id ? (
+                        <span className="flex items-center gap-1">
+                          <button onClick={() => handleDelete(user.id)} disabled={deletingId === user.id} className="text-2xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50">
+                            {deletingId === user.id ? '...' : 'Sì'}
                           </button>
-                        )}
-                      </div>
-                    </td>
+                          <button onClick={() => setConfirmDeleteId(null)} className="text-2xs px-2 py-1 border border-border rounded hover:bg-cream text-gray-500">No</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setConfirmDeleteId(user.id)} disabled={user.id === currentUserId} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Elimina">
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: table */}
+            <div className="hidden sm:block bg-white border border-border rounded overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-cream/40">
+                    <th className="text-left px-4 py-3 text-2xs font-medium uppercase tracking-wide text-gray-400">Nome</th>
+                    <th className="text-left px-4 py-3 text-2xs font-medium uppercase tracking-wide text-gray-400">Email</th>
+                    <th className="text-left px-4 py-3 text-2xs font-medium uppercase tracking-wide text-gray-400">Ruolo</th>
+                    <th className="text-left px-4 py-3 text-2xs font-medium uppercase tracking-wide text-gray-400">Creato</th>
+                    <th className="text-left px-4 py-3 text-2xs font-medium uppercase tracking-wide text-gray-400">Stato</th>
+                    <th className="px-4 py-3" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user.id} className="border-b border-border/50 last:border-0 hover:bg-cream/20 transition-colors">
+                      <td className="px-4 py-3 font-medium text-primary">{user.companyName}</td>
+                      <td className="px-4 py-3 text-gray-500">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-2xs font-semibold px-2 py-0.5 rounded ${ROLE_BADGE[user.role]}`}>
+                          {ROLE_LABELS[user.role]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-400">{formatDate(user.createdAt)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`flex items-center gap-1 w-fit text-2xs font-medium px-2 py-0.5 rounded ${
+                          user.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                          {user.isActive ? 'Attivo' : 'Disattivo'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 justify-end">
+                          <button onClick={() => setModalUser(user)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-cream rounded transition-colors" title="Modifica">
+                            <Pencil size={13} />
+                          </button>
+                          <button onClick={() => handleToggleActive(user)} disabled={togglingId === user.id || user.id === currentUserId} className="p-1.5 text-gray-400 hover:text-primary hover:bg-cream rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={user.isActive ? 'Disattiva' : 'Attiva'}>
+                            <Power size={13} />
+                          </button>
+                          {confirmDeleteId === user.id ? (
+                            <span className="flex items-center gap-1">
+                              <button onClick={() => handleDelete(user.id)} disabled={deletingId === user.id} className="text-2xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50">
+                                {deletingId === user.id ? '...' : 'Conferma'}
+                              </button>
+                              <button onClick={() => setConfirmDeleteId(null)} className="text-2xs px-2 py-1 border border-border rounded hover:bg-cream text-gray-500">No</button>
+                            </span>
+                          ) : (
+                            <button onClick={() => setConfirmDeleteId(user.id)} disabled={user.id === currentUserId} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Elimina">
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {/* Role legend */}
@@ -470,9 +412,6 @@ export default function AdminImpostazioniPage({ currentUserId }: { currentUserId
           ))}
         </div>
       </section>
-
-      {/* Section: Font catalogo */}
-      <CatalogFontSection />
 
       {/* Modal */}
       {modalUser !== undefined && (

@@ -4,14 +4,10 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 
-const SINGLETON_ID = 'singleton';
-
 export async function GET() {
   try {
-    const settings = await prisma.appSettings.findUnique({ where: { id: SINGLETON_ID } });
-    return NextResponse.json({
-      catalogFont: settings?.catalogFont ?? 'inter',
-    });
+    const record = await prisma.appSettings.findUnique({ where: { chiave: 'catalogo.font' } });
+    return NextResponse.json({ catalogFont: record?.valore ?? 'inter' });
   } catch {
     return NextResponse.json({ catalogFont: 'inter' });
   }
@@ -27,11 +23,11 @@ export async function PATCH(req: NextRequest) {
   const allowed = ['inter', 'playfair', 'montserrat', 'lato'];
   const catalogFont = allowed.includes(body.catalogFont) ? body.catalogFont : 'inter';
 
-  const settings = await prisma.appSettings.upsert({
-    where: { id: SINGLETON_ID },
-    update: { catalogFont },
-    create: { id: SINGLETON_ID, catalogFont },
+  await prisma.appSettings.upsert({
+    where: { chiave: 'catalogo.font' },
+    update: { valore: catalogFont },
+    create: { chiave: 'catalogo.font', valore: catalogFont },
   });
 
-  return NextResponse.json({ catalogFont: settings.catalogFont });
+  return NextResponse.json({ catalogFont });
 }

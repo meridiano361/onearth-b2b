@@ -404,10 +404,10 @@ model CatalogTemplate {
 }
 
 model AppSettings {
-  id          String   @id @default("singleton")
-  catalogFont String   @default("inter")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  chiave    String   @unique
+  valore    String
+  updatedAt DateTime @updatedAt
 
   @@map("app_settings")
 }

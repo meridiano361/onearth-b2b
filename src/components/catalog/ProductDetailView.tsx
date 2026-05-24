@@ -10,6 +10,7 @@ import { useCartStore } from '@/store/cartStore';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import QuantitySelector from './QuantitySelector';
 import { ProductImage } from '@/components/ui/ProductImage';
+import { useSettings } from '@/contexts/SettingsContext';
 import type { Product } from '@/types';
 
 interface Props {
@@ -24,25 +25,26 @@ export default function ProductDetailView({ id }: Props) {
   const tf = useTranslations('filters');
   const tg = useTranslations('groupings');
   const locale = useLocale();
+  const { scheda: ss } = useSettings();
 
-  const classFields: { key: keyof Product; label: string }[] = [
+  const classFields: { key: keyof Product; label: string; show?: boolean }[] = [
     { key: 'gruppoMerceologico', label: tf('gruppoMerceologico') },
     { key: 'famiglia',           label: tf('famiglia') },
     { key: 'classe',             label: tf('classe') },
     { key: 'sottoclasse',        label: tf('sottoclasse') },
     { key: 'gruppoOmogeneo',     label: tf('gruppoOmogeneo') },
-    { key: 'nomLinea',           label: tg('nomLinea') },
+    { key: 'nomLinea',           label: tg('nomLinea'),    show: ss.linea },
     { key: 'stagione',           label: tg('stagione') },
-    { key: 'collezione',         label: tg('collezione') },
-    { key: 'colore',             label: tg('colore') },
-    { key: 'temaColore',         label: tg('temaColore') },
+    { key: 'collezione',         label: tg('collezione'), show: ss.collezione },
+    { key: 'colore',             label: tg('colore'),     show: ss.colore },
+    { key: 'temaColore',         label: tg('temaColore'), show: ss.temaColore },
   ];
 
-  const detailFields: { key: keyof Product; label: string }[] = [
-    { key: 'produttore', label: tf('produttore') },
-    { key: 'paese',      label: 'Paese' },
-    { key: 'misura',     label: tp('misura') },
-    { key: 'lotSize',    label: tp('lotSizeLabel') },
+  const detailFields: { key: keyof Product; label: string; show?: boolean }[] = [
+    { key: 'produttore', label: tf('produttore'), show: ss.produttore },
+    { key: 'paese',      label: 'Paese',          show: ss.paese },
+    { key: 'misura',     label: tp('misura'),      show: ss.misure },
+    { key: 'lotSize',    label: tp('lotSizeLabel'), show: ss.confezione },
   ];
 
   const { data, isLoading, isError } = useQuery({
@@ -94,8 +96,9 @@ export default function ProductDetailView({ id }: Props) {
     );
   }
 
-  const activeClassFields = classFields.filter(({ key }) => product[key]);
-  const activeDetailFields = detailFields.filter(({ key }) => {
+  const activeClassFields = classFields.filter(({ key, show }) => show !== false && product[key]);
+  const activeDetailFields = detailFields.filter(({ key, show }) => {
+    if (show === false) return false;
     const v = product[key];
     return v !== null && v !== undefined && v !== '' && v !== 1;
   });
@@ -108,11 +111,14 @@ export default function ProductDetailView({ id }: Props) {
     return product.description || null;
   })();
 
-  const hasBusinessInfo =
-    product.fasciaSconto != null ||
-    product.fasciaRicarico ||
-    product.iva != null;
   const guadagnoPotenziale = Number(product.retailPrice) - Number(product.costPrice);
+  const margine = product.retailPrice ? (guadagnoPotenziale / Number(product.retailPrice)) * 100 : 0;
+  const hasBusinessInfo =
+    (ss.fasciaSconto && product.fasciaSconto != null) ||
+    (ss.fasciaRicarico && !!product.fasciaRicarico) ||
+    (ss.iva && product.iva != null) ||
+    ss.guadagnoPotenziale ||
+    ss.margine;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
@@ -136,26 +142,35 @@ export default function ProductDetailView({ id }: Props) {
 
         {/* Info */}
         <div className="flex flex-col">
-          <p className="label-luxury text-accent mb-1">{product.code}</p>
+          {ss.codice && <p className="label-luxury text-accent mb-1">{product.code}</p>}
 
           <h1 className="font-display text-2xl sm:text-3xl text-primary font-light leading-snug mb-3">
             {product.name}
           </h1>
 
-          {localizedDescription && (
+          {ss.descrizione && localizedDescription && (
             <p className="text-sm text-gray-500 leading-relaxed mb-4">{localizedDescription}</p>
           )}
 
           <div className="mb-6">
-            <p className="text-2xs text-gray-400 uppercase tracking-widest mb-0.5">
-              {tp('retailPriceLabel')}
-            </p>
-            <p className="text-3xl font-semibold text-primary">
-              {formatCurrency(product.retailPrice)}
-            </p>
-            {product.lotSize > 1 && (
-              <p className="text-xs text-gray-400 mt-0.5">
-                {tp('lotPack', { lotSize: product.lotSize })}
+            {ss.pvp && (
+              <>
+                <p className="text-2xs text-gray-400 uppercase tracking-widest mb-0.5">
+                  {tp('retailPriceLabel')}
+                </p>
+                <p className="text-3xl font-semibold text-primary">
+                  {formatCurrency(product.retailPrice)}
+                </p>
+                {product.lotSize > 1 && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {tp('lotPack', { lotSize: product.lotSize })}
+                  </p>
+                )}
+              </>
+            )}
+            {ss.prezzoCosto && (
+              <p className="text-xs text-gray-400 mt-1">
+                {tp('cost')}: {formatCurrency(product.costPrice)}
               </p>
             )}
           </div>
@@ -218,7 +233,7 @@ export default function ProductDetailView({ id }: Props) {
         )}
 
         <div className="space-y-6">
-          {(activeDetailFields.length > 0 || product.notes) && (
+          {(activeDetailFields.length > 0 || (ss.note && product.notes)) && (
             <div>
               <h2 className="label-luxury text-gray-400 mb-3">{tp('detailsTitle')}</h2>
               <div className="space-y-2">
@@ -232,7 +247,7 @@ export default function ProductDetailView({ id }: Props) {
                     </span>
                   </div>
                 ))}
-                {product.notes && (
+                {ss.note && product.notes && (
                   <div className="flex items-start gap-2 pt-1">
                     <span className="text-xs text-gray-400 w-32 flex-shrink-0">{tp('notesLabel')}</span>
                     <span className="text-sm text-gray-500 italic">{product.notes}</span>
@@ -246,28 +261,36 @@ export default function ProductDetailView({ id }: Props) {
             <div>
               <h2 className="label-luxury text-gray-400 mb-3">Informazioni commerciali</h2>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                {product.fasciaSconto != null && (
+                {ss.fasciaSconto && product.fasciaSconto != null && (
                   <>
                     <span className="text-xs text-gray-400">Fascia sconto</span>
                     <span className="text-xs font-medium text-primary">{Number(product.fasciaSconto)}%</span>
                   </>
                 )}
-                {product.fasciaRicarico && (
+                {ss.fasciaRicarico && product.fasciaRicarico && (
                   <>
                     <span className="text-xs text-gray-400">Fascia ricarico</span>
                     <span className="text-xs font-medium text-primary">{product.fasciaRicarico}</span>
                   </>
                 )}
-                {product.iva != null && (
+                {ss.iva && product.iva != null && (
                   <>
                     <span className="text-xs text-gray-400">IVA</span>
                     <span className="text-xs font-medium text-primary">{product.iva}%</span>
                   </>
                 )}
-                <>
-                  <span className="text-xs text-gray-400">Guadagno potenziale</span>
-                  <span className="text-xs font-medium text-emerald-600">{formatCurrency(guadagnoPotenziale)}</span>
-                </>
+                {ss.guadagnoPotenziale && (
+                  <>
+                    <span className="text-xs text-gray-400">Guadagno potenziale</span>
+                    <span className="text-xs font-medium text-emerald-600">{formatCurrency(guadagnoPotenziale)}</span>
+                  </>
+                )}
+                {ss.margine && (
+                  <>
+                    <span className="text-xs text-gray-400">Margine</span>
+                    <span className="text-xs font-medium text-primary">{margine.toFixed(1)}%</span>
+                  </>
+                )}
               </div>
             </div>
           )}

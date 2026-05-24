@@ -1,5 +1,17 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, Image, Link } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Image, Link, Font } from '@react-pdf/renderer';
+
+// Register custom fonts (fetched from CDN at PDF generation time)
+Font.register({ family: 'Inter',           src: 'https://cdn.jsdelivr.net/npm/@fontsource/inter/files/inter-latin-400-normal.woff2' });
+Font.register({ family: 'Inter-Bold',      src: 'https://cdn.jsdelivr.net/npm/@fontsource/inter/files/inter-latin-700-normal.woff2' });
+Font.register({ family: 'Lato',            src: 'https://cdn.jsdelivr.net/npm/@fontsource/lato/files/lato-latin-400-normal.woff2' });
+Font.register({ family: 'Lato-Bold',       src: 'https://cdn.jsdelivr.net/npm/@fontsource/lato/files/lato-latin-700-normal.woff2' });
+Font.register({ family: 'Montserrat',      src: 'https://cdn.jsdelivr.net/npm/@fontsource/montserrat/files/montserrat-latin-400-normal.woff2' });
+Font.register({ family: 'Montserrat-Bold', src: 'https://cdn.jsdelivr.net/npm/@fontsource/montserrat/files/montserrat-latin-700-normal.woff2' });
+Font.register({ family: 'Playfair',        src: 'https://cdn.jsdelivr.net/npm/@fontsource/playfair-display/files/playfair-display-latin-400-normal.woff2' });
+Font.register({ family: 'Playfair-Bold',   src: 'https://cdn.jsdelivr.net/npm/@fontsource/playfair-display/files/playfair-display-latin-700-normal.woff2' });
+Font.register({ family: 'Nova',            src: 'https://cdn.jsdelivr.net/npm/@fontsource/nova-flat/files/nova-flat-latin-400-normal.woff2' });
+Font.register({ family: 'Nova-Bold',       src: 'https://cdn.jsdelivr.net/npm/@fontsource/nova-flat/files/nova-flat-latin-400-normal.woff2' });
 
 const APP_BASE_URL = 'https://app.b2b.on-earth.it';
 import { parse as parseHtmlNode } from 'node-html-parser';
@@ -138,6 +150,7 @@ export type CustomSection = {
 };
 
 export type CatalogConfig = {
+  fontFamiglia?: string;
   titolo: string;
   mostraLogo: boolean;
   mostraData: boolean;
@@ -319,11 +332,26 @@ function resolveCoverLogo(cov: CatalogConfig['copertina'], headerLogoBase64: str
 
 // ── Typography helpers ────────────────────────────────────────────────────────
 
-function fieldFont(fs: FieldStyle): string {
-  if (fs.bold && fs.italic) return 'Helvetica-BoldOblique';
-  if (fs.bold) return 'Helvetica-Bold';
-  if (fs.italic) return 'Helvetica-Oblique';
-  return 'Helvetica';
+function resolveFamily(fontFamiglia?: string): string {
+  switch (fontFamiglia) {
+    case 'inter':      return 'Inter';
+    case 'lato':       return 'Lato';
+    case 'montserrat': return 'Montserrat';
+    case 'playfair':   return 'Playfair';
+    case 'nova':       return 'Nova';
+    default:           return 'Helvetica';
+  }
+}
+
+function fieldFont(fs: FieldStyle, fontFamiglia?: string): string {
+  const base = resolveFamily(fontFamiglia);
+  if (base === 'Helvetica') {
+    if (fs.bold && fs.italic) return 'Helvetica-BoldOblique';
+    if (fs.bold) return 'Helvetica-Bold';
+    if (fs.italic) return 'Helvetica-Oblique';
+    return 'Helvetica';
+  }
+  return fs.bold ? `${base}-Bold` : base;
 }
 
 type Segment = { text: string; bold: boolean; italic: boolean };
@@ -815,7 +843,7 @@ function ProductCard({
             <Link src={`${APP_BASE_URL}/catalog/${product.id}`}>
               <Text style={{
                 fontSize: cfs.codice.fontSize,
-                fontFamily: fieldFont(cfs.codice),
+                fontFamily: fieldFont(cfs.codice, config.fontFamiglia),
                 color: cfs.codice.color,
                 letterSpacing: 0.3,
                 overflow: 'hidden',
@@ -839,7 +867,7 @@ function ProductCard({
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <Text style={{
               fontSize: cfs.descrizione.fontSize,
-              fontFamily: fieldFont(cfs.descrizione),
+              fontFamily: fieldFont(cfs.descrizione, config.fontFamiglia),
               color: cfs.descrizione.color,
               lineHeight: 1.25,
               overflow: 'hidden',
@@ -857,7 +885,7 @@ function ProductCard({
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <Text style={{
               fontSize: misureStyle.fontSize,
-              fontFamily: fieldFont(misureStyle),
+              fontFamily: fieldFont(misureStyle, config.fontFamiglia),
               color: misureStyle.color,
               overflow: 'hidden',
             }} {...({ numberOfLines: 1 } as any)}>
@@ -879,7 +907,7 @@ function ProductCard({
                 {f.produttore && product.produttore ? (
                   <Text style={{
                     fontSize: cfs.produttore.fontSize,
-                    fontFamily: fieldFont(cfs.produttore),
+                    fontFamily: fieldFont(cfs.produttore, config.fontFamiglia),
                     color: cfs.produttore.color,
                     lineHeight: 1.3,
                   }}>
@@ -889,7 +917,7 @@ function ProductCard({
                 {f.paese && product.paese ? (
                   <Text style={{
                     fontSize: cfs.paese.fontSize,
-                    fontFamily: fieldFont(cfs.paese),
+                    fontFamily: fieldFont(cfs.paese, config.fontFamiglia),
                     color: cfs.paese.color,
                     lineHeight: 1.3,
                   }}>
@@ -906,7 +934,7 @@ function ProductCard({
                     <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Costo i.e.</Text>
                     <Text style={{
                       fontSize: cfs.prezzoCosto.fontSize,
-                      fontFamily: fieldFont(cfs.prezzoCosto),
+                      fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia),
                       color: cfs.prezzoCosto.color,
                     }}>
                       {euro(product.costPrice)}
@@ -918,7 +946,7 @@ function ProductCard({
                     <Text style={[s.priceLabel, { color: cfs.pvp.color }]}>PVP i.i.</Text>
                     <Text style={{
                       fontSize: cfs.pvp.fontSize,
-                      fontFamily: fieldFont(cfs.pvp),
+                      fontFamily: fieldFont(cfs.pvp, config.fontFamiglia),
                       color: cfs.pvp.color,
                     }}>
                       {euro(product.retailPrice)}
@@ -1040,7 +1068,7 @@ function CoverPage({
     const imgTop = (pageH - imgH) / 2 + (pageH * imgOffsetY / 100);
 
     return (
-      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica' }}>
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia) }}>
         {cov.immagineBase64 && (
           <Image
             src={cov.immagineBase64}
@@ -1117,7 +1145,7 @@ function CoverPage({
     const imgTopH = (halfH - imgHh) / 2 + (halfH * imgOffsetY / 100);
 
     return (
-      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica' }}>
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia) }}>
         {/* Top half: image */}
         {cov.immagineBase64 ? (
           <Image
@@ -1362,7 +1390,7 @@ function FinalPage({
   // ── full-overlay ─────────────────────────────────────────────────────────────
   if (resolvedLayout === 'full-overlay') {
     return (
-      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: '#000000', opacity: 0.55 }} />
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V }}>
@@ -1382,7 +1410,7 @@ function FinalPage({
   // ── background ───────────────────────────────────────────────────────────────
   if (resolvedLayout === 'background') {
     return (
-      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
@@ -1401,7 +1429,7 @@ function FinalPage({
   // ── img-only ─────────────────────────────────────────────────────────────────
   if (resolvedLayout === 'img-only') {
     return (
-      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         {logoView}
         {renderSezione3(pf, PAD_H)}
@@ -1417,7 +1445,7 @@ function FinalPage({
     const imgLeft = (imgAreaW - imgW) / 2 + (imgAreaW * imgOffsetX / 100);
     const imgTop = (pageH - imgH) / 2 + (pageH * imgOffsetY / 100);
     return (
-      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina, flexDirection: 'row' }}>
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina, flexDirection: 'row' }}>
         <View style={{ width: imgAreaW, height: pageH, overflow: 'hidden' }}>
           {imgSrc && (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1447,7 +1475,7 @@ function FinalPage({
     const imgLeft = (pageW - imgW) / 2 + (pageW * imgOffsetX / 100);
     const imgTop = (imgAreaH - imgH) / 2 + (imgAreaH * imgOffsetY / 100);
     return (
-      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
@@ -1476,7 +1504,7 @@ function FinalPage({
   const imgLeft = (pageW - imgW) / 2 + (pageW * imgOffsetX / 100);
   const imgTop = (imgAreaH - imgH) / 2 + (imgAreaH * imgOffsetY / 100);
   return (
-    <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+    <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
       <View style={{ height: imgAreaH, overflow: 'hidden' }}>
         {imgSrc && (
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1575,7 +1603,7 @@ function PenultimaPage({
 
   if (resolvedLayout === 'full-overlay') {
     return (
-      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: '#000000', opacity: 0.55 }} />
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V }}>
@@ -1594,7 +1622,7 @@ function PenultimaPage({
 
   if (resolvedLayout === 'background') {
     return (
-      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
@@ -1612,7 +1640,7 @@ function PenultimaPage({
 
   if (resolvedLayout === 'img-only') {
     return (
-      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         {logoView}
         {renderSezione3(pp, PAD_H)}
@@ -1627,7 +1655,7 @@ function PenultimaPage({
     const imgLeft = (imgAreaW - imgW) / 2 + (imgAreaW * imgOffsetX / 100);
     const imgTop = (pageH - imgH) / 2 + (pageH * imgOffsetY / 100);
     return (
-      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina, flexDirection: 'row' }}>
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina, flexDirection: 'row' }}>
         <View style={{ width: imgAreaW, height: pageH, overflow: 'hidden' }}>
           {imgSrc && (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1656,7 +1684,7 @@ function PenultimaPage({
     const imgLeft = (pageW - imgW) / 2 + (pageW * imgOffsetX / 100);
     const imgTop = (imgAreaH - imgH) / 2 + (imgAreaH * imgOffsetY / 100);
     return (
-      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+      <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
@@ -1685,7 +1713,7 @@ function PenultimaPage({
   const imgLeft = (pageW - imgW) / 2 + (pageW * imgOffsetX / 100);
   const imgTop = (imgAreaH - imgH) / 2 + (imgAreaH * imgOffsetY / 100);
   return (
-    <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: config.colori.sfondoPagina }}>
+    <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
       <View style={{ height: imgAreaH, overflow: 'hidden' }}>
         {imgSrc && (
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
