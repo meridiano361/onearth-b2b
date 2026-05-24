@@ -8,11 +8,13 @@ import { useCartStore } from '@/store/cartStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { ProductImage } from '@/components/ui/ProductImage';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useSettings } from '@/contexts/SettingsContext';
 import type { Product } from '@/types';
 
 function ProductRow({ product }: { product: Product }) {
   const { addItem, getItemQuantity } = useCartStore();
   const { isFavorited, toggle: toggleFavorite } = useFavorites();
+  const { card: cs } = useSettings();
   const [justAdded, setJustAdded] = useState(false);
   const [heartPop, setHeartPop] = useState(false);
 
@@ -68,7 +70,7 @@ function ProductRow({ product }: { product: Product }) {
       <Link href={`/catalog/${product.id}`} className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
           <p className="text-2xs font-mono text-gray-400 tracking-wide leading-none">{product.code}</p>
-          {product.collezione === 'CA27' && (
+          {cs.badgeNuovo && product.collezione?.toUpperCase() === 'CA27' && (
             <span className="bg-black text-white text-2xs font-bold px-1.5 py-0.5 rounded-full tracking-wide leading-none">NUOVO</span>
           )}
         </div>

@@ -8,11 +8,13 @@ import { useCartStore } from '@/store/cartStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { ProductImage } from '@/components/ui/ProductImage';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useSettings } from '@/contexts/SettingsContext';
 import type { Product } from '@/types';
 
 function LookbookCard({ product }: { product: Product }) {
   const { addItem, getItemQuantity } = useCartStore();
   const { isFavorited, toggle: toggleFavorite } = useFavorites();
+  const { card: cs } = useSettings();
   const [justAdded, setJustAdded] = useState(false);
   const [heartPop, setHeartPop] = useState(false);
 
@@ -68,7 +70,7 @@ function LookbookCard({ product }: { product: Product }) {
       </button>
 
       {/* NUOVO badge — CA27 collection */}
-      {product.collezione === 'CA27' && (
+      {cs.badgeNuovo && product.collezione?.toUpperCase() === 'CA27' && (
         <div className="absolute top-2 right-2 bg-black text-white text-2xs font-bold px-2 py-0.5 rounded-full tracking-wide">
           NUOVO
         </div>

@@ -100,7 +100,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
 
           {/* NUOVO badge — CA27 collection */}
-          {cs.badgeNuovo && product.collezione === 'CA27' && (
+          {cs.badgeNuovo && product.collezione?.toUpperCase() === 'CA27' && (
             <div className="absolute bottom-2 right-2 bg-black text-white text-2xs font-bold px-2 py-0.5 rounded-full tracking-wide">
               NUOVO
             </div>

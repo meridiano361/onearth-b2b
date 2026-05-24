@@ -24,6 +24,7 @@ function shuffle<T>(arr: T[]): T[] {
 function SpotlightCard({ product }: { product: Product }) {
   const { addItem, getItemQuantity } = useCartStore();
   const { isFavorited, toggle: toggleFavorite } = useFavorites();
+  const { card: cs } = useSettings();
   const [justAdded, setJustAdded] = useState(false);
 
   const cartQty = getItemQuantity(product.id);
@@ -54,6 +55,11 @@ function SpotlightCard({ product }: { product: Product }) {
           {inCart && (
             <div className="absolute top-1.5 right-1.5 bg-accent rounded-full p-0.5">
               <Check size={8} className="text-white" />
+            </div>
+          )}
+          {cs.badgeNuovo && product.collezione?.toUpperCase() === 'CA27' && (
+            <div className="absolute bottom-1.5 left-1.5 bg-black text-white text-2xs font-bold px-1.5 py-0.5 rounded-full tracking-wide leading-none">
+              NUOVO
             </div>
           )}
         </div>
