@@ -78,6 +78,7 @@ interface FetchProductsOptions {
   raggruppa: string;
   mostraLogo: boolean;
   coverImgBase64?: string | null;
+  fotoConfig?: { numero: 'solo-principale' | 'tutte' | 'scegli'; quantita: number; layout: 'grande-thumbnail' | 'griglia-2x2' | 'prima-disponibile' };
 }
 
 async function buildGroupsAndConfig(opts: FetchProductsOptions & {
@@ -86,7 +87,7 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
   mostraPagina: boolean;
   fullConfig?: Partial<CatalogConfig>;
 }): Promise<{ groups: GroupForPDF[]; config: CatalogConfig }> {
-  const { where, orderBy, campi, raggruppa, mostraLogo, coverImgBase64, titolo, mostraData, mostraPagina, fullConfig } = opts;
+  const { where, orderBy, campi, raggruppa, mostraLogo, coverImgBase64, titolo, mostraData, mostraPagina, fullConfig, fotoConfig } = opts;
 
   const products = await prisma.product.findMany({
     where,
@@ -98,6 +99,9 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
       description: true,
       costPrice: true,
       retailPrice: true,
+      imageUrl2: true,
+      imageUrl3: true,
+      imageUrl4: true,
       lotSize: true,
       imageUrl: true,
       misura: true,
@@ -120,13 +124,27 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
   // Download images concurrently (max 20 at a time)
   const BATCH = 20;
   const imageMap = new Map<string, string | null>();
+  const imageMap2 = new Map<string, string | null>();
+  const imageMap3 = new Map<string, string | null>();
+  const imageMap4 = new Map<string, string | null>();
+  const fotoConf = opts.fotoConfig;
+  const needsExtraPhotos = fotoConf && fotoConf.numero !== 'solo-principale' && campi.foto;
   if (campi.foto) {
     for (let i = 0; i < products.length; i += BATCH) {
       const slice = products.slice(i, i + BATCH);
-      const results = await Promise.all(
+      const mainResults = await Promise.all(
         slice.map((p) => (p.imageUrl ? fetchImageAsJpegBase64(p.imageUrl) : Promise.resolve(null)))
       );
-      slice.forEach((p, j) => imageMap.set(p.id, results[j]));
+      slice.forEach((p, j) => imageMap.set(p.id, mainResults[j]));
+
+      if (needsExtraPhotos) {
+        const [r2, r3, r4] = await Promise.all([
+          Promise.all(slice.map((p) => ((p as any).imageUrl2 ? fetchImageAsJpegBase64((p as any).imageUrl2) : Promise.resolve(null)))),
+          Promise.all(slice.map((p) => ((p as any).imageUrl3 ? fetchImageAsJpegBase64((p as any).imageUrl3) : Promise.resolve(null)))),
+          Promise.all(slice.map((p) => ((p as any).imageUrl4 ? fetchImageAsJpegBase64((p as any).imageUrl4) : Promise.resolve(null)))),
+        ]);
+        slice.forEach((p, j) => { imageMap2.set(p.id, r2[j]); imageMap3.set(p.id, r3[j]); imageMap4.set(p.id, r4[j]); });
+      }
     }
   }
 
@@ -148,6 +166,9 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
     collezione: p.collezione,
     iva: p.iva,
     imageDataUri: imageMap.get(p.id) ?? null,
+    imageDataUri2: imageMap2.get(p.id) ?? null,
+    imageDataUri3: imageMap3.get(p.id) ?? null,
+    imageDataUri4: imageMap4.get(p.id) ?? null,
     classe: p.classe,
     sottoclasse: p.sottoclasse,
     famiglia: p.famiglia,
@@ -315,6 +336,7 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
       textColor: '#FFFFFF',
       posizione: 'image-top-right',
     },
+    fotoConfig: fotoConfig ?? fullConfig?.fotoConfig,
   };
 
   // If a cover image was provided separately (e.g. from GET route), inject it
@@ -475,6 +497,7 @@ export async function POST(req: NextRequest) {
       titolo: body.titolo || 'Catalogo ON EARTH',
       mostraData: body.mostraData !== false,
       mostraPagina: body.mostraPagina !== false,
+      fotoConfig: body.fotoConfig,
       // Pass all new fields through fullConfig
       fullConfig: {
         formato: body.formato,

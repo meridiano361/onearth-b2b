@@ -167,6 +167,11 @@ interface FormState {
     textColor: string;
     posizione: 'image-top-right' | 'next-to-code';
   };
+  fotoConfig: {
+    numero: 'solo-principale' | 'tutte' | 'scegli';
+    quantita: number;
+    layout: 'grande-thumbnail' | 'griglia-2x2' | 'prima-disponibile';
+  };
 }
 
 interface Template {
@@ -181,6 +186,7 @@ interface PreviewResult {
   pages: number;
   productPages: number;
   groupPages: number;
+  fotoStats?: { senza: number; una: number; multiple: number } | null;
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
@@ -354,6 +360,11 @@ const DEFAULT_STATE: FormState = {
     textColor: '#FFFFFF',
     posizione: 'image-top-right',
   },
+  fotoConfig: {
+    numero: 'solo-principale' as const,
+    quantita: 1,
+    layout: 'grande-thumbnail' as const,
+  },
 };
 
 // Merge a saved (possibly old) template config with DEFAULT_STATE so that
@@ -377,6 +388,7 @@ function mergeWithDefaults(saved: any): FormState {
     paginaFinaleTypo: { ...DEFAULT_STATE.paginaFinaleTypo, ...saved?.paginaFinaleTypo },
     paginaPenultimaTypo: { ...DEFAULT_STATE.paginaPenultimaTypo, ...saved?.paginaPenultimaTypo },
     nuovoBadge: { ...DEFAULT_STATE.nuovoBadge, ...saved?.nuovoBadge },
+    fotoConfig: { ...DEFAULT_STATE.fotoConfig, ...saved?.fotoConfig },
     sezioniPersonalizzate: saved?.sezioniPersonalizzate ?? DEFAULT_STATE.sezioniPersonalizzate,
   };
 }
@@ -1505,6 +1517,7 @@ export default function AdminCatalogoPDFPage() {
     paginaFinale: false,
     sezioniPersonalizzate: false,
     nuovoBadge: false,
+    fotoConfig: false,
   });
 
   // Custom sections editing state
@@ -2235,6 +2248,79 @@ export default function AdminCatalogoPDFPage() {
             </div>
           )}
         </div>
+
+        {/* ── Foto prodotto ── */}
+        {config.campi.foto && (
+          <div className="border border-border rounded overflow-hidden">
+            <SectionTitle open={sections.fotoConfig} onToggle={() => toggleSection('fotoConfig')}>
+              Foto prodotto
+            </SectionTitle>
+            {sections.fotoConfig && (
+              <div className="p-4 space-y-4">
+                <div>
+                  <p className="text-xs font-medium text-gray-600 mb-2">Numero foto per prodotto</p>
+                  <div className="space-y-1.5">
+                    {([
+                      { value: 'solo-principale', label: 'Solo foto principale' },
+                      { value: 'tutte', label: 'Tutte le foto disponibili (max 4)' },
+                      { value: 'scegli', label: 'Scegli quante' },
+                    ] as const).map((opt) => (
+                      <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="fotoNumero"
+                          value={opt.value}
+                          checked={config.fotoConfig.numero === opt.value}
+                          onChange={() => setConfig((c) => ({ ...c, fotoConfig: { ...c.fotoConfig, numero: opt.value } }))}
+                          className="accent-primary"
+                        />
+                        <span className="text-xs text-gray-700">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {config.fotoConfig.numero === 'scegli' && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs text-gray-600">Numero massimo di foto:</span>
+                      <select
+                        value={config.fotoConfig.quantita}
+                        onChange={(e) => setConfig((c) => ({ ...c, fotoConfig: { ...c.fotoConfig, quantita: Number(e.target.value) } }))}
+                        className="border border-border rounded text-xs px-2 py-1 bg-white"
+                      >
+                        {[2, 3, 4].map((n) => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+                {config.fotoConfig.numero !== 'solo-principale' && (
+                  <div className="border-t border-border pt-3">
+                    <p className="text-xs font-medium text-gray-600 mb-2">Layout foto multiple</p>
+                    <div className="space-y-1.5">
+                      {([
+                        { value: 'grande-thumbnail', label: 'Grande + thumbnail laterali' },
+                        { value: 'griglia-2x2', label: 'Griglia 2×2' },
+                        { value: 'prima-disponibile', label: 'Solo la prima disponibile' },
+                      ] as const).map((opt) => (
+                        <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="fotoLayout"
+                            value={opt.value}
+                            checked={config.fotoConfig.layout === opt.value}
+                            onChange={() => setConfig((c) => ({ ...c, fotoConfig: { ...c.fotoConfig, layout: opt.value } }))}
+                            className="accent-primary"
+                          />
+                          <span className="text-xs text-gray-700">{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Tipografia campi scheda ── */}
         <div className="border border-border rounded overflow-hidden">
@@ -3819,6 +3905,23 @@ export default function AdminCatalogoPDFPage() {
                 <span className="text-gray-500 font-medium">Totale pagine stimate</span>
                 <span className="font-bold text-primary">{preview.pages}</span>
               </div>
+              {preview.fotoStats && (
+                <div className="border-t border-border pt-1 mt-1 space-y-1">
+                  <p className="text-2xs text-gray-400 font-medium uppercase tracking-wide">Foto</p>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Con 2+ foto</span>
+                    <span className="font-semibold text-primary">{preview.fotoStats.multiple}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Con 1 foto</span>
+                    <span className="font-semibold text-primary">{preview.fotoStats.una}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Senza foto</span>
+                    <span className={`font-semibold ${preview.fotoStats.senza > 0 ? 'text-amber-500' : 'text-primary'}`}>{preview.fotoStats.senza}</span>
+                  </div>
+                </div>
+              )}
               {preview.count === 0 && (
                 <p className="text-xs text-amber-600 mt-1">
                   Nessun prodotto corrisponde ai filtri selezionati

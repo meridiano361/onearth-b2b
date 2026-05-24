@@ -267,6 +267,11 @@ export type CatalogConfig = {
     textColor: string;
     posizione: 'image-top-right' | 'next-to-code';
   };
+  fotoConfig?: {
+    numero: 'solo-principale' | 'tutte' | 'scegli';
+    quantita: number;
+    layout: 'grande-thumbnail' | 'griglia-2x2' | 'prima-disponibile';
+  };
 };
 
 export type ProductForPDF = {
@@ -284,6 +289,9 @@ export type ProductForPDF = {
   collezione: string | null;
   iva: number;
   imageDataUri: string | null;
+  imageDataUri2?: string | null;
+  imageDataUri3?: string | null;
+  imageDataUri4?: string | null;
   classe: string | null;
   sottoclasse: string | null;
   famiglia: string | null;
@@ -790,46 +798,102 @@ function ProductCard({
       }]}
     >
       {/* Image area */}
-      {f.foto && (
-        <View
-          style={{
-            width: layout.CARD_W - box.borderWidth,
-            height: layout.IMG_H,
-            backgroundColor: colori.sfondoFoto,
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-          }}
-        >
-          {product.imageDataUri ? (
-            <Link src={`${APP_BASE_URL}/catalog/${product.id}`}>
-              <Image
-                style={{
-                  width: layout.CARD_W - box.borderWidth,
-                  height: layout.IMG_H,
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  objectFit: 'contain' as any,
-                }}
-                src={product.imageDataUri}
-              />
-            </Link>
-          ) : config.logoBase64 ? (
-            <Image
-              style={{ width: 55, height: 12, opacity: 0.25 }}
-              src={config.logoBase64}
-            />
-          ) : null}
+      {f.foto && (() => {
+        const fc = config.fotoConfig;
+        const cardW = layout.CARD_W - box.borderWidth;
+        // Collect all available images
+        const allUris = [product.imageDataUri, product.imageDataUri2, product.imageDataUri3, product.imageDataUri4].filter(Boolean) as string[];
+        // Determine how many photos to show
+        let maxPhotos = 1;
+        if (fc) {
+          if (fc.numero === 'tutte') maxPhotos = 4;
+          else if (fc.numero === 'scegli') maxPhotos = fc.quantita;
+        }
+        const photosToShow = allUris.slice(0, maxPhotos);
+        const mainUri = photosToShow[0] ?? null;
+        const extraUris = photosToShow.slice(1);
+        const showMultiple = photosToShow.length > 1;
+        const layout2 = fc?.layout ?? 'grande-thumbnail';
 
-          {/* NUOVO badge — image-top-right position */}
-          {config.nuovoBadge?.attivo && product.collezione === 'CA27' && config.nuovoBadge.posizione === 'image-top-right' && (
-            <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: config.nuovoBadge.bgColor, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 3 }}>
-              <Text style={{ fontSize: 5, color: config.nuovoBadge.textColor, fontFamily: 'Helvetica-Bold' }}>
-                {config.nuovoBadge.testo}
-              </Text>
+        // Placeholder when no photo
+        const placeholder = config.logoBase64 ? (
+          <Image style={{ width: 55, height: 12, opacity: 0.25 }} src={config.logoBase64} />
+        ) : null;
+
+        // NUOVO badge
+        const nuovoBadge = config.nuovoBadge?.attivo && product.collezione === 'CA27' && config.nuovoBadge.posizione === 'image-top-right' ? (
+          <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: config.nuovoBadge.bgColor, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 3 }}>
+            <Text style={{ fontSize: 5, color: config.nuovoBadge.textColor, fontFamily: 'Helvetica-Bold' }}>
+              {config.nuovoBadge.testo}
+            </Text>
+          </View>
+        ) : null;
+
+        if (!showMultiple || layout2 === 'prima-disponibile') {
+          // Single photo (original behavior)
+          return (
+            <View style={{ width: cardW, height: layout.IMG_H, backgroundColor: colori.sfondoFoto, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              {mainUri ? (
+                <Link src={`${APP_BASE_URL}/catalog/${product.id}`}>
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  <Image style={{ width: cardW, height: layout.IMG_H, objectFit: 'contain' as any }} src={mainUri} />
+                </Link>
+              ) : placeholder}
+              {nuovoBadge}
             </View>
-          )}
-        </View>
-      )}
+          );
+        }
+
+        if (layout2 === 'griglia-2x2') {
+          // 2×2 grid — 4 equal cells
+          const half = layout.IMG_H / 2;
+          const halfW = cardW / 2;
+          const cells = [photosToShow[0], photosToShow[1], photosToShow[2], photosToShow[3]];
+          return (
+            <View style={{ width: cardW, height: layout.IMG_H, flexDirection: 'row', flexWrap: 'wrap', overflow: 'hidden' }}>
+              {cells.map((uri, idx) => (
+                <View key={idx} style={{ width: halfW, height: half, backgroundColor: colori.sfondoFoto, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {uri
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    ? <Image style={{ width: halfW, height: half, objectFit: 'contain' as any }} src={uri} />
+                    : placeholder}
+                </View>
+              ))}
+              {nuovoBadge}
+            </View>
+          );
+        }
+
+        // Default: grande-thumbnail (main 70% + strip 30%)
+        const mainH = Math.round(layout.IMG_H * 0.7);
+        const thumbH = layout.IMG_H - mainH;
+        const thumbW = extraUris.length > 0 ? cardW / extraUris.length : cardW;
+        return (
+          <View style={{ width: cardW, height: layout.IMG_H, overflow: 'hidden' }}>
+            {/* Main photo */}
+            <View style={{ width: cardW, height: mainH, backgroundColor: colori.sfondoFoto, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              {mainUri
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ? <Image style={{ width: cardW, height: mainH, objectFit: 'contain' as any }} src={mainUri} />
+                : placeholder}
+            </View>
+            {/* Thumbnail strip */}
+            {extraUris.length > 0 && (
+              <View style={{ flexDirection: 'row', width: cardW, height: thumbH }}>
+                {extraUris.map((uri, idx) => (
+                  <View key={idx} style={{ width: thumbW, height: thumbH, backgroundColor: colori.sfondoFoto, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                    {uri
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      ? <Image style={{ width: thumbW, height: thumbH, objectFit: 'contain' as any }} src={uri} />
+                      : null}
+                  </View>
+                ))}
+              </View>
+            )}
+            {nuovoBadge}
+          </View>
+        );
+      })()}
 
       {/* Text area */}
       <View

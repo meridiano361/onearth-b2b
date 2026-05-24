@@ -56,11 +56,29 @@ export async function POST(req: NextRequest) {
     const penultimaPage = body.paginaPenultima?.attiva ? 1 : 0;
     const finalPage = body.paginaFinale?.attiva ? 1 : 0;
 
+    // Photo stats (only when foto field is enabled)
+    let fotoStats: { senza: number; una: number; multiple: number } | null = null;
+    if (body.campi?.foto && count > 0) {
+      const products = await prisma.product.findMany({
+        where,
+        select: { imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true },
+      });
+      let senza = 0, una = 0, multiple = 0;
+      for (const p of products) {
+        const cnt = [p.imageUrl, p.imageUrl2, p.imageUrl3, p.imageUrl4].filter(Boolean).length;
+        if (cnt === 0) senza++;
+        else if (cnt === 1) una++;
+        else multiple++;
+      }
+      fotoStats = { senza, una, multiple };
+    }
+
     return NextResponse.json({
       count,
       pages: productPages + groupPages + coverPage + penultimaPage + finalPage,
       productPages,
       groupPages,
+      fotoStats,
     });
   } catch (err) {
     console.error('[catalogo-pdf preview]', err);

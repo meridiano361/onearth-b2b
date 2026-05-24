@@ -17,6 +17,7 @@ import type { Product } from '@/types';
 import toast from 'react-hot-toast';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
+type FotoFilter = 'all' | 'con-foto' | 'senza-foto' | 'foto-multiple';
 type SortField = 'code' | 'name' | 'produttore' | 'collezione' | 'costPrice' | 'retailPrice';
 type SortDir = 'asc' | 'desc';
 
@@ -91,6 +92,7 @@ export default function AdminProductsPage() {
   const [filterProduttore, setFilterProduttore] = useState('');
   const [filterTranche, setFilterTranche] = useState('');
   const [filterActive, setFilterActive] = useState<ActiveFilter>('all');
+  const [filterFoto, setFilterFoto] = useState<FotoFilter>('all');
   const [filterFasciaSconto, setFilterFasciaSconto] = useState('');
   const [filterFasciaRicarico, setFilterFasciaRicarico] = useState('');
   const [filterPrezzoCosto, setFilterPrezzoCosto] = useState('');
@@ -166,6 +168,9 @@ export default function AdminProductsPage() {
       if (filterTranche && p.tranche !== filterTranche) return false;
       if (filterActive === 'active' && !p.isActive) return false;
       if (filterActive === 'inactive' && p.isActive) return false;
+      if (filterFoto === 'con-foto' && !p.imageUrl) return false;
+      if (filterFoto === 'senza-foto' && p.imageUrl) return false;
+      if (filterFoto === 'foto-multiple' && !p.imageUrl2 && !p.imageUrl3 && !p.imageUrl4) return false;
       if (filterFasciaSconto) {
         const sc = computeSconto(p);
         if (filterFasciaSconto === '0-30' && sc >= 30) return false;
@@ -206,7 +211,7 @@ export default function AdminProductsPage() {
     }
 
     return filtered;
-  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterActive, filterFasciaSconto, filterFasciaRicarico, filterPrezzoCosto, sortField, sortDir]);
+  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterActive, filterFoto, filterFasciaSconto, filterFasciaRicarico, filterPrezzoCosto, sortField, sortDir]);
 
   function handleColumnSort(field: SortField) {
     if (sortField === field) {
@@ -225,14 +230,14 @@ export default function AdminProductsPage() {
       : <ChevronDown size={11} className="ml-1 text-accent inline" />;
   }
 
-  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterActive !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto;
+  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterActive !== 'all' || filterFoto !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto;
 
   function resetFilters() {
     setSearch(''); setFilterGruppo(''); setFilterFamiglia('');
     setFilterClasse(''); setFilterSottoclasse(''); setFilterGruppoOmogeneo('');
     setFilterColore(''); setFilterCollezione(''); setFilterLinea('');
     setFilterProduttore(''); setFilterTranche('');
-    setFilterActive('all');
+    setFilterActive('all'); setFilterFoto('all');
     setFilterFasciaSconto(''); setFilterFasciaRicarico(''); setFilterPrezzoCosto('');
   }
 
@@ -409,7 +414,14 @@ export default function AdminProductsPage() {
         <div>
           <p className="label-luxury text-accent mb-1">Admin</p>
           <h1 className="font-display text-2xl text-primary font-light">Prodotti</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{data?.total || 0} prodotti in collezione</p>
+          <p className="text-sm text-gray-400 mt-0.5">
+            {isLoading ? 'Caricamento...' : [
+              `${products.length} prodotti${hasFilters ? ` (su ${allProducts.length})` : ''}`,
+              `${products.filter(p => p.isActive).length} attivi`,
+              `${products.filter(p => !p.isActive).length} non attivi`,
+              `${products.filter(p => !p.imageUrl).length} senza foto`,
+            ].join(' · ')}
+          </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Button variant="secondary" icon={<Upload size={13} />} onClick={() => setShowImport(true)}>
@@ -498,9 +510,15 @@ export default function AdminProductsPage() {
             <option value="50+">&gt; 50 €</option>
           </select>
           <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as ActiveFilter)} className={selectClass}>
-            <option value="all">Tutti</option>
-            <option value="active">Attivi</option>
-            <option value="inactive">Non attivi</option>
+            <option value="all">Stato: Tutti</option>
+            <option value="active">Solo attivi</option>
+            <option value="inactive">Solo non attivi</option>
+          </select>
+          <select value={filterFoto} onChange={(e) => setFilterFoto(e.target.value as FotoFilter)} className={selectClass}>
+            <option value="all">Foto: Tutti</option>
+            <option value="con-foto">Con foto</option>
+            <option value="senza-foto">Senza foto</option>
+            <option value="foto-multiple">Con foto multiple</option>
           </select>
           {hasFilters && (
             <button onClick={resetFilters} className="flex items-center gap-1 h-8 px-2 text-xs text-gray-500 hover:text-primary border border-border rounded hover:bg-cream transition-colors">
@@ -550,15 +568,16 @@ export default function AdminProductsPage() {
               <th>{thBtn('retailPrice', 'Vendita i.i.')}</th>
               <th>%SC</th>
               <th>% Ric.</th>
+              <th className="text-center">Foto</th>
               <th>Stato</th>
               <th className="w-20"></th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={11} className="py-12 text-center"><LoadingSpinner className="mx-auto" /></td></tr>
+              <tr><td colSpan={12} className="py-12 text-center"><LoadingSpinner className="mx-auto" /></td></tr>
             ) : products.length === 0 ? (
-              <tr><td colSpan={11} className="py-12 text-center text-gray-400 text-sm">Nessun prodotto trovato</td></tr>
+              <tr><td colSpan={12} className="py-12 text-center text-gray-400 text-sm">Nessun prodotto trovato</td></tr>
             ) : (
               products.map((product) => {
                 const ivaFactor = 1 + (product.iva ?? 22) / 100;
@@ -586,6 +605,14 @@ export default function AdminProductsPage() {
                           {ricarico >= 0 ? '+' : ''}{ricarico.toFixed(1)}%
                         </span>
                       ) : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="text-center whitespace-nowrap">
+                      {(() => {
+                        const cnt = [product.imageUrl, product.imageUrl2, product.imageUrl3, product.imageUrl4].filter(Boolean).length;
+                        return cnt > 0
+                          ? <span className="text-xs text-green-600">📷 {cnt}</span>
+                          : <span className="text-xs text-gray-300">📷</span>;
+                      })()}
                     </td>
                     <td><Badge variant={product.isActive ? 'success' : 'default'} size="xs">{product.isActive ? 'Attivo' : 'Inattivo'}</Badge></td>
                     <td>
