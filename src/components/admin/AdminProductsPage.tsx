@@ -18,6 +18,7 @@ import toast from 'react-hot-toast';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
 type FotoFilter = 'all' | 'con-foto' | 'senza-foto' | 'foto-multiple';
+type TemaColorePresenzaFilter = 'all' | 'con-tema' | 'senza-tema';
 type SortField = 'code' | 'name' | 'produttore' | 'collezione' | 'costPrice' | 'retailPrice';
 type SortDir = 'asc' | 'desc';
 
@@ -101,6 +102,7 @@ export default function AdminProductsPage() {
   const [filterStagione, setFilterStagione] = useState('');
   const [filterActive, setFilterActive] = useState<ActiveFilter>('all');
   const [filterFoto, setFilterFoto] = useState<FotoFilter>('all');
+  const [filterTemaColorePresenza, setFilterTemaColorePresenza] = useState<TemaColorePresenzaFilter>('all');
   const [filterFasciaSconto, setFilterFasciaSconto] = useState('');
   const [filterFasciaRicarico, setFilterFasciaRicarico] = useState('');
   const [filterPrezzoCosto, setFilterPrezzoCosto] = useState('');
@@ -146,6 +148,10 @@ export default function AdminProductsPage() {
   const produttoreOptions = useMemo(() => uniqueSorted(allProducts, 'produttore'), [allProducts]);
   const trancheOptions = useMemo(() => uniqueSorted(allProducts, 'tranche'), [allProducts]);
   const stagioneOptions = useMemo(() => uniqueSorted(allProducts, 'stagione'), [allProducts]);
+
+  function hasTemaColore(p: Product): boolean {
+    return !!(p.temaColore || p.temaColore2 || p.temaColore3 || p.temaColore4 || p.temaColore5);
+  }
 
   function computeSconto(p: Product): number {
     const fs = Number((p as any).fasciaSconto);
@@ -212,6 +218,8 @@ export default function AdminProductsPage() {
         if (filterPrezzoCosto === '20-50' && (cost < 20 || cost >= 50)) return false;
         if (filterPrezzoCosto === '50+' && cost < 50) return false;
       }
+      if (filterTemaColorePresenza === 'con-tema' && !hasTemaColore(p)) return false;
+      if (filterTemaColorePresenza === 'senza-tema' && hasTemaColore(p)) return false;
       return true;
     });
 
@@ -229,7 +237,7 @@ export default function AdminProductsPage() {
     }
 
     return filtered;
-  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterTemaColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterStagione, filterActive, filterFoto, filterFasciaSconto, filterFasciaRicarico, filterPrezzoCosto, sortField, sortDir]);
+  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterTemaColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterStagione, filterActive, filterFoto, filterFasciaSconto, filterFasciaRicarico, filterPrezzoCosto, filterTemaColorePresenza, sortField, sortDir]);
 
   function handleColumnSort(field: SortField) {
     if (sortField === field) {
@@ -248,14 +256,14 @@ export default function AdminProductsPage() {
       : <ChevronDown size={11} className="ml-1 text-accent inline" />;
   }
 
-  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterTemaColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterStagione || filterActive !== 'all' || filterFoto !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto;
+  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterTemaColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterStagione || filterActive !== 'all' || filterFoto !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto || filterTemaColorePresenza !== 'all';
 
   function resetFilters() {
     setSearch(''); setFilterGruppo(''); setFilterFamiglia('');
     setFilterClasse(''); setFilterSottoclasse(''); setFilterGruppoOmogeneo('');
     setFilterColore(''); setFilterTemaColore(''); setFilterCollezione(''); setFilterLinea('');
     setFilterProduttore(''); setFilterTranche(''); setFilterStagione('');
-    setFilterActive('all'); setFilterFoto('all');
+    setFilterActive('all'); setFilterFoto('all'); setFilterTemaColorePresenza('all');
     setFilterFasciaSconto(''); setFilterFasciaRicarico(''); setFilterPrezzoCosto('');
   }
 
@@ -538,6 +546,11 @@ export default function AdminProductsPage() {
             <option value="">Tema colore</option>
             {temaColoreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
+          <select value={filterTemaColorePresenza} onChange={(e) => setFilterTemaColorePresenza(e.target.value as TemaColorePresenzaFilter)} className={selectClass}>
+            <option value="all">Tema: Tutti</option>
+            <option value="con-tema">Con tema colore</option>
+            <option value="senza-tema">Senza tema colore</option>
+          </select>
           <select value={filterCollezione} onChange={(e) => setFilterCollezione(e.target.value)} className={selectClass}>
             <option value="">Collezione</option>
             {collezioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
@@ -624,6 +637,28 @@ export default function AdminProductsPage() {
         </div>
       )}
 
+      {/* Riepilogo tema colore */}
+      {!isLoading && (
+        <div className="flex items-center gap-3 mb-3 text-xs text-gray-500">
+          <button
+            onClick={() => setFilterTemaColorePresenza(filterTemaColorePresenza === 'con-tema' ? 'all' : 'con-tema')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded border transition-colors ${filterTemaColorePresenza === 'con-tema' ? 'border-emerald-400 bg-emerald-50 text-emerald-700 font-medium' : 'border-border hover:border-emerald-300 hover:bg-emerald-50/50 text-gray-500'}`}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
+            <span className="font-medium text-emerald-700">{allProducts.filter(hasTemaColore).length}</span>
+            &nbsp;con tema colore
+          </button>
+          <button
+            onClick={() => setFilterTemaColorePresenza(filterTemaColorePresenza === 'senza-tema' ? 'all' : 'senza-tema')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded border transition-colors ${filterTemaColorePresenza === 'senza-tema' ? 'border-gray-400 bg-gray-100 text-gray-700 font-medium' : 'border-border hover:border-gray-300 hover:bg-gray-50 text-gray-500'}`}
+          >
+            <span className="w-2 h-2 rounded-full bg-gray-300 flex-shrink-0" />
+            <span className="font-medium text-gray-600">{allProducts.filter(p => !hasTemaColore(p)).length}</span>
+            &nbsp;senza tema colore
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white border border-border rounded overflow-hidden overflow-x-auto">
         <table className="table-luxury w-full min-w-[640px]">
@@ -636,6 +671,7 @@ export default function AdminProductsPage() {
               <th>{thBtn('name', 'Descrizione')}</th>
               <th>{thBtn('produttore', 'Produttore')}</th>
               <th className="hidden sm:table-cell">{thBtn('collezione', 'Collezione')}</th>
+              <th className="hidden lg:table-cell">Tema colore</th>
               <th>{thBtn('costPrice', 'Costo i.e.')}</th>
               <th>{thBtn('retailPrice', 'Vendita i.i.')}</th>
               <th>%SC</th>
@@ -647,9 +683,9 @@ export default function AdminProductsPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={12} className="py-12 text-center"><LoadingSpinner className="mx-auto" /></td></tr>
+              <tr><td colSpan={13} className="py-12 text-center"><LoadingSpinner className="mx-auto" /></td></tr>
             ) : products.length === 0 ? (
-              <tr><td colSpan={12} className="py-12 text-center text-gray-400 text-sm">Nessun prodotto trovato</td></tr>
+              <tr><td colSpan={13} className="py-12 text-center text-gray-400 text-sm">Nessun prodotto trovato</td></tr>
             ) : (
               products.map((product) => {
                 const ivaFactor = 1 + (product.iva ?? 22) / 100;
@@ -662,6 +698,12 @@ export default function AdminProductsPage() {
                     <td><p className="font-medium text-primary text-xs">{product.name}</p></td>
                     <td><span className="text-xs text-gray-500">{product.produttore || '—'}</span></td>
                     <td className="hidden sm:table-cell"><span className="text-xs text-gray-500">{product.collezione || '—'}</span></td>
+                    <td className="hidden lg:table-cell">
+                      {hasTemaColore(product)
+                        ? <span className="inline-flex items-center gap-1 text-2xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded max-w-[120px] truncate" title={[product.temaColore, product.temaColore2, product.temaColore3, product.temaColore4, product.temaColore5].filter(Boolean).join(', ')}>{product.temaColore}</span>
+                        : <span className="text-xs text-gray-300">—</span>
+                      }
+                    </td>
                     <td className="font-medium text-xs">{formatCurrency(product.costPrice)}</td>
                     <td className="text-xs text-gray-500">{formatCurrency(product.retailPrice)}</td>
                     <td className="text-xs text-center">
