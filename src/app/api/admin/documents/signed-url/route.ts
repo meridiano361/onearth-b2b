@@ -8,13 +8,16 @@ const VIDEO_TIPI = ['Video presentazione', 'Video tutorial'];
 const AUDIO_TIPI = ['Audio / Podcast'];
 const MEDIA_TIPI = [...VIDEO_TIPI, ...AUDIO_TIPI];
 
+// Limite effettivo per tutti i tipi: 50 MB (max Supabase Free Plan)
+const MAX_ALL = 50 * 1024 * 1024;
+
 const MAX_BY_TIPO: Record<string, number> = {
   'Condizioni Commerciali': 20 * 1024 * 1024,
   'Catalogo PDF':           20 * 1024 * 1024,
-  'Video presentazione':   500 * 1024 * 1024,
-  'Video tutorial':        500 * 1024 * 1024,
-  'Audio / Podcast':       100 * 1024 * 1024,
-  'Altro':                  50 * 1024 * 1024,
+  'Video presentazione':    MAX_ALL,
+  'Video tutorial':         MAX_ALL,
+  'Audio / Podcast':        MAX_ALL,
+  'Altro':                  MAX_ALL,
 };
 
 function getSupabaseAdmin() {
@@ -25,10 +28,11 @@ function getSupabaseAdmin() {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function ensureBucket(supabase: any, bucket: string, fileSizeLimit: number) {
+async function ensureBucket(supabase: any, bucket: string) {
   const { data: buckets } = await supabase.storage.listBuckets();
   if (!buckets?.some((b: { name: string }) => b.name === bucket)) {
-    await supabase.storage.createBucket(bucket, { public: true, fileSizeLimit });
+    // Non specifichiamo fileSizeLimit: usa il limite del piano Supabase attivo
+    await supabase.storage.createBucket(bucket, { public: true });
   }
 }
 
@@ -47,7 +51,7 @@ export async function POST(req: NextRequest) {
   if (!fileName) return NextResponse.json({ error: 'fileName mancante' }, { status: 400 });
 
   const resolvedTipo = tipo ?? 'Altro';
-  const maxSize = MAX_BY_TIPO[resolvedTipo] ?? MAX_BY_TIPO['Altro'];
+  const maxSize = MAX_BY_TIPO[resolvedTipo] ?? MAX_ALL;
 
   if (size > maxSize) {
     const maxMB = Math.round(maxSize / 1024 / 1024);
@@ -59,10 +63,9 @@ export async function POST(req: NextRequest) {
 
   const isMedia = MEDIA_TIPI.includes(resolvedTipo);
   const bucket = isMedia ? 'media' : 'documents';
-  const bucketMax = isMedia ? 500 * 1024 * 1024 : 50 * 1024 * 1024;
 
   const supabase = getSupabaseAdmin();
-  await ensureBucket(supabase, bucket, bucketMax);
+  await ensureBucket(supabase, bucket);
 
   // Preserve original extension
   const ext = fileName.includes('.') ? fileName.split('.').pop()!.toLowerCase() : 'bin';

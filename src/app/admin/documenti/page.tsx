@@ -17,6 +17,9 @@ type TipoConfig = {
   kind: MediaKind;
 };
 
+// Supabase Free Plan: 50 MB max per file
+const PLAN_MAX_MB = 50;
+
 const TIPO_CONFIG: Record<string, TipoConfig> = {
   'Condizioni Commerciali': {
     bucket: 'documents', maxMB: 20,
@@ -31,27 +34,27 @@ const TIPO_CONFIG: Record<string, TipoConfig> = {
     kind: 'pdf',
   },
   'Video presentazione': {
-    bucket: 'media', maxMB: 500,
+    bucket: 'media', maxMB: PLAN_MAX_MB,
     accept: '.mp4,.mov,.avi,.webm,video/*',
-    fileLabel: 'FILE VIDEO (MAX 500MB) — MP4, MOV, WEBM',
+    fileLabel: `FILE VIDEO (MAX ${PLAN_MAX_MB}MB) — MP4, MOV, WEBM`,
     kind: 'video',
   },
   'Video tutorial': {
-    bucket: 'media', maxMB: 500,
+    bucket: 'media', maxMB: PLAN_MAX_MB,
     accept: '.mp4,.mov,.avi,.webm,video/*',
-    fileLabel: 'FILE VIDEO (MAX 500MB) — MP4, MOV, WEBM',
+    fileLabel: `FILE VIDEO (MAX ${PLAN_MAX_MB}MB) — MP4, MOV, WEBM`,
     kind: 'video',
   },
   'Audio / Podcast': {
-    bucket: 'media', maxMB: 100,
+    bucket: 'media', maxMB: PLAN_MAX_MB,
     accept: '.mp3,.wav,.m4a,.ogg,audio/*',
-    fileLabel: 'FILE AUDIO (MAX 100MB) — MP3, M4A, WAV',
+    fileLabel: `FILE AUDIO (MAX ${PLAN_MAX_MB}MB) — MP3, M4A, WAV`,
     kind: 'audio',
   },
   'Altro': {
-    bucket: 'documents', maxMB: 50,
+    bucket: 'documents', maxMB: PLAN_MAX_MB,
     accept: '',
-    fileLabel: 'TUTTI I FORMATI (MAX 50MB)',
+    fileLabel: `TUTTI I FORMATI (MAX ${PLAN_MAX_MB}MB)`,
     kind: 'other',
   },
 };
@@ -291,6 +294,9 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
               <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${visibile ? 'translate-x-5' : 'translate-x-0.5'}`} />
             </button>
           </div>
+          <p className="text-2xs text-gray-400 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            Nota: il piano attuale supporta file fino a {PLAN_MAX_MB} MB. Per file più grandi contatta il supporto.
+          </p>
           <ProgressBar progress={progress} label={statusMsg} />
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} disabled={loading} className="px-4 py-2 text-sm text-gray-600 hover:text-primary transition-colors disabled:opacity-50">Annulla</button>

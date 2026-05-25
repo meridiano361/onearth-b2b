@@ -4,10 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { createClient } from '@supabase/supabase-js';
 
-const BUCKETS = [
-  { name: 'documents', fileSizeLimit: 50 * 1024 * 1024 },   // 50 MB
-  { name: 'media',     fileSizeLimit: 500 * 1024 * 1024 },  // 500 MB
-] as const;
+const BUCKET_NAMES = ['documents', 'media'] as const;
 
 function getSupabaseAdmin() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -31,12 +28,10 @@ export async function POST() {
 
   const existingNames = new Set((existing ?? []).map((b: { name: string }) => b.name));
 
-  for (const { name, fileSizeLimit } of BUCKETS) {
+  for (const name of BUCKET_NAMES) {
     if (!existingNames.has(name)) {
-      const { error } = await supabase.storage.createBucket(name, {
-        public: true,
-        fileSizeLimit,
-      });
+      // Non specifichiamo fileSizeLimit: usa il limite del piano Supabase attivo
+      const { error } = await supabase.storage.createBucket(name, { public: true });
       if (error) {
         return NextResponse.json(
           { error: `Impossibile creare bucket "${name}": ${error.message}` },
