@@ -52,8 +52,8 @@ export default function CartSidebar() {
           if (list.length >= 1) setSelectedDestinazioneId(list[0].id);
         })
         .catch(() => {});
-    } else if (isOperator && session?.user.organizationId) {
-      fetch(`/api/destinazioni?organizationId=${session.user.organizationId}`)
+    } else if (isOperator) {
+      fetch('/api/catalog/destinazioni')
         .then((r) => r.json())
         .then((d) => {
           const list: Destinazione[] = d.data || [];
@@ -62,7 +62,7 @@ export default function CartSidebar() {
         })
         .catch(() => {});
     }
-  }, [isOperator, preview, session?.user.organizationId]);
+  }, [isOperator, preview]);
 
   // Suggestions
   const productIds = items.map((i) => i.productId).join(',');
