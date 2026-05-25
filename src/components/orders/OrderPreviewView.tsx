@@ -105,7 +105,7 @@ function ProductCard({
       </div>
 
       {/* Body */}
-      <div className="p-2.5 flex flex-col gap-1.5 flex-1 min-h-0">
+      <div className="p-2.5 flex flex-col gap-1.5 grow">
         <div>
           <p className="text-2xs font-mono text-gray-400 tracking-wider leading-none">{product.code}</p>
           <p className="text-xs font-medium text-primary leading-snug mt-1 h-10 overflow-hidden">{product.name}</p>
