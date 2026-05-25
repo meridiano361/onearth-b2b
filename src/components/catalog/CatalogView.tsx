@@ -127,7 +127,7 @@ export default function CatalogView() {
     if (gruppoOmogeneo)     result = result.filter((p) => p.gruppoOmogeneo     === gruppoOmogeneo);
     if (nomLinea)           result = result.filter((p) => p.nomLinea           === nomLinea);
     if (colore)             result = result.filter((p) => p.colore             === colore);
-    if (temaColore)         result = result.filter((p) => p.temaColore         === temaColore);
+    if (temaColore)         result = result.filter((p) => [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].includes(temaColore));
     if (stagione)           result = result.filter((p) => p.stagione           === stagione);
     if (collezione)         result = result.filter((p) => p.collezione         === collezione);
     if (produttore)         result = result.filter((p) => p.produttore         === produttore);

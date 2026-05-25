@@ -37,6 +37,11 @@ interface BulkEditValues {
   collezione: string;
   colore: string;
   temaColore: string;
+  temaColore2: string;
+  temaColore3: string;
+  temaColore4: string;
+  temaColore5: string;
+  temaColoreBulkMode: 'sostituisci' | 'aggiungi';
   // Prezzi e logistica
   lotSize: string;
   iva: string;
@@ -54,6 +59,7 @@ const EMPTY_BULK: BulkEditValues = {
   produttore: '', misura: '', paese: '',
   gruppoMerceologico: '', famiglia: '', classe: '', sottoclasse: '', gruppoOmogeneo: '',
   nomLinea: '', stagione: '', collezione: '', colore: '', temaColore: '',
+  temaColore2: '', temaColore3: '', temaColore4: '', temaColore5: '', temaColoreBulkMode: 'sostituisci',
   lotSize: '', iva: '', costPrice: '', retailPrice: '', fasciaRicarico: '', fasciaSconto: '', tranche: '',
   notes: '', isActive: '',
 };
@@ -87,6 +93,7 @@ export default function AdminProductsPage() {
   const [filterSottoclasse, setFilterSottoclasse] = useState('');
   const [filterGruppoOmogeneo, setFilterGruppoOmogeneo] = useState('');
   const [filterColore, setFilterColore] = useState('');
+  const [filterTemaColore, setFilterTemaColore] = useState('');
   const [filterCollezione, setFilterCollezione] = useState('');
   const [filterLinea, setFilterLinea] = useState('');
   const [filterProduttore, setFilterProduttore] = useState('');
@@ -126,6 +133,13 @@ export default function AdminProductsPage() {
   const sottoclasseOptions = useMemo(() => uniqueSorted(allProducts, 'sottoclasse'), [allProducts]);
   const gruppoOmogeneoOptions = useMemo(() => uniqueSorted(allProducts, 'gruppoOmogeneo'), [allProducts]);
   const coloreOptions = useMemo(() => uniqueSorted(allProducts, 'colore'), [allProducts]);
+  const temaColoreOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of allProducts) {
+      [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].forEach((v) => { if (v) set.add(v); });
+    }
+    return Array.from(set).sort();
+  }, [allProducts]);
   const collezioneOptions = useMemo(() => uniqueSorted(allProducts, 'collezione'), [allProducts]);
   const lineaOptions = useMemo(() => uniqueSorted(allProducts, 'nomLinea'), [allProducts]);
   const produttoreOptions = useMemo(() => uniqueSorted(allProducts, 'produttore'), [allProducts]);
@@ -162,6 +176,7 @@ export default function AdminProductsPage() {
       if (filterSottoclasse && p.sottoclasse !== filterSottoclasse) return false;
       if (filterGruppoOmogeneo && p.gruppoOmogeneo !== filterGruppoOmogeneo) return false;
       if (filterColore && p.colore !== filterColore) return false;
+      if (filterTemaColore && ![p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].includes(filterTemaColore)) return false;
       if (filterCollezione && p.collezione !== filterCollezione) return false;
       if (filterLinea && p.nomLinea !== filterLinea) return false;
       if (filterProduttore && p.produttore !== filterProduttore) return false;
@@ -211,7 +226,7 @@ export default function AdminProductsPage() {
     }
 
     return filtered;
-  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterActive, filterFoto, filterFasciaSconto, filterFasciaRicarico, filterPrezzoCosto, sortField, sortDir]);
+  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterTemaColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterActive, filterFoto, filterFasciaSconto, filterFasciaRicarico, filterPrezzoCosto, sortField, sortDir]);
 
   function handleColumnSort(field: SortField) {
     if (sortField === field) {
@@ -230,12 +245,12 @@ export default function AdminProductsPage() {
       : <ChevronDown size={11} className="ml-1 text-accent inline" />;
   }
 
-  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterActive !== 'all' || filterFoto !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto;
+  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterTemaColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterActive !== 'all' || filterFoto !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto;
 
   function resetFilters() {
     setSearch(''); setFilterGruppo(''); setFilterFamiglia('');
     setFilterClasse(''); setFilterSottoclasse(''); setFilterGruppoOmogeneo('');
-    setFilterColore(''); setFilterCollezione(''); setFilterLinea('');
+    setFilterColore(''); setFilterTemaColore(''); setFilterCollezione(''); setFilterLinea('');
     setFilterProduttore(''); setFilterTranche('');
     setFilterActive('all'); setFilterFoto('all');
     setFilterFasciaSconto(''); setFilterFasciaRicarico(''); setFilterPrezzoCosto('');
@@ -320,11 +335,20 @@ export default function AdminProductsPage() {
       ['gruppoMerceologico', b.gruppoMerceologico], ['famiglia', b.famiglia],
       ['classe', b.classe], ['sottoclasse', b.sottoclasse], ['gruppoOmogeneo', b.gruppoOmogeneo],
       ['nomLinea', b.nomLinea], ['stagione', b.stagione], ['collezione', b.collezione],
-      ['colore', b.colore], ['temaColore', b.temaColore],
+      ['colore', b.colore],
       ['fasciaRicarico', b.fasciaRicarico], ['tranche', b.tranche], ['notes', b.notes],
     ];
     for (const [k, v] of strMap) {
       if (v.trim()) payload[k] = v.trim();
+    }
+
+    // temaColore — modalità Sostituisci o Aggiungi
+    if (b.temaColoreBulkMode === 'sostituisci' && b.temaColore.trim()) {
+      payload.temaColore = b.temaColore.trim();
+      payload.temaColore2 = b.temaColore2.trim() || null;
+      payload.temaColore3 = b.temaColore3.trim() || null;
+      payload.temaColore4 = b.temaColore4.trim() || null;
+      payload.temaColore5 = b.temaColore5.trim() || null;
     }
     if (b.lotSize.trim()) { const n = parseInt(b.lotSize, 10); if (!isNaN(n) && n > 0) payload.lotSize = n; }
     if (b.iva.trim()) { const n = parseInt(b.iva, 10); if (!isNaN(n)) payload.iva = n; }
@@ -332,6 +356,38 @@ export default function AdminProductsPage() {
     if (b.retailPrice.trim()) { const n = parseFloat(b.retailPrice); if (!isNaN(n) && n > 0) payload.retailPrice = n; }
     if (b.fasciaSconto.trim()) { const n = parseFloat(b.fasciaSconto); if (!isNaN(n)) payload.fasciaSconto = n; }
     if (b.isActive !== '') payload.isActive = b.isActive === 'true';
+
+    // Aggiungi mode: per-product update to fill first empty temaColore slot
+    if (b.temaColoreBulkMode === 'aggiungi' && b.temaColore.trim()) {
+      const newTema = b.temaColore.trim();
+      const selectedProds = allProducts.filter((p) => selectedIds.has(p.id));
+      if (selectedProds.length === 0) { toast.error('Nessun prodotto selezionato'); return; }
+      setIsBulkUpdating(true);
+      try {
+        let updated = 0;
+        await Promise.all(selectedProds.map(async (p) => {
+          const slots = ['temaColore', 'temaColore2', 'temaColore3', 'temaColore4', 'temaColore5'] as const;
+          const emptySlot = slots.find((s) => !p[s]);
+          if (!emptySlot) return;
+          await fetch(`/api/products/${p.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [emptySlot]: newTema }),
+          });
+          updated++;
+        }));
+        setShowBulkEdit(false);
+        setBulkEditValues(EMPTY_BULK);
+        setSelectedIds(new Set());
+        await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+        toast.success(`Tema colore aggiunto a ${updated} prodott${updated === 1 ? 'o' : 'i'}`);
+      } catch {
+        toast.error('Impossibile aggiornare i prodotti');
+      } finally {
+        setIsBulkUpdating(false);
+      }
+      return;
+    }
 
     if (Object.keys(payload).length === 0) {
       toast.error('Compila almeno un campo');
@@ -474,6 +530,10 @@ export default function AdminProductsPage() {
           <select value={filterColore} onChange={(e) => setFilterColore(e.target.value)} className={selectClass}>
             <option value="">Colore</option>
             {coloreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+          <select value={filterTemaColore} onChange={(e) => setFilterTemaColore(e.target.value)} className={selectClass}>
+            <option value="">Tema colore</option>
+            {temaColoreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
           <select value={filterCollezione} onChange={(e) => setFilterCollezione(e.target.value)} className={selectClass}>
             <option value="">Collezione</option>
@@ -789,13 +849,39 @@ export default function AdminProductsPage() {
               ['classe', 'Classe'], ['sottoclasse', 'Sottoclasse'],
               ['gruppoOmogeneo', 'Gruppo omogeneo'], ['nomLinea', 'Linea'],
               ['stagione', 'Stagione'], ['collezione', 'Collezione'],
-              ['colore', 'Colore'], ['temaColore', 'Tema colore'],
+              ['colore', 'Colore'],
             ] as [keyof BulkEditValues, string][]).map(([k, label]) => (
               <div key={k}>
                 <label className={bulkLabelClass}>{label}</label>
                 <input value={bulkEditValues[k] as string} onChange={(e) => setBulk(k, e.target.value)} placeholder="—" className={bulkInputClass} />
               </div>
             ))}
+          </div>
+
+          {/* Tema colore — Sostituisci / Aggiungi */}
+          <div className="border border-border rounded p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className={bulkLabelClass + ' mb-0'}>Tema colore</label>
+              <div className="flex gap-1">
+                {(['sostituisci', 'aggiungi'] as const).map((mode) => (
+                  <button key={mode} type="button" onClick={() => setBulk('temaColoreBulkMode', mode)} className={`text-2xs px-2 py-0.5 rounded transition-colors ${bulkEditValues.temaColoreBulkMode === mode ? 'bg-primary text-white' : 'border border-border text-gray-500 hover:bg-cream'}`}>
+                    {mode === 'sostituisci' ? 'Sostituisci' : 'Aggiungi'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {bulkEditValues.temaColoreBulkMode === 'sostituisci' ? (
+              <div className="grid grid-cols-2 gap-2">
+                {(['temaColore', 'temaColore2', 'temaColore3', 'temaColore4', 'temaColore5'] as const).map((k, i) => (
+                  <input key={k} value={bulkEditValues[k]} onChange={(e) => setBulk(k, e.target.value)} placeholder={i === 0 ? 'Valore 1' : `Valore ${i + 1} (opz.)`} className={bulkInputClass} />
+                ))}
+              </div>
+            ) : (
+              <div>
+                <input value={bulkEditValues.temaColore} onChange={(e) => setBulk('temaColore', e.target.value)} placeholder="Valore da aggiungere al primo slot libero" className={bulkInputClass} />
+                <p className="text-2xs text-gray-400 mt-1">Aggiunge il valore al primo campo temaColore vuoto di ogni prodotto selezionato.</p>
+              </div>
+            )}
           </div>
 
           <p className={bulkSectionClass}>Prezzi e Logistica</p>

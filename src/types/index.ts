@@ -62,6 +62,10 @@ export interface Product {
   gruppoOmogeneo: string | null;
   stagione: string | null;
   temaColore: string | null;
+  temaColore2: string | null;
+  temaColore3: string | null;
+  temaColore4: string | null;
+  temaColore5: string | null;
   fasciaRicarico: string | null;
   fasciaSconto: number | null;
   collezione: string | null;

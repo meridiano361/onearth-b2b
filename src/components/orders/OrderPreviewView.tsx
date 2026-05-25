@@ -13,6 +13,46 @@ import { formatCurrency } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { Order, OrderItem, Product, Destinazione } from '@/types';
 
+// ── Sort options ───────────────────────────────────────────────
+const PREVIEW_SORT_KEY = 'preview-sort';
+const SORT_OPTIONS = [
+  { value: 'name-asc',   label: 'Nome A→Z' },
+  { value: 'name-desc',  label: 'Nome Z→A' },
+  { value: 'linea-asc',  label: 'Linea A→Z' },
+  { value: 'linea-desc', label: 'Linea Z→A' },
+  { value: 'price-asc',  label: 'Prezzo ↑' },
+  { value: 'price-desc', label: 'Prezzo ↓' },
+  { value: 'novita',     label: 'Novità' },
+  { value: 'continuativi', label: 'Continuativi' },
+] as const;
+
+function sortGroupItems<T extends { product?: any }>(grpItems: T[], sortBy: string): T[] {
+  return [...grpItems].sort((a, b) => {
+    const pa = a.product;
+    const pb = b.product;
+    if (!pa || !pb) return 0;
+    switch (sortBy) {
+      case 'name-asc':  return pa.name.localeCompare(pb.name, 'it');
+      case 'name-desc': return pb.name.localeCompare(pa.name, 'it');
+      case 'linea-asc':  return (pa.nomLinea ?? '').localeCompare(pb.nomLinea ?? '', 'it');
+      case 'linea-desc': return (pb.nomLinea ?? '').localeCompare(pa.nomLinea ?? '', 'it');
+      case 'price-asc':  return Number(pa.retailPrice) - Number(pb.retailPrice);
+      case 'price-desc': return Number(pb.retailPrice) - Number(pa.retailPrice);
+      case 'novita': {
+        const aNew = pa.collezione === 'CA27' ? 0 : 1;
+        const bNew = pb.collezione === 'CA27' ? 0 : 1;
+        return aNew !== bNew ? aNew - bNew : pa.name.localeCompare(pb.name, 'it');
+      }
+      case 'continuativi': {
+        const aCont = !pa.collezione || pa.collezione !== 'CA27' ? 0 : 1;
+        const bCont = !pb.collezione || pb.collezione !== 'CA27' ? 0 : 1;
+        return aCont !== bCont ? aCont - bCont : pa.name.localeCompare(pb.name, 'it');
+      }
+      default: return 0;
+    }
+  });
+}
+
 // ── Grouping options ───────────────────────────────────────────
 const GROUPING_KEYS = [
   'nomLinea', 'collezione', 'colore', 'temaColore',
@@ -273,6 +313,10 @@ export default function OrderPreviewView({ id }: { id: string }) {
   const GROUPINGS = GROUPING_KEYS.map((k) => ({ value: k, label: tg(k) }));
 
   const [groupBy, setGroupBy] = useState('collezione');
+  const [sortBy, setSortBy] = useState<string>(() =>
+    typeof window !== 'undefined' ? (localStorage.getItem(PREVIEW_SORT_KEY) ?? 'name-asc') : 'name-asc'
+  );
+  function handleSortChange(v: string) { setSortBy(v); localStorage.setItem(PREVIEW_SORT_KEY, v); }
   const [qtyOverrides, setQtyOverrides] = useState<QtyMap>({});
   const qtyDebounceRef = useRef<Record<string, NodeJS.Timeout>>({});
   const [exporting, setExporting] = useState(false);
@@ -330,13 +374,16 @@ export default function OrderPreviewView({ id }: { id: string }) {
     }
     return Array.from(map.entries())
       .sort(([a], [b]) => a.localeCompare(b, 'it'))
-      .map(([name, grpItems]) => ({
-        name,
-        items: grpItems,
-        subtotal: grpItems.reduce((s, it) => s + it.effectiveSubtotal, 0),
-        totalQty: grpItems.reduce((s, it) => s + it.effectiveQty, 0),
-      }));
-  }, [items, groupBy]);
+      .map(([name, grpItems]) => {
+        const sorted = sortGroupItems(grpItems, sortBy);
+        return {
+          name,
+          items: sorted,
+          subtotal: grpItems.reduce((s, it) => s + it.effectiveSubtotal, 0),
+          totalQty: grpItems.reduce((s, it) => s + it.effectiveQty, 0),
+        };
+      });
+  }, [items, groupBy, sortBy]);
 
   const grandTotal = useMemo(() => items.reduce((s, it) => s + it.effectiveSubtotal, 0), [items]);
   const grandQty   = useMemo(() => items.reduce((s, it) => s + it.effectiveQty, 0),   [items]);
@@ -653,6 +700,16 @@ export default function OrderPreviewView({ id }: { id: string }) {
               {g.label}
             </button>
           ))}
+        </div>
+        <div className="flex items-center gap-2 px-4 sm:px-6 py-1.5 border-t border-border/40">
+          <span className="text-2xs text-gray-400 flex-shrink-0">Ordina:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => handleSortChange(e.target.value)}
+            className="text-2xs border border-border rounded px-1.5 py-0.5 bg-white text-primary focus:outline-none cursor-pointer"
+          >
+            {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
         </div>
       </div>
 

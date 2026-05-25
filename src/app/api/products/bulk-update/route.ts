@@ -24,6 +24,10 @@ const schema = z.object({
     collezione:          z.string().optional().nullable(),
     colore:              z.string().optional().nullable(),
     temaColore:          z.string().optional().nullable(),
+    temaColore2:         z.string().optional().nullable(),
+    temaColore3:         z.string().optional().nullable(),
+    temaColore4:         z.string().optional().nullable(),
+    temaColore5:         z.string().optional().nullable(),
     // Prezzi e logistica
     lotSize:             z.coerce.number().int().positive().optional(),
     iva:                 z.coerce.number().int().min(0).max(100).optional(),
@@ -54,7 +58,7 @@ export async function PATCH(req: NextRequest) {
     const strFields = [
       'produttore', 'misura', 'paese',
       'gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo',
-      'nomLinea', 'stagione', 'collezione', 'colore', 'temaColore',
+      'nomLinea', 'stagione', 'collezione', 'colore', 'temaColore', 'temaColore2', 'temaColore3', 'temaColore4', 'temaColore5',
       'fasciaRicarico', 'tranche', 'notes',
     ] as const;
     for (const f of strFields) {

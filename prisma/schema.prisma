@@ -73,6 +73,10 @@ model Product {
   gruppoOmogeneo     String?
   stagione           String?
   temaColore         String?
+  temaColore2        String?
+  temaColore3        String?
+  temaColore4        String?
+  temaColore5        String?
   fasciaRicarico     String?
   fasciaSconto       Decimal? @db.Decimal(5, 2)
   collezione         String?

@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRef, useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Languages, Loader2 } from 'lucide-react';
+import { Languages, Loader2, X } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import PaeseSelect from '@/components/ui/PaeseSelect';
@@ -32,6 +32,10 @@ const schema = z
     collezione: z.string().optional(),
     colore: z.string().optional(),
     temaColore: z.string().optional(),
+    temaColore2: z.string().optional(),
+    temaColore3: z.string().optional(),
+    temaColore4: z.string().optional(),
+    temaColore5: z.string().optional(),
     lotSize: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 1)),
     iva: z.string().default('22').transform(Number),
     costPrice: z.string().min(1, 'Obbligatorio').transform(Number),
@@ -125,6 +129,10 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           collezione: product.collezione || '',
           colore: product.colore || '',
           temaColore: product.temaColore || '',
+          temaColore2: product.temaColore2 || '',
+          temaColore3: product.temaColore3 || '',
+          temaColore4: product.temaColore4 || '',
+          temaColore5: product.temaColore5 || '',
           lotSize: String(product.lotSize),
           iva: String(product.iva ?? 22),
           costPrice: String(product.costPrice),
@@ -240,6 +248,10 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           collezione: v.collezione || null,
           colore: v.colore || null,
           temaColore: v.temaColore || null,
+          temaColore2: (v as any).temaColore2 || null,
+          temaColore3: (v as any).temaColore3 || null,
+          temaColore4: (v as any).temaColore4 || null,
+          temaColore5: (v as any).temaColore5 || null,
           fasciaRicarico: v.fasciaRicarico || null,
           fasciaSconto: v.fasciaSconto ? parseFloat(v.fasciaSconto) || null : null,
           tranche: v.tranche || null,
@@ -375,19 +387,50 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <Combobox
-          label="Colore"
-          field="colore"
-          value={watch('colore') || ''}
-          onChange={(v) => setValue('colore', v)}
-        />
+        <Combobox label="Colore" field="colore" value={watch('colore') || ''} onChange={(v) => setValue('colore', v)} />
         <Combobox
           label="Tema colore"
           field="temaColore"
           value={watch('temaColore') || ''}
-          onChange={(v) => setValue('temaColore', v)}
+          onChange={(v) => { setValue('temaColore', v); if (!v) { setValue('temaColore2', ''); setValue('temaColore3', ''); setValue('temaColore4', ''); setValue('temaColore5', ''); } }}
         />
       </div>
+      {watch('temaColore') && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-end gap-1">
+            <div className="flex-1">
+              <Combobox label="Tema colore 2" field="temaColore" value={watch('temaColore2') || ''} onChange={(v) => { setValue('temaColore2', v); if (!v) { setValue('temaColore3', ''); setValue('temaColore4', ''); setValue('temaColore5', ''); } }} />
+            </div>
+            {watch('temaColore2') && <button type="button" onClick={() => { setValue('temaColore2', ''); setValue('temaColore3', ''); setValue('temaColore4', ''); setValue('temaColore5', ''); }} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors"><X size={13} /></button>}
+          </div>
+          {watch('temaColore2') ? (
+            <div className="flex items-end gap-1">
+              <div className="flex-1">
+                <Combobox label="Tema colore 3" field="temaColore" value={watch('temaColore3') || ''} onChange={(v) => { setValue('temaColore3', v); if (!v) { setValue('temaColore4', ''); setValue('temaColore5', ''); } }} />
+              </div>
+              {watch('temaColore3') && <button type="button" onClick={() => { setValue('temaColore3', ''); setValue('temaColore4', ''); setValue('temaColore5', ''); }} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors"><X size={13} /></button>}
+            </div>
+          ) : <div />}
+        </div>
+      )}
+      {watch('temaColore2') && watch('temaColore3') && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-end gap-1">
+            <div className="flex-1">
+              <Combobox label="Tema colore 4" field="temaColore" value={watch('temaColore4') || ''} onChange={(v) => { setValue('temaColore4', v); if (!v) setValue('temaColore5', ''); }} />
+            </div>
+            {watch('temaColore4') && <button type="button" onClick={() => { setValue('temaColore4', ''); setValue('temaColore5', ''); }} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors"><X size={13} /></button>}
+          </div>
+          {watch('temaColore4') ? (
+            <div className="flex items-end gap-1">
+              <div className="flex-1">
+                <Combobox label="Tema colore 5" field="temaColore" value={watch('temaColore5') || ''} onChange={(v) => setValue('temaColore5', v)} />
+              </div>
+              {watch('temaColore5') && <button type="button" onClick={() => setValue('temaColore5', '')} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors"><X size={13} /></button>}
+            </div>
+          ) : <div />}
+        </div>
+      )}
 
       {/* ── Prezzi e Logistica ── */}
       <SectionLabel>Prezzi e Logistica</SectionLabel>

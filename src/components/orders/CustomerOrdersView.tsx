@@ -30,12 +30,28 @@ import OrderExcelExport from '@/components/orders/OrderExcelExport';
 import type { Order } from '@/types';
 import { useSettings } from '@/contexts/SettingsContext';
 
+const PREVIEW_SORT_KEY = 'preview-sort';
+const SORT_OPTIONS = [
+  { value: 'name-asc',     label: 'Nome A→Z' },
+  { value: 'name-desc',    label: 'Nome Z→A' },
+  { value: 'linea-asc',    label: 'Linea A→Z' },
+  { value: 'linea-desc',   label: 'Linea Z→A' },
+  { value: 'price-asc',    label: 'Prezzo ↑' },
+  { value: 'price-desc',   label: 'Prezzo ↓' },
+  { value: 'novita',       label: 'Novità' },
+  { value: 'continuativi', label: 'Continuativi' },
+];
+
 export default function CustomerOrdersView() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const t = useTranslations('orders');
   const { ordine } = useSettings();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [productSort, setProductSort] = useState<string>(() =>
+    typeof window !== 'undefined' ? (localStorage.getItem(PREVIEW_SORT_KEY) ?? 'name-asc') : 'name-asc'
+  );
+  function handleProductSortChange(v: string) { setProductSort(v); localStorage.setItem(PREVIEW_SORT_KEY, v); }
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
@@ -101,13 +117,25 @@ export default function CustomerOrdersView() {
     <div className="min-h-screen bg-cream">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-primary tracking-tight">{t('title')}</h1>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {list.length === 0
-              ? t('noOrdersFound')
-              : `${list.length} ${list.length === 1 ? t('orderSingular') : t('orderPlural')}`}
-          </p>
+        <div className="mb-6 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-primary tracking-tight">{t('title')}</h1>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {list.length === 0
+                ? t('noOrdersFound')
+                : `${list.length} ${list.length === 1 ? t('orderSingular') : t('orderPlural')}`}
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <span className="text-2xs text-gray-400">Ordina prodotti</span>
+            <select
+              value={productSort}
+              onChange={(e) => handleProductSortChange(e.target.value)}
+              className="text-xs border border-border rounded px-2 py-1 bg-white text-primary focus:outline-none cursor-pointer"
+            >
+              {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
         </div>
 
         {list.length === 0 && (

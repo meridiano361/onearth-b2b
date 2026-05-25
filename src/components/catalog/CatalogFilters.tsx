@@ -129,7 +129,13 @@ export default function CatalogFilters({
   // Flat filters scoped to active hierarchy
   const nomLineaOpts    = useMemo(() => opts(byHierarchy, 'nomLinea'),    [byHierarchy]);
   const coloreOpts      = useMemo(() => opts(byHierarchy, 'colore'),      [byHierarchy]);
-  const temaColoreOpts  = useMemo(() => opts(byHierarchy, 'temaColore'),  [byHierarchy]);
+  const temaColoreOpts  = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of byHierarchy) {
+      [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].forEach((v) => { if (v) set.add(v); });
+    }
+    return Array.from(set).sort();
+  }, [byHierarchy]);
   const stagioneOpts    = useMemo(() => opts(byHierarchy, 'stagione'),    [byHierarchy]);
   const collezioneOpts  = useMemo(() => opts(byHierarchy, 'collezione'),  [byHierarchy]);
   const produttoreOpts  = useMemo(() => opts(byHierarchy, 'produttore'),  [byHierarchy]);
