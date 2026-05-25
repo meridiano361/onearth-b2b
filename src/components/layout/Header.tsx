@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
-import { LogOut } from 'lucide-react';
+import { LogOut, Heart } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -68,6 +68,18 @@ export default function Header({ session }: HeaderProps) {
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Preferiti — mobile only, not in bottom bar */}
+      <Link
+        href="/catalog/preferiti"
+        className="md:hidden p-1.5 text-gray-400 hover:text-primary transition-colors"
+        aria-label="Preferiti"
+      >
+        <Heart
+          size={18}
+          className={pathname.startsWith('/catalog/preferiti') ? 'fill-gray-900 text-gray-900' : ''}
+        />
+      </Link>
 
       {/* Language selector */}
       <LanguageSelector />
