@@ -6,13 +6,17 @@ import { prisma } from '@/lib/prisma';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
-const BUCKET = 'documents';
-
 function getSupabaseAdmin() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('Supabase env vars missing');
   return createClient(url, key, { auth: { persistSession: false } });
+}
+
+function bucketFromMime(mimeType: string | null | undefined): string {
+  if (!mimeType) return 'documents';
+  if (mimeType.startsWith('video/') || mimeType.startsWith('audio/')) return 'media';
+  return 'documents';
 }
 
 const patchSchema = z.object({
@@ -23,6 +27,7 @@ const patchSchema = z.object({
   url:        z.string().url().optional(),
   storageKey: z.string().min(1).optional(),
   size:       z.number().positive().optional(),
+  mimeType:   z.string().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -40,7 +45,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   // Se è arrivato un nuovo storageKey, elimina il vecchio file da Supabase
   if (data.storageKey && data.storageKey !== existing.storageKey) {
     const supabase = getSupabaseAdmin();
-    await supabase.storage.from(BUCKET).remove([existing.storageKey]);
+    const oldBucket = bucketFromMime(existing.mimeType);
+    await supabase.storage.from(oldBucket).remove([existing.storageKey]);
   }
 
   const doc = await prisma.document.update({
@@ -52,6 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.url        !== undefined ? { url:        data.url }        : {}),
       ...(data.storageKey !== undefined ? { storageKey: data.storageKey } : {}),
       ...(data.size       !== undefined ? { size:       data.size }       : {}),
+      ...(data.mimeType   !== undefined ? { mimeType:   data.mimeType }   : {}),
     },
   });
 
@@ -68,7 +75,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const supabase = getSupabaseAdmin();
-  await supabase.storage.from(BUCKET).remove([existing.storageKey]);
+  const bucket = bucketFromMime(existing.mimeType);
+  await supabase.storage.from(bucket).remove([existing.storageKey]);
   await prisma.document.delete({ where: { id: params.id } });
 
   return NextResponse.json({ ok: true });

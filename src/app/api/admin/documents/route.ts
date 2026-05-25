@@ -11,6 +11,7 @@ const createSchema = z.object({
   url:        z.string().url(),
   storageKey: z.string().min(1),
   size:       z.number().positive(),
+  mimeType:   z.string().optional(),
   visibile:   z.boolean().default(true),
 });
 

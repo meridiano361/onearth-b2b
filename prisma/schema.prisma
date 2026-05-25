@@ -375,6 +375,7 @@ model Document {
   url        String
   storageKey String
   size       Int
+  mimeType   String?
   visibile   Boolean  @default(true)
   createdAt  DateTime @default(now())
 

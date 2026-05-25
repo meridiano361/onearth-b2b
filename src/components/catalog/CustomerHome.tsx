@@ -4,7 +4,7 @@ import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { Globe, Mic, ShoppingBag, Check, Heart } from 'lucide-react';
+import { Globe, Mic, ShoppingBag, Check, Heart, Film } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -237,6 +237,23 @@ export default function CustomerHome() {
             </div>
           </section>
         )}
+
+        {/* ── Risorse e media ──────────────────────────────────── */}
+        <section>
+          <Link
+            href="/catalog/risorse"
+            className="flex items-center gap-3 bg-white border border-gray-200 shadow-sm rounded-xl px-5 py-4 hover:border-primary/30 transition-colors group"
+          >
+            <div className="w-9 h-9 rounded-lg bg-primary/5 flex items-center justify-center flex-shrink-0">
+              <Film size={18} className="text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-primary">Risorse e media</p>
+              <p className="text-xs text-gray-400">Video, audio e documenti PDF</p>
+            </div>
+            <span className="ml-auto text-gray-300 group-hover:text-primary transition-colors">›</span>
+          </Link>
+        </section>
 
         {/* ── Social links ───────────────────────────────────── */}
         <section>
