@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 const SINGLETON_ID = 'singleton';
 
 export async function GET() {
