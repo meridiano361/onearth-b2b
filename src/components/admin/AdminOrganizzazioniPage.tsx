@@ -6,7 +6,7 @@ import {
   Plus, ChevronDown, ChevronRight, Edit2, Trash2,
   ToggleLeft, ToggleRight, KeyRound, Store, Globe, Radio, Package,
   Users, MapPin, Copy, CheckSquare, Square, Loader2,
-  ShoppingBag, Building, ShoppingCart, Tag, Landmark, X,
+  ShoppingBag, Building, ShoppingCart, Tag, Landmark, X, Layers,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -541,6 +541,18 @@ export default function AdminOrganizzazioniPage() {
     } catch { toast.error('Errore'); }
   }
 
+  async function handleToggleMondiEspositivi(op: Operator) {
+    try {
+      const res = await fetch(`/api/admin/operators/${op.id}/features`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ featureMondiEspositivi: !op.featureMondiEspositivi }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      refresh();
+      toast.success(op.featureMondiEspositivi ? 'Mondi Espositivi disabilitato' : 'Mondi Espositivi abilitato');
+    } catch { toast.error('Errore'); }
+  }
+
   async function handleDeleteOperator(op: Operator) {
     if (!confirm(`Eliminare ${op.nome} ${op.cognome}?`)) return;
     try {
@@ -843,6 +855,7 @@ export default function AdminOrganizzazioniPage() {
                                   <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Nome</th>
                                   <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Email</th>
                                   <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Stato</th>
+                                  <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs hidden xl:table-cell">Mondi</th>
                                   <th className="w-24"></th>
                                 </tr>
                               </thead>
@@ -860,13 +873,34 @@ export default function AdminOrganizzazioniPage() {
                                         </button>
                                       </td>
                                       <td className="px-3 py-2">
-                                        <span className="font-medium text-primary">{op.nome} {op.cognome}</span>
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="font-medium text-primary">{op.nome} {op.cognome}</span>
+                                          {op.featureMondiEspositivi && (
+                                            <span className="text-2xs font-bold px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 tracking-wide flex items-center gap-0.5">
+                                              <Layers size={9} />TESTER
+                                            </span>
+                                          )}
+                                        </div>
                                       </td>
                                       <td className="px-3 py-2 text-gray-500">{op.email}</td>
                                       <td className="px-3 py-2">
                                         <Badge variant={op.attivo ? 'success' : 'default'} size="xs">
                                           {op.attivo ? 'Attivo' : 'Inattivo'}
                                         </Badge>
+                                      </td>
+                                      <td className="px-3 py-2 hidden xl:table-cell">
+                                        <button
+                                          onClick={() => handleToggleMondiEspositivi(op)}
+                                          className={`flex items-center gap-1 text-2xs px-2 py-0.5 rounded transition-colors ${
+                                            op.featureMondiEspositivi
+                                              ? 'bg-violet-100 text-violet-700 hover:bg-violet-200'
+                                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                          }`}
+                                          title={op.featureMondiEspositivi ? 'Disabilita Mondi Espositivi' : 'Abilita Mondi Espositivi'}
+                                        >
+                                          <Layers size={10} />
+                                          {op.featureMondiEspositivi ? 'ON' : 'OFF'}
+                                        </button>
                                       </td>
                                       <td className="px-3 py-2">
                                         <div className="flex items-center gap-1 justify-end">
@@ -884,6 +918,11 @@ export default function AdminOrganizzazioniPage() {
                                             {op.attivo
                                               ? <ToggleRight size={14} className="text-green-500" />
                                               : <ToggleLeft size={14} />}
+                                          </button>
+                                          <button onClick={() => handleToggleMondiEspositivi(op)}
+                                            className="p-1 xl:hidden text-gray-400 hover:text-violet-600 rounded hover:bg-violet-50 transition-colors"
+                                            title={op.featureMondiEspositivi ? 'Disabilita Mondi Espositivi' : 'Abilita Mondi Espositivi'}>
+                                            <Layers size={12} className={op.featureMondiEspositivi ? 'text-violet-500' : ''} />
                                           </button>
                                           <button onClick={() => handleDeleteOperator(op)}
                                             className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina">
@@ -919,7 +958,14 @@ export default function AdminOrganizzazioniPage() {
                                   {/* Name + status */}
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">
-                                      <p className="font-medium text-primary text-sm">{op.nome} {op.cognome}</p>
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <p className="font-medium text-primary text-sm">{op.nome} {op.cognome}</p>
+                                        {op.featureMondiEspositivi && (
+                                          <span className="text-2xs font-bold px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 tracking-wide flex items-center gap-0.5">
+                                            <Layers size={9} />TESTER
+                                          </span>
+                                        )}
+                                      </div>
                                       <p
                                         className="text-xs text-gray-500 mt-0.5"
                                         style={{ overflowWrap: 'break-word', wordBreak: 'break-all' }}
@@ -954,6 +1000,11 @@ export default function AdminOrganizzazioniPage() {
                                       {op.attivo
                                         ? <ToggleRight size={16} className="text-green-500" />
                                         : <ToggleLeft size={16} />}
+                                    </button>
+                                    <button onClick={() => handleToggleMondiEspositivi(op)}
+                                      className="p-1.5 text-gray-400 hover:text-violet-600 rounded hover:bg-violet-50 transition-colors"
+                                      title={op.featureMondiEspositivi ? 'Disabilita Mondi Espositivi' : 'Abilita Mondi Espositivi'}>
+                                      <Layers size={14} className={op.featureMondiEspositivi ? 'text-violet-500' : ''} />
                                     </button>
                                     <button onClick={() => handleDeleteOperator(op)}
                                       className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina">

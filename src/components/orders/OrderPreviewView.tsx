@@ -4,13 +4,15 @@ import { useState, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, CheckCircle, Minus, Plus, X, Database, Search, Loader2, MapPin, Copy } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle, Minus, Plus, X, Database, Search, Loader2, MapPin, Copy, Layers } from 'lucide-react';
 import OrderExcelExport from '@/components/orders/OrderExcelExport';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import DisplayGroupsManager from '@/components/catalog/DisplayGroupsManager';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import type { Order, OrderItem, Product, Destinazione } from '@/types';
 
 // ── Sort options ───────────────────────────────────────────────
@@ -309,9 +311,11 @@ export default function OrderPreviewView({ id }: { id: string }) {
   const router = useRouter();
   const t = useTranslations('preview');
   const tg = useTranslations('groupings');
+  const { mondiEspositivi } = useFeatureFlags();
 
   const GROUPINGS = GROUPING_KEYS.map((k) => ({ value: k, label: tg(k) }));
 
+  const [viewMode, setViewMode] = useState<'ordine' | 'mondi'>('ordine');
   const [groupBy, setGroupBy] = useState('collezione');
   const [sortBy, setSortBy] = useState<string>(() =>
     typeof window !== 'undefined' ? (localStorage.getItem(PREVIEW_SORT_KEY) ?? 'name-asc') : 'name-asc'
@@ -677,8 +681,43 @@ export default function OrderPreviewView({ id }: { id: string }) {
         </div>
       </div>
 
+      {/* ── Vista toggle (Mondi Espositivi) ───────────────── */}
+      {mondiEspositivi && (
+        <div className="sticky top-[57px] z-20 bg-white border-b border-border px-4 sm:px-6 py-2 flex gap-1">
+          <button
+            onClick={() => setViewMode('ordine')}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded transition-colors ${
+              viewMode === 'ordine'
+                ? 'bg-primary text-white'
+                : 'text-gray-500 hover:bg-cream border border-border'
+            }`}
+          >
+            Vista ordine
+          </button>
+          <button
+            onClick={() => setViewMode('mondi')}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded transition-colors ${
+              viewMode === 'mondi'
+                ? 'bg-violet-600 text-white'
+                : 'text-gray-500 hover:bg-violet-50 border border-border'
+            }`}
+          >
+            <Layers size={12} />
+            Mondi Espositivi
+          </button>
+        </div>
+      )}
+
+      {/* ── Mondi Espositivi view ──────────────────────────── */}
+      {mondiEspositivi && viewMode === 'mondi' && (
+        <DisplayGroupsManager orderId={id} orderItems={order.items ?? []} />
+      )}
+
+      {/* ── Vista ordine (hidden when mondi is active) ────── */}
+      {viewMode === 'ordine' && <>
+
       {/* ── Grouping tabs ─────────────────────────────────── */}
-      <div className="sticky top-[57px] z-10 bg-white border-b border-border">
+      <div className="sticky z-10 bg-white border-b border-border" style={{ top: mondiEspositivi ? 101 : 57 }}>
         <div
           ref={tabsRef}
           className="flex overflow-x-auto scrollbar-none px-4 sm:px-6"
@@ -892,6 +931,8 @@ export default function OrderPreviewView({ id }: { id: string }) {
           </div>
         </div>
       </div>
+
+      </> /* end viewMode === 'ordine' */}
 
     </div>
   );

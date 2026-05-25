@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
           telefono: true,
           ruolo: true,
           attivo: true,
+          featureMondiEspositivi: true,
           createdAt: true,
           organizationId: true,
         },

@@ -41,6 +41,7 @@ export const authOptions: NextAuthOptions = {
             companyName: operator.organization.nome,
             customerCode: '',
             organizationId: operator.organizationId,
+            featureMondiEspositivi: operator.featureMondiEspositivi,
           };
         }
 
@@ -73,6 +74,7 @@ export const authOptions: NextAuthOptions = {
         token.companyName = user.companyName;
         token.customerCode = user.customerCode;
         if (user.organizationId) token.organizationId = user.organizationId;
+        if (user.featureMondiEspositivi !== undefined) token.featureMondiEspositivi = user.featureMondiEspositivi;
       }
       // Repair old OPERATOR sessions missing organizationId
       await repairOperatorOrg(token);
@@ -98,6 +100,7 @@ export const authOptions: NextAuthOptions = {
         // legacy fallback
         if (token.canaleId && !token.destinazioneId) session.user.destinazioneId = token.canaleId as string;
         if (token.canaleName && !token.destinazioneName) session.user.destinazioneName = token.canaleName as string;
+        if (token.featureMondiEspositivi !== undefined) session.user.featureMondiEspositivi = token.featureMondiEspositivi as boolean;
       }
       return session;
     },

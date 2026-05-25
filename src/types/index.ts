@@ -122,8 +122,43 @@ export interface Operator {
   ruolo: string | null;
   organizationId: string;
   attivo: boolean;
+  featureMondiEspositivi: boolean;
   createdAt: string;
   organization?: { nome: string };
+}
+
+// ─── Mondi Espositivi ─────────────────────────────────────────────────────────
+
+export interface DisplayGroupItem {
+  id: string;
+  groupId: string;
+  orderItemId: string;
+  nota: string | null;
+  posizione: number;
+  orderItem: OrderItem;
+}
+
+export interface DisplayGroup {
+  id: string;
+  orderId: string;
+  nome: string;
+  descrizione: string | null;
+  coloreTag: string | null;
+  stagione: string | null;
+  temaTag: string | null;
+  posizione: number;
+  createdAt: string;
+  prodotti: DisplayGroupItem[];
+}
+
+export interface DisplayGroupPreset {
+  id: string;
+  operatorId: string;
+  nome: string;
+  descrizione: string | null;
+  coloreTag: string | null;
+  temaTag: string | null;
+  createdAt: string;
 }
 
 export interface Destinazione {
@@ -241,6 +276,7 @@ declare module 'next-auth' {
       organizationId?: string;
       destinazioneId?: string;
       destinazioneName?: string;
+      featureMondiEspositivi?: boolean;
     };
   }
 
@@ -254,6 +290,7 @@ declare module 'next-auth' {
     organizationId?: string;
     destinazioneId?: string;
     destinazioneName?: string;
+    featureMondiEspositivi?: boolean;
   }
 }
 
@@ -266,5 +303,6 @@ declare module 'next-auth/jwt' {
     organizationId?: string;
     destinazioneId?: string;
     destinazioneName?: string;
+    featureMondiEspositivi?: boolean;
   }
 }
