@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { FileText, Plus, Trash2, RefreshCw, Eye, EyeOff, Upload } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { FileText, Plus, Trash2, RefreshCw, Upload } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { createClient } from '@supabase/supabase-js';
 import toast from 'react-hot-toast';
 
 const TIPI = ['Condizioni Commerciali', 'Catalogo PDF', 'Altro'];
+const MAX_SIZE_MB = 50;
+const MAX_SIZE = MAX_SIZE_MB * 1024 * 1024;
 
 interface Doc {
   id: string;
@@ -27,43 +30,79 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+// ─── Upload diretto su Supabase tramite signed URL ────────────────────────────
+
+async function uploadToSupabase(file: File): Promise<{ url: string; storageKey: string }> {
+  // 1. Chiedi un signed upload URL al server
+  const res = await fetch('/api/admin/documents/signed-url', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileName: file.name, size: file.size }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Impossibile ottenere URL firmato');
+  }
+  const { signedUrl, storageKey, publicUrl } = await res.json();
+
+  // 2. Carica il file direttamente su Supabase (bypass del limite 4.5 MB di Vercel)
+  const uploadRes = await fetch(signedUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/pdf' },
+    body: file,
+  });
+  if (!uploadRes.ok) {
+    throw new Error(`Upload fallito (${uploadRes.status})`);
+  }
+
+  return { url: publicUrl, storageKey };
+}
+
+// ─── Modal carica ─────────────────────────────────────────────────────────────
+
 function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState(TIPI[0]);
   const [visibile, setVisibile] = useState(true);
   const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) { toast.error('Seleziona un file PDF'); return; }
     if (!nome.trim()) { toast.error('Inserisci un nome'); return; }
+    if (file.size > MAX_SIZE) { toast.error(`File troppo grande (max ${MAX_SIZE_MB} MB)`); return; }
 
     setLoading(true);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('nome', nome.trim());
-      fd.append('tipo', tipo);
-      fd.append('visibile', String(visibile));
+      setProgress('Caricamento file su storage…');
+      const { url, storageKey } = await uploadToSupabase(file);
 
-      const res = await fetch('/api/admin/documents', { method: 'POST', body: fd });
+      setProgress('Salvataggio metadati…');
+      const res = await fetch('/api/admin/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: nome.trim(), tipo, url, storageKey, size: file.size, visibile }),
+      });
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Upload fallito');
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Errore salvataggio metadati');
       }
+
       toast.success('Documento caricato');
       onDone();
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message ?? 'Errore upload');
     } finally {
       setLoading(false);
+      setProgress(null);
     }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40" onClick={!loading ? onClose : undefined} />
       <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
         <h2 className="text-sm font-semibold text-primary mb-5">Carica documento</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -87,7 +126,9 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
             </select>
           </div>
           <div>
-            <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">File PDF * (max 20MB)</label>
+            <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+              File PDF * (max {MAX_SIZE_MB} MB)
+            </label>
             <input
               type="file"
               accept=".pdf,application/pdf"
@@ -106,15 +147,21 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
               <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${visibile ? 'translate-x-5' : 'translate-x-0.5'}`} />
             </button>
           </div>
+          {progress && (
+            <p className="text-2xs text-gray-400 flex items-center gap-1.5">
+              <span className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              {progress}
+            </p>
+          )}
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-primary transition-colors">Annulla</button>
+            <button type="button" onClick={onClose} disabled={loading} className="px-4 py-2 text-sm text-gray-600 hover:text-primary transition-colors disabled:opacity-50">Annulla</button>
             <button
               type="submit"
               disabled={loading}
               className="px-5 py-2 text-sm font-medium bg-primary text-white rounded hover:bg-warm-darker disabled:opacity-50 transition-colors flex items-center gap-2"
             >
               <Upload size={13} />
-              {loading ? 'Caricamento...' : 'Carica'}
+              {loading ? 'Caricamento…' : 'Carica'}
             </button>
           </div>
         </form>
@@ -123,44 +170,48 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
   );
 }
 
+// ─── Modal sostituisci / modifica ─────────────────────────────────────────────
+
 function ReplaceModal({ doc, onClose, onDone }: { doc: Doc; onClose: () => void; onDone: () => void }) {
   const [nome, setNome] = useState(doc.nome);
   const [tipo, setTipo] = useState(doc.tipo);
   const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      const fd = new FormData();
-      if (file) fd.append('file', file);
-      fd.append('nome', nome.trim());
-      fd.append('tipo', tipo);
-      fd.append('visibile', String(doc.visibile));
+      let fileFields: Record<string, unknown> = {};
 
-      const method = file ? 'PATCH' : 'PATCH';
-      const res = file
-        ? await fetch(`/api/admin/documents/${doc.id}`, { method, body: fd })
-        : await fetch(`/api/admin/documents/${doc.id}`, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nome: nome.trim(), tipo }),
-          });
+      if (file) {
+        if (file.size > MAX_SIZE) throw new Error(`File troppo grande (max ${MAX_SIZE_MB} MB)`);
+        setProgress('Caricamento file su storage…');
+        const { url, storageKey } = await uploadToSupabase(file);
+        fileFields = { url, storageKey, size: file.size };
+      }
 
-      if (!res.ok) throw new Error((await res.json()).error || 'Errore');
+      setProgress('Salvataggio…');
+      const res = await fetch(`/api/admin/documents/${doc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: nome.trim(), tipo, ...fileFields }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Errore');
       toast.success('Documento aggiornato');
       onDone();
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message ?? 'Errore');
     } finally {
       setLoading(false);
+      setProgress(null);
     }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40" onClick={!loading ? onClose : undefined} />
       <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
         <h2 className="text-sm font-semibold text-primary mb-5">Modifica documento</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -175,7 +226,9 @@ function ReplaceModal({ doc, onClose, onDone }: { doc: Doc; onClose: () => void;
             </select>
           </div>
           <div>
-            <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sostituisci file (opzionale)</label>
+            <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+              Sostituisci file PDF (opzionale, max {MAX_SIZE_MB} MB)
+            </label>
             <input
               type="file"
               accept=".pdf,application/pdf"
@@ -184,10 +237,16 @@ function ReplaceModal({ doc, onClose, onDone }: { doc: Doc; onClose: () => void;
             />
             {file && <p className="text-2xs text-gray-400 mt-1">{file.name} · {fmtSize(file.size)}</p>}
           </div>
+          {progress && (
+            <p className="text-2xs text-gray-400 flex items-center gap-1.5">
+              <span className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              {progress}
+            </p>
+          )}
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-primary">Annulla</button>
+            <button type="button" onClick={onClose} disabled={loading} className="px-4 py-2 text-sm text-gray-600 hover:text-primary disabled:opacity-50">Annulla</button>
             <button type="submit" disabled={loading} className="px-5 py-2 text-sm font-medium bg-primary text-white rounded hover:bg-warm-darker disabled:opacity-50 transition-colors">
-              {loading ? 'Salvataggio...' : 'Salva'}
+              {loading ? 'Salvataggio…' : 'Salva'}
             </button>
           </div>
         </form>
@@ -195,6 +254,8 @@ function ReplaceModal({ doc, onClose, onDone }: { doc: Doc; onClose: () => void;
     </div>
   );
 }
+
+// ─── Pagina principale ────────────────────────────────────────────────────────
 
 export default function DocumentiPage() {
   const qc = useQueryClient();
