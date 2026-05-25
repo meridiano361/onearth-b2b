@@ -33,7 +33,14 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const preview = getPreviewFromSession(session);
-  const organizationId = preview?.organizationId ?? session.user.organizationId;
+  let organizationId = preview?.organizationId ?? session.user.organizationId;
+
+  // Fallback for old OPERATOR sessions missing organizationId
+  if (!organizationId && session.user.role === 'OPERATOR') {
+    const op = await prisma.operator.findUnique({ where: { id: session.user.id }, select: { organizationId: true } });
+    organizationId = op?.organizationId;
+  }
+
   if (!organizationId) return NextResponse.json({ data: [] });
 
   const canali = await prisma.canale.findMany({
@@ -46,15 +53,21 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user.organizationId) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (getPreviewFromSession(session)) {
     return NextResponse.json(
       { error: 'Non puoi modificare dati in modalità anteprima', previewMode: true },
       { status: 403 }
     );
   }
+
+  // Resolve organizationId — fallback to DB lookup for old sessions missing the field
+  let organizationId = session.user.organizationId;
+  if (!organizationId && session.user.role === 'OPERATOR') {
+    const op = await prisma.operator.findUnique({ where: { id: session.user.id }, select: { organizationId: true } });
+    organizationId = op?.organizationId;
+  }
+  if (!organizationId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
   const data = createSchema.parse(body);
@@ -68,7 +81,7 @@ export async function POST(req: NextRequest) {
       citta: data.citta?.trim() || null,
       indirizzo: data.indirizzo?.trim() || null,
       budget: data.budget ?? null,
-      organizationId: session.user.organizationId,
+      organizationId,
     },
   });
 

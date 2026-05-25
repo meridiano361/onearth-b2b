@@ -78,7 +78,15 @@ export async function GET(req: NextRequest) {
       where.organizationId = preview.organizationId;
     } else if (!isAdminRole(session.user.role)) {
       if (session.user.role === 'OPERATOR') {
-        where.organizationId = session.user.organizationId;
+        // OR across organizationId and operatorId so orders found even if one field is null
+        const orClauses: any[] = [];
+        if (session.user.organizationId) orClauses.push({ organizationId: session.user.organizationId });
+        orClauses.push({ operatorId: session.user.id });
+        if (orClauses.length === 1) {
+          where.operatorId = session.user.id;
+        } else {
+          where.OR = orClauses;
+        }
       } else {
         // CUSTOMER (legacy) or any other non-admin role: filter by customerId
         where.customerId = session.user.id;
@@ -179,7 +187,10 @@ export async function POST(req: NextRequest) {
       if (!data.canaleId) {
         return NextResponse.json({ error: 'Destinazione obbligatoria' }, { status: 400 });
       }
-      orderData.organizationId = session.user.organizationId;
+      // If organizationId missing from session (old JWT), fetch from DB
+      const orgId = session.user.organizationId ??
+        (await prisma.operator.findUnique({ where: { id: session.user.id }, select: { organizationId: true } }))?.organizationId;
+      orderData.organizationId = orgId || null;
       orderData.canaleId = data.canaleId;
       orderData.operatorId = session.user.id;
     } else if (isAdminRole(session.user.role)) {

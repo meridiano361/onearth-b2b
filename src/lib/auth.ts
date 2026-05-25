@@ -4,6 +4,12 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import type { AppRole } from '@/types';
 
+async function repairOperatorOrg(token: any) {
+  if (token.role !== 'OPERATOR' || token.organizationId) return;
+  const op = await prisma.operator.findUnique({ where: { id: token.id }, select: { organizationId: true } });
+  if (op?.organizationId) token.organizationId = op.organizationId;
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -68,6 +74,8 @@ export const authOptions: NextAuthOptions = {
         token.customerCode = user.customerCode;
         if (user.organizationId) token.organizationId = user.organizationId;
       }
+      // Repair old OPERATOR sessions missing organizationId
+      await repairOperatorOrg(token);
       // Allow session.update({ destinazioneId, destinazioneName }) from client
       if (trigger === 'update' && session) {
         if (session.destinazioneId !== undefined) token.destinazioneId = session.destinazioneId;
