@@ -8,8 +8,8 @@ import { z } from 'zod';
 
 const orderItemSchema = z.object({
   productId: z.string(),
-  quantity: z.number().int().positive(),
-  unitPrice: z.number().positive(),
+  quantity: z.coerce.number().int().positive(),
+  unitPrice: z.coerce.number().positive(),
 });
 
 const createOrderSchema = z.object({
@@ -147,6 +147,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+    console.log('[POST /api/orders] body items:', JSON.stringify(body?.items?.length), 'role:', session.user.role, 'canaleId:', body?.canaleId);
+
     const data = createOrderSchema.parse(body);
 
     // Validate and price items
@@ -156,7 +158,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (products.length !== productIds.length) {
-      return NextResponse.json({ error: 'Uno o più prodotti non trovati o non attivi' }, { status: 400 });
+      const foundIds = new Set(products.map((p) => p.id));
+      const missingIds = productIds.filter((id) => !foundIds.has(id));
+      console.error('[POST /api/orders] prodotti non trovati o inattivi:', missingIds);
+      return NextResponse.json({ error: `Prodotti non trovati o non più attivi: rimuovili dal carrello e riprova.`, missing: missingIds }, { status: 400 });
     }
 
     const productMap = new Map(products.map((p) => [p.id, p]));
@@ -226,6 +231,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    console.log('[POST /api/orders] creating order', { orgId: orderData.organizationId, canaleId: orderData.canaleId, opId: orderData.operatorId, items: orderItems.length });
     const order = await prisma.order.create({
       data: orderData,
       include: {
@@ -235,16 +241,19 @@ export async function POST(req: NextRequest) {
         items: { include: { product: { include: { category: true } } } },
       },
     });
+    console.log('[POST /api/orders] created:', order.id, order.orderNumber);
 
     return NextResponse.json({ data: serializeOrder(order) }, { status: 201 });
   } catch (err: any) {
     if (err.name === 'ZodError') {
+      console.error('[POST /api/orders] ZodError:', JSON.stringify(err.errors));
       return NextResponse.json({ error: 'Dati non validi', details: err.errors }, { status: 400 });
     }
     if (err.code === 'P2002') {
+      console.error('[POST /api/orders] P2002 duplicate:', err.meta);
       return NextResponse.json({ error: 'Prodotto duplicato nell\'ordine' }, { status: 409 });
     }
-    console.error('POST /api/orders error:', err);
+    console.error('[POST /api/orders] error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

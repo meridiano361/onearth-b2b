@@ -25,7 +25,7 @@ export default function CartSidebar() {
   const { data: session } = useSession();
   const preview = usePreview();
   const { ordine } = useSettings();
-  const { items, collectionId, notes, clearCart, getTotalItems, hasLotWarnings, addItem } = useCartStore();
+  const { items, collectionId, notes, clearCart, removeItem, getTotalItems, hasLotWarnings, addItem } = useCartStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [destinazioni, setDestinazioni] = useState<Destinazione[]>([]);
   const [showDestinazioneModal, setShowDestinazioneModal] = useState(false);
@@ -98,12 +98,18 @@ export default function CartSidebar() {
           items: items.map((i) => ({
             productId: i.productId,
             quantity: i.quantity,
-            unitPrice: i.product.costPrice,
+            unitPrice: Number(i.product.costPrice),
           })),
         }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? t('errorCreate'));
+      if (!res.ok) {
+        // Se ci sono prodotti mancanti, rimuovili dal carrello
+        if (body.missing?.length) {
+          body.missing.forEach((id: string) => removeItem(id));
+        }
+        throw new Error(body.error ?? t('errorCreate'));
+      }
       clearCart();
       toast.success('Ordine creato con successo');
       router.push('/catalog/orders');
