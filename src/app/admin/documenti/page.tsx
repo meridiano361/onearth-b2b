@@ -126,6 +126,13 @@ async function uploadToSupabase(
   tipo: string,
   onProgress: (p: UploadProgress) => void,
 ): Promise<{ url: string; storageKey: string }> {
+  // Garantisce che i bucket esistano prima di qualsiasi upload
+  const ensureRes = await fetch('/api/admin/documents/ensure-buckets', { method: 'POST' });
+  if (!ensureRes.ok) {
+    const err = await ensureRes.json().catch(() => ({}));
+    throw new Error(err.error || 'Impossibile creare i bucket di storage');
+  }
+
   const res = await fetch('/api/admin/documents/signed-url', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
