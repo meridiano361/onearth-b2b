@@ -135,7 +135,17 @@ export interface DisplayGroupItem {
   orderItemId: string;
   nota: string | null;
   posizione: number;
+  isFocus: boolean;
   orderItem: OrderItem;
+}
+
+export interface DisplayGroupSchedule {
+  id: string;
+  groupId: string;
+  anno: number;
+  settimanaIn: number;
+  settimanaFn: number;
+  nota: string | null;
 }
 
 export interface DisplayGroup {
@@ -149,6 +159,7 @@ export interface DisplayGroup {
   posizione: number;
   createdAt: string;
   prodotti: DisplayGroupItem[];
+  schedules?: DisplayGroupSchedule[];
 }
 
 export interface DisplayGroupPreset {

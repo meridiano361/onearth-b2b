@@ -4,6 +4,24 @@ import { prisma } from '@/lib/prisma';
 
 const FORBIDDEN = NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { orderId: string; groupId: string; orderItemId: string } }
+) {
+  const operatorId = await requireMondiEspositivi();
+  if (!operatorId) return FORBIDDEN;
+
+  const body = await req.json();
+  const isFocus = Boolean(body.isFocus);
+
+  await prisma.displayGroupItem.updateMany({
+    where: { groupId: params.groupId, orderItemId: params.orderItemId },
+    data: { isFocus },
+  });
+
+  return NextResponse.json({ ok: true });
+}
+
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: { orderId: string; groupId: string; orderItemId: string } }

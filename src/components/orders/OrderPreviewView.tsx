@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import DisplayGroupsManager from '@/components/catalog/DisplayGroupsManager';
+import CalendarioEsposizione from '@/components/catalog/CalendarioEsposizione';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import type { Order, OrderItem, Product, Destinazione } from '@/types';
 
@@ -315,7 +316,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
 
   const GROUPINGS = GROUPING_KEYS.map((k) => ({ value: k, label: tg(k) }));
 
-  const [viewMode, setViewMode] = useState<'ordine' | 'mondi'>('ordine');
+  const [viewMode, setViewMode] = useState<'ordine' | 'mondi' | 'calendario'>('ordine');
   const [groupBy, setGroupBy] = useState('collezione');
   const [sortBy, setSortBy] = useState<string>(() =>
     typeof window !== 'undefined' ? (localStorage.getItem(PREVIEW_SORT_KEY) ?? 'name-asc') : 'name-asc'
@@ -705,6 +706,16 @@ export default function OrderPreviewView({ id }: { id: string }) {
             <Layers size={12} />
             Mondi Espositivi
           </button>
+          <button
+            onClick={() => setViewMode('calendario')}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded transition-colors ${
+              viewMode === 'calendario'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-500 hover:bg-blue-50 border border-border'
+            }`}
+          >
+            📅 Calendario
+          </button>
         </div>
       )}
 
@@ -713,7 +724,12 @@ export default function OrderPreviewView({ id }: { id: string }) {
         <DisplayGroupsManager orderId={id} orderItems={order.items ?? []} />
       )}
 
-      {/* ── Vista ordine (hidden when mondi is active) ────── */}
+      {/* ── Calendario view ────────────────────────────────── */}
+      {mondiEspositivi && viewMode === 'calendario' && (
+        <CalendarioEsposizione orderId={id} />
+      )}
+
+      {/* ── Vista ordine (hidden when mondi/calendario active) */}
       {viewMode === 'ordine' && <>
 
       {/* ── Grouping tabs ─────────────────────────────────── */}

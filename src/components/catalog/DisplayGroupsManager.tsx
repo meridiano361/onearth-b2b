@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent,
@@ -12,11 +12,11 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Plus, LayoutGrid, List, Pencil, Copy, Trash2,
   GripVertical, X, Search, Check, Download, Loader2, ChevronDown, ChevronRight,
-  MoreHorizontal,
+  MoreHorizontal, Flame, Calendar,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ProductImage } from '@/components/ui/ProductImage';
-import type { DisplayGroup, DisplayGroupItem, OrderItem } from '@/types';
+import type { DisplayGroup, DisplayGroupItem, DisplayGroupSchedule, OrderItem } from '@/types';
 
 // ─── Costanti ─────────────────────────────────────────────────────────────────
 
@@ -52,8 +52,6 @@ const TEMPLATES = [
   { nome: 'Parete' },
 ];
 
-const CARD_SLOTS = 6;
-
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
 function sortProductsForDisplay(items: DisplayGroupItem[]): DisplayGroupItem[] {
@@ -77,13 +75,39 @@ function groupByLinea(items: DisplayGroupItem[]): { linea: string; items: Displa
   return Array.from(map.entries()).map(([linea, lineaItems]) => ({ linea, items: lineaItems }));
 }
 
-// ─── Product views (for GroupRow expanded) ────────────────────────────────────
+function getActiveSchedule(schedules: DisplayGroupSchedule[] | undefined): DisplayGroupSchedule | null {
+  if (!schedules?.length) return null;
+  const year = new Date().getFullYear();
+  return schedules.find((s) => s.anno === year) ?? schedules[0];
+}
+
+// ─── FlameButton ──────────────────────────────────────────────────────────────
+
+function FlameButton({
+  isFocus, onToggle, size = 14,
+}: { isFocus: boolean; onToggle: () => void; size?: number }) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      title={isFocus ? 'Rimuovi focus' : 'Segna come focus'}
+      className="transition-opacity hover:opacity-100"
+      style={{ opacity: isFocus ? 1 : 0.2 }}
+    >
+      <Flame size={size} color={isFocus ? '#F97316' : '#6B7280'} fill={isFocus ? '#F97316' : 'none'} />
+    </button>
+  );
+}
+
+// ─── Product views (used in GroupRow) ─────────────────────────────────────────
 
 function ProductListaView({
-  items, onRemove, deletingItemId,
+  items, orderId, groupId, onRemove, onToggleFocus, deletingItemId,
 }: {
   items: DisplayGroupItem[];
+  orderId: string;
+  groupId: string;
   onRemove: (item: DisplayGroupItem) => void;
+  onToggleFocus: (item: DisplayGroupItem) => void;
   deletingItemId: string | null;
 }) {
   const sorted = sortProductsForDisplay(items);
@@ -120,6 +144,7 @@ function ProductListaView({
                   </span>
                 )}
                 <span className="text-base font-medium text-gray-600 flex-shrink-0">× {item.orderItem.quantity}</span>
+                <FlameButton isFocus={item.isFocus} onToggle={() => onToggleFocus(item)} size={13} />
                 <button
                   onClick={() => onRemove(item)}
                   disabled={deletingItemId === item.id}
@@ -137,10 +162,13 @@ function ProductListaView({
 }
 
 function ProductBoardView({
-  items, onRemove, deletingItemId,
+  items, orderId, groupId, onRemove, onToggleFocus, deletingItemId,
 }: {
   items: DisplayGroupItem[];
+  orderId: string;
+  groupId: string;
   onRemove: (item: DisplayGroupItem) => void;
+  onToggleFocus: (item: DisplayGroupItem) => void;
   deletingItemId: string | null;
 }) {
   const sorted = sortProductsForDisplay(items);
@@ -156,23 +184,36 @@ function ProductBoardView({
               <div className="flex-1 h-px bg-border" />
             </div>
           )}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
             {lineaItems.map((item) => {
               const p = item.orderItem.product;
               return (
-                <div key={item.id} className="relative group/item aspect-square rounded overflow-hidden bg-cream">
-                  {p?.imageUrl
-                    ? <ProductImage src={p.imageUrl} alt={p?.name ?? ''} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full bg-cream" />
-                  }
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/item:opacity-100 transition-opacity flex flex-col justify-end p-1.5 pointer-events-none">
-                    <p className="text-sm font-mono text-white/80 leading-tight">{p?.code}</p>
-                    <p className="text-sm text-white leading-tight line-clamp-2">{p?.name}</p>
+                <div
+                  key={item.id}
+                  className="relative group/item rounded-[8px] overflow-hidden"
+                  style={{
+                    backgroundColor: '#F3F4F6',
+                    border: item.isFocus ? '2px solid #F97316' : '2px solid transparent',
+                  }}
+                >
+                  <div className="aspect-square overflow-hidden">
+                    {p?.imageUrl
+                      ? <ProductImage src={p.imageUrl} alt={p?.name ?? ''} className="w-full h-full object-cover" />
+                      : <div className="w-full h-full bg-gray-200" />
+                    }
                   </div>
+                  <p className="text-[9px] text-gray-400 text-center py-1 px-0.5 truncate">{p?.code}</p>
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/40 transition-colors rounded-[8px]" />
+                  {/* Focus button */}
+                  <div className="absolute top-1 right-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                    <FlameButton isFocus={item.isFocus} onToggle={() => onToggleFocus(item)} size={12} />
+                  </div>
+                  {/* Remove button */}
                   <button
                     onClick={() => onRemove(item)}
                     disabled={deletingItemId === item.id}
-                    className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full items-center justify-center hidden group-hover/item:flex z-10"
+                    className="absolute top-1 left-1 w-5 h-5 bg-red-500 text-white rounded-full items-center justify-center hidden group-hover/item:flex z-10"
                   >
                     {deletingItemId === item.id ? <Loader2 size={9} className="animate-spin" /> : <X size={9} />}
                   </button>
@@ -247,7 +288,6 @@ function GroupFormModal({
           <button onClick={onClose} className="text-gray-400 hover:text-primary p-1 transition-colors"><X size={16} /></button>
         </div>
 
-        {/* Template rapidi */}
         {!isEdit && (
           <div className="mb-4">
             <p className="text-2xs text-gray-400 uppercase tracking-wider mb-2">Template rapidi</p>
@@ -308,11 +348,9 @@ function GroupFormModal({
             </div>
           </div>
 
-          {/* Palette colori — griglia 8 colonne, pallini 28×28px */}
           <div>
             <label className="block text-2xs text-gray-400 uppercase tracking-wider mb-2">Colore tag</label>
             <div className="grid grid-cols-8 gap-1.5">
-              {/* Nessun colore */}
               <button
                 onClick={() => setForm((f) => ({ ...f, coloreTag: '' }))}
                 className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
@@ -381,19 +419,13 @@ function AddItemsModal({
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return orderItems.filter((it) =>
-      !q ||
-      it.product?.code?.toLowerCase().includes(q) ||
-      it.product?.name?.toLowerCase().includes(q)
+      !q || it.product?.code?.toLowerCase().includes(q) || it.product?.name?.toLowerCase().includes(q)
     );
   }, [orderItems, search]);
 
   function toggleItem(id: string) {
     if (assignedItemIds.has(id)) return;
-    setSelected((prev) => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
+    setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
 
   async function handleAdd() {
@@ -410,9 +442,7 @@ function AddItemsModal({
       onAdded();
     } catch {
       toast.error('Errore nell\'aggiunta dei prodotti');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   return (
@@ -421,18 +451,14 @@ function AddItemsModal({
       <div className="relative z-10 bg-white w-full sm:max-w-lg sm:rounded-lg shadow-2xl max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
           <p className="text-sm font-semibold text-primary">Aggiungi prodotti al gruppo</p>
-          <button onClick={onClose} className="text-gray-400 hover:text-primary p-1 transition-colors"><X size={16} /></button>
+          <button onClick={onClose} className="text-gray-400 hover:text-primary p-1"><X size={16} /></button>
         </div>
         <div className="px-4 py-3 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2 border border-border rounded px-3 py-2">
             <Search size={13} className="text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Cerca per codice o nome…"
-              className="flex-1 text-xs outline-none bg-transparent text-primary placeholder-gray-400"
-            />
+              className="flex-1 text-xs outline-none bg-transparent text-primary placeholder-gray-400" />
           </div>
         </div>
         <div className="flex-1 overflow-y-auto divide-y divide-border">
@@ -440,25 +466,16 @@ function AddItemsModal({
             const isAssigned = assignedItemIds.has(item.id);
             const isSelected = selected.has(item.id);
             return (
-              <button
-                key={item.id}
-                onClick={() => toggleItem(item.id)}
-                disabled={isAssigned}
+              <button key={item.id} onClick={() => toggleItem(item.id)} disabled={isAssigned}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
                   isAssigned ? 'opacity-50 cursor-default' : isSelected ? 'bg-accent/8' : 'hover:bg-cream/50'
-                }`}
-              >
+                }`}>
                 <div className="flex-shrink-0 w-4 h-4">
-                  {isAssigned
-                    ? <Check size={14} className="text-green-500" />
-                    : isSelected
-                    ? <div className="w-4 h-4 rounded bg-accent flex items-center justify-center"><Check size={10} className="text-white" /></div>
-                    : <div className="w-4 h-4 rounded border border-border" />
-                  }
+                  {isAssigned ? <Check size={14} className="text-green-500" />
+                    : isSelected ? <div className="w-4 h-4 rounded bg-accent flex items-center justify-center"><Check size={10} className="text-white" /></div>
+                    : <div className="w-4 h-4 rounded border border-border" />}
                 </div>
-                {item.product?.imageUrl && (
-                  <ProductImage src={item.product.imageUrl} alt={item.product.name} className="w-10 h-10 object-cover rounded flex-shrink-0" />
-                )}
+                {item.product?.imageUrl && <ProductImage src={item.product.imageUrl} alt={item.product.name} className="w-10 h-10 object-cover rounded flex-shrink-0" />}
                 <div className="flex-1 min-w-0">
                   <p className="text-2xs text-gray-400 font-medium">{item.product?.code}</p>
                   <p className="text-xs text-primary truncate">{item.product?.name}</p>
@@ -467,17 +484,12 @@ function AddItemsModal({
               </button>
             );
           })}
-          {filtered.length === 0 && (
-            <p className="text-center text-sm text-gray-400 py-10">Nessun prodotto trovato</p>
-          )}
+          {filtered.length === 0 && <p className="text-center text-sm text-gray-400 py-10">Nessun prodotto trovato</p>}
         </div>
         <div className="px-4 py-3 border-t border-border flex items-center justify-between flex-shrink-0">
           <span className="text-xs text-gray-400">{selected.size} selezionati</span>
-          <button
-            onClick={handleAdd}
-            disabled={selected.size === 0 || saving}
-            className="px-4 py-2 bg-primary text-white text-xs rounded hover:bg-primary/90 transition-colors flex items-center gap-1.5 disabled:opacity-50"
-          >
+          <button onClick={handleAdd} disabled={selected.size === 0 || saving}
+            className="px-4 py-2 bg-primary text-white text-xs rounded hover:bg-primary/90 transition-colors flex items-center gap-1.5 disabled:opacity-50">
             {saving && <Loader2 size={11} className="animate-spin" />}
             Aggiungi selezionati
           </button>
@@ -487,7 +499,87 @@ function AddItemsModal({
   );
 }
 
-// ─── GroupCard (board view) — griglia 2×3 fissa ───────────────────────────────
+// ─── AssignToGroupPopover ──────────────────────────────────────────────────────
+
+function AssignToGroupPopover({
+  item, orderId, groups, onClose, onAssigned, onCreateGroup,
+}: {
+  item: OrderItem;
+  orderId: string;
+  groups: DisplayGroup[];
+  onClose: () => void;
+  onAssigned: () => void;
+  onCreateGroup: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [assigning, setAssigning] = useState<string | null>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [onClose]);
+
+  async function assignTo(groupId: string) {
+    setAssigning(groupId);
+    try {
+      const res = await fetch(`/api/catalog/orders/${orderId}/display-groups/${groupId}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderItemId: item.id }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Prodotto assegnato');
+      onAssigned();
+    } catch {
+      toast.error('Errore nell\'assegnazione');
+    } finally {
+      setAssigning(null);
+    }
+  }
+
+  return (
+    <div
+      ref={ref}
+      className="absolute z-40 bg-white border border-border rounded-lg shadow-xl py-1 min-w-[180px]"
+      style={{ top: '100%', left: 0, marginTop: 4 }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <p className="px-3 py-1.5 text-2xs font-semibold text-gray-400 uppercase tracking-wider">Aggiungi a gruppo</p>
+      {groups.length === 0 && (
+        <p className="px-3 py-2 text-xs text-gray-400 italic">Nessun gruppo ancora</p>
+      )}
+      {groups.map((g) => (
+        <button
+          key={g.id}
+          onClick={() => assignTo(g.id)}
+          disabled={assigning === g.id}
+          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-cream transition-colors"
+        >
+          {assigning === g.id
+            ? <Loader2 size={10} className="animate-spin text-gray-400" />
+            : g.coloreTag
+            ? <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: g.coloreTag }} />
+            : <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-gray-200" />
+          }
+          <span className="truncate">{g.nome}</span>
+        </button>
+      ))}
+      <div className="border-t border-border mt-1 pt-1">
+        <button
+          onClick={() => { onClose(); onCreateGroup(); }}
+          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-accent hover:bg-accent/5 transition-colors"
+        >
+          <Plus size={11} />Crea nuovo gruppo
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── GroupCard (board) ────────────────────────────────────────────────────────
 
 function GroupCard({
   group, orderId, orderItems, onEdit, onDuplicate, onDelete, onRefresh,
@@ -500,14 +592,17 @@ function GroupCard({
   onDelete: () => void;
   onRefresh: () => void;
 }) {
+  const queryClient = useQueryClient();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id });
   const [menuOpen, setMenuOpen] = useState(false);
   const [addItemsOpen, setAddItemsOpen] = useState(false);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
-  const assignedItemIds = useMemo(
-    () => new Set(group.prodotti.map((p) => p.orderItemId)),
-    [group.prodotti]
-  );
+  const assignedItemIds = useMemo(() => new Set(group.prodotti.map((p) => p.orderItemId)), [group.prodotti]);
+  const sorted = useMemo(() => sortProductsForDisplay(group.prodotti), [group.prodotti]);
+  const grouped = useMemo(() => groupByLinea(sorted), [sorted]);
+  const activeSchedule = getActiveSchedule(group.schedules);
+  const hasFocus = group.prodotti.some((p) => p.isFocus);
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -516,121 +611,149 @@ function GroupCard({
     zIndex: isDragging ? 50 : undefined,
   };
 
-  const hasOverflow = group.prodotti.length > CARD_SLOTS;
-  const overflowCount = group.prodotti.length - (CARD_SLOTS - 1);
-  const displayedItems = hasOverflow ? group.prodotti.slice(0, CARD_SLOTS - 1) : group.prodotti;
-  const emptySlots = hasOverflow ? 0 : CARD_SLOTS - group.prodotti.length;
+  async function removeItem(item: DisplayGroupItem) {
+    setDeletingItemId(item.id);
+    try {
+      const res = await fetch(`/api/catalog/orders/${orderId}/display-groups/${group.id}/items/${item.orderItemId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      onRefresh();
+    } catch { toast.error('Errore nella rimozione'); }
+    finally { setDeletingItemId(null); }
+  }
+
+  async function toggleFocus(item: DisplayGroupItem) {
+    const newVal = !item.isFocus;
+    // Optimistic update
+    queryClient.setQueryData(['display-groups', orderId], (old: any) => ({
+      ...old,
+      groups: old.groups.map((g: DisplayGroup) =>
+        g.id === group.id
+          ? { ...g, prodotti: g.prodotti.map((p) => p.id === item.id ? { ...p, isFocus: newVal } : p) }
+          : g
+      ),
+    }));
+    try {
+      await fetch(`/api/catalog/orders/${orderId}/display-groups/${group.id}/items/${item.orderItemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFocus: newVal }),
+      });
+    } catch {
+      toast.error('Errore');
+      onRefresh();
+    }
+  }
 
   return (
     <>
-      <div ref={setNodeRef} style={style} className="bg-white border border-border rounded-lg overflow-hidden flex flex-col h-[320px]">
+      <div ref={setNodeRef} style={style} className="bg-white border border-border rounded-lg overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border bg-cream/40 flex-shrink-0">
           <button {...attributes} {...listeners} className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none">
             <GripVertical size={14} />
           </button>
-          {group.coloreTag && (
-            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: group.coloreTag }} />
-          )}
+          {group.coloreTag && <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: group.coloreTag }} />}
           <span className="flex-1 text-sm font-semibold text-primary truncate">{group.nome}</span>
+          {hasFocus && <Flame size={12} color="#F97316" fill="#F97316" />}
+          {/* Schedule badge */}
+          {activeSchedule ? (
+            <span className="text-2xs text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 flex items-center gap-0.5 flex-shrink-0">
+              <Calendar size={9} />S{activeSchedule.settimanaIn}→S{activeSchedule.settimanaFn}
+            </span>
+          ) : (
+            <span className="text-2xs text-gray-300 flex-shrink-0 hidden sm:block">non pianificato</span>
+          )}
           <div className="relative flex-shrink-0">
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="p-1 text-gray-400 hover:text-primary rounded hover:bg-white transition-colors"
-            >
+            <button onClick={() => setMenuOpen(!menuOpen)} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-white transition-colors">
               <MoreHorizontal size={14} />
             </button>
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                 <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-border rounded shadow-lg py-1 min-w-[150px]">
-                  <button onClick={() => { setMenuOpen(false); onEdit(); }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream transition-colors">
-                    <Pencil size={11} />Rinomina
-                  </button>
-                  <button onClick={() => { setMenuOpen(false); onDuplicate(); }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream transition-colors">
-                    <Copy size={11} />Duplica
-                  </button>
-                  <button onClick={() => { setMenuOpen(false); onDelete(); }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 transition-colors">
-                    <Trash2 size={11} />Elimina
-                  </button>
+                  <button onClick={() => { setMenuOpen(false); onEdit(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream"><Pencil size={11} />Rinomina</button>
+                  <button onClick={() => { setMenuOpen(false); onDuplicate(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream"><Copy size={11} />Duplica</button>
+                  <button onClick={() => { setMenuOpen(false); onDelete(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50"><Trash2 size={11} />Elimina</button>
                 </div>
               </>
             )}
           </div>
         </div>
 
-        {/* Griglia 2×3 slot prodotto */}
-        <div className="flex-1 overflow-hidden p-2">
-          <div className="grid grid-cols-2 grid-rows-3 gap-1 h-full">
-            {/* Prodotti visualizzati */}
-            {displayedItems.map((item) => {
-              const p = item.orderItem.product;
-              return (
-                <div key={item.id} className="flex flex-col overflow-hidden rounded">
-                  <div className="flex-1 relative overflow-hidden bg-cream">
-                    {p?.imageUrl
-                      ? <ProductImage src={p.imageUrl} alt={p.name} className="absolute inset-0 w-full h-full object-cover" />
-                      : null
-                    }
-                  </div>
-                  <p className="text-[9px] text-gray-400 text-center py-0.5 flex-shrink-0 truncate px-0.5">
-                    {p?.code}
-                  </p>
-                </div>
-              );
-            })}
-
-            {/* Slot overflow "+N altri" */}
-            {hasOverflow && (
-              <div className="relative rounded overflow-hidden bg-gray-100 flex flex-col">
-                <div className="flex-1 relative">
-                  {group.prodotti[CARD_SLOTS - 1]?.orderItem.product?.imageUrl && (
-                    <ProductImage
-                      src={group.prodotti[CARD_SLOTS - 1].orderItem.product!.imageUrl!}
-                      alt=""
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
+        {/* Product grid — 5 per row, all products, linea separators */}
+        <div className="p-3 flex-1">
+          {group.prodotti.length === 0 ? (
+            <p className="text-sm text-gray-300 text-center py-4 italic">Nessun prodotto</p>
+          ) : (
+            <div className="space-y-3">
+              {grouped.map(({ linea, items: lineaItems }) => (
+                <div key={linea || '__nessuna__'}>
+                  {linea && (
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="text-2xs font-semibold uppercase tracking-wide text-gray-400">{linea}</span>
+                      <div className="flex-1 h-px bg-gray-200" />
+                    </div>
                   )}
-                  <div className="absolute inset-0 bg-black/65 flex items-center justify-center">
-                    <span className="text-white text-xs font-bold leading-tight text-center">+{overflowCount}<br/>altri</span>
+                  <div className="grid grid-cols-5 gap-1">
+                    {lineaItems.map((item) => {
+                      const p = item.orderItem.product;
+                      return (
+                        <div
+                          key={item.id}
+                          className="relative group/slot rounded-[6px] overflow-hidden"
+                          style={{
+                            backgroundColor: '#F3F4F6',
+                            border: item.isFocus ? '1.5px solid #F97316' : '1.5px solid transparent',
+                          }}
+                        >
+                          <div className="aspect-square overflow-hidden">
+                            {p?.imageUrl
+                              ? <ProductImage src={p.imageUrl} alt={p?.name ?? ''} className="w-full h-full object-cover" />
+                              : <div className="w-full h-full bg-gray-200" />
+                            }
+                          </div>
+                          <p className="text-[8px] text-gray-400 text-center leading-tight py-0.5 truncate">{p?.code}</p>
+                          {/* Hover controls */}
+                          <div className="absolute top-0.5 right-0.5 flex flex-col gap-0.5 opacity-0 group-hover/slot:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => toggleFocus(item)}
+                              className="w-4 h-4 bg-white/90 rounded flex items-center justify-center"
+                              title={item.isFocus ? 'Rimuovi focus' : 'Focus'}
+                            >
+                              <Flame size={9} color={item.isFocus ? '#F97316' : '#9CA3AF'} fill={item.isFocus ? '#F97316' : 'none'} />
+                            </button>
+                            <button
+                              onClick={() => removeItem(item)}
+                              disabled={deletingItemId === item.id}
+                              className="w-4 h-4 bg-red-500/90 rounded flex items-center justify-center"
+                            >
+                              {deletingItemId === item.id ? <Loader2 size={7} className="animate-spin text-white" /> : <X size={7} className="text-white" />}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-                <p className="text-[9px] text-gray-400 text-center py-0.5 flex-shrink-0">···</p>
-              </div>
-            )}
-
-            {/* Slot vuoti */}
-            {Array.from({ length: emptySlots }).map((_, i) => (
-              <div key={`empty-${i}`} className="rounded border border-dashed border-gray-200 flex flex-col">
-                <div className="flex-1" />
-                <p className="text-[9px] text-transparent py-0.5">·</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-3 py-2 flex items-center justify-between flex-shrink-0 border-t border-border/50">
-          <span className="text-xs text-gray-400">
-            {group.prodotti.length} prodott{group.prodotti.length !== 1 ? 'i' : 'o'}
-          </span>
+              ))}
+            </div>
+          )}
           <button
             onClick={() => setAddItemsOpen(true)}
-            className="flex items-center gap-1 text-2xs text-accent hover:text-accent/80 transition-colors"
+            className="mt-2 w-full flex items-center justify-center gap-1 text-2xs text-accent hover:text-accent/80 border border-dashed border-accent/30 hover:border-accent/60 rounded py-1.5 transition-colors"
           >
-            <Plus size={10} />Aggiungi
+            <Plus size={10} />Aggiungi prodotto
           </button>
+        </div>
+
+        <div className="px-3 py-2 flex items-center justify-between flex-shrink-0 border-t border-border/50">
+          <span className="text-xs text-gray-400">{group.prodotti.length} prodott{group.prodotti.length !== 1 ? 'i' : 'o'}</span>
         </div>
       </div>
 
       {addItemsOpen && (
         <AddItemsModal
-          orderId={orderId}
-          groupId={group.id}
-          orderItems={orderItems}
+          orderId={orderId} groupId={group.id} orderItems={orderItems}
           assignedItemIds={assignedItemIds}
           onClose={() => setAddItemsOpen(false)}
           onAdded={() => { setAddItemsOpen(false); onRefresh(); }}
@@ -640,7 +763,7 @@ function GroupCard({
   );
 }
 
-// ─── GroupRow (list/accordion view) ───────────────────────────────────────────
+// ─── GroupRow (list/accordion) ─────────────────────────────────────────────────
 
 function GroupRow({
   group, orderId, orderItems, onEdit, onDuplicate, onDelete, onRefresh,
@@ -653,16 +776,15 @@ function GroupRow({
   onDelete: () => void;
   onRefresh: () => void;
 }) {
+  const queryClient = useQueryClient();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id });
   const [open, setOpen] = useState(false);
   const [addItemsOpen, setAddItemsOpen] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [productView, setProductView] = useState<'lista' | 'board'>('lista');
 
-  const assignedItemIds = useMemo(
-    () => new Set(group.prodotti.map((p) => p.orderItemId)),
-    [group.prodotti]
-  );
+  const assignedItemIds = useMemo(() => new Set(group.prodotti.map((p) => p.orderItemId)), [group.prodotti]);
+  const activeSchedule = getActiveSchedule(group.schedules);
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -673,17 +795,30 @@ function GroupRow({
   async function removeItem(item: DisplayGroupItem) {
     setDeletingItemId(item.id);
     try {
-      const res = await fetch(
-        `/api/catalog/orders/${orderId}/display-groups/${group.id}/items/${item.orderItemId}`,
-        { method: 'DELETE' }
-      );
+      const res = await fetch(`/api/catalog/orders/${orderId}/display-groups/${group.id}/items/${item.orderItemId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
       onRefresh();
-    } catch {
-      toast.error('Errore nella rimozione');
-    } finally {
-      setDeletingItemId(null);
-    }
+    } catch { toast.error('Errore nella rimozione'); }
+    finally { setDeletingItemId(null); }
+  }
+
+  async function toggleFocus(item: DisplayGroupItem) {
+    const newVal = !item.isFocus;
+    queryClient.setQueryData(['display-groups', orderId], (old: any) => ({
+      ...old,
+      groups: old.groups.map((g: DisplayGroup) =>
+        g.id === group.id
+          ? { ...g, prodotti: g.prodotti.map((p) => p.id === item.id ? { ...p, isFocus: newVal } : p) }
+          : g
+      ),
+    }));
+    try {
+      await fetch(`/api/catalog/orders/${orderId}/display-groups/${group.id}/items/${item.orderItemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFocus: newVal }),
+      });
+    } catch { toast.error('Errore'); onRefresh(); }
   }
 
   return (
@@ -693,24 +828,21 @@ function GroupRow({
           <button {...attributes} {...listeners} className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none p-0.5">
             <GripVertical size={14} />
           </button>
-          {group.coloreTag && (
-            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: group.coloreTag }} />
-          )}
+          {group.coloreTag && <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: group.coloreTag }} />}
           <button onClick={() => setOpen(!open)} className="flex-1 flex items-center gap-2 text-left min-w-0">
             <span className="flex-1 text-xl font-semibold text-primary truncate">{group.nome}</span>
+            {activeSchedule && (
+              <span className="text-2xs text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 flex items-center gap-0.5 flex-shrink-0 hidden sm:flex">
+                <Calendar size={9} />S{activeSchedule.settimanaIn}→S{activeSchedule.settimanaFn}
+              </span>
+            )}
             <span className="text-sm text-gray-400 flex-shrink-0">{group.prodotti.length} pz.</span>
             {open ? <ChevronDown size={13} className="text-gray-400 flex-shrink-0" /> : <ChevronRight size={13} className="text-gray-400 flex-shrink-0" />}
           </button>
           <div className="flex items-center gap-0.5 flex-shrink-0">
-            <button onClick={onEdit} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica">
-              <Pencil size={12} />
-            </button>
-            <button onClick={onDuplicate} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Duplica">
-              <Copy size={12} />
-            </button>
-            <button onClick={onDelete} className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina">
-              <Trash2 size={12} />
-            </button>
+            <button onClick={onEdit} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica"><Pencil size={12} /></button>
+            <button onClick={onDuplicate} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Duplica"><Copy size={12} /></button>
+            <button onClick={onDelete} className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina"><Trash2 size={12} /></button>
           </div>
         </div>
 
@@ -718,23 +850,16 @@ function GroupRow({
           <div className="border-t border-border px-3 py-3 bg-cream/20 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center bg-white rounded border border-border overflow-hidden">
-                <button
-                  onClick={() => setProductView('lista')}
-                  className={`px-3 py-1 text-xs flex items-center gap-1.5 transition-colors ${productView === 'lista' ? 'bg-primary text-white' : 'text-gray-400 hover:text-primary'}`}
-                >
+                <button onClick={() => setProductView('lista')}
+                  className={`px-3 py-1 text-xs flex items-center gap-1.5 transition-colors ${productView === 'lista' ? 'bg-primary text-white' : 'text-gray-400 hover:text-primary'}`}>
                   <List size={12} />Lista
                 </button>
-                <button
-                  onClick={() => setProductView('board')}
-                  className={`px-3 py-1 text-xs flex items-center gap-1.5 transition-colors ${productView === 'board' ? 'bg-primary text-white' : 'text-gray-400 hover:text-primary'}`}
-                >
+                <button onClick={() => setProductView('board')}
+                  className={`px-3 py-1 text-xs flex items-center gap-1.5 transition-colors ${productView === 'board' ? 'bg-primary text-white' : 'text-gray-400 hover:text-primary'}`}>
                   <LayoutGrid size={12} />Board
                 </button>
               </div>
-              <button
-                onClick={() => setAddItemsOpen(true)}
-                className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors"
-              >
+              <button onClick={() => setAddItemsOpen(true)} className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors">
                 <Plus size={11} />Aggiungi
               </button>
             </div>
@@ -742,16 +867,14 @@ function GroupRow({
             {group.prodotti.length === 0 ? (
               <p className="text-sm text-gray-300 text-center py-4 italic">Nessun prodotto</p>
             ) : productView === 'lista' ? (
-              <ProductListaView items={group.prodotti} onRemove={removeItem} deletingItemId={deletingItemId} />
+              <ProductListaView items={group.prodotti} orderId={orderId} groupId={group.id} onRemove={removeItem} onToggleFocus={toggleFocus} deletingItemId={deletingItemId} />
             ) : (
-              <ProductBoardView items={group.prodotti} onRemove={removeItem} deletingItemId={deletingItemId} />
+              <ProductBoardView items={group.prodotti} orderId={orderId} groupId={group.id} onRemove={removeItem} onToggleFocus={toggleFocus} deletingItemId={deletingItemId} />
             )}
 
             {group.prodotti.length > 0 && (
-              <button
-                onClick={() => setAddItemsOpen(true)}
-                className="w-full flex items-center justify-center gap-1 text-2xs text-accent hover:text-accent/80 border border-dashed border-accent/30 hover:border-accent/60 rounded py-1.5 transition-colors"
-              >
+              <button onClick={() => setAddItemsOpen(true)}
+                className="w-full flex items-center justify-center gap-1 text-2xs text-accent hover:text-accent/80 border border-dashed border-accent/30 hover:border-accent/60 rounded py-1.5 transition-colors">
                 <Plus size={10} />Aggiungi prodotto
               </button>
             )}
@@ -761,9 +884,7 @@ function GroupRow({
 
       {addItemsOpen && (
         <AddItemsModal
-          orderId={orderId}
-          groupId={group.id}
-          orderItems={orderItems}
+          orderId={orderId} groupId={group.id} orderItems={orderItems}
           assignedItemIds={assignedItemIds}
           onClose={() => setAddItemsOpen(false)}
           onAdded={() => { setAddItemsOpen(false); onRefresh(); }}
@@ -787,10 +908,9 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
   const [editGroup, setEditGroup] = useState<DisplayGroup | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [unassignedView, setUnassignedView] = useState<'board' | 'list'>('board');
+  const [openPopoverItemId, setOpenPopoverItemId] = useState<string | null>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const { data, isLoading } = useQuery<{ groups: DisplayGroup[] }>({
     queryKey: ['display-groups', orderId],
@@ -821,9 +941,7 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
       if (!res.ok) throw new Error();
       toast.success('Gruppo eliminato');
       refresh();
-    } catch {
-      toast.error('Errore nell\'eliminazione');
-    }
+    } catch { toast.error('Errore nell\'eliminazione'); }
   }
 
   async function handleDuplicate(group: DisplayGroup) {
@@ -832,9 +950,7 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
       if (!res.ok) throw new Error();
       toast.success('Gruppo duplicato');
       refresh();
-    } catch {
-      toast.error('Errore nella duplicazione');
-    }
+    } catch { toast.error('Errore nella duplicazione'); }
   }
 
   async function handleExportPdf() {
@@ -847,16 +963,11 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
       const a = document.createElement('a');
       a.href = url;
       a.download = `mondi-espositivi-${orderId.slice(0, 8)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
       toast.success('PDF pronto');
-    } catch {
-      toast.error('Errore nella generazione del PDF');
-    } finally {
-      setExportingPdf(false);
-    }
+    } catch { toast.error('Errore nella generazione del PDF'); }
+    finally { setExportingPdf(false); }
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -866,33 +977,22 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
     const newIndex = groups.findIndex((g) => g.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
     const reordered = arrayMove(groups, oldIndex, newIndex);
-    queryClient.setQueryData(['display-groups', orderId], {
-      groups: reordered.map((g, i) => ({ ...g, posizione: i })),
-    });
+    queryClient.setQueryData(['display-groups', orderId], { groups: reordered.map((g, i) => ({ ...g, posizione: i })) });
     try {
       await fetch(`/api/catalog/orders/${orderId}/display-groups/reorder`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gruppi: reordered.map((g, i) => ({ id: g.id, posizione: i })) }),
       });
-    } catch {
-      toast.error('Errore nel riordinamento');
-      refresh();
-    }
+    } catch { toast.error('Errore nel riordinamento'); refresh(); }
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 size={20} className="animate-spin text-gray-300" />
-      </div>
-    );
+    return <div className="flex items-center justify-center py-16"><Loader2 size={20} className="animate-spin text-gray-300" /></div>;
   }
 
   const sharedGroupProps = (group: DisplayGroup) => ({
-    group,
-    orderId,
-    orderItems,
+    group, orderId, orderItems,
     onEdit: () => setEditGroup(group),
     onDuplicate: () => handleDuplicate(group),
     onDelete: () => handleDelete(group),
@@ -925,22 +1025,13 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
               className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary border border-border rounded px-2.5 py-1.5 hover:bg-cream transition-colors disabled:opacity-40"
               title="Esporta PDF"
             >
-              {exportingPdf ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
-              PDF
+              {exportingPdf ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}PDF
             </button>
             <div className="flex items-center bg-cream rounded border border-border overflow-hidden">
-              <button
-                onClick={() => setView('board')}
-                className={`p-1.5 transition-colors ${view === 'board' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}
-                title="Vista board"
-              >
+              <button onClick={() => setView('board')} className={`p-1.5 transition-colors ${view === 'board' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`} title="Vista board">
                 <LayoutGrid size={14} />
               </button>
-              <button
-                onClick={() => setView('list')}
-                className={`p-1.5 transition-colors ${view === 'list' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}
-                title="Vista lista"
-              >
+              <button onClick={() => setView('list')} className={`p-1.5 transition-colors ${view === 'list' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`} title="Vista lista">
                 <List size={14} />
               </button>
             </div>
@@ -948,8 +1039,7 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
               onClick={() => setNewGroupOpen(true)}
               className="flex items-center gap-1.5 text-xs bg-primary text-white px-3 py-1.5 rounded hover:bg-primary/90 transition-colors"
             >
-              <Plus size={13} />
-              Nuovo gruppo
+              <Plus size={13} />Nuovo gruppo
             </button>
           </div>
         </div>
@@ -963,18 +1053,10 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
                 {unassignedItems.length} prodott{unassignedItems.length !== 1 ? 'i non assegnati' : 'o non assegnato'}
               </p>
               <div className="flex items-center bg-white rounded border border-amber-200 overflow-hidden">
-                <button
-                  onClick={() => setUnassignedView('board')}
-                  className={`p-1 transition-colors ${unassignedView === 'board' ? 'bg-amber-100 text-amber-700' : 'text-gray-400 hover:text-amber-600'}`}
-                  title="Vista foto"
-                >
+                <button onClick={() => setUnassignedView('board')} className={`p-1 transition-colors ${unassignedView === 'board' ? 'bg-amber-100 text-amber-700' : 'text-gray-400 hover:text-amber-600'}`} title="Vista foto">
                   <LayoutGrid size={12} />
                 </button>
-                <button
-                  onClick={() => setUnassignedView('list')}
-                  className={`p-1 transition-colors ${unassignedView === 'list' ? 'bg-amber-100 text-amber-700' : 'text-gray-400 hover:text-amber-600'}`}
-                  title="Vista lista"
-                >
+                <button onClick={() => setUnassignedView('list')} className={`p-1 transition-colors ${unassignedView === 'list' ? 'bg-amber-100 text-amber-700' : 'text-gray-400 hover:text-amber-600'}`} title="Vista lista">
                   <List size={12} />
                 </button>
               </div>
@@ -983,14 +1065,31 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
             {unassignedView === 'board' ? (
               <div className="grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-10 gap-1">
                 {unassignedItems.map((it) => (
-                  <div key={it.id} className="relative group/ua aspect-square rounded-[6px] overflow-hidden bg-white border border-amber-100">
-                    {it.product?.imageUrl
-                      ? <ProductImage src={it.product.imageUrl} alt={it.product.name} className="w-full h-full object-cover" />
-                      : <div className="w-full h-full bg-cream" />
-                    }
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/ua:opacity-100 transition-opacity flex items-end p-1 pointer-events-none">
-                      <span className="text-white leading-tight" style={{ fontSize: 10 }}>{it.product?.code}</span>
+                  <div key={it.id} className="relative">
+                    <div
+                      className="relative group/ua aspect-square rounded-[6px] overflow-hidden cursor-pointer"
+                      style={{ backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB' }}
+                      onClick={() => setOpenPopoverItemId(openPopoverItemId === it.id ? null : it.id)}
+                    >
+                      {it.product?.imageUrl
+                        ? <ProductImage src={it.product.imageUrl} alt={it.product.name} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full bg-gray-200" />
+                      }
+                      <div className="absolute inset-0 bg-black/0 group-hover/ua:bg-black/40 transition-colors rounded-[6px]" />
+                      <div className="absolute inset-0 opacity-0 group-hover/ua:opacity-100 transition-opacity flex items-end p-1 pointer-events-none">
+                        <span className="text-white leading-tight" style={{ fontSize: 10 }}>{it.product?.code}</span>
+                      </div>
                     </div>
+                    {openPopoverItemId === it.id && (
+                      <AssignToGroupPopover
+                        item={it}
+                        orderId={orderId}
+                        groups={groups}
+                        onClose={() => setOpenPopoverItemId(null)}
+                        onAssigned={() => { setOpenPopoverItemId(null); refresh(); }}
+                        onCreateGroup={() => { setOpenPopoverItemId(null); setNewGroupOpen(true); }}
+                      />
+                    )}
                   </div>
                 ))}
               </div>
@@ -999,15 +1098,26 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
                 {unassignedItems.map((it, idx) => (
                   <div
                     key={it.id}
-                    className={`flex items-center gap-2.5 px-1 py-1.5 ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/50'}`}
+                    className={`relative flex items-center gap-2.5 px-1 py-1.5 cursor-pointer hover:bg-amber-100/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/50'}`}
+                    onClick={() => setOpenPopoverItemId(openPopoverItemId === it.id ? null : it.id)}
                   >
                     {it.product?.imageUrl
-                      ? <ProductImage src={it.product.imageUrl} alt={it.product.name} className="w-10 h-10 object-cover rounded flex-shrink-0" />
-                      : <div className="w-10 h-10 bg-cream rounded flex-shrink-0" />
+                      ? <ProductImage src={it.product.imageUrl} alt={it.product.name} className="w-10 h-10 object-cover rounded flex-shrink-0 border border-[#E5E7EB]" />
+                      : <div className="w-10 h-10 rounded flex-shrink-0" style={{ backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB' }} />
                     }
                     <p className="flex-1 text-xs text-primary truncate min-w-0">{it.product?.name}</p>
                     <p className="text-2xs text-gray-400 font-mono flex-shrink-0">{it.product?.code}</p>
                     <p className="text-2xs text-gray-400 flex-shrink-0">× {it.quantity}</p>
+                    {openPopoverItemId === it.id && (
+                      <AssignToGroupPopover
+                        item={it}
+                        orderId={orderId}
+                        groups={groups}
+                        onClose={() => setOpenPopoverItemId(null)}
+                        onAssigned={() => { setOpenPopoverItemId(null); refresh(); }}
+                        onCreateGroup={() => { setOpenPopoverItemId(null); setNewGroupOpen(true); }}
+                      />
+                    )}
                   </div>
                 ))}
               </div>
@@ -1023,12 +1133,8 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
             </div>
             <p className="text-sm font-medium text-gray-500 mb-1">Nessun mondo espositivo</p>
             <p className="text-xs text-gray-400 mb-4">Crea il primo gruppo per organizzare i prodotti dell&apos;ordine</p>
-            <button
-              onClick={() => setNewGroupOpen(true)}
-              className="flex items-center gap-1.5 text-xs bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors"
-            >
-              <Plus size={13} />
-              Crea primo gruppo
+            <button onClick={() => setNewGroupOpen(true)} className="flex items-center gap-1.5 text-xs bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors">
+              <Plus size={13} />Crea primo gruppo
             </button>
           </div>
         )}
@@ -1038,15 +1144,11 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
           <SortableContext items={groups.map((g) => g.id)} strategy={verticalListSortingStrategy}>
             {view === 'board' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {groups.map((group) => (
-                  <GroupCard key={group.id} {...sharedGroupProps(group)} />
-                ))}
+                {groups.map((group) => <GroupCard key={group.id} {...sharedGroupProps(group)} />)}
               </div>
             ) : (
               <div className="space-y-2">
-                {groups.map((group) => (
-                  <GroupRow key={group.id} {...sharedGroupProps(group)} />
-                ))}
+                {groups.map((group) => <GroupRow key={group.id} {...sharedGroupProps(group)} />)}
               </div>
             )}
           </SortableContext>

@@ -21,6 +21,7 @@ const GROUP_INCLUDE = {
       },
     },
   },
+  schedules: { orderBy: { settimanaIn: 'asc' as const } },
 } as const;
 
 export async function GET(_req: NextRequest, { params }: { params: { orderId: string } }) {

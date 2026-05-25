@@ -420,18 +420,33 @@ model DisplayGroup {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  order    Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  prodotti DisplayGroupItem[]
+  order     Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  prodotti  DisplayGroupItem[]
+  schedules DisplayGroupSchedule[]
 
   @@map("display_groups")
 }
 
-model DisplayGroupItem {
+model DisplayGroupSchedule {
   id          String @id @default(cuid())
+  groupId     String
+  anno        Int
+  settimanaIn Int
+  settimanaFn Int
+  nota        String?
+
+  group DisplayGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@map("display_group_schedules")
+}
+
+model DisplayGroupItem {
+  id          String  @id @default(cuid())
   groupId     String
   orderItemId String
   nota        String?
-  posizione   Int    @default(0)
+  posizione   Int     @default(0)
+  isFocus     Boolean @default(false)
 
   group     DisplayGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   orderItem OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
