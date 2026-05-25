@@ -86,6 +86,7 @@ export default function CartSidebar() {
   const budgetRemaining = budget != null ? budget - costTotal : null;
 
   async function submitOrder(canaleId?: string) {
+    console.log('[CartSidebar] submitOrder called', { canaleId, items: items.length });
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/orders', {
@@ -146,27 +147,18 @@ export default function CartSidebar() {
   }
 
   async function handleCreateOrder() {
+    console.log('[CartSidebar] handleCreateOrder', { isOperator, destCount: destinazioni.length, isEmpty, isSubmitting });
     if (isSubmitting || isEmpty) return;
     if (isOperator) {
-      let canaleId: string | null = null;
-      try {
-        const res = await fetch('/api/catalog/destinazioni');
-        if (res.ok) {
-          const d = await res.json();
-          const list: Destinazione[] = d.data || [];
-          setDestinazioni(list);
-          if (list.length === 1) {
-            canaleId = list[0].id;
-            setSelectedDestinazioneId(list[0].id);
-          } else if (list.length > 1) {
-            if (!selectedDestinazioneId) setSelectedDestinazioneId(list[0].id);
-            setShowDestinazioneModal(true);
-            return;
-          }
-          // 0 destinazioni: canaleId rimane null, procedi senza
-        }
-      } catch { /* ignora errori di rete */ }
-      await submitOrder(canaleId || undefined);
+      if (destinazioni.length === 0) {
+        // Nessuna destinazione configurata: crea ordine senza
+        await submitOrder(undefined);
+      } else if (destinazioni.length === 1) {
+        await submitOrder(destinazioni[0].id);
+      } else {
+        // Più destinazioni: mostra modal di selezione
+        setShowDestinazioneModal(true);
+      }
     } else {
       await submitOrder(undefined);
     }
