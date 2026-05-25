@@ -189,14 +189,11 @@ export async function POST(req: NextRequest) {
     };
 
     if (session.user.role === 'OPERATOR') {
-      if (!data.canaleId) {
-        return NextResponse.json({ error: 'Destinazione obbligatoria' }, { status: 400 });
-      }
       // If organizationId missing from session (old JWT), fetch from DB
       const orgId = session.user.organizationId ??
         (await prisma.operator.findUnique({ where: { id: session.user.id }, select: { organizationId: true } }))?.organizationId;
       orderData.organizationId = orgId || null;
-      orderData.canaleId = data.canaleId;
+      orderData.canaleId = data.canaleId || null;
       orderData.operatorId = session.user.id;
     } else if (isAdminRole(session.user.role)) {
       if (data.customerId) orderData.customerId = data.customerId;

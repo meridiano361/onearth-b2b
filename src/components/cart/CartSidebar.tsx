@@ -148,14 +148,25 @@ export default function CartSidebar() {
   async function handleCreateOrder() {
     if (isSubmitting || isEmpty) return;
     if (isOperator) {
-      if (destinazioni.length === 0) {
-        setShowCreateDestModal(true);
-        return;
-      } else if (destinazioni.length === 1) {
-        await submitOrder(destinazioni[0].id);
-      } else {
-        setShowDestinazioneModal(true);
-      }
+      let canaleId: string | null = null;
+      try {
+        const res = await fetch('/api/catalog/destinazioni');
+        if (res.ok) {
+          const d = await res.json();
+          const list: Destinazione[] = d.data || [];
+          setDestinazioni(list);
+          if (list.length === 1) {
+            canaleId = list[0].id;
+            setSelectedDestinazioneId(list[0].id);
+          } else if (list.length > 1) {
+            if (!selectedDestinazioneId) setSelectedDestinazioneId(list[0].id);
+            setShowDestinazioneModal(true);
+            return;
+          }
+          // 0 destinazioni: canaleId rimane null, procedi senza
+        }
+      } catch { /* ignora errori di rete */ }
+      await submitOrder(canaleId || undefined);
     } else {
       await submitOrder(undefined);
     }
