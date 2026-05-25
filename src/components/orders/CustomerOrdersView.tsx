@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Copy, Pencil, ScanEye, Trash2, TrendingUp } from 'lucide-react';
+import { Copy, Loader2, Pencil, ScanEye, Send, ShoppingCart, Trash2, TrendingUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
+import { useSession } from 'next-auth/react';
 import { formatCurrency, formatDate, getOrderStatusLabel, getOrderStatusColor } from '@/lib/utils';
+import { useCartStore } from '@/store/cartStore';
 
 function orderProjections(order: Order) {
   let venditeII = 0;
@@ -27,7 +29,7 @@ function orderProjections(order: Order) {
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import OrderDemetraExport from '@/components/orders/OrderDemetraExport';
 import OrderExcelExport from '@/components/orders/OrderExcelExport';
-import type { Order } from '@/types';
+import type { Destinazione, Order } from '@/types';
 import { useSettings } from '@/contexts/SettingsContext';
 
 const PREVIEW_SORT_KEY = 'preview-sort';
@@ -47,6 +49,59 @@ export default function CustomerOrdersView() {
   const router = useRouter();
   const t = useTranslations('orders');
   const { ordine } = useSettings();
+  const { data: session } = useSession();
+  const isOperator = session?.user.role === 'OPERATOR';
+
+  // Cart (bozza corrente)
+  const { items: cartItems, collectionId: cartCollectionId, notes: cartNotes, clearCart } = useCartStore();
+  const [draftSubmitting, setDraftSubmitting] = useState(false);
+  const [draftDestinazioneId, setDraftDestinazioneId] = useState('');
+  const [draftDestinazioni, setDraftDestinazioni] = useState<Destinazione[]>([]);
+
+  useEffect(() => {
+    if (!isOperator || cartItems.length === 0) return;
+    fetch('/api/catalog/destinazioni')
+      .then(r => r.json())
+      .then(d => {
+        const list: Destinazione[] = d.data || [];
+        setDraftDestinazioni(list);
+        if (list.length >= 1) setDraftDestinazioneId(prev => prev || list[0].id);
+      })
+      .catch(() => {});
+  }, [isOperator, cartItems.length]);
+
+  const cartTotal = cartItems.reduce((sum, i) => sum + Number(i.product.costPrice) * i.quantity, 0);
+  const cartTotalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
+
+  async function handleCreateFromDraft() {
+    setDraftSubmitting(true);
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          collectionId: cartCollectionId || null,
+          notes: cartNotes || null,
+          canaleId: draftDestinazioneId || null,
+          items: cartItems.map(i => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            unitPrice: Number(i.product.costPrice),
+          })),
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Errore');
+      clearCart();
+      toast.success('Ordine creato con successo');
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+    } catch (e: any) {
+      toast.error(e.message || 'Errore');
+    } finally {
+      setDraftSubmitting(false);
+    }
+  }
+
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [productSort, setProductSort] = useState<string>(() =>
     typeof window !== 'undefined' ? (localStorage.getItem(PREVIEW_SORT_KEY) ?? 'name-asc') : 'name-asc'
@@ -138,7 +193,7 @@ export default function CustomerOrdersView() {
           </div>
         </div>
 
-        {list.length === 0 && (
+        {list.length === 0 && cartItems.length === 0 && (
           <div className="text-center py-20">
             <p className="text-sm text-gray-400">{t('noOrders')}</p>
             <Link href="/catalog" className="mt-3 inline-block text-sm text-accent hover:underline">
@@ -148,6 +203,62 @@ export default function CustomerOrdersView() {
         )}
 
         <div className="space-y-4">
+          {/* Bozza corrente — visibile subito dal carrello */}
+          {cartItems.length > 0 && (
+            <div className="bg-white border-2 border-amber-200 rounded p-4 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <ShoppingCart size={13} className="text-amber-500" />
+                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Bozza corrente</p>
+                </div>
+                <span className="text-2xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium flex-shrink-0">
+                  Carrello
+                </span>
+              </div>
+
+              <p className="text-xs text-gray-500">
+                {cartItems.length} {cartItems.length === 1 ? 'articolo' : 'articoli'}
+                {' · '}
+                {cartTotalItems} pz
+                {' · '}
+                <span className="font-medium text-primary">{formatCurrency(cartTotal)}</span>
+              </p>
+
+              <div className="space-y-0.5 max-h-28 overflow-y-auto">
+                {cartItems.map(item => (
+                  <div key={item.productId} className="flex items-center justify-between text-2xs text-gray-500">
+                    <span className="truncate flex-1 mr-2 font-mono">{item.product.code}</span>
+                    <span className="truncate flex-1 mr-2">{item.product.name}</span>
+                    <span className="flex-shrink-0 font-medium">×{item.quantity}</span>
+                  </div>
+                ))}
+              </div>
+
+              {isOperator && draftDestinazioni.length > 1 && (
+                <select
+                  value={draftDestinazioneId}
+                  onChange={e => setDraftDestinazioneId(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-white border border-border rounded text-xs text-primary focus:outline-none focus:border-amber-400"
+                >
+                  {draftDestinazioni.map(d => (
+                    <option key={d.id} value={d.id}>
+                      {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              <button
+                onClick={handleCreateFromDraft}
+                disabled={draftSubmitting}
+                className="w-full py-2 text-xs font-medium rounded bg-amber-600 text-white hover:bg-amber-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
+              >
+                {draftSubmitting
+                  ? <><Loader2 size={11} className="animate-spin" /> Creazione in corso…</>
+                  : <><Send size={11} /> Crea Ordine</>}
+              </button>
+            </div>
+          )}
           {list.map((order) => {
             const isExported = order.status === 'ESPORTATO';
             const isConfirming = confirmingId === order.id;
