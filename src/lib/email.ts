@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 export async function sendAccessRequestNotification(data: {
   nome: string;
@@ -9,6 +9,10 @@ export async function sendAccessRequestNotification(data: {
   email: string;
   telefono?: string | null;
 }) {
+  if (!resend) {
+    console.log('[email] RESEND_API_KEY non configurato, email non inviata');
+    return;
+  }
   try {
     await resend.emails.send({
       from: 'onboarding@resend.dev',
