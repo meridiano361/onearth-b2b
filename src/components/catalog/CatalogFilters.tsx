@@ -21,6 +21,10 @@ interface CatalogFiltersProps {
   onNomLineaChange: (v: string | null) => void;
   selectedColore: string | null;
   onColoreChange: (v: string | null) => void;
+  selectedTemaColore: string | null;
+  onTemaColoreChange: (v: string | null) => void;
+  selectedStagione: string | null;
+  onStagioneChange: (v: string | null) => void;
   selectedCollezione: string | null;
   onCollezioneChange: (v: string | null) => void;
   selectedProduttore: string | null;
@@ -75,6 +79,8 @@ export default function CatalogFilters({
   selectedGruppoOmogeneo,     onGruppoOmogeneoChange,
   selectedNomLinea,           onNomLineaChange,
   selectedColore,             onColoreChange,
+  selectedTemaColore,         onTemaColoreChange,
+  selectedStagione,           onStagioneChange,
   selectedCollezione,         onCollezioneChange,
   selectedProduttore,         onProduttoreChange,
   selectedTranche,            onTrancheChange,
@@ -121,11 +127,13 @@ export default function CatalogFilters({
   const gruppoOmogeneoOpts     = useMemo(() => opts(byGMFamClsSub, 'gruppoOmogeneo'),     [byGMFamClsSub]);
 
   // Flat filters scoped to active hierarchy
-  const nomLineaOpts   = useMemo(() => opts(byHierarchy, 'nomLinea'),   [byHierarchy]);
-  const coloreOpts     = useMemo(() => opts(byHierarchy, 'colore'),     [byHierarchy]);
-  const collezioneOpts = useMemo(() => opts(byHierarchy, 'collezione'), [byHierarchy]);
-  const produttoreOpts = useMemo(() => opts(byHierarchy, 'produttore'), [byHierarchy]);
-  const trancheOpts    = useMemo(() => opts(byHierarchy, 'tranche'),    [byHierarchy]);
+  const nomLineaOpts    = useMemo(() => opts(byHierarchy, 'nomLinea'),    [byHierarchy]);
+  const coloreOpts      = useMemo(() => opts(byHierarchy, 'colore'),      [byHierarchy]);
+  const temaColoreOpts  = useMemo(() => opts(byHierarchy, 'temaColore'),  [byHierarchy]);
+  const stagioneOpts    = useMemo(() => opts(byHierarchy, 'stagione'),    [byHierarchy]);
+  const collezioneOpts  = useMemo(() => opts(byHierarchy, 'collezione'),  [byHierarchy]);
+  const produttoreOpts  = useMemo(() => opts(byHierarchy, 'produttore'),  [byHierarchy]);
+  const trancheOpts     = useMemo(() => opts(byHierarchy, 'tranche'),     [byHierarchy]);
 
   // ── Cascading onChange handlers ────────────────────────────
   function handleGruppoMerceologicoChange(v: string | null) {
@@ -180,11 +188,13 @@ export default function CatalogFilters({
         <FilterSelect label={t('gruppoOmogeneo')}     allLabel={t('all')} value={selectedGruppoOmogeneo}     options={gruppoOmogeneoOpts}     onChange={onGruppoOmogeneoChange} />
 
         {/* Flat filters scoped to hierarchy */}
-        <FilterSelect label={t('linea')}     allLabel={t('all')} value={selectedNomLinea}   options={nomLineaOpts}   onChange={onNomLineaChange} />
-        <FilterSelect label={t('colore')}    allLabel={t('all')} value={selectedColore}     options={coloreOpts}     onChange={onColoreChange} />
-        <FilterSelect label={t('collezione')} allLabel={t('all')} value={selectedCollezione} options={collezioneOpts} onChange={onCollezioneChange} />
-        <FilterSelect label={t('produttore')} allLabel={t('all')} value={selectedProduttore} options={produttoreOpts} onChange={onProduttoreChange} />
-        <FilterSelect label={t('tranche')}   allLabel={t('all')} value={selectedTranche}    options={trancheOpts}    onChange={onTrancheChange} />
+        <FilterSelect label={t('linea')}      allLabel={t('all')} value={selectedNomLinea}    options={nomLineaOpts}    onChange={onNomLineaChange} />
+        <FilterSelect label={t('colore')}     allLabel={t('all')} value={selectedColore}      options={coloreOpts}      onChange={onColoreChange} />
+        <FilterSelect label={t('temaColore')} allLabel={t('all')} value={selectedTemaColore}  options={temaColoreOpts}  onChange={onTemaColoreChange} />
+        <FilterSelect label={t('stagione')}   allLabel={t('all')} value={selectedStagione}    options={stagioneOpts}    onChange={onStagioneChange} />
+        <FilterSelect label={t('collezione')} allLabel={t('all')} value={selectedCollezione}  options={collezioneOpts}  onChange={onCollezioneChange} />
+        <FilterSelect label={t('produttore')} allLabel={t('all')} value={selectedProduttore}  options={produttoreOpts}  onChange={onProduttoreChange} />
+        <FilterSelect label={t('tranche')}    allLabel={t('all')} value={selectedTranche}     options={trancheOpts}     onChange={onTrancheChange} />
 
       </div>
     </div>

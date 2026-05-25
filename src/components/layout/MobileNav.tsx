@@ -3,41 +3,67 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, LayoutGrid, Heart, Package, MapPin, HelpCircle, X, Loader2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import {
+  Home, LayoutGrid, Heart, Package, Menu,
+  MapPin, FolderOpen, HelpCircle, LogOut,
+  X, Loader2,
+} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { signOut } from 'next-auth/react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import CartSidebar from '@/components/cart/CartSidebar';
-import { useSettings } from '@/contexts/SettingsContext';
 
-const MENU_CONFIG: Record<string, {
-  icon: React.ElementType;
-  href?: string;
-  isActive: (pathname: string, ordersOpen: boolean) => boolean;
-}> = {
-  catalogo: { icon: LayoutGrid, href: '/catalog/products', isActive: (p) => p.startsWith('/catalog/products') },
-  preferiti: { icon: Heart, href: '/catalog/preferiti', isActive: (p) => p.startsWith('/catalog/preferiti') },
-  ordini: { icon: Package, isActive: (p, open) => p.startsWith('/catalog/orders') || open },
-  destinazioni: { icon: MapPin, href: '/catalog/destinazioni', isActive: (p) => p.startsWith('/catalog/destinazioni') },
-  assistenza: { icon: HelpCircle, href: '/catalog/assistenza', isActive: (p) => p.startsWith('/catalog/assistenza') },
-};
+// ─── Sub-nav items inside "Altro" drawer ─────────────────────────────────────
+
+const ALTRO_ITEMS = [
+  { icon: MapPin,      label: 'Destinazioni', href: '/catalog/destinazioni' },
+  { icon: FolderOpen,  label: 'Risorse',       href: '/catalog/risorse' },
+  { icon: HelpCircle,  label: 'Assistenza',    href: '/catalog/assistenza' },
+] as const;
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+
+function navItemCls(active: boolean) {
+  return cn(
+    'flex-1 flex flex-col items-center justify-center gap-[3px] py-1 transition-colors relative',
+    active ? 'text-gray-900' : 'text-[#9CA3AF]',
+  );
+}
+
+function ActiveDot({ active }: { active: boolean }) {
+  if (!active) return null;
+  return <span className="absolute bottom-[1px] left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-gray-900" />;
+}
+
+function tabCls(active: boolean) {
+  return cn(
+    'flex-1 py-2.5 text-xs font-medium border-b-2 transition-colors flex items-center justify-center gap-1.5',
+    active ? 'text-gray-900 border-gray-900' : 'text-gray-400 border-transparent',
+  );
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function MobileNav() {
   const [ordersOpen, setOrdersOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'current' | 'saved'>('current');
+  const [altroOpen, setAltroOpen]   = useState(false);
+  const [activeTab, setActiveTab]   = useState<'current' | 'saved'>('current');
+
   const pathname = usePathname();
   const { getTotalItems } = useCartStore();
   const totalItems = getTotalItems();
-  const tn = useTranslations('nav');
-  const { menu } = useSettings();
 
   useEffect(() => {
     setOrdersOpen(false);
+    setAltroOpen(false);
   }, [pathname]);
 
-  const isHome = pathname === '/catalog' || pathname === '/home';
-  const isOrders = pathname.startsWith('/catalog/orders') || ordersOpen;
+  const isHome      = pathname === '/catalog' || pathname === '/home';
+  const isCatalogo  = pathname.startsWith('/catalog/products');
+  const isPreferiti = pathname.startsWith('/catalog/preferiti');
+  const isOrdini    = pathname.startsWith('/catalog/orders') || ordersOpen;
+  const isAltro     = altroOpen || ALTRO_ITEMS.some((item) => pathname.startsWith(item.href));
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['mobile-saved-orders'],
@@ -52,82 +78,67 @@ export default function MobileNav() {
 
   const savedOrders: any[] = ordersData ?? [];
 
-  function navCls(active: boolean) {
-    return cn(
-      'flex-1 flex flex-col items-center justify-center gap-0.5 py-3 transition-colors',
-      active ? 'text-gray-900 font-semibold' : 'text-gray-400'
-    );
-  }
-
-  function tabCls(active: boolean) {
-    return cn(
-      'flex-1 py-2.5 text-xs font-medium border-b-2 transition-colors flex items-center justify-center gap-1.5',
-      active ? 'text-gray-900 border-gray-900' : 'text-gray-400 border-transparent'
-    );
-  }
-
   return (
     <>
-      {/* Bottom tab bar */}
+      {/* ── Bottom tab bar ──────────────────────────────────────── */}
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-30"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', height: 56 }}
       >
-        <div className="flex items-stretch">
-          <Link href="/catalog" className={navCls(isHome)}>
-            <Home size={20} />
-            <span className="text-2xs">Home</span>
+        <div className="flex items-stretch h-full">
+
+          {/* Home */}
+          <Link href="/catalog" className={navItemCls(isHome)}>
+            <Home size={18} />
+            <span className="text-[10px]">Home</span>
+            <ActiveDot active={isHome} />
           </Link>
 
-          {menu.ordine
-            .filter((key) => menu.items[key]?.visibile)
-            .map((key) => {
-              const cfg = MENU_CONFIG[key];
-              if (!cfg) return null;
-              const { icon: Icon, href, isActive } = cfg;
-              const active = isActive(pathname, ordersOpen);
-              const label = menu.items[key]?.label ?? key;
+          {/* Catalogo */}
+          <Link href="/catalog/products" className={navItemCls(isCatalogo)}>
+            <LayoutGrid size={18} />
+            <span className="text-[10px]">Catalogo</span>
+            <ActiveDot active={isCatalogo} />
+          </Link>
 
-              if (key === 'ordini') {
-                return (
-                  <button
-                    key={key}
-                    onClick={() => { setOrdersOpen(true); setActiveTab('current'); }}
-                    className={navCls(active)}
-                  >
-                    <div className="relative">
-                      <Icon size={20} />
-                      {totalItems > 0 && (
-                        <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-2xs font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
-                          {totalItems > 99 ? '99+' : totalItems}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-2xs">{label}</span>
-                  </button>
-                );
-              }
+          {/* Preferiti */}
+          <Link href="/catalog/preferiti" className={navItemCls(isPreferiti)}>
+            <Heart size={18} className={isPreferiti ? 'fill-gray-900' : ''} />
+            <span className="text-[10px]">Preferiti</span>
+            <ActiveDot active={isPreferiti} />
+          </Link>
 
-              if (key === 'preferiti') {
-                return (
-                  <Link key={key} href={href!} className={navCls(active)}>
-                    <Icon size={20} className={active ? 'fill-gray-900' : ''} />
-                    <span className="text-2xs">{label}</span>
-                  </Link>
-                );
-              }
+          {/* Ordini */}
+          <button
+            onClick={() => { setOrdersOpen(true); setActiveTab('current'); }}
+            className={navItemCls(isOrdini)}
+          >
+            <div className="relative">
+              <Package size={18} />
+              {totalItems > 0 && (
+                <span className="absolute -top-1.5 -right-2.5 bg-red-500 text-white text-[9px] font-bold w-[14px] h-[14px] rounded-full flex items-center justify-center leading-none">
+                  {totalItems > 99 ? '99+' : totalItems}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px]">Ordini</span>
+            <ActiveDot active={isOrdini} />
+          </button>
 
-              return (
-                <Link key={key} href={href!} className={navCls(active)}>
-                  <Icon size={20} />
-                  <span className="text-2xs">{label}</span>
-                </Link>
-              );
-            })}
+          {/* Altro */}
+          <button
+            onClick={() => setAltroOpen(true)}
+            className={navItemCls(isAltro)}
+          >
+            <Menu size={18} />
+            <span className="text-[10px]">Altro</span>
+            <ActiveDot active={isAltro} />
+          </button>
+
         </div>
       </nav>
 
-      {/* Orders drawer */}
+      {/* ── Ordini drawer ────────────────────────────────────────── */}
       {ordersOpen && (
         <div className="md:hidden fixed inset-0 z-40">
           <div
@@ -138,18 +149,13 @@ export default function MobileNav() {
             className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[85vh] flex flex-col shadow-luxury-xl animate-slide-up"
             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0 border-b border-border">
               <span className="text-xs font-semibold text-primary uppercase tracking-widest">Ordini</span>
-              <button
-                onClick={() => setOrdersOpen(false)}
-                className="text-gray-400 hover:text-primary transition-colors p-1"
-              >
+              <button onClick={() => setOrdersOpen(false)} className="text-gray-400 hover:text-primary transition-colors p-1">
                 <X size={18} />
               </button>
             </div>
 
-            {/* Tabs */}
             <div className="flex border-b border-border flex-shrink-0">
               <button className={tabCls(activeTab === 'current')} onClick={() => setActiveTab('current')}>
                 Ordine corrente
@@ -164,7 +170,6 @@ export default function MobileNav() {
               </button>
             </div>
 
-            {/* Tab content */}
             <div className="flex-1 overflow-y-auto">
               {activeTab === 'current' ? (
                 <CartSidebar />
@@ -209,6 +214,55 @@ export default function MobileNav() {
                   </Link>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Altro drawer ─────────────────────────────────────────── */}
+      {altroOpen && (
+        <div className="md:hidden fixed inset-0 z-40">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setAltroOpen(false)}
+          />
+          <div
+            className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-luxury-xl animate-slide-up"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          >
+            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-border">
+              <span className="text-xs font-semibold text-primary uppercase tracking-widest">Menu</span>
+              <button onClick={() => setAltroOpen(false)} className="text-gray-400 hover:text-primary transition-colors p-1">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="py-2">
+              {ALTRO_ITEMS.map(({ icon: Icon, label, href }) => {
+                const active = pathname.startsWith(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setAltroOpen(false)}
+                    className={cn(
+                      'flex items-center gap-3 px-5 py-3.5 transition-colors',
+                      active ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900 hover:bg-cream/60',
+                    )}
+                  >
+                    <Icon size={18} className={active ? 'text-gray-900' : 'text-gray-400'} />
+                    <span className="text-sm">{label}</span>
+                  </Link>
+                );
+              })}
+              <div className="border-t border-border mt-2 pt-2">
+                <button
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                  className="flex items-center gap-3 px-5 py-3.5 w-full text-left text-red-500 hover:text-red-700 hover:bg-red-50/60 transition-colors"
+                >
+                  <LogOut size={18} />
+                  <span className="text-sm">Esci</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

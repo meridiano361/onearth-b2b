@@ -24,6 +24,8 @@ type Filters = {
   gruppoOmogeneo:     string | null;
   nomLinea:           string | null;
   colore:             string | null;
+  temaColore:         string | null;
+  stagione:           string | null;
   collezione:         string | null;
   produttore:         string | null;
   tranche:            string | null;
@@ -37,6 +39,8 @@ const EMPTY_FILTERS: Filters = {
   gruppoOmogeneo:     null,
   nomLinea:           null,
   colore:             null,
+  temaColore:         null,
+  stagione:           null,
   collezione:         null,
   produttore:         null,
   tranche:            null,
@@ -93,8 +97,7 @@ export default function CatalogView() {
     staleTime: 60_000,
   });
   const publicDocs: { tipo: string; url: string; nome: string }[] = docsData?.data ?? [];
-  const condizioniDoc = publicDocs.find((d) => d.tipo === 'Condizioni Commerciali');
-  const catalogoDoc   = publicDocs.find((d) => d.tipo === 'Catalogo PDF');
+  const catalogoDoc = publicDocs.find((d) => d.tipo === 'Catalogo PDF');
 
   const products = productsData ?? [];
 
@@ -116,7 +119,7 @@ export default function CatalogView() {
       );
     }
 
-    const { gruppoMerceologico, famiglia, classe, sottoclasse, gruppoOmogeneo, nomLinea, colore, collezione, produttore, tranche } = filters;
+    const { gruppoMerceologico, famiglia, classe, sottoclasse, gruppoOmogeneo, nomLinea, colore, temaColore, stagione, collezione, produttore, tranche } = filters;
     if (gruppoMerceologico) result = result.filter((p) => p.gruppoMerceologico === gruppoMerceologico);
     if (famiglia)           result = result.filter((p) => p.famiglia           === famiglia);
     if (classe)             result = result.filter((p) => p.classe             === classe);
@@ -124,6 +127,8 @@ export default function CatalogView() {
     if (gruppoOmogeneo)     result = result.filter((p) => p.gruppoOmogeneo     === gruppoOmogeneo);
     if (nomLinea)           result = result.filter((p) => p.nomLinea           === nomLinea);
     if (colore)             result = result.filter((p) => p.colore             === colore);
+    if (temaColore)         result = result.filter((p) => p.temaColore         === temaColore);
+    if (stagione)           result = result.filter((p) => p.stagione           === stagione);
     if (collezione)         result = result.filter((p) => p.collezione         === collezione);
     if (produttore)         result = result.filter((p) => p.produttore         === produttore);
     if (tranche)            result = result.filter((p) => p.tranche            === tranche);
@@ -159,6 +164,8 @@ export default function CatalogView() {
     selectedGruppoOmogeneo:     filters.gruppoOmogeneo,     onGruppoOmogeneoChange:     (v: string | null) => setFilter('gruppoOmogeneo', v),
     selectedNomLinea:           filters.nomLinea,           onNomLineaChange:           (v: string | null) => setFilter('nomLinea', v),
     selectedColore:             filters.colore,             onColoreChange:             (v: string | null) => setFilter('colore', v),
+    selectedTemaColore:         filters.temaColore,         onTemaColoreChange:         (v: string | null) => setFilter('temaColore', v),
+    selectedStagione:           filters.stagione,           onStagioneChange:           (v: string | null) => setFilter('stagione', v),
     selectedCollezione:         filters.collezione,         onCollezioneChange:         (v: string | null) => setFilter('collezione', v),
     selectedProduttore:         filters.produttore,         onProduttoreChange:         (v: string | null) => setFilter('produttore', v),
     selectedTranche:            filters.tranche,            onTrancheChange:            (v: string | null) => setFilter('tranche', v),
@@ -174,6 +181,8 @@ export default function CatalogView() {
     { key: 'gruppoOmogeneo',     label: 'Gruppo omogeneo' },
     { key: 'nomLinea',           label: 'Linea' },
     { key: 'colore',             label: 'Colore' },
+    { key: 'temaColore',         label: 'Tema colore' },
+    { key: 'stagione',           label: 'Stagione' },
     { key: 'collezione',         label: 'Collezione' },
     { key: 'produttore',         label: 'Produttore' },
     { key: 'tranche',            label: 'Tranche' },
@@ -209,17 +218,6 @@ export default function CatalogView() {
         <div className="border-b border-border bg-cream/30 px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
           <span className="text-2xs uppercase tracking-widest text-gray-400 font-medium hidden sm:block">CASA 2027</span>
           <div className="flex items-center gap-4 ml-auto">
-            {condizioniDoc && (
-              <a
-                href={condizioniDoc.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary transition-colors"
-              >
-                <FileDown size={13} />
-                Condizioni Commerciali
-              </a>
-            )}
             {catalogoDoc && (
               <a
                 href={catalogoDoc.url}
