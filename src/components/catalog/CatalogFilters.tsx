@@ -33,6 +33,7 @@ interface CatalogFiltersProps {
   onTrancheChange: (v: string | null) => void;
   hasActiveFilters: boolean;
   onResetAll: () => void;
+  enabledFilters?: string[] | null;
 }
 
 function opts(products: Product[], field: keyof Product): string[] {
@@ -85,8 +86,10 @@ export default function CatalogFilters({
   selectedProduttore,         onProduttoreChange,
   selectedTranche,            onTrancheChange,
   hasActiveFilters,           onResetAll,
+  enabledFilters,
 }: CatalogFiltersProps) {
   const t = useTranslations('filters');
+  const show = (key: string) => !enabledFilters || enabledFilters.length === 0 || enabledFilters.includes(key);
 
   // ── Cascading product subsets ──────────────────────────────
   const byGM = useMemo(() =>
@@ -187,20 +190,20 @@ export default function CatalogFilters({
         </div>
 
         {/* Hierarchy */}
-        <FilterSelect label={t('gruppoMerceologico')} allLabel={t('all')} value={selectedGruppoMerceologico} options={gruppoMerceologicoOpts} onChange={handleGruppoMerceologicoChange} />
-        <FilterSelect label={t('famiglia')}           allLabel={t('all')} value={selectedFamiglia}           options={famigliaOpts}           onChange={handleFamigliaChange} />
-        <FilterSelect label={t('classe')}             allLabel={t('all')} value={selectedClasse}             options={classeOpts}             onChange={handleClasseChange} />
-        <FilterSelect label={t('sottoclasse')}        allLabel={t('all')} value={selectedSottoclasse}        options={sottoclasseOpts}        onChange={handleSottoclasseChange} />
-        <FilterSelect label={t('gruppoOmogeneo')}     allLabel={t('all')} value={selectedGruppoOmogeneo}     options={gruppoOmogeneoOpts}     onChange={onGruppoOmogeneoChange} />
+        {show('gruppoMerceologico') && <FilterSelect label={t('gruppoMerceologico')} allLabel={t('all')} value={selectedGruppoMerceologico} options={gruppoMerceologicoOpts} onChange={handleGruppoMerceologicoChange} />}
+        {show('famiglia')           && <FilterSelect label={t('famiglia')}           allLabel={t('all')} value={selectedFamiglia}           options={famigliaOpts}           onChange={handleFamigliaChange} />}
+        {show('classe')             && <FilterSelect label={t('classe')}             allLabel={t('all')} value={selectedClasse}             options={classeOpts}             onChange={handleClasseChange} />}
+        {show('sottoclasse')        && <FilterSelect label={t('sottoclasse')}        allLabel={t('all')} value={selectedSottoclasse}        options={sottoclasseOpts}        onChange={handleSottoclasseChange} />}
+        {show('gruppoOmogeneo')     && <FilterSelect label={t('gruppoOmogeneo')}     allLabel={t('all')} value={selectedGruppoOmogeneo}     options={gruppoOmogeneoOpts}     onChange={onGruppoOmogeneoChange} />}
 
         {/* Flat filters scoped to hierarchy */}
-        <FilterSelect label={t('linea')}      allLabel={t('all')} value={selectedNomLinea}    options={nomLineaOpts}    onChange={onNomLineaChange} />
-        <FilterSelect label={t('colore')}     allLabel={t('all')} value={selectedColore}      options={coloreOpts}      onChange={onColoreChange} />
-        <FilterSelect label={t('temaColore')} allLabel={t('all')} value={selectedTemaColore}  options={temaColoreOpts}  onChange={onTemaColoreChange} />
-        <FilterSelect label={t('stagione')}   allLabel={t('all')} value={selectedStagione}    options={stagioneOpts}    onChange={onStagioneChange} />
-        <FilterSelect label={t('collezione')} allLabel={t('all')} value={selectedCollezione}  options={collezioneOpts}  onChange={onCollezioneChange} />
-        <FilterSelect label={t('produttore')} allLabel={t('all')} value={selectedProduttore}  options={produttoreOpts}  onChange={onProduttoreChange} />
-        <FilterSelect label={t('tranche')}    allLabel={t('all')} value={selectedTranche}     options={trancheOpts}     onChange={onTrancheChange} />
+        {show('nomLinea')    && <FilterSelect label={t('linea')}      allLabel={t('all')} value={selectedNomLinea}    options={nomLineaOpts}    onChange={onNomLineaChange} />}
+        {show('colore')      && <FilterSelect label={t('colore')}     allLabel={t('all')} value={selectedColore}      options={coloreOpts}      onChange={onColoreChange} />}
+        {show('temaColore')  && <FilterSelect label={t('temaColore')} allLabel={t('all')} value={selectedTemaColore}  options={temaColoreOpts}  onChange={onTemaColoreChange} />}
+        {show('stagione')    && <FilterSelect label={t('stagione')}   allLabel={t('all')} value={selectedStagione}    options={stagioneOpts}    onChange={onStagioneChange} />}
+        {show('collezione')  && <FilterSelect label={t('collezione')} allLabel={t('all')} value={selectedCollezione}  options={collezioneOpts}  onChange={onCollezioneChange} />}
+        {show('produttore')  && <FilterSelect label={t('produttore')} allLabel={t('all')} value={selectedProduttore}  options={produttoreOpts}  onChange={onProduttoreChange} />}
+        {show('tranche')     && <FilterSelect label={t('tranche')}    allLabel={t('all')} value={selectedTranche}     options={trancheOpts}     onChange={onTrancheChange} />}
 
       </div>
     </div>

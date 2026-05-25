@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { GripVertical, ImageIcon } from 'lucide-react';
@@ -315,9 +315,58 @@ function SortableSocialItem({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+const ALL_CATALOG_FILTERS: { key: string; label: string }[] = [
+  { key: 'gruppoMerceologico', label: 'Gruppo merceologico' },
+  { key: 'famiglia',           label: 'Famiglia' },
+  { key: 'classe',             label: 'Classe' },
+  { key: 'sottoclasse',        label: 'Sottoclasse' },
+  { key: 'gruppoOmogeneo',     label: 'Gruppo omogeneo' },
+  { key: 'nomLinea',           label: 'Linea' },
+  { key: 'collezione',         label: 'Collezione' },
+  { key: 'colore',             label: 'Colore' },
+  { key: 'temaColore',         label: 'Tema colore' },
+  { key: 'stagione',           label: 'Stagione' },
+  { key: 'produttore',         label: 'Produttore' },
+  { key: 'tranche',            label: 'Tranche' },
+];
+
 export default function AdminPersonalizzazionePage() {
   const [settings, setSettings] = useState<AppSettingsData>(DEFAULT_APP_SETTINGS);
   const [saving, setSaving] = useState<string | null>(null);
+
+  // Filtri catalogo cliente
+  const [filtriVisibili, setFiltriVisibili] = useState<string[]>([]);
+  const [savingFiltri, setSavingFiltri] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/admin/catalog-settings')
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d.filtriVisibili)) setFiltriVisibili(d.filtriVisibili); })
+      .catch(() => {});
+  }, []);
+
+  async function saveFiltriCatalogo() {
+    setSavingFiltri(true);
+    try {
+      const res = await fetch('/api/admin/catalog-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filtriVisibili }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Filtri catalogo salvati');
+    } catch {
+      toast.error('Errore nel salvataggio');
+    } finally {
+      setSavingFiltri(false);
+    }
+  }
+
+  function toggleFiltro(key: string) {
+    setFiltriVisibili(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -765,6 +814,45 @@ export default function AdminPersonalizzazionePage() {
           />
         </div>
         <SaveButton onClick={() => saveSection(loginKeys, 'Login')} loading={saving === 'Login'} />
+      </SectionCard>
+
+      {/* ── Filtri catalogo cliente ───────────────────────────── */}
+      <SectionCard title="Filtri catalogo cliente">
+        <p className="text-xs text-gray-400">
+          Seleziona i filtri visibili nella sezione catalogo clienti. Se nessun filtro è selezionato, vengono mostrati tutti.
+        </p>
+        <div className="space-y-2">
+          {ALL_CATALOG_FILTERS.map(({ key, label }) => (
+            <ToggleRow
+              key={key}
+              label={label}
+              checked={filtriVisibili.length === 0 || filtriVisibili.includes(key)}
+              onChange={() => {
+                if (filtriVisibili.length === 0) {
+                  // Passa da "tutti" a "tutti tranne questo"
+                  setFiltriVisibili(ALL_CATALOG_FILTERS.map(f => f.key).filter(k => k !== key));
+                } else {
+                  toggleFiltro(key);
+                }
+              }}
+            />
+          ))}
+        </div>
+        <div className="flex items-center justify-between pt-2">
+          <button
+            onClick={() => setFiltriVisibili([])}
+            className="text-xs text-gray-400 hover:text-primary transition-colors"
+          >
+            Abilita tutti
+          </button>
+          <button
+            onClick={saveFiltriCatalogo}
+            disabled={savingFiltri}
+            className="px-4 py-2 bg-gray-900 text-white text-xs font-medium rounded hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          >
+            {savingFiltri ? 'Salvataggio…' : 'Salva'}
+          </button>
+        </div>
       </SectionCard>
     </div>
   );

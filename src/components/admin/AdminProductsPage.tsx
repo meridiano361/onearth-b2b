@@ -98,6 +98,7 @@ export default function AdminProductsPage() {
   const [filterLinea, setFilterLinea] = useState('');
   const [filterProduttore, setFilterProduttore] = useState('');
   const [filterTranche, setFilterTranche] = useState('');
+  const [filterStagione, setFilterStagione] = useState('');
   const [filterActive, setFilterActive] = useState<ActiveFilter>('all');
   const [filterFoto, setFilterFoto] = useState<FotoFilter>('all');
   const [filterFasciaSconto, setFilterFasciaSconto] = useState('');
@@ -144,6 +145,7 @@ export default function AdminProductsPage() {
   const lineaOptions = useMemo(() => uniqueSorted(allProducts, 'nomLinea'), [allProducts]);
   const produttoreOptions = useMemo(() => uniqueSorted(allProducts, 'produttore'), [allProducts]);
   const trancheOptions = useMemo(() => uniqueSorted(allProducts, 'tranche'), [allProducts]);
+  const stagioneOptions = useMemo(() => uniqueSorted(allProducts, 'stagione'), [allProducts]);
 
   function computeSconto(p: Product): number {
     const fs = Number((p as any).fasciaSconto);
@@ -181,6 +183,7 @@ export default function AdminProductsPage() {
       if (filterLinea && p.nomLinea !== filterLinea) return false;
       if (filterProduttore && p.produttore !== filterProduttore) return false;
       if (filterTranche && p.tranche !== filterTranche) return false;
+      if (filterStagione && p.stagione !== filterStagione) return false;
       if (filterActive === 'active' && !p.isActive) return false;
       if (filterActive === 'inactive' && p.isActive) return false;
       if (filterFoto === 'con-foto' && !p.imageUrl) return false;
@@ -226,7 +229,7 @@ export default function AdminProductsPage() {
     }
 
     return filtered;
-  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterTemaColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterActive, filterFoto, filterFasciaSconto, filterFasciaRicarico, filterPrezzoCosto, sortField, sortDir]);
+  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterTemaColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterStagione, filterActive, filterFoto, filterFasciaSconto, filterFasciaRicarico, filterPrezzoCosto, sortField, sortDir]);
 
   function handleColumnSort(field: SortField) {
     if (sortField === field) {
@@ -245,13 +248,13 @@ export default function AdminProductsPage() {
       : <ChevronDown size={11} className="ml-1 text-accent inline" />;
   }
 
-  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterTemaColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterActive !== 'all' || filterFoto !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto;
+  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterTemaColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterStagione || filterActive !== 'all' || filterFoto !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto;
 
   function resetFilters() {
     setSearch(''); setFilterGruppo(''); setFilterFamiglia('');
     setFilterClasse(''); setFilterSottoclasse(''); setFilterGruppoOmogeneo('');
     setFilterColore(''); setFilterTemaColore(''); setFilterCollezione(''); setFilterLinea('');
-    setFilterProduttore(''); setFilterTranche('');
+    setFilterProduttore(''); setFilterTranche(''); setFilterStagione('');
     setFilterActive('all'); setFilterFoto('all');
     setFilterFasciaSconto(''); setFilterFasciaRicarico(''); setFilterPrezzoCosto('');
   }
@@ -550,6 +553,10 @@ export default function AdminProductsPage() {
           <select value={filterTranche} onChange={(e) => setFilterTranche(e.target.value)} className={selectClass}>
             <option value="">Tranche</option>
             {trancheOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+          <select value={filterStagione} onChange={(e) => setFilterStagione(e.target.value)} className={selectClass}>
+            <option value="">Stagione</option>
+            {stagioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
           <select value={filterFasciaSconto} onChange={(e) => setFilterFasciaSconto(e.target.value)} className={selectClass}>
             <option value="">Fascia sconto</option>

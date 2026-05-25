@@ -419,3 +419,11 @@ model AppSettings {
 
   @@map("app_settings")
 }
+
+model CatalogSettings {
+  id             String   @id @default(cuid())
+  filtriVisibili Json     @default("[]")
+  updatedAt      DateTime @updatedAt
+
+  @@map("catalog_settings")
+}

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Search, SlidersHorizontal, X, Package, Heart, FileDown } from 'lucide-react';
+import { Check, FileDown, Heart, Loader2, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn, debounce } from '@/lib/utils';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -32,37 +33,103 @@ type Filters = {
 };
 
 const EMPTY_FILTERS: Filters = {
-  gruppoMerceologico: null,
-  famiglia:           null,
-  classe:             null,
-  sottoclasse:        null,
-  gruppoOmogeneo:     null,
-  nomLinea:           null,
-  colore:             null,
-  temaColore:         null,
-  stagione:           null,
-  collezione:         null,
-  produttore:         null,
-  tranche:            null,
+  gruppoMerceologico: null, famiglia: null, classe: null, sottoclasse: null,
+  gruppoOmogeneo: null, nomLinea: null, colore: null, temaColore: null,
+  stagione: null, collezione: null, produttore: null, tranche: null,
 };
+
+// Short URL keys for cleaner URLs
+const URL_KEYS: Record<keyof Filters, string> = {
+  gruppoMerceologico: 'gm', famiglia: 'fam', classe: 'cls', sottoclasse: 'sub',
+  gruppoOmogeneo: 'go', nomLinea: 'lin', colore: 'col', temaColore: 'tcol',
+  stagione: 'stag', collezione: 'coll', produttore: 'prod', tranche: 'tran',
+};
+
+const CHIP_LABELS: { key: keyof Filters; label: string }[] = [
+  { key: 'gruppoMerceologico', label: 'Gruppo merceologico' },
+  { key: 'famiglia',           label: 'Famiglia' },
+  { key: 'classe',             label: 'Classe' },
+  { key: 'sottoclasse',        label: 'Sottoclasse' },
+  { key: 'gruppoOmogeneo',     label: 'Gruppo omogeneo' },
+  { key: 'nomLinea',           label: 'Linea' },
+  { key: 'colore',             label: 'Colore' },
+  { key: 'temaColore',         label: 'Tema colore' },
+  { key: 'stagione',           label: 'Stagione' },
+  { key: 'collezione',         label: 'Collezione' },
+  { key: 'produttore',         label: 'Produttore' },
+  { key: 'tranche',            label: 'Tranche' },
+];
 
 export default function CatalogView() {
   const { data: session } = useSession();
   const isCustomer = session?.user?.role === 'CUSTOMER';
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const [search, setSearch]               = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [showFilters, setShowFilters]     = useState(false);
-  const [filters, setFilters]             = useState<Filters>(EMPTY_FILTERS);
+  // ── Initialize filters from URL params ──────────────────────
+  const [filters, setFilters] = useState<Filters>(() => {
+    const init: Filters = { ...EMPTY_FILTERS };
+    for (const [filterKey, urlKey] of Object.entries(URL_KEYS)) {
+      const v = searchParams.get(urlKey);
+      if (v) (init as any)[filterKey] = v;
+    }
+    return init;
+  });
+
+  const [sortBy, setSortByRaw] = useState<'az' | 'za' | 'price-asc' | 'price-desc' | 'novita' | 'continuativi'>(
+    () => (searchParams.get('sort') as any) || 'az'
+  );
+  const [search, setSearch]               = useState(() => searchParams.get('q') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get('q') || '');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
-  const [sortBy, setSortBy]               = useState<'az' | 'za' | 'price-asc' | 'price-desc' | 'novita' | 'continuativi'>('az');
+
+  // ── Mobile drawer state ──────────────────────────────────────
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [pendingFilters, setPendingFilters] = useState<Filters>(EMPTY_FILTERS);
+
   const { favoriteIds } = useFavorites();
   const { mode: viewMode, changeMode: setViewMode } = useViewMode();
   const tn = useTranslations('nav');
 
+  // ── URL update helper ────────────────────────────────────────
+  function updateUrl(f: Filters, sort: string, q: string) {
+    const params = new URLSearchParams();
+    for (const [filterKey, urlKey] of Object.entries(URL_KEYS)) {
+      const v = (f as any)[filterKey];
+      if (v) params.set(urlKey, v);
+    }
+    if (sort && sort !== 'az') params.set('sort', sort);
+    if (q.trim()) params.set('q', q.trim());
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false });
+  }
+
+  // ── Filter setters (update state + URL) ─────────────────────
+  function setFilter(key: keyof Filters, value: string | null) {
+    setFilters(prev => {
+      const next = { ...prev, [key]: value };
+      updateUrl(next, sortBy, search);
+      return next;
+    });
+  }
+
+  function handleResetAll() {
+    setFilters(EMPTY_FILTERS);
+    updateUrl(EMPTY_FILTERS, sortBy, search);
+  }
+
+  function setSortBy(v: typeof sortBy) {
+    setSortByRaw(v);
+    updateUrl(filters, v, search);
+  }
+
   const debouncedSetSearch = useCallback(
-    debounce((val: string) => setDebouncedSearch(val), 250),
-    []
+    debounce((val: string) => {
+      setDebouncedSearch(val);
+      updateUrl(filters, sortBy, val);
+    }, 300),
+    [filters, sortBy]
   );
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -70,18 +137,34 @@ export default function CatalogView() {
     debouncedSetSearch(e.target.value);
   }
 
-  function setFilter(key: keyof Filters, value: string | null) {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+  // ── Mobile drawer helpers ────────────────────────────────────
+  function openMobileFilters() {
+    setPendingFilters({ ...filters });
+    setShowMobileFilters(true);
   }
 
-  function handleResetAll() {
+  function setPendingFilter(key: keyof Filters, value: string | null) {
+    setPendingFilters(prev => ({ ...prev, [key]: value }));
+  }
+
+  function applyMobileFilters() {
+    setFilters(pendingFilters);
+    updateUrl(pendingFilters, sortBy, search);
+    setShowMobileFilters(false);
+  }
+
+  function resetMobileFilters() {
+    setPendingFilters(EMPTY_FILTERS);
     setFilters(EMPTY_FILTERS);
+    updateUrl(EMPTY_FILTERS, sortBy, search);
+    setShowMobileFilters(false);
   }
 
-  const hasActiveFilters = Object.values(filters).some(Boolean);
+  const hasActiveFilters   = Object.values(filters).some(Boolean);
+  const activeFilterCount  = Object.values(filters).filter(Boolean).length;
+  const pendingFilterCount = Object.values(pendingFilters).filter(Boolean).length;
 
-  const activeFilterCount = Object.values(filters).filter(Boolean).length;
-
+  // ── Products ─────────────────────────────────────────────────
   const { data: productsData, isLoading: productsLoading } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
@@ -90,6 +173,14 @@ export default function CatalogView() {
       return (await res.json()).data as Product[];
     },
   });
+
+  // ── Admin catalog settings (enabled filters) ─────────────────
+  const { data: catalogSettingsData } = useQuery({
+    queryKey: ['catalog-settings'],
+    queryFn: () => fetch('/api/admin/catalog-settings').then(r => r.json()),
+    staleTime: 5 * 60 * 1000,
+  });
+  const enabledFilters: string[] | null = catalogSettingsData?.filtriVisibili ?? null;
 
   const { data: docsData } = useQuery({
     queryKey: ['public-documents'],
@@ -155,58 +246,74 @@ export default function CatalogView() {
     return result;
   }, [products, debouncedSearch, filters, onlyFavorites, favoriteIds, sortBy]);
 
-  const filterProps = {
-    products,
-    selectedGruppoMerceologico: filters.gruppoMerceologico, onGruppoMerceologicoChange: (v: string | null) => setFilter('gruppoMerceologico', v),
-    selectedFamiglia:           filters.famiglia,           onFamigliaChange:           (v: string | null) => setFilter('famiglia', v),
-    selectedClasse:             filters.classe,             onClasseChange:             (v: string | null) => setFilter('classe', v),
-    selectedSottoclasse:        filters.sottoclasse,        onSottoclasseChange:        (v: string | null) => setFilter('sottoclasse', v),
-    selectedGruppoOmogeneo:     filters.gruppoOmogeneo,     onGruppoOmogeneoChange:     (v: string | null) => setFilter('gruppoOmogeneo', v),
-    selectedNomLinea:           filters.nomLinea,           onNomLineaChange:           (v: string | null) => setFilter('nomLinea', v),
-    selectedColore:             filters.colore,             onColoreChange:             (v: string | null) => setFilter('colore', v),
-    selectedTemaColore:         filters.temaColore,         onTemaColoreChange:         (v: string | null) => setFilter('temaColore', v),
-    selectedStagione:           filters.stagione,           onStagioneChange:           (v: string | null) => setFilter('stagione', v),
-    selectedCollezione:         filters.collezione,         onCollezioneChange:         (v: string | null) => setFilter('collezione', v),
-    selectedProduttore:         filters.produttore,         onProduttoreChange:         (v: string | null) => setFilter('produttore', v),
-    selectedTranche:            filters.tranche,            onTrancheChange:            (v: string | null) => setFilter('tranche', v),
-    hasActiveFilters,
-    onResetAll: handleResetAll,
-  };
+  function makeFilterProps(currentFilters: Filters, onFilterChange: (key: keyof Filters, value: string | null) => void) {
+    return {
+      products,
+      selectedGruppoMerceologico: currentFilters.gruppoMerceologico, onGruppoMerceologicoChange: (v: string | null) => { onFilterChange('gruppoMerceologico', v); onFilterChange('famiglia', null); onFilterChange('classe', null); onFilterChange('sottoclasse', null); onFilterChange('gruppoOmogeneo', null); },
+      selectedFamiglia:           currentFilters.famiglia,           onFamigliaChange:           (v: string | null) => { onFilterChange('famiglia', v); onFilterChange('classe', null); onFilterChange('sottoclasse', null); onFilterChange('gruppoOmogeneo', null); },
+      selectedClasse:             currentFilters.classe,             onClasseChange:             (v: string | null) => { onFilterChange('classe', v); onFilterChange('sottoclasse', null); onFilterChange('gruppoOmogeneo', null); },
+      selectedSottoclasse:        currentFilters.sottoclasse,        onSottoclasseChange:        (v: string | null) => { onFilterChange('sottoclasse', v); onFilterChange('gruppoOmogeneo', null); },
+      selectedGruppoOmogeneo:     currentFilters.gruppoOmogeneo,     onGruppoOmogeneoChange:     (v: string | null) => onFilterChange('gruppoOmogeneo', v),
+      selectedNomLinea:           currentFilters.nomLinea,           onNomLineaChange:           (v: string | null) => onFilterChange('nomLinea', v),
+      selectedColore:             currentFilters.colore,             onColoreChange:             (v: string | null) => onFilterChange('colore', v),
+      selectedTemaColore:         currentFilters.temaColore,         onTemaColoreChange:         (v: string | null) => onFilterChange('temaColore', v),
+      selectedStagione:           currentFilters.stagione,           onStagioneChange:           (v: string | null) => onFilterChange('stagione', v),
+      selectedCollezione:         currentFilters.collezione,         onCollezioneChange:         (v: string | null) => onFilterChange('collezione', v),
+      selectedProduttore:         currentFilters.produttore,         onProduttoreChange:         (v: string | null) => onFilterChange('produttore', v),
+      selectedTranche:            currentFilters.tranche,            onTrancheChange:            (v: string | null) => onFilterChange('tranche', v),
+      hasActiveFilters,
+      onResetAll: handleResetAll,
+      enabledFilters,
+    };
+  }
 
-  const CHIP_LABELS: { key: keyof Filters; label: string }[] = [
-    { key: 'gruppoMerceologico', label: 'Gruppo merceologico' },
-    { key: 'famiglia',           label: 'Famiglia' },
-    { key: 'classe',             label: 'Classe' },
-    { key: 'sottoclasse',        label: 'Sottoclasse' },
-    { key: 'gruppoOmogeneo',     label: 'Gruppo omogeneo' },
-    { key: 'nomLinea',           label: 'Linea' },
-    { key: 'colore',             label: 'Colore' },
-    { key: 'temaColore',         label: 'Tema colore' },
-    { key: 'stagione',           label: 'Stagione' },
-    { key: 'collezione',         label: 'Collezione' },
-    { key: 'produttore',         label: 'Produttore' },
-    { key: 'tranche',            label: 'Tranche' },
-  ];
+  const desktopFilterProps = makeFilterProps(filters, setFilter);
+  const pendingFilterProps = makeFilterProps(pendingFilters, setPendingFilter);
 
   return (
     <div className="flex h-full">
-      {/* Filters sidebar — desktop */}
+      {/* Filters sidebar — desktop only */}
       <div className="hidden md:block">
-        <CatalogFilters {...filterProps} />
+        <CatalogFilters {...desktopFilterProps} />
       </div>
 
-      {/* Mobile filters drawer */}
-      {showFilters && (
-        <div className="md:hidden fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-primary/30" onClick={() => setShowFilters(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-64 sm:w-72 bg-white shadow-luxury-xl overflow-y-auto">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <span className="text-sm font-medium">Filtri</span>
-              <button onClick={() => setShowFilters(false)} className="text-gray-400">
+      {/* Mobile bottom drawer */}
+      {showMobileFilters && (
+        <div className="md:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowMobileFilters(false)} />
+          <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl flex flex-col" style={{ maxHeight: '85dvh' }}>
+            {/* Drawer header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+              <span className="text-sm font-semibold text-primary">Filtri</span>
+              <button onClick={() => setShowMobileFilters(false)} className="text-gray-400 hover:text-primary">
                 <X size={16} />
               </button>
             </div>
-            <CatalogFilters {...filterProps} />
+            {/* Scrollable filter content */}
+            <div className="flex-1 overflow-y-auto">
+              <CatalogFilters
+                {...pendingFilterProps}
+                hasActiveFilters={pendingFilterCount > 0}
+                onResetAll={() => setPendingFilters(EMPTY_FILTERS)}
+              />
+            </div>
+            {/* Action buttons — sticky bottom */}
+            <div className="flex-shrink-0 border-t border-border bg-white px-4 py-3 flex gap-3">
+              <button
+                onClick={resetMobileFilters}
+                className="flex-1 py-2.5 border border-border rounded-lg text-sm font-medium text-gray-600 hover:bg-cream transition-colors flex items-center justify-center gap-1.5"
+              >
+                <RotateCcw size={13} />
+                Reset
+              </button>
+              <button
+                onClick={applyMobileFilters}
+                className="flex-1 py-2.5 bg-primary text-background rounded-lg text-sm font-semibold hover:bg-warm-darker transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Check size={13} />
+                Applica{pendingFilterCount > 0 ? ` (${pendingFilterCount})` : ' filtri'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -214,7 +321,7 @@ export default function CatalogView() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
 
-        {/* ── Catalog PDF download ─────────────────────────── */}
+        {/* ── Catalog PDF download ─────────────────────────────────── */}
         <div className="border-b border-border bg-cream/30 px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
           <span className="text-2xs uppercase tracking-widest text-gray-400 font-medium hidden sm:block">CASA 2027</span>
           <div className="flex items-center gap-4 ml-auto">
@@ -247,7 +354,7 @@ export default function CatalogView() {
               />
               {search && (
                 <button
-                  onClick={() => { setSearch(''); setDebouncedSearch(''); }}
+                  onClick={() => { setSearch(''); setDebouncedSearch(''); updateUrl(filters, sortBy, ''); }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   <X size={15} />
@@ -260,11 +367,11 @@ export default function CatalogView() {
           <div className="px-4 sm:px-6 py-2 sm:py-3 flex items-center gap-2 sm:gap-3">
             {/* Mobile filter button */}
             <button
-              onClick={() => setShowFilters(true)}
+              onClick={openMobileFilters}
               className="md:hidden flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-border rounded px-2.5 py-2 hover:bg-cream transition-colors flex-shrink-0 relative"
             >
               <SlidersHorizontal size={13} />
-              Filtri
+              Filtra
               {activeFilterCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 bg-accent text-white text-2xs font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
                   {activeFilterCount}
@@ -284,7 +391,7 @@ export default function CatalogView() {
               />
               {search && (
                 <button
-                  onClick={() => { setSearch(''); setDebouncedSearch(''); }}
+                  onClick={() => { setSearch(''); setDebouncedSearch(''); updateUrl(filters, sortBy, ''); }}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   <X size={12} />
@@ -310,7 +417,7 @@ export default function CatalogView() {
             {/* View mode toggle */}
             <ViewToggle mode={viewMode} onChange={setViewMode} />
 
-            {/* Favorites toggle — desktop only (mobile uses per-card hearts) */}
+            {/* Favorites toggle — desktop only */}
             <button
               onClick={() => setOnlyFavorites((v) => !v)}
               className={cn(
@@ -362,7 +469,7 @@ export default function CatalogView() {
           </h1>
         </div>
 
-        {/* Product display — switches based on view mode */}
+        {/* Product display */}
         <div className="px-3 sm:px-6 py-4 sm:py-6">
           {viewMode === 'grid' && (
             <ProductGrid products={filteredProducts} isLoading={productsLoading} />
@@ -375,6 +482,20 @@ export default function CatalogView() {
           )}
         </div>
       </div>
+
+      {/* Mobile floating filter button */}
+      <button
+        onClick={openMobileFilters}
+        className="md:hidden fixed bottom-20 right-4 z-30 bg-primary text-background rounded-full shadow-lg px-4 py-2.5 flex items-center gap-2 text-xs font-semibold"
+      >
+        <SlidersHorizontal size={14} />
+        Filtra
+        {activeFilterCount > 0 && (
+          <span className="bg-accent text-white text-2xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+            {activeFilterCount}
+          </span>
+        )}
+      </button>
     </div>
   );
 }

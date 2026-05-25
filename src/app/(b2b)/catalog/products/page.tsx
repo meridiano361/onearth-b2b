@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Metadata } from 'next';
 import CatalogView from '@/components/catalog/CatalogView';
 
@@ -6,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function ProductsPage() {
-  return <CatalogView />;
+  return (
+    <Suspense fallback={null}>
+      <CatalogView />
+    </Suspense>
+  );
 }
