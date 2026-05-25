@@ -4,10 +4,17 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 
+const SINGLETON_ID = 'singleton';
+
 export async function GET() {
-  const record = await prisma.catalogSettings.findFirst();
-  const filtriVisibili = (record?.filtriVisibili as string[]) ?? [];
-  return NextResponse.json({ filtriVisibili });
+  try {
+    const record = await prisma.catalogSettings.findUnique({ where: { id: SINGLETON_ID } });
+    const filtriVisibili = Array.isArray(record?.filtriVisibili) ? (record!.filtriVisibili as string[]) : [];
+    return NextResponse.json({ filtriVisibili });
+  } catch (error) {
+    console.error('[GET /api/admin/catalog-settings]', error);
+    return NextResponse.json({ filtriVisibili: [] });
+  }
 }
 
 export async function PUT(req: NextRequest) {
@@ -16,15 +23,27 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const body = await req.json();
-  const filtriVisibili: string[] = Array.isArray(body.filtriVisibili) ? body.filtriVisibili : [];
-
-  const existing = await prisma.catalogSettings.findFirst();
-  if (existing) {
-    await prisma.catalogSettings.update({ where: { id: existing.id }, data: { filtriVisibili } });
-  } else {
-    await prisma.catalogSettings.create({ data: { filtriVisibili } });
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  return NextResponse.json({ filtriVisibili });
+  const filtriVisibili: string[] =
+    body !== null && typeof body === 'object' && Array.isArray((body as any).filtriVisibili)
+      ? (body as any).filtriVisibili
+      : [];
+
+  try {
+    await prisma.catalogSettings.upsert({
+      where: { id: SINGLETON_ID },
+      update: { filtriVisibili },
+      create: { id: SINGLETON_ID, filtriVisibili },
+    });
+    return NextResponse.json({ filtriVisibili });
+  } catch (error) {
+    console.error('[PUT /api/admin/catalog-settings]', error);
+    return NextResponse.json({ error: 'Database error', detail: String(error) }, { status: 500 });
+  }
 }
