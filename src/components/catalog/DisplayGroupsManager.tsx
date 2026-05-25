@@ -21,28 +21,38 @@ import type { DisplayGroup, DisplayGroupItem, OrderItem } from '@/types';
 // ─── Costanti ─────────────────────────────────────────────────────────────────
 
 const COLOR_PALETTE = [
-  { label: 'Sabbia',     value: '#D4C4B0' },
-  { label: 'Terracotta', value: '#C17A5A' },
-  { label: 'Salvia',     value: '#8FAF8F' },
-  { label: 'Ardesia',    value: '#6B7280' },
-  { label: 'Notte',      value: '#1F2937' },
-  { label: 'Rosa',       value: '#F9A8D4' },
-  { label: 'Cielo',      value: '#93C5FD' },
-  { label: 'Ocra',       value: '#F59E0B' },
+  { label: 'Bianco',       value: '#FFFFFF' },
+  { label: 'Grigio chiaro',value: '#F3F4F6' },
+  { label: 'Grigio',       value: '#9CA3AF' },
+  { label: 'Grigio scuro', value: '#4B5563' },
+  { label: 'Nero',         value: '#111827' },
+  { label: 'Sabbia',       value: '#D4C4B0' },
+  { label: 'Beige',        value: '#F5F0E8' },
+  { label: 'Terracotta',   value: '#C17A5A' },
+  { label: 'Mattone',      value: '#9B3A2A' },
+  { label: 'Rosso',        value: '#EF4444' },
+  { label: 'Rosa',         value: '#F9A8D4' },
+  { label: 'Fucsia',       value: '#EC4899' },
+  { label: 'Lilla',        value: '#C4B5FD' },
+  { label: 'Viola',        value: '#7C3AED' },
+  { label: 'Cielo',        value: '#93C5FD' },
+  { label: 'Blu',          value: '#3B82F6' },
+  { label: 'Blu notte',    value: '#1E3A5F' },
+  { label: 'Menta',        value: '#6EE7B7' },
+  { label: 'Salvia',       value: '#8FAF8F' },
+  { label: 'Verde',        value: '#22C55E' },
+  { label: 'Ocra',         value: '#F59E0B' },
+  { label: 'Arancio',      value: '#F97316' },
+  { label: 'Giallo',       value: '#FDE68A' },
 ];
 
 const TEMPLATES = [
-  { emoji: '🪟', nome: 'Vetrina 1',       coloreTag: '#D4C4B0' },
-  { emoji: '🪟', nome: 'Vetrina 2',       coloreTag: '#C17A5A' },
-  { emoji: '🏝️', nome: 'Isola',           coloreTag: '#8FAF8F' },
-  { emoji: '🧱', nome: 'Parete 1',        coloreTag: '#6B7280' },
-  { emoji: '🧱', nome: 'Parete 2',        coloreTag: '#1F2937' },
-  { emoji: '🚪', nome: 'Ingresso',        coloreTag: '#F59E0B' },
-  { emoji: '⭐', nome: 'Area Premium',    coloreTag: '#F9A8D4' },
-  { emoji: '🎯', nome: 'Corner Promo',    coloreTag: '#93C5FD' },
-  { emoji: '📦', nome: 'Scaffale',        coloreTag: '#D4C4B0' },
-  { emoji: '🌸', nome: 'Area Stagionale', coloreTag: '#8FAF8F' },
+  { nome: 'Vetrina' },
+  { nome: 'Isola' },
+  { nome: 'Parete' },
 ];
+
+const CARD_SLOTS = 6;
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
@@ -67,19 +77,17 @@ function groupByLinea(items: DisplayGroupItem[]): { linea: string; items: Displa
   return Array.from(map.entries()).map(([linea, lineaItems]) => ({ linea, items: lineaItems }));
 }
 
-// ─── Product views ────────────────────────────────────────────────────────────
+// ─── Product views (for GroupRow expanded) ────────────────────────────────────
 
 function ProductListaView({
-  items, onRemove, deletingItemId, compact = false,
+  items, onRemove, deletingItemId,
 }: {
   items: DisplayGroupItem[];
   onRemove: (item: DisplayGroupItem) => void;
   deletingItemId: string | null;
-  compact?: boolean;
 }) {
   const sorted = sortProductsForDisplay(items);
   const grouped = groupByLinea(sorted);
-  const photoSize = compact ? 'w-8 h-8' : 'w-12 h-12';
 
   return (
     <div className="divide-y divide-border/50 rounded overflow-hidden">
@@ -99,14 +107,14 @@ function ProductListaView({
                 className={`flex items-center gap-2.5 px-2 py-2 group/item ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/70'}`}
               >
                 {p?.imageUrl
-                  ? <ProductImage src={p.imageUrl} alt={p.name} className={`${photoSize} object-cover rounded flex-shrink-0`} />
-                  : <div className={`${photoSize} bg-cream rounded flex-shrink-0`} />
+                  ? <ProductImage src={p.imageUrl} alt={p.name} className="w-12 h-12 object-cover rounded flex-shrink-0" />
+                  : <div className="w-12 h-12 bg-cream rounded flex-shrink-0" />
                 }
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-mono text-gray-400">{p?.code}</p>
                   <p className="text-base text-primary truncate leading-tight">{p?.name}</p>
                 </div>
-                {p?.nomLinea && !compact && (
+                {p?.nomLinea && (
                   <span className="hidden sm:block text-sm font-semibold uppercase text-accent/80 bg-accent/8 px-2 py-0.5 rounded flex-shrink-0 max-w-[100px] truncate">
                     {p.nomLinea}
                   </span>
@@ -129,12 +137,11 @@ function ProductListaView({
 }
 
 function ProductBoardView({
-  items, onRemove, deletingItemId, colsClass = 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
+  items, onRemove, deletingItemId,
 }: {
   items: DisplayGroupItem[];
   onRemove: (item: DisplayGroupItem) => void;
   deletingItemId: string | null;
-  colsClass?: string;
 }) {
   const sorted = sortProductsForDisplay(items);
   const grouped = groupByLinea(sorted);
@@ -149,7 +156,7 @@ function ProductBoardView({
               <div className="flex-1 h-px bg-border" />
             </div>
           )}
-          <div className={`grid ${colsClass} gap-2`}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {lineaItems.map((item) => {
               const p = item.orderItem.product;
               return (
@@ -165,7 +172,7 @@ function ProductBoardView({
                   <button
                     onClick={() => onRemove(item)}
                     disabled={deletingItemId === item.id}
-                    className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full items-center justify-center hidden group-hover/item:flex transition-all z-10"
+                    className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full items-center justify-center hidden group-hover/item:flex z-10"
                   >
                     {deletingItemId === item.id ? <Loader2 size={9} className="animate-spin" /> : <X size={9} />}
                   </button>
@@ -202,10 +209,6 @@ function GroupFormModal({
     temaTag: group?.temaTag ?? '',
   });
   const [saving, setSaving] = useState(false);
-
-  function applyTemplate(t: typeof TEMPLATES[0]) {
-    setForm((f) => ({ ...f, nome: t.nome, coloreTag: t.coloreTag }));
-  }
 
   async function handleSave() {
     if (!form.nome.trim()) { toast.error('Nome obbligatorio'); return; }
@@ -244,22 +247,21 @@ function GroupFormModal({
           <button onClick={onClose} className="text-gray-400 hover:text-primary p-1 transition-colors"><X size={16} /></button>
         </div>
 
+        {/* Template rapidi */}
         {!isEdit && (
           <div className="mb-4">
             <p className="text-2xs text-gray-400 uppercase tracking-wider mb-2">Template rapidi</p>
-            <div className="grid grid-cols-5 gap-1.5">
+            <div className="flex gap-2">
               {TEMPLATES.map((t) => (
                 <button
                   key={t.nome}
-                  onClick={() => applyTemplate(t)}
-                  className="flex flex-col items-center gap-1 px-1 py-2 rounded border border-border hover:border-accent hover:bg-accent/5 transition-colors"
+                  onClick={() => setForm((f) => ({ ...f, nome: t.nome }))}
+                  className="px-3 py-1.5 text-xs text-gray-700 border border-border rounded hover:border-gray-400 hover:bg-gray-50 transition-colors"
                 >
-                  <span className="text-base leading-none">{t.emoji}</span>
-                  <span className="text-2xs text-center leading-tight text-gray-600">{t.nome}</span>
+                  {t.nome}
                 </button>
               ))}
             </div>
-            <p className="text-2xs text-gray-400 mt-2 text-center">O scrivi un nome personalizzato...</p>
           </div>
         )}
 
@@ -306,25 +308,37 @@ function GroupFormModal({
             </div>
           </div>
 
+          {/* Palette colori — griglia 8 colonne, pallini 28×28px */}
           <div>
             <label className="block text-2xs text-gray-400 uppercase tracking-wider mb-2">Colore tag</label>
-            <div className="flex gap-2 flex-wrap">
+            <div className="grid grid-cols-8 gap-1.5">
+              {/* Nessun colore */}
               <button
                 onClick={() => setForm((f) => ({ ...f, coloreTag: '' }))}
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${!form.coloreTag ? 'border-primary' : 'border-transparent hover:border-border'}`}
+                className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                  !form.coloreTag ? 'border-gray-500 ring-2 ring-offset-1 ring-gray-400' : 'border-gray-200 hover:border-gray-400'
+                }`}
                 style={{ backgroundColor: '#E5E7EB' }}
                 title="Nessun colore"
               >
-                {!form.coloreTag && <X size={10} className="text-gray-500" />}
+                <X size={10} className="text-gray-500" />
               </button>
               {COLOR_PALETTE.map((c) => (
                 <button
                   key={c.value}
                   onClick={() => setForm((f) => ({ ...f, coloreTag: c.value }))}
-                  className={`w-6 h-6 rounded-full border-2 transition-all ${form.coloreTag === c.value ? 'border-primary scale-110' : 'border-transparent hover:border-border'}`}
+                  className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                    form.coloreTag === c.value
+                      ? 'border-gray-600 ring-2 ring-offset-1 ring-gray-500 scale-110'
+                      : 'border-gray-200 hover:border-gray-400'
+                  }`}
                   style={{ backgroundColor: c.value }}
                   title={c.label}
-                />
+                >
+                  {form.coloreTag === c.value && (
+                    <Check size={10} className="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" />
+                  )}
+                </button>
               ))}
             </div>
           </div>
@@ -409,7 +423,6 @@ function AddItemsModal({
           <p className="text-sm font-semibold text-primary">Aggiungi prodotti al gruppo</p>
           <button onClick={onClose} className="text-gray-400 hover:text-primary p-1 transition-colors"><X size={16} /></button>
         </div>
-
         <div className="px-4 py-3 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2 border border-border rounded px-3 py-2">
             <Search size={13} className="text-gray-400" />
@@ -422,7 +435,6 @@ function AddItemsModal({
             />
           </div>
         </div>
-
         <div className="flex-1 overflow-y-auto divide-y divide-border">
           {filtered.map((item) => {
             const isAssigned = assignedItemIds.has(item.id);
@@ -459,7 +471,6 @@ function AddItemsModal({
             <p className="text-center text-sm text-gray-400 py-10">Nessun prodotto trovato</p>
           )}
         </div>
-
         <div className="px-4 py-3 border-t border-border flex items-center justify-between flex-shrink-0">
           <span className="text-xs text-gray-400">{selected.size} selezionati</span>
           <button
@@ -476,7 +487,7 @@ function AddItemsModal({
   );
 }
 
-// ─── GroupCard (board view) ────────────────────────────────────────────────────
+// ─── GroupCard (board view) — griglia 2×3 fissa ───────────────────────────────
 
 function GroupCard({
   group, orderId, orderItems, onEdit, onDuplicate, onDelete, onRefresh,
@@ -492,8 +503,6 @@ function GroupCard({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id });
   const [menuOpen, setMenuOpen] = useState(false);
   const [addItemsOpen, setAddItemsOpen] = useState(false);
-  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
-  const [productView, setProductView] = useState<'lista' | 'board'>('board');
 
   const assignedItemIds = useMemo(
     () => new Set(group.prodotti.map((p) => p.orderItemId)),
@@ -507,111 +516,113 @@ function GroupCard({
     zIndex: isDragging ? 50 : undefined,
   };
 
-  async function removeItem(item: DisplayGroupItem) {
-    setDeletingItemId(item.id);
-    try {
-      const res = await fetch(
-        `/api/catalog/orders/${orderId}/display-groups/${group.id}/items/${item.orderItemId}`,
-        { method: 'DELETE' }
-      );
-      if (!res.ok) throw new Error();
-      onRefresh();
-    } catch {
-      toast.error('Errore nella rimozione');
-    } finally {
-      setDeletingItemId(null);
-    }
-  }
+  const hasOverflow = group.prodotti.length > CARD_SLOTS;
+  const overflowCount = group.prodotti.length - (CARD_SLOTS - 1);
+  const displayedItems = hasOverflow ? group.prodotti.slice(0, CARD_SLOTS - 1) : group.prodotti;
+  const emptySlots = hasOverflow ? 0 : CARD_SLOTS - group.prodotti.length;
 
   return (
     <>
-      <div ref={setNodeRef} style={style} className="bg-white border border-border rounded-lg overflow-hidden flex flex-col">
-        {/* Card header */}
-        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border bg-cream/40">
+      <div ref={setNodeRef} style={style} className="bg-white border border-border rounded-lg overflow-hidden flex flex-col h-[320px]">
+        {/* Header */}
+        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border bg-cream/40 flex-shrink-0">
           <button {...attributes} {...listeners} className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none">
             <GripVertical size={14} />
           </button>
           {group.coloreTag && (
             <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: group.coloreTag }} />
           )}
-          <span className="flex-1 text-base font-semibold text-primary truncate">{group.nome}</span>
-          <div className="flex items-center gap-0.5">
-            {(group.stagione || group.temaTag) && (
-              <span className="text-sm text-gray-400 bg-white border border-border rounded-full px-2 py-0.5 hidden sm:block truncate max-w-[80px]">
-                {group.stagione || group.temaTag}
-              </span>
-            )}
+          <span className="flex-1 text-sm font-semibold text-primary truncate">{group.nome}</span>
+          <div className="relative flex-shrink-0">
             <button
-              onClick={() => setProductView(productView === 'lista' ? 'board' : 'lista')}
+              onClick={() => setMenuOpen(!menuOpen)}
               className="p-1 text-gray-400 hover:text-primary rounded hover:bg-white transition-colors"
-              title={productView === 'lista' ? 'Vista board' : 'Vista lista'}
             >
-              {productView === 'lista' ? <LayoutGrid size={12} /> : <List size={12} />}
+              <MoreHorizontal size={14} />
             </button>
-            <div className="relative">
-              <button
-                onClick={() => setMenuOpen(!menuOpen)}
-                className="p-1 text-gray-400 hover:text-primary rounded hover:bg-white transition-colors"
-              >
-                <MoreHorizontal size={14} />
-              </button>
-              {menuOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-border rounded shadow-lg py-1 min-w-[150px]">
-                    <button onClick={() => { setMenuOpen(false); onEdit(); }}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream transition-colors">
-                      <Pencil size={11} />Rinomina
-                    </button>
-                    <button onClick={() => { setMenuOpen(false); onDuplicate(); }}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream transition-colors">
-                      <Copy size={11} />Duplica
-                    </button>
-                    <button onClick={() => { setMenuOpen(false); onDelete(); }}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 transition-colors">
-                      <Trash2 size={11} />Elimina
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-border rounded shadow-lg py-1 min-w-[150px]">
+                  <button onClick={() => { setMenuOpen(false); onEdit(); }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream transition-colors">
+                    <Pencil size={11} />Rinomina
+                  </button>
+                  <button onClick={() => { setMenuOpen(false); onDuplicate(); }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream transition-colors">
+                    <Copy size={11} />Duplica
+                  </button>
+                  <button onClick={() => { setMenuOpen(false); onDelete(); }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 transition-colors">
+                    <Trash2 size={11} />Elimina
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Products */}
-        <div className="p-3 flex-1">
-          {group.prodotti.length === 0 ? (
-            <p className="text-sm text-gray-300 text-center py-4 italic">Nessun prodotto</p>
-          ) : productView === 'lista' ? (
-            <div className="mb-2">
-              <ProductListaView
-                items={group.prodotti}
-                onRemove={removeItem}
-                deletingItemId={deletingItemId}
-                compact
-              />
-            </div>
-          ) : (
-            <div className="mb-2">
-              <ProductBoardView
-                items={group.prodotti}
-                onRemove={removeItem}
-                deletingItemId={deletingItemId}
-                colsClass="grid-cols-2 sm:grid-cols-3"
-              />
-            </div>
-          )}
-          <button
-            onClick={() => setAddItemsOpen(true)}
-            className="w-full flex items-center justify-center gap-1 text-2xs text-accent hover:text-accent/80 border border-dashed border-accent/30 hover:border-accent/60 rounded py-1.5 transition-colors mt-2"
-          >
-            <Plus size={10} />
-            Aggiungi prodotto
-          </button>
+        {/* Griglia 2×3 slot prodotto */}
+        <div className="flex-1 overflow-hidden p-2">
+          <div className="grid grid-cols-2 grid-rows-3 gap-1 h-full">
+            {/* Prodotti visualizzati */}
+            {displayedItems.map((item) => {
+              const p = item.orderItem.product;
+              return (
+                <div key={item.id} className="flex flex-col overflow-hidden rounded">
+                  <div className="flex-1 relative overflow-hidden bg-cream">
+                    {p?.imageUrl
+                      ? <ProductImage src={p.imageUrl} alt={p.name} className="absolute inset-0 w-full h-full object-cover" />
+                      : null
+                    }
+                  </div>
+                  <p className="text-[9px] text-gray-400 text-center py-0.5 flex-shrink-0 truncate px-0.5">
+                    {p?.code}
+                  </p>
+                </div>
+              );
+            })}
+
+            {/* Slot overflow "+N altri" */}
+            {hasOverflow && (
+              <div className="relative rounded overflow-hidden bg-gray-100 flex flex-col">
+                <div className="flex-1 relative">
+                  {group.prodotti[CARD_SLOTS - 1]?.orderItem.product?.imageUrl && (
+                    <ProductImage
+                      src={group.prodotti[CARD_SLOTS - 1].orderItem.product!.imageUrl!}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-black/65 flex items-center justify-center">
+                    <span className="text-white text-xs font-bold leading-tight text-center">+{overflowCount}<br/>altri</span>
+                  </div>
+                </div>
+                <p className="text-[9px] text-gray-400 text-center py-0.5 flex-shrink-0">···</p>
+              </div>
+            )}
+
+            {/* Slot vuoti */}
+            {Array.from({ length: emptySlots }).map((_, i) => (
+              <div key={`empty-${i}`} className="rounded border border-dashed border-gray-200 flex flex-col">
+                <div className="flex-1" />
+                <p className="text-[9px] text-transparent py-0.5">·</p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="px-3 pb-2.5 text-sm text-gray-400">
-          {group.prodotti.length} prodott{group.prodotti.length !== 1 ? 'i' : 'o'}
+        {/* Footer */}
+        <div className="px-3 py-2 flex items-center justify-between flex-shrink-0 border-t border-border/50">
+          <span className="text-xs text-gray-400">
+            {group.prodotti.length} prodott{group.prodotti.length !== 1 ? 'i' : 'o'}
+          </span>
+          <button
+            onClick={() => setAddItemsOpen(true)}
+            className="flex items-center gap-1 text-2xs text-accent hover:text-accent/80 transition-colors"
+          >
+            <Plus size={10} />Aggiungi
+          </button>
         </div>
       </div>
 
@@ -678,7 +689,6 @@ function GroupRow({
   return (
     <>
       <div ref={setNodeRef} style={style} className="bg-white border border-border rounded-lg overflow-hidden">
-        {/* Row header */}
         <div className="flex items-center gap-2 px-3 py-3 hover:bg-cream/30 transition-colors">
           <button {...attributes} {...listeners} className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none p-0.5">
             <GripVertical size={14} />
@@ -704,10 +714,8 @@ function GroupRow({
           </div>
         </div>
 
-        {/* Expanded content */}
         {open && (
           <div className="border-t border-border px-3 py-3 bg-cream/20 space-y-3">
-            {/* Inner view toggle + add button */}
             <div className="flex items-center justify-between">
               <div className="flex items-center bg-white rounded border border-border overflow-hidden">
                 <button
@@ -734,18 +742,9 @@ function GroupRow({
             {group.prodotti.length === 0 ? (
               <p className="text-sm text-gray-300 text-center py-4 italic">Nessun prodotto</p>
             ) : productView === 'lista' ? (
-              <ProductListaView
-                items={group.prodotti}
-                onRemove={removeItem}
-                deletingItemId={deletingItemId}
-              />
+              <ProductListaView items={group.prodotti} onRemove={removeItem} deletingItemId={deletingItemId} />
             ) : (
-              <ProductBoardView
-                items={group.prodotti}
-                onRemove={removeItem}
-                deletingItemId={deletingItemId}
-                colsClass="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
-              />
+              <ProductBoardView items={group.prodotti} onRemove={removeItem} deletingItemId={deletingItemId} />
             )}
 
             {group.prodotti.length > 0 && (
@@ -753,8 +752,7 @@ function GroupRow({
                 onClick={() => setAddItemsOpen(true)}
                 className="w-full flex items-center justify-center gap-1 text-2xs text-accent hover:text-accent/80 border border-dashed border-accent/30 hover:border-accent/60 rounded py-1.5 transition-colors"
               >
-                <Plus size={10} />
-                Aggiungi prodotto
+                <Plus size={10} />Aggiungi prodotto
               </button>
             )}
           </div>
@@ -788,6 +786,7 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
   const [newGroupOpen, setNewGroupOpen] = useState(false);
   const [editGroup, setEditGroup] = useState<DisplayGroup | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [unassignedView, setUnassignedView] = useState<'board' | 'list'>('board');
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -863,16 +862,13 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-
     const oldIndex = groups.findIndex((g) => g.id === active.id);
     const newIndex = groups.findIndex((g) => g.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-
     const reordered = arrayMove(groups, oldIndex, newIndex);
     queryClient.setQueryData(['display-groups', orderId], {
       groups: reordered.map((g, i) => ({ ...g, posizione: i })),
     });
-
     try {
       await fetch(`/api/catalog/orders/${orderId}/display-groups/reorder`, {
         method: 'PUT',
@@ -916,7 +912,7 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
 
       <div className="px-4 sm:px-6 py-6 pb-32 lg:pb-24">
 
-        {/* Header */}
+        {/* Header toolbar */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-semibold text-primary">Mondi Espositivi</h2>
@@ -961,20 +957,61 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
         {/* Prodotti non assegnati */}
         {unassignedItems.length > 0 && (
           <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-            <p className="text-xs font-medium text-amber-800 mb-2 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
-              {unassignedItems.length} prodott{unassignedItems.length !== 1 ? 'i non assegnati' : 'o non assegnato'}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {unassignedItems.map((it) => (
-                <div key={it.id} className="flex items-center gap-1.5 bg-white border border-amber-200 rounded px-2 py-1">
-                  {it.product?.imageUrl && (
-                    <ProductImage src={it.product.imageUrl} alt={it.product.name} className="w-6 h-6 object-cover rounded" />
-                  )}
-                  <span className="text-2xs text-gray-600">{it.product?.code}</span>
-                </div>
-              ))}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-amber-800 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                {unassignedItems.length} prodott{unassignedItems.length !== 1 ? 'i non assegnati' : 'o non assegnato'}
+              </p>
+              <div className="flex items-center bg-white rounded border border-amber-200 overflow-hidden">
+                <button
+                  onClick={() => setUnassignedView('board')}
+                  className={`p-1 transition-colors ${unassignedView === 'board' ? 'bg-amber-100 text-amber-700' : 'text-gray-400 hover:text-amber-600'}`}
+                  title="Vista foto"
+                >
+                  <LayoutGrid size={12} />
+                </button>
+                <button
+                  onClick={() => setUnassignedView('list')}
+                  className={`p-1 transition-colors ${unassignedView === 'list' ? 'bg-amber-100 text-amber-700' : 'text-gray-400 hover:text-amber-600'}`}
+                  title="Vista lista"
+                >
+                  <List size={12} />
+                </button>
+              </div>
             </div>
+
+            {unassignedView === 'board' ? (
+              <div className="grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-10 gap-1">
+                {unassignedItems.map((it) => (
+                  <div key={it.id} className="relative group/ua aspect-square rounded-[6px] overflow-hidden bg-white border border-amber-100">
+                    {it.product?.imageUrl
+                      ? <ProductImage src={it.product.imageUrl} alt={it.product.name} className="w-full h-full object-cover" />
+                      : <div className="w-full h-full bg-cream" />
+                    }
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/ua:opacity-100 transition-opacity flex items-end p-1 pointer-events-none">
+                      <span className="text-white leading-tight" style={{ fontSize: 10 }}>{it.product?.code}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="divide-y divide-amber-100 rounded overflow-hidden">
+                {unassignedItems.map((it, idx) => (
+                  <div
+                    key={it.id}
+                    className={`flex items-center gap-2.5 px-1 py-1.5 ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/50'}`}
+                  >
+                    {it.product?.imageUrl
+                      ? <ProductImage src={it.product.imageUrl} alt={it.product.name} className="w-10 h-10 object-cover rounded flex-shrink-0" />
+                      : <div className="w-10 h-10 bg-cream rounded flex-shrink-0" />
+                    }
+                    <p className="flex-1 text-xs text-primary truncate min-w-0">{it.product?.name}</p>
+                    <p className="text-2xs text-gray-400 font-mono flex-shrink-0">{it.product?.code}</p>
+                    <p className="text-2xs text-gray-400 flex-shrink-0">× {it.quantity}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

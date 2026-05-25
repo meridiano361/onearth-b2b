@@ -6,26 +6,43 @@ import { renderToBuffer, Document, Page, View, Text, Image, StyleSheet } from '@
 
 const FORBIDDEN = NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-const COL = 5;
+const COLS = 5;
+const ROWS = 5;
+const PER_PAGE = COLS * ROWS; // 25
 
-const styles = StyleSheet.create({
-  page: { padding: 36, fontFamily: 'Helvetica', backgroundColor: '#FFFFFF' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 12, borderBottom: '1 solid #E5E7EB' },
-  headerTitle: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: '#111827', letterSpacing: 1 },
-  headerSub: { fontSize: 9, color: '#6B7280', marginTop: 2 },
-  groupHeader: { backgroundColor: '#111827', padding: '10 14', marginBottom: 14, flexDirection: 'row', alignItems: 'center' },
-  groupDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  groupName: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: '#FFFFFF', letterSpacing: 0.5 },
-  groupMeta: { fontSize: 8, color: '#9CA3AF', marginTop: 2 },
-  lineaLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#6B7280', letterSpacing: 1, marginBottom: 6, marginTop: 10, textTransform: 'uppercase' },
-  lineaSep: { borderBottom: '0.5 solid #E5E7EB', marginBottom: 8 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  cell: { width: '18.4%' },
-  cellImg: { width: '100%', aspectRatio: 1, objectFit: 'cover', backgroundColor: '#F3F4F6', borderRadius: 3 },
-  cellCode: { fontSize: 6, color: '#9CA3AF', marginTop: 2, textAlign: 'center' },
-  cellQty: { fontSize: 6, fontFamily: 'Helvetica-Bold', color: '#374151', textAlign: 'center' },
-  footer: { position: 'absolute', bottom: 24, left: 36, right: 36, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  footerText: { fontSize: 7, color: '#9CA3AF' },
+// A4 usable width = 595 - 72 = 523pt; 5 cols with gap 3: (523 - 4×3) / 5 ≈ 101pt
+const CELL_W = '19.2%';
+
+const s = StyleSheet.create({
+  page: { paddingHorizontal: 36, paddingTop: 36, paddingBottom: 30, fontFamily: 'Helvetica', backgroundColor: '#FFFFFF' },
+
+  // Header — height ~30pt
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, height: 30 },
+  headerLogo: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#111827', width: 80 },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  headerGroupName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#111827' },
+  headerGroupMeta: { fontSize: 7, color: '#6B7280', marginTop: 2 },
+  headerRight: { width: 80, alignItems: 'flex-end' },
+  headerPageNum: { fontSize: 9, color: '#6B7280' },
+  colorRect: { width: 10, height: 10, borderRadius: 2, marginLeft: 4 },
+
+  // Header line
+  headerLine: { borderBottom: '0.5 solid #E5E7EB', marginBottom: 10 },
+
+  // Grid row
+  gridRow: { flexDirection: 'row', gap: 3, marginBottom: 3 },
+
+  // Cell
+  cell: { width: CELL_W, border: '0.5 solid #E5E7EB', padding: 3 },
+  cellImg: { width: '100%', aspectRatio: 1, backgroundColor: '#F3F4F6', objectFit: 'cover' },
+  cellImgPlaceholder: { width: '100%', aspectRatio: 1, backgroundColor: '#F3F4F6' },
+  cellCode: { fontSize: 6.5, color: '#6B7280', textAlign: 'center', marginTop: 3 },
+  cellName: { fontSize: 7, color: '#111827', textAlign: 'center', marginTop: 2 },
+
+  // Footer — height ~16pt
+  footer: { position: 'absolute', bottom: 16, left: 36, right: 36, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  footerText: { fontSize: 8, color: '#9CA3AF' },
+
   noGroups: { fontSize: 12, color: '#6B7280', textAlign: 'center', marginTop: 60 },
 });
 
@@ -50,6 +67,10 @@ function sortItems<T extends { orderItem: { product?: { nomLinea?: string | null
   });
 }
 
+function truncateName(name: string, maxLen = 40): string {
+  return name.length > maxLen ? name.slice(0, maxLen - 1) + '…' : name;
+}
+
 export async function GET(_req: NextRequest, { params }: { params: { orderId: string } }) {
   const operatorId = await requireMondiEspositivi();
   if (!operatorId) return FORBIDDEN;
@@ -71,7 +92,7 @@ export async function GET(_req: NextRequest, { params }: { params: { orderId: st
                 product: {
                   select: {
                     code: true, name: true, imageUrl: true,
-                    nomLinea: true, colore: true, retailPrice: true,
+                    nomLinea: true, colore: true,
                   },
                 },
               },
@@ -87,7 +108,7 @@ export async function GET(_req: NextRequest, { params }: { params: { orderId: st
   const orderLabel = order.orderNumber ?? `#${order.id.slice(0, 8).toUpperCase()}`;
   const dateLabel = new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
 
-  // Prefetch images
+  // Prefetch all images
   const imgCache = new Map<string, string | null>();
   await Promise.all(
     groups.flatMap((g) => g.prodotti.map(async (p) => {
@@ -96,114 +117,119 @@ export async function GET(_req: NextRequest, { params }: { params: { orderId: st
     }))
   );
 
-  // Build group-by-linea structure
-  function buildLineaGroups(items: typeof groups[0]['prodotti']) {
-    const sorted = sortItems(items);
-    const map = new Map<string, typeof items>();
-    for (const item of sorted) {
-      const linea = item.orderItem.product?.nomLinea ?? '';
-      if (!map.has(linea)) map.set(linea, []);
-      map.get(linea)!.push(item);
-    }
-    return Array.from(map.entries());
-  }
+  // Build all pages
+  const pageElements: React.ReactElement[] = [];
 
-  const doc = React.createElement(
-    Document,
-    { title: `Mondi Espositivi - ${orderLabel}` },
-    ...groups.map((group, gIdx) => {
-      const lineaGroups = buildLineaGroups(group.prodotti);
+  for (const group of groups) {
+    const sorted = sortItems(group.prodotti);
+    const totalGroupPages = Math.max(1, Math.ceil(sorted.length / PER_PAGE));
 
-      const productElements: React.ReactElement[] = [];
-      for (const [linea, lineaItems] of lineaGroups) {
-        // Linea separator
-        if (linea) {
-          productElements.push(
-            React.createElement(View, { key: `sep-${linea}` },
-              React.createElement(Text, { style: styles.lineaLabel }, linea),
-              React.createElement(View, { style: styles.lineaSep }),
-            )
-          );
+    for (let pageIdx = 0; pageIdx < totalGroupPages; pageIdx++) {
+      const pageProducts = sorted.slice(pageIdx * PER_PAGE, (pageIdx + 1) * PER_PAGE);
+      const isFirst = pageIdx === 0;
+      const groupPageLabel = totalGroupPages > 1 ? `Pag. ${pageIdx + 1}/${totalGroupPages}` : '';
+
+      // Build grid rows
+      const gridRows: React.ReactElement[] = [];
+      for (let r = 0; r < ROWS; r++) {
+        const cells: React.ReactElement[] = [];
+        for (let c = 0; c < COLS; c++) {
+          const item = pageProducts[r * COLS + c];
+          if (!item) {
+            // empty cell (filler)
+            cells.push(
+              React.createElement(View, { key: `empty-${r}-${c}`, style: s.cell })
+            );
+          } else {
+            const p = item.orderItem.product;
+            const img = p?.imageUrl ? imgCache.get(p.imageUrl) : null;
+            cells.push(
+              React.createElement(
+                View,
+                { key: item.id, style: s.cell },
+                img
+                  ? React.createElement(Image, { src: img, style: s.cellImg })
+                  : React.createElement(View, { style: s.cellImgPlaceholder }),
+                React.createElement(Text, { style: s.cellCode }, p?.code ?? ''),
+                p?.name ? React.createElement(Text, { style: s.cellName }, truncateName(p.name)) : null,
+              )
+            );
+          }
         }
-        // 5-col grid rows
-        for (let i = 0; i < lineaItems.length; i += COL) {
-          const row = lineaItems.slice(i, i + COL);
-          productElements.push(
-            React.createElement(
-              View,
-              { key: `row-${linea}-${i}`, style: { flexDirection: 'row', gap: 6, marginBottom: 6 } },
-              ...row.map((item) => {
-                const p = item.orderItem.product;
-                const img = p?.imageUrl ? imgCache.get(p.imageUrl) : null;
-                return React.createElement(
-                  View,
-                  { key: item.id, style: styles.cell },
-                  img
-                    ? React.createElement(Image, { src: img, style: styles.cellImg })
-                    : React.createElement(View, { style: styles.cellImg }),
-                  React.createElement(Text, { style: styles.cellCode }, p?.code ?? ''),
-                  React.createElement(Text, { style: styles.cellQty }, `× ${item.orderItem.quantity}`),
-                );
-              }),
-            )
-          );
-        }
+        gridRows.push(
+          React.createElement(View, { key: `row-${r}`, style: s.gridRow }, ...cells)
+        );
       }
 
-      return React.createElement(
-        Page,
-        { key: group.id, size: 'A4', style: styles.page },
-        // Header
+      pageElements.push(
         React.createElement(
-          View,
-          { style: styles.header },
+          Page,
+          { key: `${group.id}-${pageIdx}`, size: 'A4', style: s.page },
+
+          // Header
           React.createElement(
             View,
-            null,
-            React.createElement(Text, { style: styles.headerTitle }, 'ON EARTH B2B'),
-            React.createElement(Text, { style: styles.headerSub }, `Mondi Espositivi · Ordine ${orderLabel}`),
-          ),
-          React.createElement(
-            View,
-            { style: { alignItems: 'flex-end' } },
-            React.createElement(Text, { style: { fontSize: 8, color: '#6B7280' } }, `Mondo ${gIdx + 1} di ${groups.length}`),
-          ),
-        ),
-        // Group header
-        React.createElement(
-          View,
-          { style: styles.groupHeader },
-          group.coloreTag && React.createElement(View, { style: [styles.groupDot, { backgroundColor: group.coloreTag }] }),
-          React.createElement(
-            View,
-            null,
-            React.createElement(Text, { style: styles.groupName }, group.nome),
-            (group.stagione || group.temaTag) && React.createElement(
-              Text, { style: styles.groupMeta },
-              [group.stagione, group.temaTag].filter(Boolean).join(' · ')
+            { style: s.header },
+            // Logo left
+            React.createElement(Text, { style: s.headerLogo }, 'ON EARTH'),
+            // Group name center
+            React.createElement(
+              View,
+              { style: s.headerCenter },
+              React.createElement(
+                View,
+                { style: { flexDirection: 'row', alignItems: 'center' } },
+                React.createElement(Text, { style: s.headerGroupName }, isFirst ? group.nome : `${group.nome} (cont.)`),
+                group.coloreTag
+                  ? React.createElement(View, { style: [s.colorRect, { backgroundColor: group.coloreTag }] })
+                  : null,
+              ),
+              (group.stagione || group.temaTag || groupPageLabel)
+                ? React.createElement(
+                    Text,
+                    { style: s.headerGroupMeta },
+                    [group.stagione, group.temaTag, groupPageLabel].filter(Boolean).join(' · ')
+                  )
+                : null,
+            ),
+            // Page number right
+            React.createElement(
+              View,
+              { style: s.headerRight },
+              React.createElement(Text, { style: s.headerPageNum, render: ({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => `${pageNumber} / ${totalPages}` }),
             ),
           ),
-        ),
-        // Product grid sorted by linea
-        ...productElements,
-        // Footer
-        React.createElement(
-          View,
-          { style: styles.footer, fixed: true },
-          React.createElement(Text, { style: styles.footerText }, `ON EARTH B2B · ${dateLabel}`),
-          React.createElement(Text, { style: styles.footerText, render: ({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => `${pageNumber} / ${totalPages}` }),
-        ),
-      );
-    }),
-    groups.length === 0
-      ? React.createElement(
-          Page,
-          { size: 'A4', style: styles.page },
-          React.createElement(Text, { style: styles.noGroups }, 'Nessun mondo espositivo da esportare.')
-        )
-      : null,
-  );
 
+          // Header separator
+          React.createElement(View, { style: s.headerLine }),
+
+          // Product grid
+          ...gridRows,
+
+          // Footer
+          React.createElement(
+            View,
+            { style: s.footer, fixed: true },
+            React.createElement(Text, { style: s.footerText }, `Ordine ${orderLabel}`),
+            React.createElement(Text, { style: s.footerText }, dateLabel),
+          ),
+        )
+      );
+    }
+  }
+
+  // Empty state page
+  if (groups.length === 0) {
+    pageElements.push(
+      React.createElement(
+        Page,
+        { key: 'empty', size: 'A4', style: s.page },
+        React.createElement(Text, { style: s.noGroups }, 'Nessun mondo espositivo da esportare.')
+      )
+    );
+  }
+
+  const doc = React.createElement(Document, { title: `Mondi Espositivi - ${orderLabel}` }, ...pageElements);
   const buffer = await renderToBuffer(doc as any);
 
   return new NextResponse(buffer as unknown as BodyInit, {
