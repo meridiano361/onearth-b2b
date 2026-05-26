@@ -227,6 +227,7 @@ export interface Order {
   confirmedAt: string | null;
   customer?: Customer;
   organization?: Organization;
+  operator?: Pick<Operator, 'id' | 'nome' | 'cognome' | 'email'>;
   destinazione?: Destinazione;
   /** @deprecated use destinazione */
   canale?: Destinazione;

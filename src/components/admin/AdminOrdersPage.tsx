@@ -132,17 +132,22 @@ function OrderRow({ order, selected, onToggleSelect, onStatusChange, onDelete }:
 
         {/* Status badge + info */}
         <div className="flex-1 min-w-0">
-          <span className={`inline-block text-2xs font-semibold px-2 py-0.5 rounded mb-1 ${style.badge}`}>
-            {style.label}
-          </span>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-primary truncate max-w-[200px] sm:max-w-none">
-              {order.customer?.companyName}
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className={`inline-block text-2xs font-semibold px-2 py-0.5 rounded ${style.badge}`}>
+              {style.label}
             </span>
             <span className="text-2xs text-gray-400 font-mono">
-              #{order.id.slice(0, 8).toUpperCase()}
+              {order.orderNumber || `#${order.id.slice(0, 8).toUpperCase()}`}
             </span>
           </div>
+          <p className="text-sm font-medium text-primary truncate">
+            {order.organization?.nome || order.customer?.companyName || '—'}
+          </p>
+          {order.operator && (
+            <p className="text-xs text-gray-500">
+              {order.operator.nome} {order.operator.cognome}
+            </p>
+          )}
           <p className="text-2xs text-gray-400 mt-0.5">
             {formatDate(order.createdAt, 'datetime')} · {order.totalItems} pz · {order.items?.length || 0} righe
           </p>
@@ -307,10 +312,15 @@ export default function AdminOrdersPage() {
   const orders: Order[] = (data?.data || []).filter((o: Order) => {
     if (searchCliente) {
       const q = searchCliente.toLowerCase();
-      if (
-        !o.customer?.companyName?.toLowerCase().includes(q) &&
-        !o.customer?.customerCode?.toLowerCase().includes(q)
-      ) return false;
+      const matchCustomer =
+        o.customer?.companyName?.toLowerCase().includes(q) ||
+        o.customer?.customerCode?.toLowerCase().includes(q);
+      const matchOrg = o.organization?.nome?.toLowerCase().includes(q);
+      const matchOperator =
+        o.operator?.nome?.toLowerCase().includes(q) ||
+        o.operator?.cognome?.toLowerCase().includes(q) ||
+        o.operator?.email?.toLowerCase().includes(q);
+      if (!matchCustomer && !matchOrg && !matchOperator) return false;
     }
     if (searchNumero) {
       if (!o.id.toLowerCase().includes(searchNumero.toLowerCase())) return false;
