@@ -36,8 +36,11 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
   const queryClient = useQueryClient();
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
-  const shortId = order.id.slice(0, 8);
+  const shortId = order.orderNumber ?? order.id.slice(0, 8).toUpperCase();
   const items = order.items ?? [];
+  const tranchePresenti = [...new Set(
+    items.map(it => (it.product as any)?.tranche as string | undefined).filter((t): t is string => Boolean(t))
+  )];
 
   useEffect(() => {
     if (!pos) return;
@@ -53,19 +56,25 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
     setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
   }
 
-  async function handleCSV(e: React.MouseEvent) {
+  async function handleCSV(e: React.MouseEvent, tranche?: string) {
     e.stopPropagation();
     setPos(null);
+    const filtered = tranche ? items.filter(it => (it.product as any)?.tranche === tranche) : items;
     const lines = [
       'Codice;Quantità',
-      ...items.map((it) => `${it.product?.code ?? ''};${it.quantity}`),
+      ...filtered.map((it) => `${it.product?.code ?? ''};${it.quantity}`),
     ];
+    const filename = tranche
+      ? `Demetra-${shortId}-${tranche}.csv`
+      : `Demetra-${shortId}-completo.csv`;
     // UTF-8 BOM so Italian Excel opens it correctly
-    download('﻿' + lines.join('\r\n'), `ordine-demetra-${shortId}.csv`, 'text/csv;charset=utf-8;');
-    toast.success('CSV Demetra pronto');
-    await markExported(order.id);
-    queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-    onExported?.();
+    download('﻿' + lines.join('\r\n'), filename, 'text/csv;charset=utf-8;');
+    toast.success(`CSV ${tranche ?? 'completo'} pronto`);
+    if (!tranche) {
+      await markExported(order.id);
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      onExported?.();
+    }
   }
 
   async function handleXLSX(e: React.MouseEvent) {
@@ -116,15 +125,24 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
         createPortal(
           <div
             style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 9999 }}
-            className="bg-white border border-border rounded shadow-luxury overflow-hidden min-w-[140px]"
+            className="bg-white border border-border rounded shadow-luxury overflow-hidden min-w-[160px]"
             onMouseDown={(e) => e.stopPropagation()}
           >
             <button
-              onClick={handleCSV}
+              onClick={(e) => handleCSV(e)}
               className="flex items-center w-full text-left px-4 py-2.5 text-xs text-primary hover:bg-cream transition-colors"
             >
-              CSV
+              CSV completo
             </button>
+            {tranchePresenti.map((tr) => (
+              <button
+                key={tr}
+                onClick={(e) => handleCSV(e, tr)}
+                className="flex items-center w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-cream transition-colors"
+              >
+                CSV tranche {tr}
+              </button>
+            ))}
             <div className="border-t border-border/50" />
             <button
               onClick={handleXLSX}

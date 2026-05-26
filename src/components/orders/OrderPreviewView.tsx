@@ -329,7 +329,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
   const [qtyOverrides, setQtyOverrides] = useState<QtyMap>({});
   const qtyDebounceRef = useRef<Record<string, NodeJS.Timeout>>({});
   const [exporting, setExporting] = useState(false);
-  const [exportingDemetra, setExportingDemetra] = useState(false);
+  const [exportingDemetra, setExportingDemetra] = useState<string | null>(null);
   const [addProductsOpen, setAddProductsOpen] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
 
@@ -398,6 +398,11 @@ export default function OrderPreviewView({ id }: { id: string }) {
           return { ...it, effectiveQty: qty, effectiveSubtotal: qty * Number(it.unitPrice) };
         }),
     [order?.items, qtyOverrides]
+  );
+
+  const tranchePresenti = useMemo(
+    () => [...new Set(items.map(it => (it.product as any)?.tranche as string | undefined).filter((t): t is string => Boolean(t)))],
+    [items]
   );
 
   // Groups computed client-side from current groupBy
@@ -492,43 +497,47 @@ export default function OrderPreviewView({ id }: { id: string }) {
     }
   }
 
-  async function handleExportDemetra() {
+  async function handleExportDemetra(tranche?: string) {
     if (exportingDemetra) return;
-    setExportingDemetra(true);
+    setExportingDemetra(tranche ?? 'ALL');
     try {
-      const csvItems = (order?.items ?? []).filter((it) => it.product != null);
+      const filtered = tranche
+        ? items.filter(it => (it.product as any)?.tranche === tranche)
+        : items;
       const csv =
-        'Codice;Quantità;Tranche\r\n' +
-        csvItems
-          .map((it) => {
-            const qty = qtyOverrides[it.id] ?? it.quantity;
-            const tranche = (it.product as any)?.tranche ?? '';
-            return `${it.product?.code};${qty};${tranche}`;
-          })
+        'Codice;Quantità\r\n' +
+        filtered
+          .map((it) => `${it.product?.code};${it.effectiveQty}`)
           .join('\r\n');
+      const label = order?.orderNumber ?? id.slice(0, 8).toUpperCase();
+      const filename = tranche
+        ? `Demetra-${label}-${tranche}.csv`
+        : `Demetra-${label}-completo.csv`;
       const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `ordine-demetra-${id.slice(0, 8)}.csv`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      // Mark as ESPORTATO
-      const res = await fetch(`/api/orders/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'ESPORTATO' }),
-      });
-      if (!res.ok) throw new Error();
-      toast.success(t('exportSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
+      if (!tranche) {
+        // Mark as ESPORTATO only for full export
+        const res = await fetch(`/api/orders/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'ESPORTATO' }),
+        });
+        if (!res.ok) throw new Error();
+        queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+        queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
+      }
+      toast.success(tranche ? `CSV tranche ${tranche} pronto` : t('exportSuccess'));
     } catch {
       toast.error(t('exportError'));
     } finally {
-      setExportingDemetra(false);
+      setExportingDemetra(null);
     }
   }
 
@@ -1021,29 +1030,43 @@ export default function OrderPreviewView({ id }: { id: string }) {
               <span className="hidden sm:inline">Duplica</span>
             </button>
 
-            {/* Esporta in Demetra — primary CTA */}
-            {order.status === 'ESPORTATO' ? (
-              <div className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs bg-green-100 text-green-700 rounded flex-shrink-0 cursor-default">
-                <CheckCircle size={12} />
-                <span className="hidden sm:inline">{t('alreadyExported')}</span>
-              </div>
-            ) : (
-              <button
-                onClick={handleExportDemetra}
-                disabled={exportingDemetra || items.length === 0}
-                className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-              >
-                {exportingDemetra ? (
-                  <Loader2 size={12} className="animate-spin" />
-                ) : (
-                  <Database size={12} />
-                )}
-                <span className="hidden sm:inline">
-                  {exportingDemetra ? t('exportingDemetra') : t('exportDemetra')}
-                </span>
-                <span className="sm:hidden">Demetra</span>
-              </button>
-            )}
+            {/* Esporta in Demetra — bottone principale + per tranche */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {order.status === 'ESPORTATO' ? (
+                <div className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs bg-green-100 text-green-700 rounded cursor-default">
+                  <CheckCircle size={12} />
+                  <span className="hidden sm:inline">{t('alreadyExported')}</span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleExportDemetra()}
+                  disabled={!!exportingDemetra || items.length === 0}
+                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {exportingDemetra === 'ALL' ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <Database size={12} />
+                  )}
+                  <span className="hidden sm:inline">
+                    {exportingDemetra === 'ALL' ? t('exportingDemetra') : t('exportDemetra')}
+                  </span>
+                  <span className="sm:hidden">CSV</span>
+                </button>
+              )}
+              {tranchePresenti.map((tr) => (
+                <button
+                  key={tr}
+                  onClick={() => handleExportDemetra(tr)}
+                  disabled={!!exportingDemetra}
+                  title={`Esporta CSV tranche ${tr}`}
+                  className="flex items-center gap-1 px-2 py-2 text-xs border border-border rounded hover:bg-cream transition-colors text-gray-600 disabled:opacity-50"
+                >
+                  {exportingDemetra === tr ? <Loader2 size={10} className="animate-spin" /> : <Database size={10} />}
+                  {tr}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Total */}

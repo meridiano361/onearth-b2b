@@ -62,6 +62,20 @@ function OrderRow({ order, selected, onToggleSelect, onStatusChange, onDelete }:
 
   const style = STATUS_STYLE[order.status] ?? { badge: 'bg-gray-100 text-gray-500', label: order.status };
 
+  const tranchePresenti = [...new Set(
+    (order.items ?? []).map(it => (it.product as any)?.tranche as string | undefined).filter((t): t is string => Boolean(t))
+  )];
+
+  function handleExportCSV(e: React.MouseEvent, tranche?: string) {
+    e.stopPropagation();
+    const label = order.orderNumber ?? `#${order.id.slice(0, 8).toUpperCase()}`;
+    const filename = tranche ? `Demetra-${label}-${tranche}.csv` : `Demetra-${label}-completo.csv`;
+    const filtered = (order.items ?? []).filter(it => !tranche || (it.product as any)?.tranche === tranche);
+    const lines = ['Codice;Quantità', ...filtered.map(it => `${it.product?.code ?? ''};${it.quantity}`)];
+    dlFile('﻿' + lines.join('\r\n'), filename, 'text/csv;charset=utf-8;');
+    toast.success(`CSV ${tranche ?? 'completo'} pronto`);
+  }
+
   async function handleStatusChange(newStatus: string) {
     setIsUpdating(true);
     try {
@@ -179,6 +193,19 @@ function OrderRow({ order, selected, onToggleSelect, onStatusChange, onDelete }:
                 onClick={(e) => { e.stopPropagation(); handleExport('pdf'); }}
                 className="text-2xs px-2 py-1 border border-border rounded hover:bg-cream transition-colors text-gray-500"
               >PDF</button>
+              <button
+                onClick={(e) => handleExportCSV(e)}
+                className="text-2xs px-2 py-1 border border-border rounded hover:bg-cream transition-colors text-gray-500"
+                title="Esporta CSV completo per Demetra"
+              >CSV</button>
+              {tranchePresenti.map((tr) => (
+                <button
+                  key={tr}
+                  onClick={(e) => handleExportCSV(e, tr)}
+                  className="text-2xs px-2 py-1 border border-border rounded hover:bg-cream transition-colors text-gray-500"
+                  title={`Esporta CSV tranche ${tr}`}
+                >{tr}</button>
+              ))}
               {!confirmDelete ? (
                 <button
                   onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
