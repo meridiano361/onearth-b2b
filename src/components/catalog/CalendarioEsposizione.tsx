@@ -10,28 +10,44 @@ import type { DisplayGroup, DisplayGroupSchedule, SpazioEspositivo } from '@/typ
 
 const MONTHS = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
 const WEEKS_COUNT = 52;
-const MOBILE_VISIBLE = 13;
-const CELL_H = 20; // px per row
+const COL_W = 30;   // px per colonna settimana
+const ROW_H = 40;   // px altezza riga spazio
+const NAME_W = 120; // px colonna nomi
 
-// Settimana ISO → mese (prima settimana del mese, approssimata)
-const WEEK_MONTH_STARTS: Record<number, number> = {
-  1: 0, 5: 1, 9: 2, 14: 3, 18: 4, 22: 5, 27: 6, 31: 7, 36: 8, 40: 9, 44: 10, 48: 11,
-};
+// Prima settimana di ogni mese (0-based)
+const MONTH_STARTS = [1, 5, 9, 14, 18, 22, 27, 31, 36, 40, 44, 48];
+
+// Raggruppa mesi → settimane per intestazione
+const MONTH_GROUPS = MONTH_STARTS.map((start, i) => ({
+  month: i,
+  start,
+  end: i < MONTH_STARTS.length - 1 ? MONTH_STARTS[i + 1] - 1 : WEEKS_COUNT,
+  span: (i < MONTH_STARTS.length - 1 ? MONTH_STARTS[i + 1] - 1 : WEEKS_COUNT) - start + 1,
+}));
 
 const FALLBACK_COLOR = '#D4C4B0';
+const ALL_WEEKS = Array.from({ length: WEEKS_COUNT }, (_, i) => i + 1);
 
-// ─── Props ────────────────────────────────────────────────────────────────────
-
-interface CalendarioEsposizioneProps {
-  orderId: string;
+function getTextColor(bgHex: string): string {
+  if (!bgHex || bgHex.length < 7) return '#111827';
+  const r = parseInt(bgHex.slice(1, 3), 16) / 255;
+  const g = parseInt(bgHex.slice(3, 5), 16) / 255;
+  const b = parseInt(bgHex.slice(5, 7), 16) / 255;
+  return 0.299 * r + 0.587 * g + 0.114 * b > 0.55 ? '#111827' : '#FFFFFF';
 }
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface CalendarioEsposizioneProps { orderId: string; }
 
 interface PopoverState {
   type: 'empty' | 'schedule';
   spazioId: string;
+  spazioNome: string;
   week: number;
   schedule?: DisplayGroupSchedule;
-  rect: DOMRect;
+  x: number;
+  y: number;
 }
 
 // ─── CalendarioEsposizione ────────────────────────────────────────────────────
@@ -39,20 +55,10 @@ interface PopoverState {
 export default function CalendarioEsposizione({ orderId }: CalendarioEsposizioneProps) {
   const [anno, setAnno] = useState(() => new Date().getFullYear());
   const [popover, setPopover] = useState<PopoverState | null>(null);
-  const [mobileOffset, setMobileOffset] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
   const [editingSpazioId, setEditingSpazioId] = useState<string | null>(null);
   const [editingNome, setEditingNome] = useState('');
   const [addingSpazio, setAddingSpazio] = useState(false);
   const [newSpazioName, setNewSpazioName] = useState('');
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
 
   // ─── Queries ──────────────────────────────────────────────────────────────
 
@@ -78,24 +84,15 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
   const allSchedules = scheduleData?.schedules ?? [];
   const spazi = spaziData?.spazi ?? [];
 
-  // Close popover on outside click
+  // Chiudi popover al click fuori
   useEffect(() => {
     if (!popover) return;
     function handle(e: MouseEvent) {
-      const t = e.target as Element;
-      if (!t.closest('[data-popover]')) setPopover(null);
+      if (!(e.target as Element).closest('[data-popover]')) setPopover(null);
     }
     document.addEventListener('mousedown', handle);
     return () => document.removeEventListener('mousedown', handle);
   }, [popover]);
-
-  const visibleWeeks = useMemo(() => {
-    if (!isMobile) return Array.from({ length: WEEKS_COUNT }, (_, i) => i + 1);
-    const start = mobileOffset * MOBILE_VISIBLE + 1;
-    return Array.from({ length: MOBILE_VISIBLE }, (_, i) => start + i).filter(w => w <= 52);
-  }, [isMobile, mobileOffset]);
-
-  const maxOffset = Math.ceil(WEEKS_COUNT / MOBILE_VISIBLE) - 1;
 
   // ─── Spazi CRUD ───────────────────────────────────────────────────────────
 
@@ -128,7 +125,11 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
   }
 
   async function deleteSpazio(id: string) {
-    if (!confirm('Eliminare questo spazio? Le pianificazioni associate verranno rimosse.')) return;
+    const hasSchedules = allSchedules.some(s => s.spazioId === id);
+    const msg = hasSchedules
+      ? 'Questo spazio ha pianificazioni associate. Eliminarlo rimuoverà anche le pianificazioni. Continuare?'
+      : 'Eliminare questo spazio?';
+    if (!confirm(msg)) return;
     try {
       await fetch(`/api/catalog/spazi-espositivi/${id}`, { method: 'DELETE' });
       refetchSpazi();
@@ -174,7 +175,7 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
     setPopover(null);
   }
 
-  // ─── Cell helpers ─────────────────────────────────────────────────────────
+  // ─── Helpers ──────────────────────────────────────────────────────────────
 
   function getScheduleForCell(spazioId: string, week: number): DisplayGroupSchedule | null {
     return allSchedules.find(s =>
@@ -190,36 +191,34 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
     return groups.find(g => g.id === groupId)?.nome ?? '';
   }
 
-  function handleCellClick(e: React.MouseEvent, spazioId: string, week: number) {
+  function handleCellClick(e: React.MouseEvent, spazioId: string, spazioNome: string, week: number) {
     const schedule = getScheduleForCell(spazioId, week);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setPopover({
       type: schedule ? 'schedule' : 'empty',
-      spazioId,
-      week,
+      spazioId, spazioNome, week,
       schedule: schedule ?? undefined,
-      rect: (e.currentTarget as HTMLElement).getBoundingClientRect(),
+      x: rect.left,
+      y: rect.bottom + window.scrollY,
     });
   }
 
-  // ─── Legenda stats ────────────────────────────────────────────────────────
+  // ─── Stats legenda ────────────────────────────────────────────────────────
 
-  const groupStats = useMemo(() => {
-    return groups.map(g => {
-      const slots = new Set<string>();
-      allSchedules.filter(s => s.groupId === g.id && s.anno === anno).forEach(s => {
-        for (let w = s.settimanaIn; w <= s.settimanaFn; w++) slots.add(`${s.spazioId}-${w}`);
-      });
-      return { group: g, slots: slots.size };
+  const groupStats = useMemo(() => groups.map(g => {
+    const slots = new Set<string>();
+    allSchedules.filter(s => s.groupId === g.id && s.anno === anno).forEach(s => {
+      for (let w = s.settimanaIn; w <= s.settimanaFn; w++) slots.add(`${s.spazioId}-${w}`);
     });
-  }, [groups, allSchedules, anno]);
+    return { group: g, slots: slots.size };
+  }), [groups, allSchedules, anno]);
 
-  const LABEL_W = 42;
-  const COL_MIN = 80;
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="px-4 sm:px-6 py-6 pb-32 lg:pb-24">
 
-      {/* Toolbar */}
+      {/* Anno selector */}
       <div className="flex items-center gap-4 mb-6">
         <h2 className="text-sm font-semibold text-primary flex-1">Calendario Esposizione</h2>
         <div className="flex items-center gap-2 bg-cream border border-border rounded px-3 py-1.5">
@@ -231,19 +230,6 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
             <ChevronRight size={14} />
           </button>
         </div>
-        {isMobile && (
-          <div className="flex items-center gap-1">
-            <button onClick={() => setMobileOffset(o => Math.max(0, o - 1))} disabled={mobileOffset === 0}
-              className="p-1 text-gray-400 hover:text-primary disabled:opacity-30 transition-colors">
-              <ChevronLeft size={14} />
-            </button>
-            <span className="text-xs text-gray-500">T{mobileOffset + 1}</span>
-            <button onClick={() => setMobileOffset(o => Math.min(maxOffset, o + 1))} disabled={mobileOffset >= maxOffset}
-              className="p-1 text-gray-400 hover:text-primary disabled:opacity-30 transition-colors">
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        )}
       </div>
 
       {groups.length === 0 ? (
@@ -251,149 +237,222 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
           Nessun gruppo espositivo. Creane uno nella vista Mondi Espositivi.
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <div style={{ minWidth: Math.max(600, LABEL_W + spazi.length * COL_MIN + 80) }}>
-
-            {/* Column headers */}
-            <div className="flex items-end pb-2 border-b border-border" style={{ paddingLeft: LABEL_W }}>
-              {spazi.map(spazio => (
-                <div key={spazio.id} className="flex-1 px-1 group" style={{ minWidth: COL_MIN }}>
-                  {editingSpazioId === spazio.id ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        autoFocus
-                        className="flex-1 text-xs border border-border rounded px-1.5 py-0.5 min-w-0 bg-white"
-                        value={editingNome}
-                        onChange={e => setEditingNome(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') renameSpazio(spazio.id, editingNome);
-                          if (e.key === 'Escape') setEditingSpazioId(null);
-                        }}
-                      />
-                      <button onClick={() => renameSpazio(spazio.id, editingNome)}
-                        className="text-[#8FAF8F] hover:opacity-70 flex-shrink-0">
-                        <Check size={12} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs font-semibold text-primary truncate flex-1" title={spazio.nome}>{spazio.nome}</span>
-                      <button
-                        onClick={() => { setEditingSpazioId(spazio.id); setEditingNome(spazio.nome); }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-primary flex-shrink-0">
-                        <Pencil size={10} />
-                      </button>
-                      <button
-                        onClick={() => deleteSpazio(spazio.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-[#C17A5A] flex-shrink-0">
-                        <Trash2 size={10} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {/* Add spazio */}
-              <div className="flex-shrink-0" style={{ minWidth: 72 }}>
-                {addingSpazio ? (
-                  <div className="flex items-center gap-1">
-                    <input
-                      autoFocus
-                      className="flex-1 text-xs border border-border rounded px-1.5 py-0.5 min-w-0 w-20 bg-white"
-                      value={newSpazioName}
-                      placeholder="Nome…"
-                      onChange={e => setNewSpazioName(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') addSpazio();
-                        if (e.key === 'Escape') { setAddingSpazio(false); setNewSpazioName(''); }
-                      }}
-                    />
-                    <button onClick={addSpazio} className="text-[#8FAF8F] flex-shrink-0"><Check size={12} /></button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setAddingSpazio(true)}
-                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary transition-colors">
-                    <Plus size={12} />
-                    <span className="hidden sm:inline">Spazio</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Rows = weeks */}
-            <div>
-              {visibleWeeks.map(w => {
-                const isMonthStart = w in WEEK_MONTH_STARTS;
-                const monthIdx = WEEK_MONTH_STARTS[w];
-
-                return (
-                  <div
-                    key={w}
-                    className="flex items-stretch"
+        /* Tabella con scroll orizzontale */
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: NAME_W + WEEKS_COUNT * COL_W }}>
+            <thead>
+              {/* Riga 1: etichette mese */}
+              <tr>
+                <th style={{
+                  position: 'sticky', left: 0, zIndex: 20, background: 'white',
+                  width: NAME_W, minWidth: NAME_W,
+                  borderBottom: '1px solid #E8DDD0',
+                }} />
+                {MONTH_GROUPS.map(({ month, span }) => (
+                  <th
+                    key={month}
+                    colSpan={span}
                     style={{
-                      height: CELL_H,
-                      borderTop: isMonthStart ? '1px solid #D4C4B0' : '1px solid #F3F4F6',
+                      textAlign: 'center',
+                      fontSize: 11, fontWeight: 700, color: '#C17A5A',
+                      padding: '4px 0',
+                      borderBottom: '1px solid #E8DDD0',
+                      borderLeft: '1px solid #E8DDD0',
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    {/* Week label */}
-                    <div
-                      className="flex-shrink-0 flex items-center gap-1 pr-1"
-                      style={{ width: LABEL_W }}
-                    >
-                      {isMonthStart && (
-                        <span className="text-[9px] font-semibold text-[#C17A5A] leading-none">
-                          {MONTHS[monthIdx]}
-                        </span>
-                      )}
-                      <span className="text-[9px] text-gray-300 leading-none ml-auto">S{w}</span>
-                    </div>
+                    {MONTHS[month]}
+                  </th>
+                ))}
+              </tr>
+              {/* Riga 2: S1...S52 */}
+              <tr>
+                <th style={{
+                  position: 'sticky', left: 0, zIndex: 20, background: 'white',
+                  borderBottom: '2px solid #E8DDD0',
+                }} />
+                {ALL_WEEKS.map(w => (
+                  <th
+                    key={w}
+                    style={{
+                      width: COL_W, minWidth: COL_W, maxWidth: COL_W,
+                      fontSize: 10, fontWeight: 400, color: '#9CA3AF',
+                      textAlign: 'center',
+                      padding: '3px 0 4px',
+                      borderBottom: '2px solid #E8DDD0',
+                      borderLeft: MONTH_STARTS.includes(w) ? '1px solid #E8DDD0' : '1px solid #F3F4F6',
+                    }}
+                  >
+                    {w}
+                  </th>
+                ))}
+              </tr>
+            </thead>
 
-                    {/* Spazio columns */}
-                    {spazi.map(spazio => {
-                      const sched = getScheduleForCell(spazio.id, w);
-                      const color = sched ? groupColor(sched.groupId) : null;
-                      const isTop = sched ? w === sched.settimanaIn : false;
-                      const isBottom = sched ? w === sched.settimanaFn : false;
-
-                      return (
-                        <div
-                          key={spazio.id}
-                          className="flex-1 px-0.5 cursor-pointer flex items-center"
-                          style={{ minWidth: COL_MIN }}
-                          onClick={e => handleCellClick(e, spazio.id, w)}
+            <tbody>
+              {spazi.map(spazio => (
+                <tr key={spazio.id} style={{ height: ROW_H }}>
+                  {/* Nome spazio (sticky) */}
+                  <td
+                    style={{
+                      position: 'sticky', left: 0, zIndex: 10, background: 'white',
+                      width: NAME_W, minWidth: NAME_W,
+                      borderBottom: '1px solid #F3F4F6',
+                      borderRight: '1px solid #E8DDD0',
+                      padding: '0 8px',
+                    }}
+                  >
+                    {editingSpazioId === spazio.id ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          autoFocus
+                          value={editingNome}
+                          onChange={e => setEditingNome(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') renameSpazio(spazio.id, editingNome);
+                            if (e.key === 'Escape') setEditingSpazioId(null);
+                          }}
+                          style={{ fontSize: 12, width: '100%', border: '1px solid #E8DDD0', borderRadius: 4, padding: '2px 6px' }}
+                        />
+                        <button onClick={() => renameSpazio(spazio.id, editingNome)} className="text-[#8FAF8F] flex-shrink-0">
+                          <Check size={11} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 group/name overflow-hidden">
+                        <span
+                          style={{ fontSize: 13, fontWeight: 600, color: '#111827', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                          title={spazio.nome}
                         >
-                          {color ? (
-                            <div
-                              className="w-full"
-                              style={{
-                                height: CELL_H - 2,
-                                backgroundColor: color,
-                                opacity: 0.82,
-                                borderRadius:
-                                  isTop && isBottom ? 4
-                                    : isTop ? '4px 4px 0 0'
-                                      : isBottom ? '0 0 4px 4px'
-                                        : 0,
-                                marginTop: isTop ? 1 : 0,
-                                marginBottom: isBottom ? 1 : 0,
-                              }}
-                              title={groupName(sched!.groupId)}
-                            />
-                          ) : (
-                            <div className="w-full hover:bg-cream transition-colors" style={{ height: CELL_H - 2 }} />
-                          )}
-                        </div>
-                      );
-                    })}
+                          {spazio.nome}
+                        </span>
+                        <button
+                          onClick={() => { setEditingSpazioId(spazio.id); setEditingNome(spazio.nome); }}
+                          className="opacity-0 group-hover/name:opacity-100 transition-opacity text-gray-400 hover:text-primary flex-shrink-0"
+                        >
+                          <Pencil size={10} />
+                        </button>
+                        <button
+                          onClick={() => deleteSpazio(spazio.id)}
+                          className="opacity-0 group-hover/name:opacity-100 transition-opacity text-gray-400 hover:text-[#C17A5A] flex-shrink-0"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    )}
+                  </td>
 
-                    {/* Add spazio column spacer */}
-                    <div className="flex-shrink-0" style={{ minWidth: 72 }} />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                  {/* Celle settimane */}
+                  {ALL_WEEKS.map(w => {
+                    const sched = getScheduleForCell(spazio.id, w);
+                    const color = sched ? groupColor(sched.groupId) : null;
+                    const isFirst = !!sched && w === sched.settimanaIn;
+                    const isLast = !!sched && w === sched.settimanaFn;
+                    const isMonthBound = MONTH_STARTS.includes(w);
+                    const name = sched ? groupName(sched.groupId) : '';
+                    const textCol = color ? getTextColor(color) : '#111827';
+
+                    return (
+                      <td
+                        key={w}
+                        onClick={e => handleCellClick(e, spazio.id, spazio.nome, w)}
+                        title={name || undefined}
+                        style={{
+                          width: COL_W, minWidth: COL_W, maxWidth: COL_W,
+                          height: ROW_H,
+                          padding: 0,
+                          position: 'relative',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #F3F4F6',
+                          borderLeft: isMonthBound ? '1px solid #E8DDD0' : '1px solid #F9F9F9',
+                        }}
+                        className={!color ? 'hover:bg-[#F5F0E8]' : 'hover:opacity-90'}
+                      >
+                        {color && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: 4, bottom: 4,
+                              left: isFirst ? 2 : 0,
+                              right: isLast ? 2 : 0,
+                              backgroundColor: color,
+                              borderTopLeftRadius: isFirst ? 4 : 0,
+                              borderBottomLeftRadius: isFirst ? 4 : 0,
+                              borderTopRightRadius: isLast ? 4 : 0,
+                              borderBottomRightRadius: isLast ? 4 : 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              paddingLeft: isFirst ? 5 : 0,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            {isFirst && (
+                              <span style={{
+                                fontSize: 10, fontWeight: 500,
+                                color: textCol,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                lineHeight: 1,
+                              }}>
+                                {name}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+
+              {/* Riga "+ Aggiungi spazio" */}
+              <tr style={{ height: 40 }}>
+                <td
+                  style={{
+                    position: 'sticky', left: 0, zIndex: 10, background: 'white',
+                    width: NAME_W, minWidth: NAME_W,
+                    borderTop: '1px dashed #E8DDD0',
+                    borderRight: '1px solid #E8DDD0',
+                    padding: '0 8px',
+                  }}
+                >
+                  {addingSpazio ? (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        autoFocus
+                        value={newSpazioName}
+                        placeholder="Nome spazio…"
+                        onChange={e => setNewSpazioName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') addSpazio();
+                          if (e.key === 'Escape') { setAddingSpazio(false); setNewSpazioName(''); }
+                        }}
+                        style={{ fontSize: 12, width: '100%', border: '1px solid #E8DDD0', borderRadius: 4, padding: '2px 6px' }}
+                      />
+                      <button onClick={addSpazio} className="text-[#8FAF8F] flex-shrink-0"><Check size={13} /></button>
+                      <button onClick={() => { setAddingSpazio(false); setNewSpazioName(''); }} className="text-gray-400 flex-shrink-0"><X size={13} /></button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setAddingSpazio(true)}
+                      className="flex items-center gap-1 transition-colors"
+                      style={{ fontSize: 13, color: '#9CA3AF' }}
+                      onMouseEnter={e => (e.currentTarget.style.color = '#111827')}
+                      onMouseLeave={e => (e.currentTarget.style.color = '#9CA3AF')}
+                    >
+                      <Plus size={13} />
+                      Aggiungi spazio
+                    </button>
+                  )}
+                </td>
+                {ALL_WEEKS.map(w => (
+                  <td key={w} style={{ borderTop: '1px dashed #E8DDD0', borderLeft: MONTH_STARTS.includes(w) ? '1px solid #E8DDD0' : undefined }} />
+                ))}
+              </tr>
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -434,13 +493,13 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
 // ─── SchedulePopover ──────────────────────────────────────────────────────────
 
 function SchedulePopover({
-  popover, groups, anno, onClose, onCreate, onSave, onDelete, groupColor, groupName,
+  popover, groups, onClose, onCreate, onSave, onDelete, groupColor, groupName,
 }: {
   popover: PopoverState;
   groups: DisplayGroup[];
   anno: number;
   onClose: () => void;
-  onCreate: (spazioId: string, groupId: string, settimanaIn: number, settimanaFn: number, nota: string) => void;
+  onCreate: (spazioId: string, groupId: string, sIn: number, sFn: number, nota: string) => void;
   onSave: (data: { settimanaIn?: number; settimanaFn?: number; nota?: string | null }) => void;
   onDelete: () => void;
   groupColor: (id: string) => string;
@@ -464,99 +523,141 @@ function SchedulePopover({
     setSaving(false);
   }
 
-  const top = Math.min(
-    popover.rect.bottom + window.scrollY + 6,
-    window.scrollY + window.innerHeight - 350
-  );
-  const left = Math.min(popover.rect.left, window.innerWidth - 288);
+  const top = Math.min(popover.y + 6, window.scrollY + window.innerHeight - 360);
+  const left = Math.min(popover.x, window.innerWidth - 290);
 
   return (
     <div
       data-popover
-      className="fixed z-50 bg-white border border-border rounded-xl shadow-2xl p-4 w-72"
-      style={{ top, left }}
+      className="fixed z-50 bg-white border border-border rounded-xl shadow-2xl p-4"
+      style={{ top, left, width: 280 }}
     >
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold text-primary">
-          {isNew ? `Aggiungi — Settimana ${popover.week}` : 'Modifica pianificazione'}
-        </p>
-        <button onClick={onClose} className="text-gray-400 hover:text-primary p-0.5 transition-colors">
+      {/* Titolo */}
+      <div className="flex items-start justify-between mb-3 gap-2">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-primary leading-tight">
+            {isNew
+              ? `Assegna a ${popover.spazioNome}`
+              : 'Modifica pianificazione'}
+          </p>
+          <p className="text-[10px] text-gray-400 mt-0.5">Settimana S{popover.week}</p>
+        </div>
+        <button onClick={onClose} className="text-gray-400 hover:text-primary p-0.5 flex-shrink-0 transition-colors">
           <X size={14} />
         </button>
       </div>
 
       <div className="space-y-3">
-        {isNew && groups.length > 0 && (
+        {/* Selezione gruppo (solo per nuova pianificazione) */}
+        {isNew && (
           <div>
-            <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Gruppo espositivo</label>
-            <select
-              value={selectedGroupId}
-              onChange={e => setSelectedGroupId(e.target.value)}
-              className="w-full text-sm border border-border rounded px-2 py-1.5 focus:outline-none focus:border-accent bg-white"
-            >
-              {groups.map(g => <option key={g.id} value={g.id}>{g.nome}</option>)}
-            </select>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">Gruppo espositivo</label>
+            {groups.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">Nessun gruppo. Creane uno nella vista Esposizione.</p>
+            ) : (
+              <div className="space-y-1 max-h-36 overflow-y-auto">
+                {groups.map(g => {
+                  const col = groupColor(g.id);
+                  return (
+                    <button
+                      key={g.id}
+                      onClick={() => setSelectedGroupId(g.id)}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors ${
+                        selectedGroupId === g.id ? 'bg-cream' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: col }} />
+                      <span className="text-xs text-primary truncate">{g.nome}</span>
+                      {selectedGroupId === g.id && <Check size={11} className="text-primary ml-auto flex-shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
+        {/* Gruppo selezionato (solo per modifica) */}
         {!isNew && popover.schedule && (
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-cream">
+          <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-cream">
             <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: groupColor(popover.schedule.groupId) }} />
-            <span className="text-xs font-medium text-primary">{groupName(popover.schedule.groupId)}</span>
+            <span className="text-xs font-semibold text-primary">{groupName(popover.schedule.groupId)}</span>
           </div>
         )}
 
+        {/* Range settimane */}
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Inizio (sett.)</label>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Da settimana</label>
             <input
               type="number" min={1} max={52}
               value={settimanaIn}
               onChange={e => setSettimanaIn(Number(e.target.value))}
-              className="w-full text-sm border border-border rounded px-2 py-1 focus:outline-none focus:border-accent"
+              className="w-full text-sm border border-border rounded px-2 py-1.5 focus:outline-none focus:border-accent"
             />
           </div>
           <div>
-            <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Fine (sett.)</label>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">A settimana</label>
             <input
               type="number" min={1} max={52}
               value={settimanaFn}
               onChange={e => setSettimanaFn(Number(e.target.value))}
-              className="w-full text-sm border border-border rounded px-2 py-1 focus:outline-none focus:border-accent"
+              className="w-full text-sm border border-border rounded px-2 py-1.5 focus:outline-none focus:border-accent"
             />
           </div>
         </div>
 
+        {/* Nota */}
         <div>
-          <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Nota</label>
+          <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Nota (opzionale)</label>
           <input
             type="text"
             value={nota}
             onChange={e => setNota(e.target.value)}
-            placeholder="Opzionale…"
-            className="w-full text-sm border border-border rounded px-2 py-1 focus:outline-none focus:border-accent"
+            placeholder="Es. campagna estiva…"
+            className="w-full text-sm border border-border rounded px-2 py-1.5 focus:outline-none focus:border-accent"
           />
         </div>
 
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={handleSubmit}
-            disabled={saving || (isNew && !selectedGroupId)}
-            className="flex-1 py-1.5 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
-          >
-            {saving && <Loader2 size={10} className="animate-spin" />}
-            {isNew ? 'Aggiungi' : 'Salva'}
-          </button>
-          {!isNew && (
+        {/* Azioni */}
+        {isNew ? (
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2 text-xs border border-border rounded text-gray-500 hover:bg-gray-50 transition-colors"
+            >
+              Annulla
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={saving || !selectedGroupId}
+              className="flex-1 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
+            >
+              {saving && <Loader2 size={10} className="animate-spin" />}
+              Conferma
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={handleSubmit}
+              disabled={saving}
+              className="flex-1 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
+            >
+              {saving && <Loader2 size={10} className="animate-spin" />}
+              Salva
+            </button>
             <button
               onClick={onDelete}
-              className="p-1.5 text-red-400 hover:text-red-600 border border-border rounded hover:bg-red-50 transition-colors"
-              title="Elimina"
+              className="flex-1 py-2 text-xs border rounded transition-colors"
+              style={{ borderColor: '#C17A5A', color: '#C17A5A' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#FDF5F0'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
             >
-              <Trash2 size={12} />
+              Rimuovi
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
