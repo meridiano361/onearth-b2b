@@ -162,7 +162,7 @@ function ProductListaView({
 }
 
 function ProductBoardView({
-  items, orderId, groupId, onRemove, onToggleFocus, deletingItemId,
+  items, onRemove, onToggleFocus, deletingItemId,
 }: {
   items: DisplayGroupItem[];
   orderId: string;
@@ -172,57 +172,46 @@ function ProductBoardView({
   deletingItemId: string | null;
 }) {
   const sorted = sortProductsForDisplay(items);
-  const grouped = groupByLinea(sorted);
-
   return (
-    <div className="space-y-4">
-      {grouped.map(({ linea, items: lineaItems }) => (
-        <div key={linea || '__nessuna__'}>
-          {linea && (
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-semibold uppercase tracking-wide text-gray-500">{linea}</span>
-              <div className="flex-1 h-px bg-border" />
+    <div className="grid grid-cols-5 gap-3">
+      {sorted.map((item) => {
+        const p = item.orderItem.product;
+        return (
+          <div
+            key={item.id}
+            className="relative group/item rounded-[8px] overflow-hidden"
+            style={{
+              backgroundColor: '#F3F4F6',
+              border: item.isFocus ? '2px solid #F97316' : '2px solid transparent',
+            }}
+          >
+            <div className="aspect-square overflow-hidden">
+              {p?.imageUrl
+                ? <ProductImage src={p.imageUrl} alt={p?.name ?? ''} className="w-full h-full object-cover" />
+                : <div className="w-full h-full bg-gray-200" />
+              }
             </div>
-          )}
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
-            {lineaItems.map((item) => {
-              const p = item.orderItem.product;
-              return (
-                <div
-                  key={item.id}
-                  className="relative group/item rounded-[8px] overflow-hidden"
-                  style={{
-                    backgroundColor: '#F3F4F6',
-                    border: item.isFocus ? '2px solid #F97316' : '2px solid transparent',
-                  }}
-                >
-                  <div className="aspect-square overflow-hidden">
-                    {p?.imageUrl
-                      ? <ProductImage src={p.imageUrl} alt={p?.name ?? ''} className="w-full h-full object-cover" />
-                      : <div className="w-full h-full bg-gray-200" />
-                    }
-                  </div>
-                  <p className="text-[9px] text-gray-400 text-center py-1 px-0.5 truncate">{p?.code}</p>
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/40 transition-colors rounded-[8px]" />
-                  {/* Focus button */}
-                  <div className="absolute top-1 right-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
-                    <FlameButton isFocus={item.isFocus} onToggle={() => onToggleFocus(item)} size={12} />
-                  </div>
-                  {/* Remove button */}
-                  <button
-                    onClick={() => onRemove(item)}
-                    disabled={deletingItemId === item.id}
-                    className="absolute top-1 left-1 w-5 h-5 bg-red-500 text-white rounded-full items-center justify-center hidden group-hover/item:flex z-10"
-                  >
-                    {deletingItemId === item.id ? <Loader2 size={9} className="animate-spin" /> : <X size={9} />}
-                  </button>
-                </div>
-              );
-            })}
+            <p className="text-[10px] text-[#6B7280] text-center py-1 px-0.5 truncate">{p?.code}</p>
+            <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/40 transition-colors rounded-[8px]" />
+            <div className="absolute top-1 right-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+              <button
+                onClick={() => onToggleFocus(item)}
+                className="w-5 h-5 bg-white/90 rounded-full flex items-center justify-center"
+                title={item.isFocus ? 'Rimuovi focus' : 'Focus'}
+              >
+                <Flame size={10} color={item.isFocus ? '#F97316' : '#9CA3AF'} fill={item.isFocus ? '#F97316' : 'none'} />
+              </button>
+            </div>
+            <button
+              onClick={() => onRemove(item)}
+              disabled={deletingItemId === item.id}
+              className="absolute top-1 left-1 w-5 h-5 bg-red-500 text-white rounded-full items-center justify-center hidden group-hover/item:flex z-10"
+            >
+              {deletingItemId === item.id ? <Loader2 size={9} className="animate-spin" /> : <X size={9} />}
+            </button>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -579,7 +568,7 @@ function AssignToGroupPopover({
   );
 }
 
-// ─── GroupCard (board) ────────────────────────────────────────────────────────
+// ─── GroupCard (board — full width, vertical stack) ───────────────────────────
 
 function GroupCard({
   group, orderId, orderItems, onEdit, onDuplicate, onDelete, onRefresh,
@@ -597,12 +586,10 @@ function GroupCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [addItemsOpen, setAddItemsOpen] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  const [productView, setProductView] = useState<'board' | 'lista'>('board');
 
   const assignedItemIds = useMemo(() => new Set(group.prodotti.map((p) => p.orderItemId)), [group.prodotti]);
-  const sorted = useMemo(() => sortProductsForDisplay(group.prodotti), [group.prodotti]);
-  const grouped = useMemo(() => groupByLinea(sorted), [sorted]);
   const activeSchedule = getActiveSchedule(group.schedules);
-  const hasFocus = group.prodotti.some((p) => p.isFocus);
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -623,7 +610,6 @@ function GroupCard({
 
   async function toggleFocus(item: DisplayGroupItem) {
     const newVal = !item.isFocus;
-    // Optimistic update
     queryClient.setQueryData(['display-groups', orderId], (old: any) => ({
       ...old,
       groups: old.groups.map((g: DisplayGroup) =>
@@ -638,39 +624,85 @@ function GroupCard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isFocus: newVal }),
       });
-    } catch {
-      toast.error('Errore');
-      onRefresh();
-    }
+    } catch { toast.error('Errore'); onRefresh(); }
   }
 
   return (
     <>
-      <div ref={setNodeRef} style={style} className="bg-white border border-border rounded-lg overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border bg-cream/40 flex-shrink-0">
-          <button {...attributes} {...listeners} className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none">
-            <GripVertical size={14} />
+      <div
+        ref={setNodeRef}
+        style={{
+          ...style,
+          border: '1px solid #E8DDD0',
+          borderRadius: 12,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+        }}
+        className="bg-white w-full overflow-hidden"
+      >
+        {/* ── Header ──────────────────────────────────────────── */}
+        <div className="flex items-center gap-3 px-5 py-4">
+          {/* Drag handle */}
+          <button
+            {...attributes} {...listeners}
+            className="text-gray-300 hover:text-gray-400 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
+          >
+            <GripVertical size={16} />
           </button>
-          {group.coloreTag && <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: group.coloreTag }} />}
-          <span className="flex-1 text-sm font-semibold text-primary truncate">{group.nome}</span>
-          {hasFocus && <Flame size={12} color="#F97316" fill="#F97316" />}
+
+          {/* Color dot + name */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {group.coloreTag && (
+              <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: group.coloreTag }} />
+            )}
+            <span className="text-xl font-semibold text-primary truncate">{group.nome}</span>
+          </div>
+
           {/* Schedule badge */}
-          {activeSchedule ? (
+          {activeSchedule && (
             <span className="text-2xs text-[#8FAF8F] bg-[#F0F5F0] border border-[#D0E0D0] rounded px-1.5 py-0.5 flex items-center gap-0.5 flex-shrink-0">
               <Calendar size={9} />S{activeSchedule.settimanaIn}→S{activeSchedule.settimanaFn}
             </span>
-          ) : (
-            <span className="text-2xs text-gray-300 flex-shrink-0 hidden sm:block">non pianificato</span>
           )}
+
+          {/* Product count */}
+          <span className="text-sm text-gray-400 flex-shrink-0">{group.prodotti.length} pz.</span>
+
+          {/* Lista / Board toggle */}
+          <div className="flex items-center bg-cream rounded border border-border overflow-hidden flex-shrink-0">
+            <button
+              onClick={() => setProductView('lista')}
+              className={`px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${productView === 'lista' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}
+            >
+              <List size={12} />Lista
+            </button>
+            <button
+              onClick={() => setProductView('board')}
+              className={`px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${productView === 'board' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}
+            >
+              <LayoutGrid size={12} />Board
+            </button>
+          </div>
+
+          {/* + Aggiungi */}
+          <button
+            onClick={() => setAddItemsOpen(true)}
+            className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors flex-shrink-0"
+          >
+            <Plus size={12} />Aggiungi
+          </button>
+
+          {/* ··· Menu */}
           <div className="relative flex-shrink-0">
-            <button onClick={() => setMenuOpen(!menuOpen)} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-white transition-colors">
-              <MoreHorizontal size={14} />
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
+            >
+              <MoreHorizontal size={16} />
             </button>
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-border rounded shadow-lg py-1 min-w-[150px]">
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-border rounded-lg shadow-lg py-1 min-w-[150px]">
                   <button onClick={() => { setMenuOpen(false); onEdit(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream"><Pencil size={11} />Rinomina</button>
                   <button onClick={() => { setMenuOpen(false); onDuplicate(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream"><Copy size={11} />Duplica</button>
                   <button onClick={() => { setMenuOpen(false); onDelete(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50"><Trash2 size={11} />Elimina</button>
@@ -680,74 +712,37 @@ function GroupCard({
           </div>
         </div>
 
-        {/* Product grid — 5 per row, all products, linea separators */}
-        <div className="p-3 flex-1">
+        {/* ── Products area ─────────────────────────────────── */}
+        <div className="px-5 pb-5">
           {group.prodotti.length === 0 ? (
-            <p className="text-sm text-gray-300 text-center py-4 italic">Nessun prodotto</p>
-          ) : (
-            <div className="space-y-3">
-              {grouped.map(({ linea, items: lineaItems }) => (
-                <div key={linea || '__nessuna__'}>
-                  {linea && (
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <span className="text-2xs font-semibold uppercase tracking-wide text-gray-400">{linea}</span>
-                      <div className="flex-1 h-px bg-gray-200" />
-                    </div>
-                  )}
-                  <div className="grid grid-cols-5 gap-1">
-                    {lineaItems.map((item) => {
-                      const p = item.orderItem.product;
-                      return (
-                        <div
-                          key={item.id}
-                          className="relative group/slot rounded-[6px] overflow-hidden"
-                          style={{
-                            backgroundColor: '#F3F4F6',
-                            border: item.isFocus ? '1.5px solid #F97316' : '1.5px solid transparent',
-                          }}
-                        >
-                          <div className="aspect-square overflow-hidden">
-                            {p?.imageUrl
-                              ? <ProductImage src={p.imageUrl} alt={p?.name ?? ''} className="w-full h-full object-cover" />
-                              : <div className="w-full h-full bg-gray-200" />
-                            }
-                          </div>
-                          <p className="text-[8px] text-gray-400 text-center leading-tight py-0.5 truncate">{p?.code}</p>
-                          {/* Hover controls */}
-                          <div className="absolute top-0.5 right-0.5 flex flex-col gap-0.5 opacity-0 group-hover/slot:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => toggleFocus(item)}
-                              className="w-4 h-4 bg-white/90 rounded flex items-center justify-center"
-                              title={item.isFocus ? 'Rimuovi focus' : 'Focus'}
-                            >
-                              <Flame size={9} color={item.isFocus ? '#F97316' : '#9CA3AF'} fill={item.isFocus ? '#F97316' : 'none'} />
-                            </button>
-                            <button
-                              onClick={() => removeItem(item)}
-                              disabled={deletingItemId === item.id}
-                              className="w-4 h-4 bg-red-500/90 rounded flex items-center justify-center"
-                            >
-                              {deletingItemId === item.id ? <Loader2 size={7} className="animate-spin text-white" /> : <X size={7} className="text-white" />}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-col items-center justify-center py-8 text-center border border-dashed border-gray-200 rounded-lg">
+              <p className="text-sm text-gray-300 italic mb-2">Nessun prodotto</p>
+              <button
+                onClick={() => setAddItemsOpen(true)}
+                className="text-xs text-accent hover:text-accent/80 transition-colors"
+              >
+                + Aggiungi prodotti
+              </button>
             </div>
+          ) : productView === 'board' ? (
+            <ProductBoardView
+              items={group.prodotti}
+              orderId={orderId}
+              groupId={group.id}
+              onRemove={removeItem}
+              onToggleFocus={toggleFocus}
+              deletingItemId={deletingItemId}
+            />
+          ) : (
+            <ProductListaView
+              items={group.prodotti}
+              orderId={orderId}
+              groupId={group.id}
+              onRemove={removeItem}
+              onToggleFocus={toggleFocus}
+              deletingItemId={deletingItemId}
+            />
           )}
-          <button
-            onClick={() => setAddItemsOpen(true)}
-            className="mt-2 w-full flex items-center justify-center gap-1 text-2xs text-accent hover:text-accent/80 border border-dashed border-accent/30 hover:border-accent/60 rounded py-1.5 transition-colors"
-          >
-            <Plus size={10} />Aggiungi prodotto
-          </button>
-        </div>
-
-        <div className="px-3 py-2 flex items-center justify-between flex-shrink-0 border-t border-border/50">
-          <span className="text-xs text-gray-400">{group.prodotti.length} prodott{group.prodotti.length !== 1 ? 'i' : 'o'}</span>
         </div>
       </div>
 
@@ -1143,7 +1138,7 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={groups.map((g) => g.id)} strategy={verticalListSortingStrategy}>
             {view === 'board' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-6 w-full">
                 {groups.map((group) => <GroupCard key={group.id} {...sharedGroupProps(group)} />)}
               </div>
             ) : (
