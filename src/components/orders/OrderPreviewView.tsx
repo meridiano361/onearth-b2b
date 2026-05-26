@@ -4,7 +4,7 @@ import { useState, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, CheckCircle, Minus, Plus, X, Database, Search, Loader2, MapPin, Copy, Layers } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle, Minus, Plus, X, Database, Search, Loader2, MapPin, Copy, Layers, Pencil, Check, CalendarDays } from 'lucide-react';
 import OrderExcelExport from '@/components/orders/OrderExcelExport';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useTranslations } from 'next-intl';
@@ -318,6 +318,10 @@ export default function OrderPreviewView({ id }: { id: string }) {
 
   const [viewMode, setViewMode] = useState<'ordine' | 'mondi' | 'calendario'>('ordine');
   const [groupBy, setGroupBy] = useState('collezione');
+  const [budgetEditing, setBudgetEditing] = useState(false);
+  const [budgetInput, setBudgetInput] = useState('');
+  const [budgetNota, setBudgetNota] = useState('');
+  const [savingBudget, setSavingBudget] = useState(false);
   const [sortBy, setSortBy] = useState<string>(() =>
     typeof window !== 'undefined' ? (localStorage.getItem(PREVIEW_SORT_KEY) ?? 'name-asc') : 'name-asc'
   );
@@ -355,6 +359,34 @@ export default function OrderPreviewView({ id }: { id: string }) {
       return (await res.json()).data as Order;
     },
   });
+
+  const { data: displayGroupsData } = useQuery<{ groups: { id: string }[] }>({
+    queryKey: ['display-groups', id],
+    queryFn: () => fetch(`/api/catalog/orders/${id}/display-groups`).then(r => r.json()),
+    enabled: mondiEspositivi,
+    staleTime: 15_000,
+    select: (d) => ({ groups: d.groups.map((g: any) => ({ id: g.id })) }),
+  });
+  const displayGroupCount = displayGroupsData?.groups.length ?? 0;
+
+  async function handleSaveBudget() {
+    setSavingBudget(true);
+    try {
+      const res = await fetch(`/api/catalog/orders/${id}/budget`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          budgetPersonalizzato: budgetInput ? Number(budgetInput) : null,
+          budgetNota: budgetNota || null,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
+      setBudgetEditing(false);
+      toast.success('Budget salvato');
+    } catch { toast.error('Errore nel salvataggio'); }
+    setSavingBudget(false);
+  }
 
   // Items with effective qty / subtotal (local optimistic overrides)
   const items = useMemo(
@@ -678,6 +710,58 @@ export default function OrderPreviewView({ id }: { id: string }) {
           <div className="text-right text-xs text-gray-500">
             <p>{items.length} art. · {grandQty} pz.</p>
             <p className="font-semibold text-primary text-sm">{formatCurrency(grandTotal)}</p>
+            {/* Budget bar */}
+            {mondiEspositivi && order.budgetPersonalizzato && !budgetEditing && (() => {
+              const budget = Number(order.budgetPersonalizzato);
+              const pct = Math.min(100, (grandTotal / budget) * 100);
+              const over = grandTotal > budget;
+              return (
+                <div className="mt-1 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <span className={`text-2xs ${over ? 'text-[#C17A5A]' : 'text-[#8FAF8F]'}`}>
+                      {over ? '+' : ''}{formatCurrency(grandTotal - budget)}
+                    </span>
+                    <button onClick={() => { setBudgetEditing(true); setBudgetInput(String(budget)); setBudgetNota(order.budgetNota ?? ''); }}
+                      className="text-gray-300 hover:text-gray-400 transition-colors">
+                      <Pencil size={10} />
+                    </button>
+                  </div>
+                  <div className="w-28 h-1.5 bg-gray-100 rounded-full overflow-hidden ml-auto mt-0.5">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, backgroundColor: over ? '#C17A5A' : '#8FAF8F' }}
+                    />
+                  </div>
+                  <p className="text-2xs text-gray-400 mt-0.5">budget {formatCurrency(budget)}</p>
+                </div>
+              );
+            })()}
+            {mondiEspositivi && !order.budgetPersonalizzato && !budgetEditing && (
+              <button
+                onClick={() => { setBudgetEditing(true); setBudgetInput(''); setBudgetNota(''); }}
+                className="text-2xs text-gray-300 hover:text-gray-400 mt-0.5 block ml-auto transition-colors"
+              >
+                + budget
+              </button>
+            )}
+            {mondiEspositivi && budgetEditing && (
+              <div className="flex items-center gap-1 mt-1 justify-end">
+                <input
+                  type="number" min={0} step={100}
+                  value={budgetInput}
+                  onChange={e => setBudgetInput(e.target.value)}
+                  placeholder="Budget €"
+                  className="text-xs border border-border rounded px-1.5 py-0.5 w-24 text-right"
+                />
+                <button onClick={handleSaveBudget} disabled={savingBudget}
+                  className="text-[#8FAF8F] hover:opacity-70 disabled:opacity-50">
+                  {savingBudget ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                </button>
+                <button onClick={() => setBudgetEditing(false)} className="text-gray-400 hover:text-primary">
+                  <X size={12} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -693,28 +777,34 @@ export default function OrderPreviewView({ id }: { id: string }) {
                 : 'text-gray-500 hover:bg-cream border border-border'
             }`}
           >
-            Vista ordine
+            Ordine
           </button>
           <button
             onClick={() => setViewMode('mondi')}
             className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded transition-colors ${
               viewMode === 'mondi'
-                ? 'bg-violet-600 text-white'
-                : 'text-gray-500 hover:bg-violet-50 border border-border'
+                ? 'bg-primary text-white'
+                : 'text-gray-500 hover:bg-cream border border-border'
             }`}
           >
             <Layers size={12} />
-            Mondi Espositivi
+            Esposizione
+            {displayGroupCount > 0 && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                viewMode === 'mondi' ? 'bg-white/20 text-white' : 'bg-cream text-primary'
+              }`}>{displayGroupCount}</span>
+            )}
           </button>
           <button
             onClick={() => setViewMode('calendario')}
             className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded transition-colors ${
               viewMode === 'calendario'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-500 hover:bg-blue-50 border border-border'
+                ? 'bg-primary text-white'
+                : 'text-gray-500 hover:bg-cream border border-border'
             }`}
           >
-            📅 Calendario
+            <CalendarDays size={12} />
+            Calendario
           </button>
         </div>
       )}
@@ -730,6 +820,22 @@ export default function OrderPreviewView({ id }: { id: string }) {
       )}
 
       {/* ── Vista ordine (hidden when mondi/calendario active) */}
+      {viewMode === 'ordine' && mondiEspositivi && displayGroupCount === 0 && (
+        <div className="mx-4 sm:mx-6 mt-4 rounded-xl border border-[#E8DDD0] bg-[#F5F0E8] px-5 py-4 flex items-start gap-4">
+          <Layers size={20} className="text-[#C17A5A] flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-primary">Organizza l&apos;esposizione in negozio</p>
+            <p className="text-xs text-gray-500 mt-0.5">Raggruppa i prodotti in mondi espositivi e pianifica le settimane di esposizione.</p>
+          </div>
+          <button
+            onClick={() => setViewMode('mondi')}
+            className="flex-shrink-0 text-xs bg-primary text-white px-3 py-1.5 rounded hover:bg-primary/90 transition-colors"
+          >
+            Inizia
+          </button>
+        </div>
+      )}
+
       {viewMode === 'ordine' && <>
 
       {/* ── Grouping tabs ─────────────────────────────────── */}

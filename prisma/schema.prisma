@@ -302,6 +302,7 @@ model Operator {
   ordini          Order[]
   favorites       Favorite[]
   displayPresets  DisplayGroupPreset[]
+  spaziEspositivi SpazioEspositivo[]
 
   @@map("operators")
 }
@@ -343,13 +344,15 @@ model Order {
   canaleId       String?
   operatorId     String?
   collectionId   String?
-  status         OrderStatus @default(MERCE_DA_ORDINARE)
-  totalValue     Decimal     @db.Decimal(10, 2) @default(0)
-  totalItems     Int         @default(0)
-  notes          String?
-  createdAt      DateTime    @default(now())
-  confirmedAt    DateTime?
-  updatedAt      DateTime    @updatedAt
+  status                OrderStatus @default(MERCE_DA_ORDINARE)
+  totalValue            Decimal     @db.Decimal(10, 2) @default(0)
+  totalItems            Int         @default(0)
+  notes                 String?
+  budgetPersonalizzato  Decimal?    @db.Decimal(10, 2)
+  budgetNota            String?
+  createdAt             DateTime    @default(now())
+  confirmedAt           DateTime?
+  updatedAt             DateTime    @updatedAt
 
   customer       Customer?      @relation(fields: [customerId], references: [id])
   organization   Organization?  @relation(fields: [organizationId], references: [id])
@@ -428,16 +431,31 @@ model DisplayGroup {
 }
 
 model DisplayGroupSchedule {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   groupId     String
+  spazioId    String?
   anno        Int
   settimanaIn Int
   settimanaFn Int
   nota        String?
 
-  group DisplayGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group  DisplayGroup      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  spazio SpazioEspositivo? @relation(fields: [spazioId], references: [id], onDelete: SetNull)
 
   @@map("display_group_schedules")
+}
+
+model SpazioEspositivo {
+  id         String   @id @default(cuid())
+  operatorId String
+  nome       String
+  posizione  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  operator  Operator              @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  schedules DisplayGroupSchedule[]
+
+  @@map("spazi_espositivi")
 }
 
 model DisplayGroupItem {

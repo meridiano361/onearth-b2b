@@ -21,7 +21,7 @@ export async function POST(req: NextRequest, { params }: { params: { orderId: st
   if (!operatorId) return FORBIDDEN;
 
   const body = await req.json();
-  const { groupId, anno, settimanaIn, settimanaFn, nota } = body as Record<string, unknown>;
+  const { groupId, spazioId, anno, settimanaIn, settimanaFn, nota } = body as Record<string, unknown>;
 
   if (!groupId || !anno || !settimanaIn) {
     return NextResponse.json({ error: 'Campi obbligatori mancanti' }, { status: 400 });
@@ -37,6 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: { orderId: st
   const schedule = await prisma.displayGroupSchedule.create({
     data: {
       groupId: String(groupId),
+      spazioId: spazioId ? String(spazioId) : null,
       anno: Number(anno),
       settimanaIn: Number(settimanaIn),
       settimanaFn: settimanaFn ? Number(settimanaFn) : Number(settimanaIn),

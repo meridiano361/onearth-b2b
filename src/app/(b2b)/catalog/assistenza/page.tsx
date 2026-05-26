@@ -3,7 +3,7 @@
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
-  Eye, Download, Smartphone, HelpCircle,
+  Eye, Download, Smartphone, HelpCircle, Layers, CalendarDays, Wallet,
 } from 'lucide-react';
 
 export const metadata = { title: 'Guida all\'app — ON EARTH' };
@@ -18,6 +18,9 @@ const SECTIONS = [
   { id: 'miei-ordini',      label: 'I miei ordini',           icon: Package },
   { id: 'anteprima-pdf',    label: 'Anteprima e PDF',         icon: Eye },
   { id: 'demetra',          label: 'Esportazione Demetra',    icon: Download },
+  { id: 'mondi-espositivi', label: 'Mondi Espositivi',        icon: Layers },
+  { id: 'calendario',       label: 'Calendario Esposizione',  icon: CalendarDays },
+  { id: 'budget-ordine',    label: 'Budget ordine',           icon: Wallet },
   { id: 'assistenza-tecnica', label: 'Assistenza tecnica',    icon: HelpCircle },
 ];
 
@@ -226,11 +229,57 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 10. Assistenza tecnica */}
+        {/* 10. Mondi Espositivi */}
+        <section id="mondi-espositivi" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Layers size={16} className="text-accent flex-shrink-0" />
+            <h2 className="text-sm font-semibold text-primary tracking-wide">10. Mondi Espositivi</h2>
+          </div>
+          <ul className="space-y-2">
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Dall&apos;anteprima di un ordine tocca il tab <span className="font-medium">Esposizione</span> per organizzare i prodotti in gruppi espositivi (es. Vetrina, Isola, Parete).</span></li>
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Crea un nuovo gruppo con il pulsante <span className="font-medium">+ Gruppo</span>: assegna nome, colore e template.</span></li>
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Trascina i prodotti non assegnati (sezione in basso) per spostarli in un gruppo, oppure clicca su un prodotto per selezionare il gruppo dal menu.</span></li>
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Usa l&apos;icona fiamma 🔥 per marcare i prodotti <span className="font-medium">focus</span> del gruppo: prodotti di punta che meritano massima visibilità.</span></li>
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Ogni gruppo mostra una griglia dei prodotti assegnati, con separatori per linea. Puoi visualizzarli in modalità Lista o Board.</span></li>
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Esporta il PDF Mondi Espositivi con il pulsante <span className="font-medium">Scarica PDF</span>: include griglia prodotti, colori e note.</span></li>
+          </ul>
+        </section>
+
+        {/* 11. Calendario Esposizione */}
+        <section id="calendario" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarDays size={16} className="text-accent flex-shrink-0" />
+            <h2 className="text-sm font-semibold text-primary tracking-wide">11. Calendario Esposizione</h2>
+          </div>
+          <ul className="space-y-2">
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Dal tab <span className="font-medium">Calendario</span> nell&apos;anteprima ordine puoi pianificare quando ogni gruppo sarà esposto, settimana per settimana.</span></li>
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Crea gli <span className="font-medium">spazi espositivi</span> (es. Vetrina destra, Isola centrale) con il pulsante <span className="font-medium">+ Spazio</span>: ogni spazio diventa una colonna nel calendario.</span></li>
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Clicca su una cella vuota per assegnare un gruppo espositivo a quello spazio, specificando settimana di inizio e fine.</span></li>
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Le celle occupate si colorano con il colore del gruppo. Clicca su una cella colorata per modificare il periodo o aggiungere una nota.</span></li>
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Rinomina o elimina uno spazio passando il mouse sull&apos;intestazione della colonna e usando le icone che appaiono.</span></li>
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Su mobile il calendario mostra un trimestre alla volta: usa le frecce per navigare tra i trimestri.</span></li>
+          </ul>
+        </section>
+
+        {/* 12. Budget ordine */}
+        <section id="budget-ordine" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Wallet size={16} className="text-accent flex-shrink-0" />
+            <h2 className="text-sm font-semibold text-primary tracking-wide">12. Budget ordine</h2>
+          </div>
+          <ul className="space-y-2">
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Nell&apos;anteprima di un ordine (feature Mondi Espositivi attiva), clicca su <span className="font-medium">+ budget</span> in alto a destra per impostare un tetto di spesa.</span></li>
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Una volta impostato, il totale ordine mostra una <span className="font-medium">barra di avanzamento</span>: verde se entro budget, arancio terracotta se superato.</span></li>
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>La differenza rispetto al budget (positiva o negativa) è indicata accanto alla barra.</span></li>
+            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Clicca sull&apos;icona matita per modificare o azzerare il budget in qualsiasi momento.</span></li>
+          </ul>
+        </section>
+
+        {/* 13. Assistenza tecnica */}
         <section id="assistenza-tecnica" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
           <div className="flex items-center gap-2 mb-4">
             <HelpCircle size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">10. Assistenza tecnica</h2>
+            <h2 className="text-sm font-semibold text-primary tracking-wide">13. Assistenza tecnica</h2>
           </div>
           <p className="text-sm text-gray-600">
             Per problemi tecnici o richieste di supporto,{' '}

@@ -657,7 +657,7 @@ function GroupCard({
           {hasFocus && <Flame size={12} color="#F97316" fill="#F97316" />}
           {/* Schedule badge */}
           {activeSchedule ? (
-            <span className="text-2xs text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 flex items-center gap-0.5 flex-shrink-0">
+            <span className="text-2xs text-[#8FAF8F] bg-[#F0F5F0] border border-[#D0E0D0] rounded px-1.5 py-0.5 flex items-center gap-0.5 flex-shrink-0">
               <Calendar size={9} />S{activeSchedule.settimanaIn}→S{activeSchedule.settimanaFn}
             </span>
           ) : (
@@ -832,7 +832,7 @@ function GroupRow({
           <button onClick={() => setOpen(!open)} className="flex-1 flex items-center gap-2 text-left min-w-0">
             <span className="flex-1 text-xl font-semibold text-primary truncate">{group.nome}</span>
             {activeSchedule && (
-              <span className="text-2xs text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 flex items-center gap-0.5 flex-shrink-0 hidden sm:flex">
+              <span className="text-2xs text-[#8FAF8F] bg-[#F0F5F0] border border-[#D0E0D0] rounded px-1.5 py-0.5 flex items-center gap-0.5 flex-shrink-0 hidden sm:flex">
                 <Calendar size={9} />S{activeSchedule.settimanaIn}→S{activeSchedule.settimanaFn}
               </span>
             )}

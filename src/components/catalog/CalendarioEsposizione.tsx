@@ -1,31 +1,24 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, X, Loader2, Trash2 } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { ChevronLeft, ChevronRight, X, Loader2, Trash2, Plus, Pencil, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
-import type { DisplayGroup, DisplayGroupSchedule } from '@/types';
+import type { DisplayGroup, DisplayGroupSchedule, SpazioEspositivo } from '@/types';
 
 // ─── Costanti ─────────────────────────────────────────────────────────────────
 
-const MONTH_NAMES_SHORT = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+const MONTHS = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
 const WEEKS_COUNT = 52;
-const MOBILE_VISIBLE = 13; // un trimestre
+const MOBILE_VISIBLE = 13;
+const CELL_H = 20; // px per row
 
-// Mappa settimana ISO → mese (approssimata)
-const WEEK_TO_MONTH: Record<number, number> = {
-  1: 0, 5: 1, 9: 2, 14: 3, 18: 4, 22: 5, 26: 6, 31: 7, 36: 8, 40: 9, 44: 10, 48: 11,
+// Settimana ISO → mese (prima settimana del mese, approssimata)
+const WEEK_MONTH_STARTS: Record<number, number> = {
+  1: 0, 5: 1, 9: 2, 14: 3, 18: 4, 22: 5, 27: 6, 31: 7, 36: 8, 40: 9, 44: 10, 48: 11,
 };
 
-function weekToMonthLabel(week: number): string | null {
-  return WEEK_TO_MONTH[week] !== undefined ? MONTH_NAMES_SHORT[WEEK_TO_MONTH[week]] : null;
-}
-
-function weekInSchedule(week: number, schedules: DisplayGroupSchedule[], anno: number): DisplayGroupSchedule | null {
-  return schedules.find((s) => s.anno === anno && week >= s.settimanaIn && week <= s.settimanaFn) ?? null;
-}
-
-const FALLBACK_COLOR = '#9CA3AF';
+const FALLBACK_COLOR = '#D4C4B0';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -33,114 +26,133 @@ interface CalendarioEsposizioneProps {
   orderId: string;
 }
 
-// ─── Popover state ────────────────────────────────────────────────────────────
-
 interface PopoverState {
   type: 'empty' | 'schedule';
-  groupId: string;
+  spazioId: string;
   week: number;
   schedule?: DisplayGroupSchedule;
-  x: number;
-  y: number;
-}
-
-// ─── Resize drag state ─────────────────────────────────────────────────────────
-
-interface DragState {
-  scheduleId: string;
-  side: 'left' | 'right';
-  startWeek: number;
-  currentWeek: number;
+  rect: DOMRect;
 }
 
 // ─── CalendarioEsposizione ────────────────────────────────────────────────────
 
 export default function CalendarioEsposizione({ orderId }: CalendarioEsposizioneProps) {
-  const queryClient = useQueryClient();
   const [anno, setAnno] = useState(() => new Date().getFullYear());
   const [popover, setPopover] = useState<PopoverState | null>(null);
-  const [mobileOffset, setMobileOffset] = useState(0); // quarter index 0-3
-  const [dragState, setDragState] = useState<DragState | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [mobileOffset, setMobileOffset] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const [editingSpazioId, setEditingSpazioId] = useState<string | null>(null);
+  const [editingNome, setEditingNome] = useState('');
+  const [addingSpazio, setAddingSpazio] = useState(false);
+  const [newSpazioName, setNewSpazioName] = useState('');
 
-  // ─── Data fetching ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  // ─── Queries ──────────────────────────────────────────────────────────────
 
   const { data: groupsData } = useQuery<{ groups: DisplayGroup[] }>({
     queryKey: ['display-groups', orderId],
-    queryFn: () => fetch(`/api/catalog/orders/${orderId}/display-groups`).then((r) => r.json()),
+    queryFn: () => fetch(`/api/catalog/orders/${orderId}/display-groups`).then(r => r.json()),
     staleTime: 10_000,
   });
 
   const { data: scheduleData, refetch: refetchSchedules } = useQuery<{ schedules: DisplayGroupSchedule[] }>({
     queryKey: ['display-group-schedules', orderId],
-    queryFn: () => fetch(`/api/catalog/orders/${orderId}/display-groups/schedule`).then((r) => r.json()),
+    queryFn: () => fetch(`/api/catalog/orders/${orderId}/display-groups/schedule`).then(r => r.json()),
     staleTime: 5_000,
+  });
+
+  const { data: spaziData, refetch: refetchSpazi } = useQuery<{ spazi: SpazioEspositivo[] }>({
+    queryKey: ['spazi-espositivi'],
+    queryFn: () => fetch('/api/catalog/spazi-espositivi').then(r => r.json()),
+    staleTime: 30_000,
   });
 
   const groups = groupsData?.groups ?? [];
   const allSchedules = scheduleData?.schedules ?? [];
+  const spazi = spaziData?.spazi ?? [];
 
-  // Close popover on click outside
+  // Close popover on outside click
   useEffect(() => {
     if (!popover) return;
-    function handleClick(e: MouseEvent) {
-      const target = e.target as Element;
-      if (!target.closest('[data-popover]')) setPopover(null);
+    function handle(e: MouseEvent) {
+      const t = e.target as Element;
+      if (!t.closest('[data-popover]')) setPopover(null);
     }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
   }, [popover]);
 
-  // ─── Drag resize ──────────────────────────────────────────────────────────
+  const visibleWeeks = useMemo(() => {
+    if (!isMobile) return Array.from({ length: WEEKS_COUNT }, (_, i) => i + 1);
+    const start = mobileOffset * MOBILE_VISIBLE + 1;
+    return Array.from({ length: MOBILE_VISIBLE }, (_, i) => start + i).filter(w => w <= 52);
+  }, [isMobile, mobileOffset]);
 
-  function weekFromX(clientX: number): number {
-    if (!containerRef.current) return 1;
-    const rect = containerRef.current.getBoundingClientRect();
-    const cellW = rect.width / WEEKS_COUNT;
-    return Math.min(52, Math.max(1, Math.round((clientX - rect.left) / cellW) + 1));
+  const maxOffset = Math.ceil(WEEKS_COUNT / MOBILE_VISIBLE) - 1;
+
+  // ─── Spazi CRUD ───────────────────────────────────────────────────────────
+
+  async function addSpazio() {
+    if (!newSpazioName.trim()) return;
+    try {
+      const res = await fetch('/api/catalog/spazi-espositivi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: newSpazioName.trim() }),
+      });
+      if (!res.ok) throw new Error();
+      setNewSpazioName('');
+      setAddingSpazio(false);
+      refetchSpazi();
+    } catch { toast.error('Errore nella creazione'); }
   }
 
-  function onDragMouseMove(e: MouseEvent) {
-    if (!dragState) return;
-    const w = weekFromX(e.clientX);
-    setDragState((d) => d ? { ...d, currentWeek: w } : null);
+  async function renameSpazio(id: string, nome: string) {
+    if (!nome.trim()) return;
+    try {
+      await fetch(`/api/catalog/spazi-espositivi/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: nome.trim() }),
+      });
+      setEditingSpazioId(null);
+      refetchSpazi();
+    } catch { toast.error('Errore nel rinomina'); }
   }
 
-  function onDragMouseUp() {
-    if (!dragState) return;
-    const { scheduleId, side, currentWeek } = dragState;
-    const sched = allSchedules.find((s) => s.id === scheduleId);
-    if (!sched) { setDragState(null); return; }
-    const newIn = side === 'left' ? Math.min(currentWeek, sched.settimanaFn) : sched.settimanaIn;
-    const newFn = side === 'right' ? Math.max(currentWeek, sched.settimanaIn) : sched.settimanaFn;
-    setDragState(null);
-    saveScheduleUpdate(scheduleId, { settimanaIn: newIn, settimanaFn: newFn });
+  async function deleteSpazio(id: string) {
+    if (!confirm('Eliminare questo spazio? Le pianificazioni associate verranno rimosse.')) return;
+    try {
+      await fetch(`/api/catalog/spazi-espositivi/${id}`, { method: 'DELETE' });
+      refetchSpazi();
+      refetchSchedules();
+    } catch { toast.error('Errore nella cancellazione'); }
   }
 
-  useEffect(() => {
-    if (!dragState) return;
-    window.addEventListener('mousemove', onDragMouseMove);
-    window.addEventListener('mouseup', onDragMouseUp);
-    return () => { window.removeEventListener('mousemove', onDragMouseMove); window.removeEventListener('mouseup', onDragMouseUp); };
-  }, [dragState]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ─── Schedule CRUD ────────────────────────────────────────────────────────
 
-  // ─── API helpers ──────────────────────────────────────────────────────────
-
-  async function createSchedule(groupId: string, week: number) {
+  async function createSchedule(spazioId: string, groupId: string, settimanaIn: number, settimanaFn: number, nota: string) {
     try {
       const res = await fetch(`/api/catalog/orders/${orderId}/display-groups/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId, anno, settimanaIn: week, settimanaFn: week }),
+        body: JSON.stringify({ groupId, spazioId, anno, settimanaIn, settimanaFn: Math.max(settimanaIn, settimanaFn), nota: nota || null }),
       });
       if (!res.ok) throw new Error();
-      toast.success('Settimana aggiunta');
+      toast.success('Pianificazione aggiunta');
       refetchSchedules();
     } catch { toast.error('Errore nella creazione'); }
     setPopover(null);
   }
 
-  async function saveScheduleUpdate(scheduleId: string, data: Partial<Pick<DisplayGroupSchedule, 'settimanaIn' | 'settimanaFn' | 'nota'>>) {
+  async function updateSchedule(scheduleId: string, data: { settimanaIn?: number; settimanaFn?: number; nota?: string | null }) {
     try {
       const res = await fetch(`/api/catalog/orders/${orderId}/display-groups/schedule/${scheduleId}`, {
         method: 'PUT',
@@ -150,86 +162,83 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
       if (!res.ok) throw new Error();
       refetchSchedules();
     } catch { toast.error('Errore nel salvataggio'); }
+    setPopover(null);
   }
 
   async function deleteSchedule(scheduleId: string) {
     try {
-      const res = await fetch(`/api/catalog/orders/${orderId}/display-groups/schedule/${scheduleId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error();
-      toast.success('Schedule eliminato');
+      await fetch(`/api/catalog/orders/${orderId}/display-groups/schedule/${scheduleId}`, { method: 'DELETE' });
+      toast.success('Pianificazione rimossa');
       refetchSchedules();
-    } catch { toast.error('Errore nell\'eliminazione'); }
+    } catch { toast.error('Errore nella cancellazione'); }
     setPopover(null);
   }
 
-  // ─── Visible weeks (mobile vs desktop) ────────────────────────────────────
+  // ─── Cell helpers ─────────────────────────────────────────────────────────
 
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
+  function getScheduleForCell(spazioId: string, week: number): DisplayGroupSchedule | null {
+    return allSchedules.find(s =>
+      s.spazioId === spazioId && s.anno === anno && week >= s.settimanaIn && week <= s.settimanaFn
+    ) ?? null;
+  }
 
-  const visibleWeeks = useMemo(() => {
-    if (!isMobile) return Array.from({ length: WEEKS_COUNT }, (_, i) => i + 1);
-    const start = mobileOffset * MOBILE_VISIBLE + 1;
-    return Array.from({ length: MOBILE_VISIBLE }, (_, i) => start + i).filter((w) => w <= 52);
-  }, [isMobile, mobileOffset]);
+  function groupColor(groupId: string): string {
+    return groups.find(g => g.id === groupId)?.coloreTag ?? FALLBACK_COLOR;
+  }
 
-  const maxOffset = Math.ceil(WEEKS_COUNT / MOBILE_VISIBLE) - 1;
+  function groupName(groupId: string): string {
+    return groups.find(g => g.id === groupId)?.nome ?? '';
+  }
 
-  // ─── Cell click handler ────────────────────────────────────────────────────
-
-  function handleCellClick(e: React.MouseEvent, groupId: string, week: number) {
-    const existing = allSchedules.find((s) => s.groupId === groupId && s.anno === anno && week >= s.settimanaIn && week <= s.settimanaFn);
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  function handleCellClick(e: React.MouseEvent, spazioId: string, week: number) {
+    const schedule = getScheduleForCell(spazioId, week);
     setPopover({
-      type: existing ? 'schedule' : 'empty',
-      groupId,
+      type: schedule ? 'schedule' : 'empty',
+      spazioId,
       week,
-      schedule: existing,
-      x: rect.left,
-      y: rect.bottom + window.scrollY,
+      schedule: schedule ?? undefined,
+      rect: (e.currentTarget as HTMLElement).getBoundingClientRect(),
     });
   }
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // ─── Legenda stats ────────────────────────────────────────────────────────
 
-  const totalActiveSets = useMemo(() => {
-    return groups.map((g) => {
-      const sched = allSchedules.filter((s) => s.groupId === g.id && s.anno === anno);
-      const weeks = new Set<number>();
-      sched.forEach((s) => { for (let w = s.settimanaIn; w <= s.settimanaFn; w++) weeks.add(w); });
-      return { group: g, weeks: weeks.size };
+  const groupStats = useMemo(() => {
+    return groups.map(g => {
+      const slots = new Set<string>();
+      allSchedules.filter(s => s.groupId === g.id && s.anno === anno).forEach(s => {
+        for (let w = s.settimanaIn; w <= s.settimanaFn; w++) slots.add(`${s.spazioId}-${w}`);
+      });
+      return { group: g, slots: slots.size };
     });
   }, [groups, allSchedules, anno]);
+
+  const LABEL_W = 42;
+  const COL_MIN = 80;
 
   return (
     <div className="px-4 sm:px-6 py-6 pb-32 lg:pb-24">
 
-      {/* Anno selector */}
+      {/* Toolbar */}
       <div className="flex items-center gap-4 mb-6">
         <h2 className="text-sm font-semibold text-primary flex-1">Calendario Esposizione</h2>
         <div className="flex items-center gap-2 bg-cream border border-border rounded px-3 py-1.5">
-          <button onClick={() => setAnno((y) => y - 1)} className="text-gray-400 hover:text-primary transition-colors">
+          <button onClick={() => setAnno(y => y - 1)} className="text-gray-400 hover:text-primary transition-colors">
             <ChevronLeft size={14} />
           </button>
           <span className="text-sm font-semibold text-primary w-10 text-center">{anno}</span>
-          <button onClick={() => setAnno((y) => y + 1)} className="text-gray-400 hover:text-primary transition-colors">
+          <button onClick={() => setAnno(y => y + 1)} className="text-gray-400 hover:text-primary transition-colors">
             <ChevronRight size={14} />
           </button>
         </div>
         {isMobile && (
           <div className="flex items-center gap-1">
-            <button onClick={() => setMobileOffset((o) => Math.max(0, o - 1))} disabled={mobileOffset === 0}
+            <button onClick={() => setMobileOffset(o => Math.max(0, o - 1))} disabled={mobileOffset === 0}
               className="p-1 text-gray-400 hover:text-primary disabled:opacity-30 transition-colors">
               <ChevronLeft size={14} />
             </button>
             <span className="text-xs text-gray-500">T{mobileOffset + 1}</span>
-            <button onClick={() => setMobileOffset((o) => Math.min(maxOffset, o + 1))} disabled={mobileOffset >= maxOffset}
+            <button onClick={() => setMobileOffset(o => Math.min(maxOffset, o + 1))} disabled={mobileOffset >= maxOffset}
               className="p-1 text-gray-400 hover:text-primary disabled:opacity-30 transition-colors">
               <ChevronRight size={14} />
             </button>
@@ -238,112 +247,148 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
       </div>
 
       {groups.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-12">Nessun gruppo espositivo. Creane uno nella vista Mondi Espositivi.</p>
+        <p className="text-sm text-gray-400 text-center py-12">
+          Nessun gruppo espositivo. Creane uno nella vista Mondi Espositivi.
+        </p>
       ) : (
         <div className="overflow-x-auto">
-          <div style={{ minWidth: isMobile ? undefined : 900 }}>
+          <div style={{ minWidth: Math.max(600, LABEL_W + spazi.length * COL_MIN + 80) }}>
 
-            {/* Week headers */}
-            <div className="flex" ref={containerRef}>
-              {/* Row label spacer */}
-              <div className="flex-shrink-0" style={{ width: 140 }} />
-              {visibleWeeks.map((w) => {
-                const monthLabel = weekToMonthLabel(w);
+            {/* Column headers */}
+            <div className="flex items-end pb-2 border-b border-border" style={{ paddingLeft: LABEL_W }}>
+              {spazi.map(spazio => (
+                <div key={spazio.id} className="flex-1 px-1 group" style={{ minWidth: COL_MIN }}>
+                  {editingSpazioId === spazio.id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        className="flex-1 text-xs border border-border rounded px-1.5 py-0.5 min-w-0 bg-white"
+                        value={editingNome}
+                        onChange={e => setEditingNome(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') renameSpazio(spazio.id, editingNome);
+                          if (e.key === 'Escape') setEditingSpazioId(null);
+                        }}
+                      />
+                      <button onClick={() => renameSpazio(spazio.id, editingNome)}
+                        className="text-[#8FAF8F] hover:opacity-70 flex-shrink-0">
+                        <Check size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-semibold text-primary truncate flex-1" title={spazio.nome}>{spazio.nome}</span>
+                      <button
+                        onClick={() => { setEditingSpazioId(spazio.id); setEditingNome(spazio.nome); }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-primary flex-shrink-0">
+                        <Pencil size={10} />
+                      </button>
+                      <button
+                        onClick={() => deleteSpazio(spazio.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-[#C17A5A] flex-shrink-0">
+                        <Trash2 size={10} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Add spazio */}
+              <div className="flex-shrink-0" style={{ minWidth: 72 }}>
+                {addingSpazio ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      autoFocus
+                      className="flex-1 text-xs border border-border rounded px-1.5 py-0.5 min-w-0 w-20 bg-white"
+                      value={newSpazioName}
+                      placeholder="Nome…"
+                      onChange={e => setNewSpazioName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') addSpazio();
+                        if (e.key === 'Escape') { setAddingSpazio(false); setNewSpazioName(''); }
+                      }}
+                    />
+                    <button onClick={addSpazio} className="text-[#8FAF8F] flex-shrink-0"><Check size={12} /></button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setAddingSpazio(true)}
+                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary transition-colors">
+                    <Plus size={12} />
+                    <span className="hidden sm:inline">Spazio</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Rows = weeks */}
+            <div>
+              {visibleWeeks.map(w => {
+                const isMonthStart = w in WEEK_MONTH_STARTS;
+                const monthIdx = WEEK_MONTH_STARTS[w];
+
                 return (
                   <div
                     key={w}
-                    className="flex-1 flex flex-col items-center border-l border-gray-100"
-                    style={{ minWidth: isMobile ? 24 : 16 }}
+                    className="flex items-stretch"
+                    style={{
+                      height: CELL_H,
+                      borderTop: isMonthStart ? '1px solid #D4C4B0' : '1px solid #F3F4F6',
+                    }}
                   >
-                    {monthLabel ? (
-                      <span className="text-[9px] text-gray-400 font-medium leading-tight">{monthLabel}</span>
-                    ) : (
-                      <span className="text-[9px] text-transparent leading-tight">·</span>
-                    )}
-                    <span className="text-[9px] text-gray-400 leading-tight">{w}</span>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Group rows */}
-            <div className="mt-1 space-y-1">
-              {groups.map((group) => {
-                const groupSchedules = allSchedules.filter((s) => s.groupId === group.id && s.anno === anno);
-                return (
-                  <div key={group.id} className="flex items-center">
-                    {/* Row label */}
-                    <div className="flex-shrink-0 flex items-center gap-2 pr-2" style={{ width: 140 }}>
-                      {group.coloreTag && (
-                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: group.coloreTag }} />
+                    {/* Week label */}
+                    <div
+                      className="flex-shrink-0 flex items-center gap-1 pr-1"
+                      style={{ width: LABEL_W }}
+                    >
+                      {isMonthStart && (
+                        <span className="text-[9px] font-semibold text-[#C17A5A] leading-none">
+                          {MONTHS[monthIdx]}
+                        </span>
                       )}
-                      <span className="text-xs text-primary font-medium truncate" title={group.nome}>{group.nome}</span>
+                      <span className="text-[9px] text-gray-300 leading-none ml-auto">S{w}</span>
                     </div>
 
-                    {/* Week cells */}
-                    <div className="flex flex-1">
-                      {visibleWeeks.map((w) => {
-                        const sched = weekInSchedule(w, groupSchedules, anno);
-                        const isDragActive = dragState && allSchedules.find((s) => s.id === dragState.scheduleId && s.groupId === group.id);
+                    {/* Spazio columns */}
+                    {spazi.map(spazio => {
+                      const sched = getScheduleForCell(spazio.id, w);
+                      const color = sched ? groupColor(sched.groupId) : null;
+                      const isTop = sched ? w === sched.settimanaIn : false;
+                      const isBottom = sched ? w === sched.settimanaFn : false;
 
-                        // For active drag: compute effective range
-                        let effectiveIn = sched?.settimanaIn ?? 0;
-                        let effectiveFn = sched?.settimanaFn ?? 0;
-                        if (dragState && sched && sched.id === dragState.scheduleId) {
-                          if (dragState.side === 'left') effectiveIn = Math.min(dragState.currentWeek, sched.settimanaFn);
-                          else effectiveFn = Math.max(dragState.currentWeek, sched.settimanaIn);
-                        }
-                        const isInRange = sched && w >= effectiveIn && w <= effectiveFn;
-                        const isFirst = isInRange && w === effectiveIn;
-                        const isLast = isInRange && w === effectiveFn;
+                      return (
+                        <div
+                          key={spazio.id}
+                          className="flex-1 px-0.5 cursor-pointer flex items-center"
+                          style={{ minWidth: COL_MIN }}
+                          onClick={e => handleCellClick(e, spazio.id, w)}
+                        >
+                          {color ? (
+                            <div
+                              className="w-full"
+                              style={{
+                                height: CELL_H - 2,
+                                backgroundColor: color,
+                                opacity: 0.82,
+                                borderRadius:
+                                  isTop && isBottom ? 4
+                                    : isTop ? '4px 4px 0 0'
+                                      : isBottom ? '0 0 4px 4px'
+                                        : 0,
+                                marginTop: isTop ? 1 : 0,
+                                marginBottom: isBottom ? 1 : 0,
+                              }}
+                              title={groupName(sched!.groupId)}
+                            />
+                          ) : (
+                            <div className="w-full hover:bg-cream transition-colors" style={{ height: CELL_H - 2 }} />
+                          )}
+                        </div>
+                      );
+                    })}
 
-                        const barColor = group.coloreTag || FALLBACK_COLOR;
-
-                        return (
-                          <div
-                            key={w}
-                            className="flex-1 relative cursor-pointer"
-                            style={{ minWidth: isMobile ? 24 : 16, height: 28 }}
-                            onClick={(e) => handleCellClick(e, group.id, w)}
-                          >
-                            {isInRange ? (
-                              <div
-                                className="absolute inset-y-1 flex items-center"
-                                style={{
-                                  left: isFirst ? 2 : 0,
-                                  right: isLast ? 2 : 0,
-                                  backgroundColor: barColor,
-                                  borderRadius: isFirst && isLast ? 4 : isFirst ? '4px 0 0 4px' : isLast ? '0 4px 4px 0' : 0,
-                                  opacity: 0.85,
-                                }}
-                              >
-                                {/* Drag handles */}
-                                {isFirst && (
-                                  <div
-                                    className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize flex-shrink-0"
-                                    onMouseDown={(e) => {
-                                      e.stopPropagation();
-                                      setDragState({ scheduleId: sched!.id, side: 'left', startWeek: w, currentWeek: w });
-                                    }}
-                                  />
-                                )}
-                                {isLast && (
-                                  <div
-                                    className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize"
-                                    onMouseDown={(e) => {
-                                      e.stopPropagation();
-                                      setDragState({ scheduleId: sched!.id, side: 'right', startWeek: w, currentWeek: w });
-                                    }}
-                                  />
-                                )}
-                              </div>
-                            ) : (
-                              <div className="absolute inset-y-1 inset-x-px rounded" style={{ backgroundColor: '#F9FAFB', border: '0.5px solid #F3F4F6' }} />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {/* Add spazio column spacer */}
+                    <div className="flex-shrink-0" style={{ minWidth: 72 }} />
                   </div>
                 );
               })}
@@ -355,14 +400,13 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
       {/* Legenda */}
       {groups.length > 0 && (
         <div className="mt-6 pt-4 border-t border-border">
-          <p className="text-2xs text-gray-400 uppercase tracking-wider mb-2">Legenda</p>
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-semibold">Gruppi</p>
           <div className="flex flex-wrap gap-3">
-            {totalActiveSets.map(({ group, weeks }) => (
-              <div key={group.id} className="flex items-center gap-2">
+            {groupStats.map(({ group, slots }) => (
+              <div key={group.id} className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: group.coloreTag || FALLBACK_COLOR }} />
                 <span className="text-xs text-gray-600">{group.nome}</span>
-                <span className="text-xs text-gray-400">·</span>
-                <span className="text-xs text-gray-400">{weeks} sett. attive</span>
+                {slots > 0 && <span className="text-xs text-gray-400">({slots} celle)</span>}
               </div>
             ))}
           </div>
@@ -373,10 +417,14 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
       {popover && (
         <SchedulePopover
           popover={popover}
+          groups={groups}
+          anno={anno}
           onClose={() => setPopover(null)}
-          onCreate={() => createSchedule(popover.groupId, popover.week)}
-          onSave={(data) => { if (popover.schedule) saveScheduleUpdate(popover.schedule.id, data); setPopover(null); }}
+          onCreate={createSchedule}
+          onSave={(data) => { if (popover.schedule) updateSchedule(popover.schedule.id, data); }}
           onDelete={() => { if (popover.schedule) deleteSchedule(popover.schedule.id); }}
+          groupColor={groupColor}
+          groupName={groupName}
         />
       )}
     </div>
@@ -386,87 +434,120 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
 // ─── SchedulePopover ──────────────────────────────────────────────────────────
 
 function SchedulePopover({
-  popover, onClose, onCreate, onSave, onDelete,
+  popover, groups, anno, onClose, onCreate, onSave, onDelete, groupColor, groupName,
 }: {
   popover: PopoverState;
+  groups: DisplayGroup[];
+  anno: number;
   onClose: () => void;
-  onCreate: () => void;
-  onSave: (data: Partial<Pick<DisplayGroupSchedule, 'settimanaIn' | 'settimanaFn' | 'nota'>>) => void;
+  onCreate: (spazioId: string, groupId: string, settimanaIn: number, settimanaFn: number, nota: string) => void;
+  onSave: (data: { settimanaIn?: number; settimanaFn?: number; nota?: string | null }) => void;
   onDelete: () => void;
+  groupColor: (id: string) => string;
+  groupName: (id: string) => string;
 }) {
-  const [form, setForm] = useState({
-    settimanaIn: popover.schedule?.settimanaIn ?? popover.week,
-    settimanaFn: popover.schedule?.settimanaFn ?? popover.week,
-    nota: popover.schedule?.nota ?? '',
-  });
+  const isNew = popover.type === 'empty';
+  const [selectedGroupId, setSelectedGroupId] = useState(popover.schedule?.groupId ?? groups[0]?.id ?? '');
+  const [settimanaIn, setSettimanaIn] = useState(popover.schedule?.settimanaIn ?? popover.week);
+  const [settimanaFn, setSettimanaFn] = useState(popover.schedule?.settimanaFn ?? popover.week);
+  const [nota, setNota] = useState(popover.schedule?.nota ?? '');
   const [saving, setSaving] = useState(false);
 
-  async function handleSave() {
+  async function handleSubmit() {
     setSaving(true);
-    onSave({ settimanaIn: form.settimanaIn, settimanaFn: Math.max(form.settimanaIn, form.settimanaFn), nota: form.nota || null as any });
+    const fn = Math.max(settimanaIn, settimanaFn);
+    if (isNew) {
+      await onCreate(popover.spazioId, selectedGroupId, settimanaIn, fn, nota);
+    } else {
+      onSave({ settimanaIn, settimanaFn: fn, nota: nota || null });
+    }
     setSaving(false);
   }
+
+  const top = Math.min(
+    popover.rect.bottom + window.scrollY + 6,
+    window.scrollY + window.innerHeight - 350
+  );
+  const left = Math.min(popover.rect.left, window.innerWidth - 288);
 
   return (
     <div
       data-popover
-      className="fixed z-50 bg-white border border-border rounded-lg shadow-2xl p-4 w-64"
-      style={{ top: Math.min(popover.y, window.innerHeight - 240), left: Math.min(popover.x, window.innerWidth - 270) }}
+      className="fixed z-50 bg-white border border-border rounded-xl shadow-2xl p-4 w-72"
+      style={{ top, left }}
     >
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-semibold text-primary">
-          {popover.type === 'empty' ? `Settimana ${popover.week}` : 'Modifica pianificazione'}
+          {isNew ? `Aggiungi — Settimana ${popover.week}` : 'Modifica pianificazione'}
         </p>
-        <button onClick={onClose} className="text-gray-400 hover:text-primary p-0.5"><X size={14} /></button>
+        <button onClick={onClose} className="text-gray-400 hover:text-primary p-0.5 transition-colors">
+          <X size={14} />
+        </button>
       </div>
 
-      {popover.type === 'empty' ? (
-        <button
-          onClick={onCreate}
-          className="w-full py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5"
-        >
-          <span>+ Aggiungi qui</span>
-        </button>
-      ) : (
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-2xs text-gray-400 uppercase mb-1">Dal</label>
-              <input
-                type="number" min={1} max={52}
-                value={form.settimanaIn}
-                onChange={(e) => setForm((f) => ({ ...f, settimanaIn: Number(e.target.value) }))}
-                className="w-full text-sm border border-border rounded px-2 py-1 focus:outline-none focus:border-accent"
-              />
-            </div>
-            <div>
-              <label className="block text-2xs text-gray-400 uppercase mb-1">Al</label>
-              <input
-                type="number" min={1} max={52}
-                value={form.settimanaFn}
-                onChange={(e) => setForm((f) => ({ ...f, settimanaFn: Number(e.target.value) }))}
-                className="w-full text-sm border border-border rounded px-2 py-1 focus:outline-none focus:border-accent"
-              />
-            </div>
-          </div>
+      <div className="space-y-3">
+        {isNew && groups.length > 0 && (
           <div>
-            <label className="block text-2xs text-gray-400 uppercase mb-1">Nota</label>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Gruppo espositivo</label>
+            <select
+              value={selectedGroupId}
+              onChange={e => setSelectedGroupId(e.target.value)}
+              className="w-full text-sm border border-border rounded px-2 py-1.5 focus:outline-none focus:border-accent bg-white"
+            >
+              {groups.map(g => <option key={g.id} value={g.id}>{g.nome}</option>)}
+            </select>
+          </div>
+        )}
+
+        {!isNew && popover.schedule && (
+          <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-cream">
+            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: groupColor(popover.schedule.groupId) }} />
+            <span className="text-xs font-medium text-primary">{groupName(popover.schedule.groupId)}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Inizio (sett.)</label>
             <input
-              type="text"
-              value={form.nota}
-              onChange={(e) => setForm((f) => ({ ...f, nota: e.target.value }))}
-              placeholder="Opzionale…"
+              type="number" min={1} max={52}
+              value={settimanaIn}
+              onChange={e => setSettimanaIn(Number(e.target.value))}
               className="w-full text-sm border border-border rounded px-2 py-1 focus:outline-none focus:border-accent"
             />
           </div>
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 py-1.5 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
-            >
-              {saving ? <Loader2 size={10} className="animate-spin" /> : null}Salva
-            </button>
+          <div>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Fine (sett.)</label>
+            <input
+              type="number" min={1} max={52}
+              value={settimanaFn}
+              onChange={e => setSettimanaFn(Number(e.target.value))}
+              className="w-full text-sm border border-border rounded px-2 py-1 focus:outline-none focus:border-accent"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Nota</label>
+          <input
+            type="text"
+            value={nota}
+            onChange={e => setNota(e.target.value)}
+            placeholder="Opzionale…"
+            className="w-full text-sm border border-border rounded px-2 py-1 focus:outline-none focus:border-accent"
+          />
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={handleSubmit}
+            disabled={saving || (isNew && !selectedGroupId)}
+            className="flex-1 py-1.5 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
+          >
+            {saving && <Loader2 size={10} className="animate-spin" />}
+            {isNew ? 'Aggiungi' : 'Salva'}
+          </button>
+          {!isNew && (
             <button
               onClick={onDelete}
               className="p-1.5 text-red-400 hover:text-red-600 border border-border rounded hover:bg-red-50 transition-colors"
@@ -474,9 +555,9 @@ function SchedulePopover({
             >
               <Trash2 size={12} />
             </button>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

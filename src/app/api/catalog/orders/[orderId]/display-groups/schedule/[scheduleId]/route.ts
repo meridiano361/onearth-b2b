@@ -12,7 +12,7 @@ export async function PUT(
   if (!operatorId) return FORBIDDEN;
 
   const body = await req.json();
-  const { anno, settimanaIn, settimanaFn, nota } = body as Record<string, unknown>;
+  const { spazioId, anno, settimanaIn, settimanaFn, nota } = body as Record<string, unknown>;
 
   const schedule = await prisma.displayGroupSchedule.findFirst({
     where: { id: params.scheduleId, group: { orderId: params.orderId } },
@@ -23,6 +23,7 @@ export async function PUT(
   const updated = await prisma.displayGroupSchedule.update({
     where: { id: params.scheduleId },
     data: {
+      ...(spazioId !== undefined && { spazioId: spazioId ? String(spazioId) : null }),
       ...(anno !== undefined && { anno: Number(anno) }),
       ...(settimanaIn !== undefined && { settimanaIn: Number(settimanaIn) }),
       ...(settimanaFn !== undefined && { settimanaFn: Number(settimanaFn) }),

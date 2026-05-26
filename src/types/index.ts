@@ -139,9 +139,18 @@ export interface DisplayGroupItem {
   orderItem: OrderItem;
 }
 
+export interface SpazioEspositivo {
+  id: string;
+  operatorId: string;
+  nome: string;
+  posizione: number;
+  createdAt: string;
+}
+
 export interface DisplayGroupSchedule {
   id: string;
   groupId: string;
+  spazioId: string | null;
   anno: number;
   settimanaIn: number;
   settimanaFn: number;
@@ -212,6 +221,8 @@ export interface Order {
   totalValue: number;
   totalItems: number;
   notes: string | null;
+  budgetPersonalizzato: number | null;
+  budgetNota: string | null;
   createdAt: string;
   confirmedAt: string | null;
   customer?: Customer;
