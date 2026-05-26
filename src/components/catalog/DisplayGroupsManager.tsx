@@ -173,7 +173,7 @@ function ProductBoardView({
 }) {
   const sorted = sortProductsForDisplay(items);
   return (
-    <div className="grid grid-cols-5 gap-3">
+    <div className="grid grid-cols-3 sm:grid-cols-6 xl:grid-cols-10 gap-2">
       {sorted.map((item) => {
         const p = item.orderItem.product;
         return (
@@ -191,7 +191,7 @@ function ProductBoardView({
                 : <div className="w-full h-full bg-gray-200" />
               }
             </div>
-            <p className="text-[10px] text-[#6B7280] text-center py-1 px-0.5 truncate">{p?.code}</p>
+            <p className="text-[9px] text-[#6B7280] text-center py-0.5 px-0.5 truncate leading-tight">{p?.code}</p>
             <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/40 transition-colors rounded-[8px]" />
             <div className="absolute top-1 right-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
               <button

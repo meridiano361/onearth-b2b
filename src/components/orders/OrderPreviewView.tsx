@@ -768,10 +768,10 @@ export default function OrderPreviewView({ id }: { id: string }) {
 
       {/* ── Vista toggle (Mondi Espositivi) ───────────────── */}
       {mondiEspositivi && (
-        <div className="sticky top-[57px] z-20 bg-white border-b border-border px-4 sm:px-6 py-2 flex gap-1">
+        <div className="sticky top-[57px] z-20 bg-white border-b border-border px-3 sm:px-6 py-2 flex gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           <button
             onClick={() => setViewMode('ordine')}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded transition-colors ${
+            className={`flex-shrink-0 flex items-center gap-1.5 text-sm px-3 py-2 rounded transition-colors ${
               viewMode === 'ordine'
                 ? 'bg-primary text-white'
                 : 'text-gray-500 hover:bg-cream border border-border'
@@ -781,13 +781,13 @@ export default function OrderPreviewView({ id }: { id: string }) {
           </button>
           <button
             onClick={() => setViewMode('mondi')}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded transition-colors ${
+            className={`flex-shrink-0 flex items-center gap-1.5 text-sm px-3 py-2 rounded transition-colors ${
               viewMode === 'mondi'
                 ? 'bg-primary text-white'
                 : 'text-gray-500 hover:bg-cream border border-border'
             }`}
           >
-            <Layers size={12} />
+            <Layers size={14} />
             Esposizione
             {displayGroupCount > 0 && (
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
@@ -797,13 +797,13 @@ export default function OrderPreviewView({ id }: { id: string }) {
           </button>
           <button
             onClick={() => setViewMode('calendario')}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded transition-colors ${
+            className={`flex-shrink-0 flex items-center gap-1.5 text-sm px-3 py-2 rounded transition-colors ${
               viewMode === 'calendario'
                 ? 'bg-primary text-white'
                 : 'text-gray-500 hover:bg-cream border border-border'
             }`}
           >
-            <CalendarDays size={12} />
+            <CalendarDays size={14} />
             Calendario
           </button>
         </div>
@@ -839,7 +839,7 @@ export default function OrderPreviewView({ id }: { id: string }) {
       {viewMode === 'ordine' && <>
 
       {/* ── Grouping tabs ─────────────────────────────────── */}
-      <div className="sticky z-10 bg-white border-b border-border" style={{ top: mondiEspositivi ? 101 : 57 }}>
+      <div className="sticky z-10 bg-white border-b border-border" style={{ top: mondiEspositivi ? 104 : 57 }}>
         <div
           ref={tabsRef}
           className="flex overflow-x-auto scrollbar-none px-4 sm:px-6"
