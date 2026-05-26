@@ -49,6 +49,7 @@ function serializeOrder(order: any) {
     organization: order.organization
       ? { ...order.organization, createdAt: order.organization.createdAt?.toISOString() }
       : undefined,
+    operator: order.operator ?? undefined,
     destinazione: order.canale
       ? { ...order.canale, budget: order.canale.budget != null ? Number(order.canale.budget) : null, createdAt: order.canale.createdAt?.toISOString(), updatedAt: order.canale.updatedAt?.toISOString() }
       : undefined,
@@ -106,6 +107,7 @@ export async function GET(req: NextRequest) {
             select: { id: true, companyName: true, customerCode: true, email: true, createdAt: true },
           },
           organization: { select: { id: true, nome: true, createdAt: true } },
+          operator: { select: { id: true, nome: true, cognome: true, email: true } },
           canale: { select: { id: true, nome: true, tipo: true, citta: true, budget: true, organizationId: true, createdAt: true, updatedAt: true } },
           items: {
             include: {

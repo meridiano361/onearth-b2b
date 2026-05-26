@@ -158,7 +158,7 @@ export default function AdminDashboard() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium text-primary truncate">
-                        {order.customer?.companyName || 'Unknown'}
+                        {order.organization?.nome || order.customer?.companyName || '—'}
                       </span>
                       <Badge variant={statusVariant[order.status] as any} size="xs">
                         {getOrderStatusLabel(order.status)}
@@ -166,6 +166,7 @@ export default function AdminDashboard() {
                     </div>
                     <p className="text-2xs text-gray-400 mt-0.5">
                       {formatDate(order.createdAt, 'datetime')} · {order.totalItems} pezzi
+                      {order.operator && ` · ${order.operator.nome} ${order.operator.cognome}`}
                     </p>
                   </div>
                   <span className="text-sm font-semibold text-primary flex-shrink-0">
