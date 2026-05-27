@@ -54,6 +54,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
 
     let mailInviata = false;
+    let mailError: string | undefined;
     if (data.inviaMail) {
       const org = await prisma.organization.findUnique({ where: { id: params.id }, select: { nome: true } });
       const result = await sendCredenziali({
@@ -64,10 +65,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         noteCliente: data.noteCliente,
       });
       mailInviata = result.sent;
+      mailError = result.error;
     }
 
     return NextResponse.json(
-      { data: { ...operator, createdAt: operator.createdAt.toISOString(), mailInviata } },
+      { data: { ...operator, createdAt: operator.createdAt.toISOString(), mailInviata, mailError } },
       { status: 201 }
     );
   } catch (err: any) {

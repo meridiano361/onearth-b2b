@@ -194,7 +194,8 @@ function OperatorModal({
         if (json.data?.mailInviata) {
           toast.success(`Operatore creato. Email con credenziali inviata a ${form.email}`);
         } else if (form.inviaMail) {
-          toast(`Operatore creato ma email non inviata. Verifica la configurazione email.`, { icon: '⚠️' });
+          const errDetail = json.data?.mailError ? `: ${json.data.mailError}` : '';
+          toast(`Operatore creato. Email non inviata${errDetail}`, { icon: '⚠️', duration: 8000 });
         } else {
           toast.success(`Operatore creato. Password: ${form.password}`);
         }

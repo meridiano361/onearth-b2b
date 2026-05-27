@@ -19,18 +19,24 @@ async function sendEmail({
   to: string;
   subject: string;
   html: string;
-}): Promise<boolean> {
+}): Promise<{ sent: boolean; error?: string }> {
   const resend = getResend();
-  if (!resend) return false;
+  if (!resend) return { sent: false, error: 'RESEND_API_KEY mancante' };
 
-  console.log('[EMAIL] Invio a:', to, '— Oggetto:', subject);
+  console.log('[EMAIL] FROM:', FROM, '→ TO:', to, '— Oggetto:', subject);
   try {
     const result = await resend.emails.send({ from: FROM, to, subject, html });
-    console.log('[EMAIL] Inviata — ID:', result.data?.id, '| Errore:', result.error ?? 'nessuno');
-    return !result.error;
-  } catch (error) {
-    console.error('[EMAIL] ERRORE invio a', to, ':', error);
-    return false;
+    if (result.error) {
+      const errMsg = `${result.error.name}: ${result.error.message}`;
+      console.error('[EMAIL] Rifiutata da Resend:', errMsg);
+      return { sent: false, error: errMsg };
+    }
+    console.log('[EMAIL] Inviata — ID:', result.data?.id);
+    return { sent: true };
+  } catch (error: any) {
+    const errMsg = error?.message ?? String(error);
+    console.error('[EMAIL] ERRORE invio a', to, ':', errMsg);
+    return { sent: false, error: errMsg };
   }
 }
 
@@ -57,13 +63,16 @@ export async function sendAccessRequestNotification(data: {
   });
 }
 
+// Re-export the type for callers that need to inspect errors
+export type EmailResult = { sent: boolean; error?: string };
+
 export async function sendCredenziali(params: {
   nome: string;
   email: string;
   password: string;
   orgNome: string;
   noteCliente?: string | null;
-}): Promise<{ sent: boolean }> {
+}): Promise<{ sent: boolean; error?: string }> {
   const notaHtml = params.noteCliente
     ? `<div style="border-left:3px solid #C17A5A;padding:12px 16px;margin:0 0 24px;background:#FDFAF7;border-radius:4px;">
         <p style="color:#374151;font-size:14px;margin:0;line-height:1.6;">${params.noteCliente.replace(/\n/g, '<br>')}</p>
@@ -114,10 +123,9 @@ export async function sendCredenziali(params: {
 </body>
 </html>`;
 
-  const sent = await sendEmail({
+  return sendEmail({
     to: params.email,
     subject: 'Benvenuto su ON EARTH B2B — Le tue credenziali di accesso',
     html,
   });
-  return { sent };
 }

@@ -263,7 +263,8 @@ export default function AccessRequestsPage() {
       if (inviaMail && resBody.data?.mailInviata) {
         toast.success(`Account creato e credenziali inviate a ${formEmail}`);
       } else if (inviaMail && !resBody.data?.mailInviata) {
-        toast.success('Account creato (email non inviata — controlla la configurazione)');
+        const errDetail = resBody.data?.mailError ? `: ${resBody.data.mailError}` : '';
+        toast(`Account creato. Email non inviata${errDetail}`, { icon: '⚠️', duration: 8000 });
       } else {
         toast.success('Account creato');
       }

@@ -73,6 +73,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
 
     let mailInviata = false;
+    let mailError: string | undefined;
     if (data.inviaMail) {
       const result = await sendCredenziali({
         nome: data.nome.trim(),
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         noteCliente: data.noteCliente,
       });
       mailInviata = result.sent;
+      mailError = result.error;
     }
 
     await prisma.accessRequest.update({
@@ -95,7 +97,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
 
     return NextResponse.json(
-      { data: { operator, orgNome: org.nome, mailInviata } },
+      { data: { operator, orgNome: org.nome, mailInviata, mailError } },
       { status: 201 }
     );
   } catch (err: any) {
