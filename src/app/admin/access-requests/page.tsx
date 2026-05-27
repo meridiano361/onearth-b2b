@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { Check, UserPlus, Trash2, Search, Loader2, X, Eye, EyeOff, Copy } from 'lucide-react';
+import { Check, UserPlus, Trash2, Search, Loader2, X, Eye, EyeOff, Copy, RefreshCw, Mail, MailCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
@@ -16,12 +16,20 @@ interface AccessRequest {
   telefono?: string | null;
   email: string;
   status: string;
+  mailCredenzialiInviata: boolean;
+  approvataDa?: string | null;
+  approvataAt?: string | null;
   createdAt: string;
 }
 
-function genPassword(orgNome: string) {
-  const letters = orgNome.toLowerCase().replace(/[^a-z]/g, '').slice(0, 5);
-  return `onearth_${letters}`;
+interface OrgLight {
+  id: string;
+  nome: string;
+}
+
+function genRandomPassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
 const FILTER_TABS = [
@@ -53,9 +61,16 @@ export default function AccessRequestsPage() {
 
   // Create operator modal
   const [createReq, setCreateReq] = useState<AccessRequest | null>(null);
-  const [createForm, setCreateForm] = useState({
-    orgNome: '', nome: '', cognome: '', email: '', telefono: '', password: '',
-  });
+  const [orgMode, setOrgMode] = useState<'existing' | 'new'>('new');
+  const [selectedOrgId, setSelectedOrgId] = useState('');
+  const [orgSearch, setOrgSearch] = useState('');
+  const [newOrgNome, setNewOrgNome] = useState('');
+  const [formNome, setFormNome] = useState('');
+  const [formCognome, setFormCognome] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [formTelefono, setFormTelefono] = useState('');
+  const [formPassword, setFormPassword] = useState('');
+  const [formNoteCliente, setFormNoteCliente] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -67,6 +82,25 @@ export default function AccessRequestsPage() {
       return res.json() as Promise<{ data: AccessRequest[] }>;
     },
   });
+
+  const { data: orgsData } = useQuery({
+    queryKey: ['admin-organizations-light'],
+    queryFn: async () => {
+      const res = await fetch('/api/organizations');
+      if (!res.ok) throw new Error('Failed');
+      const body = await res.json() as { data: OrgLight[] };
+      return body.data;
+    },
+    enabled: !!createReq,
+  });
+
+  const orgs = orgsData ?? [];
+
+  const filteredOrgs = useMemo(() => {
+    if (!orgSearch.trim()) return orgs;
+    const s = orgSearch.toLowerCase();
+    return orgs.filter((o) => o.nome.toLowerCase().includes(s));
+  }, [orgs, orgSearch]);
 
   const requests = data?.data ?? [];
 
@@ -179,41 +213,70 @@ export default function AccessRequestsPage() {
     }
   }
 
-  // Auto-populate create form when a request is selected
   useEffect(() => {
     if (createReq) {
-      setCreateForm({
-        orgNome: createReq.organizzazione,
-        nome: createReq.nome ?? '',
-        cognome: createReq.cognome ?? '',
-        email: createReq.email,
-        telefono: createReq.telefono ?? '',
-        password: genPassword(createReq.organizzazione),
-      });
+      setOrgMode('new');
+      setSelectedOrgId('');
+      setOrgSearch('');
+      setNewOrgNome(createReq.organizzazione);
+      setFormNome(createReq.nome ?? '');
+      setFormCognome(createReq.cognome ?? '');
+      setFormEmail(createReq.email);
+      setFormTelefono(createReq.telefono ?? '');
+      setFormPassword(genRandomPassword());
+      setFormNoteCliente('');
       setShowPassword(false);
     }
   }, [createReq]);
 
-  async function handleCreateOperator() {
+  async function handleCreate(inviaMail: boolean) {
     if (!createReq) return;
     setIsCreating(true);
     try {
+      const body: Record<string, unknown> = {
+        nome: formNome,
+        cognome: formCognome,
+        email: formEmail,
+        telefono: formTelefono || null,
+        password: formPassword,
+        inviaMail,
+        noteCliente: formNoteCliente || null,
+      };
+      if (orgMode === 'existing') {
+        body.organizationId = selectedOrgId;
+      } else {
+        body.nuovaOrganizzazione = { nome: newOrgNome };
+      }
+
       const res = await fetch(`/api/access-requests/${createReq.id}/create-operator`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(createForm),
+        body: JSON.stringify(body),
       });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || 'Errore');
+      const resBody = await res.json();
+      if (!res.ok) throw new Error(resBody.error || 'Errore');
       await queryClient.invalidateQueries({ queryKey: ['access-requests'] });
       setCreateReq(null);
-      toast.success(`Account creato. Password: ${createForm.password}`);
+      if (inviaMail && resBody.data?.mailInviata) {
+        toast.success(`Account creato e credenziali inviate a ${formEmail}`);
+      } else if (inviaMail && !resBody.data?.mailInviata) {
+        toast.success('Account creato (email non inviata — controlla la configurazione)');
+      } else {
+        toast.success('Account creato');
+      }
     } catch (err: any) {
       toast.error(err.message || 'Impossibile creare l\'account');
     } finally {
       setIsCreating(false);
     }
   }
+
+  const canSubmit =
+    formNome.trim() &&
+    formCognome.trim() &&
+    formEmail.trim() &&
+    formPassword.trim().length >= 6 &&
+    (orgMode === 'existing' ? !!selectedOrgId : !!newOrgNome.trim());
 
   const inputCls = 'w-full px-3 py-2 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 placeholder-gray-400';
 
@@ -358,13 +421,27 @@ export default function AccessRequestsPage() {
                   </td>
                   <td className="py-3 px-4 text-gray-600 text-xs">{r.telefono || '—'}</td>
                   <td className="py-3 px-4">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-2xs font-medium ${
-                      r.status === 'pending'
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                        : 'bg-green-50 text-green-700 border border-green-200'
-                    }`}>
-                      {r.status === 'pending' ? 'In attesa' : 'Gestita'}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-2xs font-medium ${
+                        r.status === 'pending'
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                          : 'bg-green-50 text-green-700 border border-green-200'
+                      }`}>
+                        {r.status === 'pending' ? 'In attesa' : 'Gestita'}
+                      </span>
+                      {r.status !== 'pending' && (
+                        <span
+                          className="inline-flex items-center gap-1 text-2xs text-gray-400"
+                          title={r.mailCredenzialiInviata ? 'Email credenziali inviata' : 'Email non inviata'}
+                        >
+                          {r.mailCredenzialiInviata
+                            ? <MailCheck size={10} className="text-green-500" />
+                            : <Mail size={10} className="text-gray-300" />
+                          }
+                          {r.approvataAt && format(new Date(r.approvataAt), 'd MMM', { locale: it })}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center justify-end gap-1.5">
@@ -434,26 +511,87 @@ export default function AccessRequestsPage() {
               <X size={16} />
             </button>
             <div className="mb-5">
-              <h3 className="text-sm font-semibold text-primary tracking-wide">Crea organizzazione e operatore</h3>
-              <p className="text-xs text-gray-400 mt-0.5">Verifica i dati pre-compilati dalla richiesta</p>
+              <h3 className="text-sm font-semibold text-primary tracking-wide">Crea account operatore</h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Richiesta di <span className="font-medium text-gray-600">{createReq.organizzazione}</span>
+              </p>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
+              {/* Org mode radio */}
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Organizzazione</label>
-                <input
-                  value={createForm.orgNome}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, orgNome: e.target.value, password: genPassword(e.target.value) }))}
-                  className={inputCls}
-                  placeholder="Nome organizzazione"
-                />
+                <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Organizzazione</label>
+                <div className="flex gap-3 mb-3">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={orgMode === 'new'}
+                      onChange={() => { setOrgMode('new'); setSelectedOrgId(''); setOrgSearch(''); }}
+                      className="text-accent focus:ring-accent"
+                    />
+                    <span className="text-xs text-gray-700">Nuova organizzazione</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={orgMode === 'existing'}
+                      onChange={() => setOrgMode('existing')}
+                      className="text-accent focus:ring-accent"
+                    />
+                    <span className="text-xs text-gray-700">Organizzazione esistente</span>
+                  </label>
+                </div>
+
+                {orgMode === 'new' ? (
+                  <input
+                    value={newOrgNome}
+                    onChange={(e) => setNewOrgNome(e.target.value)}
+                    className={inputCls}
+                    placeholder="Nome organizzazione"
+                  />
+                ) : (
+                  <div className="space-y-1.5">
+                    <div className="relative">
+                      <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        value={orgSearch}
+                        onChange={(e) => setOrgSearch(e.target.value)}
+                        className={inputCls + ' pl-8'}
+                        placeholder="Cerca organizzazione…"
+                      />
+                    </div>
+                    {filteredOrgs.length > 0 && (
+                      <div className="max-h-36 overflow-y-auto border border-border rounded bg-white divide-y divide-border">
+                        {filteredOrgs.map((o) => (
+                          <button
+                            key={o.id}
+                            type="button"
+                            onClick={() => { setSelectedOrgId(o.id); setOrgSearch(o.nome); }}
+                            className={`w-full text-left px-3 py-2 text-xs hover:bg-cream transition-colors ${
+                              selectedOrgId === o.id ? 'bg-accent/10 font-medium text-primary' : 'text-gray-700'
+                            }`}
+                          >
+                            {o.nome}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {selectedOrgId && (
+                      <p className="text-2xs text-green-600 flex items-center gap-1">
+                        <Check size={10} /> {orgs.find((o) => o.id === selectedOrgId)?.nome}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
+
+              {/* Nome / Cognome */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Nome</label>
                   <input
-                    value={createForm.nome}
-                    onChange={(e) => setCreateForm((f) => ({ ...f, nome: e.target.value }))}
+                    value={formNome}
+                    onChange={(e) => setFormNome(e.target.value)}
                     className={inputCls}
                     placeholder="Nome"
                   />
@@ -461,76 +599,121 @@ export default function AccessRequestsPage() {
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Cognome</label>
                   <input
-                    value={createForm.cognome}
-                    onChange={(e) => setCreateForm((f) => ({ ...f, cognome: e.target.value }))}
+                    value={formCognome}
+                    onChange={(e) => setFormCognome(e.target.value)}
                     className={inputCls}
                     placeholder="Cognome"
                   />
                 </div>
               </div>
+
+              {/* Email */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Email</label>
                 <input
-                  value={createForm.email}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                  value={formEmail}
+                  onChange={(e) => setFormEmail(e.target.value)}
                   type="email"
                   className={inputCls}
                   placeholder="email@esempio.com"
                 />
               </div>
+
+              {/* Telefono */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Telefono</label>
                 <input
-                  value={createForm.telefono}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, telefono: e.target.value }))}
+                  value={formTelefono}
+                  onChange={(e) => setFormTelefono(e.target.value)}
                   className={inputCls}
                   placeholder="Opzionale"
                 />
               </div>
+
+              {/* Password */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Password</label>
-                <div className="relative">
-                  <input
-                    value={createForm.password}
-                    onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
-                    type={showPassword ? 'text' : 'password'}
-                    className={inputCls + ' pr-10 font-mono'}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
-                </div>
-                {showPassword && (
-                  <div className="mt-1.5 flex items-center gap-1.5 p-2 bg-amber-50 border border-amber-200 rounded">
-                    <span className="font-mono text-xs font-bold text-primary">{createForm.password}</span>
+                <div className="flex gap-1.5">
+                  <div className="relative flex-1">
+                    <input
+                      value={formPassword}
+                      onChange={(e) => setFormPassword(e.target.value)}
+                      type={showPassword ? 'text' : 'password'}
+                      className={inputCls + ' font-mono pr-8'}
+                    />
                     <button
                       type="button"
-                      onClick={() => { navigator.clipboard.writeText(createForm.password); toast.success('Copiata'); }}
-                      className="ml-auto text-gray-400 hover:text-primary"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
-                      <Copy size={11} />
+                      {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => { const p = genRandomPassword(); setFormPassword(p); setShowPassword(true); }}
+                    className="px-2.5 py-2 border border-border rounded text-gray-500 hover:text-primary hover:border-gray-400 transition-colors"
+                    title="Genera nuova password"
+                  >
+                    <RefreshCw size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { navigator.clipboard.writeText(formPassword); toast.success('Password copiata'); }}
+                    className="px-2.5 py-2 border border-border rounded text-gray-500 hover:text-primary hover:border-gray-400 transition-colors"
+                    title="Copia password"
+                  >
+                    <Copy size={13} />
+                  </button>
+                </div>
+                {showPassword && formPassword && (
+                  <p className="text-2xs font-mono text-primary bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1.5">{formPassword}</p>
                 )}
-                <p className="text-2xs text-gray-400 mt-1">Generata automaticamente · comunicala al cliente</p>
+              </div>
+
+              {/* Nota per il cliente (opzionale) */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">
+                  Nota per il cliente <span className="normal-case text-gray-400 font-normal">(opzionale, inclusa nella mail)</span>
+                </label>
+                <textarea
+                  value={formNoteCliente}
+                  onChange={(e) => setFormNoteCliente(e.target.value)}
+                  rows={3}
+                  className={inputCls + ' resize-none'}
+                  placeholder="Es. la tua tranche sarà disponibile a partire da …"
+                />
               </div>
             </div>
 
-            <button
-              onClick={handleCreateOperator}
-              disabled={isCreating || !createForm.orgNome || !createForm.nome || !createForm.cognome || !createForm.email || !createForm.password}
-              className="mt-5 w-full py-2.5 text-xs font-medium rounded bg-primary text-background hover:bg-warm-darker transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isCreating ? (
-                <><Loader2 size={12} className="animate-spin" /> Creazione in corso…</>
-              ) : (
-                <><UserPlus size={12} /> Crea organizzazione e operatore</>
-              )}
-            </button>
+            {/* Action buttons */}
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                onClick={() => handleCreate(true)}
+                disabled={isCreating || !canSubmit}
+                className="w-full py-2.5 text-xs font-medium rounded bg-primary text-background hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isCreating ? (
+                  <><Loader2 size={12} className="animate-spin" /> Creazione in corso…</>
+                ) : (
+                  <><Mail size={12} /> Crea account e invia credenziali</>
+                )}
+              </button>
+              <button
+                onClick={() => handleCreate(false)}
+                disabled={isCreating || !canSubmit}
+                className="w-full py-2.5 text-xs font-medium rounded border border-border text-gray-700 hover:bg-cream transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <UserPlus size={12} /> Crea senza inviare email
+              </button>
+              <button
+                onClick={() => setCreateReq(null)}
+                disabled={isCreating}
+                className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                Annulla
+              </button>
+            </div>
           </div>
         </div>
       )}

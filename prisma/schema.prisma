@@ -222,8 +222,11 @@ model AccessRequest {
   cognome          String?
   telefono         String?
   email            String
-  status           String   @default("pending")
-  createdAt        DateTime @default(now())
+  status                  String    @default("pending")
+  mailCredenzialiInviata  Boolean   @default(false)
+  approvataDa             String?
+  approvataAt             DateTime?
+  createdAt               DateTime  @default(now())
   @@map("access_requests")
 }
 
