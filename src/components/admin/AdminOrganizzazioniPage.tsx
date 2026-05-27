@@ -384,6 +384,24 @@ function OrgOperatorsBulkBar({ count, operatorIds, onDeselect, onDone }: BulkBar
     }
   }
 
+  async function runBulkFeature(enable: boolean) {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/operators/bulk-features', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: operatorIds, featureMondiEspositivi: enable }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
+      const json = await res.json();
+      toast.success(`Mondi ${enable ? 'abilitati' : 'disabilitati'} per ${json.updated} operatori`);
+      onDone();
+    } catch (e: any) {
+      toast.error(e.message || 'Errore durante l\'operazione');
+      setLoading(false);
+    }
+  }
+
   async function handleDelete() {
     if (!confirm(`Eliminare definitivamente ${count} operatore${count !== 1 ? 'i' : ''}? Questa azione non può essere annullata.`)) return;
     setLoading(true);
@@ -431,6 +449,20 @@ function OrgOperatorsBulkBar({ count, operatorIds, onDeselect, onDone }: BulkBar
           Reset password
         </button>
         <button
+          onClick={() => runBulkFeature(true)}
+          disabled={loading}
+          className="text-2xs px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50 flex items-center gap-1"
+        >
+          <Layers size={10} />Abilita Mondi
+        </button>
+        <button
+          onClick={() => runBulkFeature(false)}
+          disabled={loading}
+          className="text-2xs px-2.5 py-1 bg-[#C17A5A]/70 hover:bg-[#C17A5A] rounded transition-colors disabled:opacity-50 flex items-center gap-1"
+        >
+          <Layers size={10} />Disabilita Mondi
+        </button>
+        <button
           onClick={handleDelete}
           disabled={loading}
           className="text-2xs px-2.5 py-1 bg-red-500/70 hover:bg-red-500 rounded transition-colors disabled:opacity-50"
@@ -471,6 +503,10 @@ export default function AdminOrganizzazioniPage() {
   const [selectedOrgIds, setSelectedOrgIds] = useState<Set<string>>(new Set());
   const [orgBulkLoading, setOrgBulkLoading] = useState(false);
   const [orgBulkResetResults, setOrgBulkResetResults] = useState<{ name: string; password: string }[] | null>(null);
+
+  // Global Mondi Espositivi bulk
+  const [mondiConfirm, setMondiConfirm] = useState<'enable' | 'disable' | null>(null);
+  const [mondiLoading, setMondiLoading] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-organizations'],
@@ -584,6 +620,28 @@ export default function AdminOrganizzazioniPage() {
     } catch (e: any) { toast.error(e.message || 'Errore'); }
   }
 
+  // ── Global Mondi Espositivi bulk ─────────────────────────────────────────
+
+  async function handleGlobalMondi(enable: boolean) {
+    setMondiLoading(true);
+    try {
+      const res = await fetch('/api/admin/operators/bulk-features', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: 'ALL', featureMondiEspositivi: enable }),
+      });
+      if (!res.ok) throw new Error('Errore');
+      const json = await res.json();
+      toast.success(`Mondi Espositivi ${enable ? 'abilitati' : 'disabilitati'} per ${json.updated} operatori`);
+      setMondiConfirm(null);
+      refresh();
+    } catch {
+      toast.error('Errore durante l\'operazione');
+    } finally {
+      setMondiLoading(false);
+    }
+  }
+
   // ── Org bulk actions ──────────────────────────────────────────────────────
 
   async function handleOrgBulkSetActive(attivo: boolean) {
@@ -658,9 +716,51 @@ export default function AdminOrganizzazioniPage() {
             {totalOrgs} organizzazioni · {totalOps} operatori
           </p>
         </div>
-        <Button icon={<Plus size={13} />} onClick={() => setShowNewOrg(true)}>
-          Nuova organizzazione
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Mondi Espositivi bulk */}
+          {mondiConfirm ? (
+            <div className="flex items-center gap-2 bg-cream border border-border rounded px-3 py-2">
+              <span className="text-xs text-gray-600">
+                {mondiConfirm === 'enable'
+                  ? `Abilitare Mondi per tutti i ${totalOps} operatori?`
+                  : `Disabilitare Mondi per tutti i ${totalOps} operatori?`}
+              </span>
+              <button
+                onClick={() => handleGlobalMondi(mondiConfirm === 'enable')}
+                disabled={mondiLoading}
+                className="text-xs px-2.5 py-1 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {mondiLoading ? '...' : 'Conferma'}
+              </button>
+              <button
+                onClick={() => setMondiConfirm(null)}
+                className="text-xs px-2.5 py-1 border border-border rounded hover:bg-cream transition-colors"
+              >
+                Annulla
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => setMondiConfirm('enable')}
+                className="flex items-center gap-1.5 text-xs border border-border rounded px-3 py-1.5 hover:bg-cream transition-colors text-gray-600"
+              >
+                <Layers size={12} />
+                Abilita Mondi per tutti
+              </button>
+              <button
+                onClick={() => setMondiConfirm('disable')}
+                className="flex items-center gap-1.5 text-xs border border-[#C17A5A] rounded px-3 py-1.5 hover:bg-orange-50 transition-colors text-[#C17A5A]"
+              >
+                <Layers size={12} />
+                Disabilita Mondi per tutti
+              </button>
+            </>
+          )}
+          <Button icon={<Plus size={13} />} onClick={() => setShowNewOrg(true)}>
+            Nuova organizzazione
+          </Button>
+        </div>
       </div>
 
       {/* ── Org bulk action bar ─────────────────────────────────────────────── */}
