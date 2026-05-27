@@ -27,9 +27,12 @@ interface OrgLight {
   nome: string;
 }
 
-function genRandomPassword() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+function generaPasswordDefault(nomeOrganizzazione: string): string {
+  const orgSlug = nomeOrganizzazione
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .substring(0, 5);
+  return 'onearth_' + orgSlug;
 }
 
 const FILTER_TABS = [
@@ -223,7 +226,7 @@ export default function AccessRequestsPage() {
       setFormCognome(createReq.cognome ?? '');
       setFormEmail(createReq.email);
       setFormTelefono(createReq.telefono ?? '');
-      setFormPassword(genRandomPassword());
+      setFormPassword(generaPasswordDefault(createReq.organizzazione));
       setFormNoteCliente('');
       setShowPassword(false);
     }
@@ -545,7 +548,10 @@ export default function AccessRequestsPage() {
                 {orgMode === 'new' ? (
                   <input
                     value={newOrgNome}
-                    onChange={(e) => setNewOrgNome(e.target.value)}
+                    onChange={(e) => {
+                      setNewOrgNome(e.target.value);
+                      setFormPassword(generaPasswordDefault(e.target.value));
+                    }}
                     className={inputCls}
                     placeholder="Nome organizzazione"
                   />
@@ -566,7 +572,7 @@ export default function AccessRequestsPage() {
                           <button
                             key={o.id}
                             type="button"
-                            onClick={() => { setSelectedOrgId(o.id); setOrgSearch(o.nome); }}
+                            onClick={() => { setSelectedOrgId(o.id); setOrgSearch(o.nome); setFormPassword(generaPasswordDefault(o.nome)); }}
                             className={`w-full text-left px-3 py-2 text-xs hover:bg-cream transition-colors ${
                               selectedOrgId === o.id ? 'bg-accent/10 font-medium text-primary' : 'text-gray-700'
                             }`}
@@ -651,7 +657,13 @@ export default function AccessRequestsPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => { const p = genRandomPassword(); setFormPassword(p); setShowPassword(true); }}
+                    onClick={() => {
+                      const orgName = orgMode === 'new'
+                        ? newOrgNome
+                        : (orgs.find(o => o.id === selectedOrgId)?.nome ?? '');
+                      setFormPassword(generaPasswordDefault(orgName));
+                      setShowPassword(true);
+                    }}
                     className="px-2.5 py-2 border border-border rounded text-gray-500 hover:text-primary hover:border-gray-400 transition-colors"
                     title="Genera nuova password"
                   >

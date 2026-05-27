@@ -307,7 +307,9 @@ export default function RequestAccessButton() {
 
                   {/* Email */}
                   <div>
-                    <label className={labelClass}>{t('emailLabel')}</label>
+                    <label className={labelClass}>
+                      {t('emailLabel')} <span className="text-red-500">*</span>
+                    </label>
                     <input
                       {...register('email')}
                       type="email"
