@@ -46,8 +46,6 @@ interface PopoverState {
   spazioNome: string;
   week: number;
   schedule?: DisplayGroupSchedule;
-  x: number;
-  y: number;
 }
 
 // ─── CalendarioEsposizione ────────────────────────────────────────────────────
@@ -84,15 +82,6 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
   const allSchedules = scheduleData?.schedules ?? [];
   const spazi = spaziData?.spazi ?? [];
 
-  // Chiudi popover al click fuori
-  useEffect(() => {
-    if (!popover) return;
-    function handle(e: MouseEvent) {
-      if (!(e.target as Element).closest('[data-popover]')) setPopover(null);
-    }
-    document.addEventListener('mousedown', handle);
-    return () => document.removeEventListener('mousedown', handle);
-  }, [popover]);
 
   // ─── Spazi CRUD ───────────────────────────────────────────────────────────
 
@@ -191,15 +180,12 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
     return groups.find(g => g.id === groupId)?.nome ?? '';
   }
 
-  function handleCellClick(e: React.MouseEvent, spazioId: string, spazioNome: string, week: number) {
+  function handleCellClick(_e: React.MouseEvent, spazioId: string, spazioNome: string, week: number) {
     const schedule = getScheduleForCell(spazioId, week);
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setPopover({
       type: schedule ? 'schedule' : 'empty',
       spazioId, spazioNome, week,
       schedule: schedule ?? undefined,
-      x: rect.left,
-      y: rect.bottom + window.scrollY,
     });
   }
 
@@ -490,7 +476,7 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
   );
 }
 
-// ─── SchedulePopover ──────────────────────────────────────────────────────────
+// ─── ScheduleModal ────────────────────────────────────────────────────────────
 
 function SchedulePopover({
   popover, groups, onClose, onCreate, onSave, onDelete, groupColor, groupName,
@@ -512,6 +498,21 @@ function SchedulePopover({
   const [nota, setNota] = useState(popover.schedule?.nota ?? '');
   const [saving, setSaving] = useState(false);
 
+  // Blocca scroll del body
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  // Chiudi con Escape
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
   async function handleSubmit() {
     setSaving(true);
     const fn = Math.max(settimanaIn, settimanaFn);
@@ -523,141 +524,152 @@ function SchedulePopover({
     setSaving(false);
   }
 
-  const top = Math.min(popover.y + 6, window.scrollY + window.innerHeight - 360);
-  const left = Math.min(popover.x, window.innerWidth - 290);
-
   return (
+    /* Overlay */
     <div
-      data-popover
-      className="fixed z-50 bg-white border border-border rounded-xl shadow-2xl p-4"
-      style={{ top, left, width: 280 }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center sm:p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+      onClick={onClose}
     >
-      {/* Titolo */}
-      <div className="flex items-start justify-between mb-3 gap-2">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-primary leading-tight">
-            {isNew
-              ? `Assegna a ${popover.spazioNome}`
-              : 'Modifica pianificazione'}
-          </p>
-          <p className="text-[10px] text-gray-400 mt-0.5">Settimana S{popover.week}</p>
+      {/* Modal — bottom sheet su mobile, centrato su desktop */}
+      <div
+        className="w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
+        style={{ maxHeight: '90vh' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Handle bar (solo mobile) */}
+        <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div className="w-10 h-1 bg-gray-300 rounded-full" />
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-primary p-0.5 flex-shrink-0 transition-colors">
-          <X size={14} />
-        </button>
-      </div>
 
-      <div className="space-y-3">
-        {/* Selezione gruppo (solo per nuova pianificazione) */}
-        {isNew && (
-          <div>
-            <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">Gruppo espositivo</label>
-            {groups.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">Nessun gruppo. Creane uno nella vista Esposizione.</p>
-            ) : (
-              <div className="space-y-1 max-h-36 overflow-y-auto">
-                {groups.map(g => {
-                  const col = groupColor(g.id);
-                  return (
-                    <button
-                      key={g.id}
-                      onClick={() => setSelectedGroupId(g.id)}
-                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors ${
-                        selectedGroupId === g.id ? 'bg-cream' : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: col }} />
-                      <span className="text-xs text-primary truncate">{g.nome}</span>
-                      {selectedGroupId === g.id && <Check size={11} className="text-primary ml-auto flex-shrink-0" />}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 pt-4 pb-3 gap-2 flex-shrink-0">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-primary leading-tight">
+              {isNew ? `Assegna a ${popover.spazioNome}` : 'Modifica pianificazione'}
+            </p>
+            <p className="text-[11px] text-gray-400 mt-0.5">Settimana S{popover.week}</p>
           </div>
-        )}
+          <button onClick={onClose} className="text-gray-400 hover:text-primary p-0.5 flex-shrink-0 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
 
-        {/* Gruppo selezionato (solo per modifica) */}
-        {!isNew && popover.schedule && (
-          <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-cream">
-            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: groupColor(popover.schedule.groupId) }} />
-            <span className="text-xs font-semibold text-primary">{groupName(popover.schedule.groupId)}</span>
+        {/* Scrollable body */}
+        <div className="px-6 overflow-y-auto flex-1 space-y-4 pb-2">
+          {/* Selezione gruppo (solo nuova pianificazione) */}
+          {isNew && (
+            <div>
+              <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-2">Gruppo espositivo</label>
+              {groups.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Nessun gruppo. Creane uno nella vista Esposizione.</p>
+              ) : (
+                <div className="space-y-1 max-h-44 overflow-y-auto border border-border rounded-lg">
+                  {groups.map(g => {
+                    const col = groupColor(g.id);
+                    return (
+                      <button
+                        key={g.id}
+                        onClick={() => setSelectedGroupId(g.id)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                          selectedGroupId === g.id ? 'bg-cream' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: col }} />
+                        <span className="text-xs text-primary flex-1 truncate">{g.nome}</span>
+                        {selectedGroupId === g.id && <Check size={11} className="text-primary flex-shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Gruppo selezionato (modifica) */}
+          {!isNew && popover.schedule && (
+            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-cream">
+              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: groupColor(popover.schedule.groupId) }} />
+              <span className="text-xs font-semibold text-primary">{groupName(popover.schedule.groupId)}</span>
+            </div>
+          )}
+
+          {/* Range settimane */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">Da settimana</label>
+              <input
+                type="number" min={1} max={52}
+                value={settimanaIn}
+                onChange={e => setSettimanaIn(Number(e.target.value))}
+                className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">A settimana</label>
+              <input
+                type="number" min={1} max={52}
+                value={settimanaFn}
+                onChange={e => setSettimanaFn(Number(e.target.value))}
+                className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-accent"
+              />
+            </div>
           </div>
-        )}
 
-        {/* Range settimane */}
-        <div className="grid grid-cols-2 gap-2">
+          {/* Nota */}
           <div>
-            <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Da settimana</label>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">Nota (opzionale)</label>
             <input
-              type="number" min={1} max={52}
-              value={settimanaIn}
-              onChange={e => setSettimanaIn(Number(e.target.value))}
-              className="w-full text-sm border border-border rounded px-2 py-1.5 focus:outline-none focus:border-accent"
+              type="text"
+              value={nota}
+              onChange={e => setNota(e.target.value)}
+              placeholder="Es. campagna estiva…"
+              className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-accent"
             />
           </div>
-          <div>
-            <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">A settimana</label>
-            <input
-              type="number" min={1} max={52}
-              value={settimanaFn}
-              onChange={e => setSettimanaFn(Number(e.target.value))}
-              className="w-full text-sm border border-border rounded px-2 py-1.5 focus:outline-none focus:border-accent"
-            />
-          </div>
         </div>
 
-        {/* Nota */}
-        <div>
-          <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Nota (opzionale)</label>
-          <input
-            type="text"
-            value={nota}
-            onChange={e => setNota(e.target.value)}
-            placeholder="Es. campagna estiva…"
-            className="w-full text-sm border border-border rounded px-2 py-1.5 focus:outline-none focus:border-accent"
-          />
+        {/* Sticky action buttons */}
+        <div className="sticky bottom-0 bg-white border-t border-border px-6 py-4 flex-shrink-0">
+          {isNew ? (
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                className="flex-1 py-2.5 text-xs border border-border rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={saving || !selectedGroupId}
+                className="flex-1 py-2.5 text-xs bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {saving && <Loader2 size={11} className="animate-spin" />}
+                Conferma
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={handleSubmit}
+                disabled={saving}
+                className="flex-1 py-2.5 text-xs bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {saving && <Loader2 size={11} className="animate-spin" />}
+                Salva
+              </button>
+              <button
+                onClick={onDelete}
+                className="flex-1 py-2.5 text-xs border rounded-lg transition-colors"
+                style={{ borderColor: '#C17A5A', color: '#C17A5A' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#FDF5F0'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
+              >
+                Rimuovi
+              </button>
+            </div>
+          )}
         </div>
-
-        {/* Azioni */}
-        {isNew ? (
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={onClose}
-              className="flex-1 py-2 text-xs border border-border rounded text-gray-500 hover:bg-gray-50 transition-colors"
-            >
-              Annulla
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={saving || !selectedGroupId}
-              className="flex-1 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
-            >
-              {saving && <Loader2 size={10} className="animate-spin" />}
-              Conferma
-            </button>
-          </div>
-        ) : (
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={handleSubmit}
-              disabled={saving}
-              className="flex-1 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
-            >
-              {saving && <Loader2 size={10} className="animate-spin" />}
-              Salva
-            </button>
-            <button
-              onClick={onDelete}
-              className="flex-1 py-2 text-xs border rounded transition-colors"
-              style={{ borderColor: '#C17A5A', color: '#C17A5A' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#FDF5F0'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
-            >
-              Rimuovi
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
