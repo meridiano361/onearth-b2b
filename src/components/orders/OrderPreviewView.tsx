@@ -307,7 +307,7 @@ function AddProductsModal({
 }
 
 // ── Main view ──────────────────────────────────────────────────
-export default function OrderPreviewView({ id }: { id: string }) {
+export default function OrderPreviewView({ id, initialTab }: { id: string; initialTab?: string }) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const t = useTranslations('preview');
@@ -316,7 +316,11 @@ export default function OrderPreviewView({ id }: { id: string }) {
 
   const GROUPINGS = GROUPING_KEYS.map((k) => ({ value: k, label: tg(k) }));
 
-  const [viewMode, setViewMode] = useState<'ordine' | 'mondi' | 'calendario'>('ordine');
+  const [viewMode, setViewMode] = useState<'ordine' | 'mondi' | 'calendario'>(() => {
+    if (initialTab === 'esposizione') return 'mondi';
+    if (initialTab === 'calendario') return 'calendario';
+    return 'ordine';
+  });
   const [groupBy, setGroupBy] = useState('collezione');
   const [budgetEditing, setBudgetEditing] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Copy, Loader2, Pencil, ScanEye, Send, ShoppingCart, Trash2, TrendingUp } from 'lucide-react';
+import { CalendarDays, Copy, Layers, Loader2, Pencil, ScanEye, Send, ShoppingCart, Trash2, TrendingUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
@@ -31,6 +31,7 @@ import OrderDemetraExport from '@/components/orders/OrderDemetraExport';
 import OrderExcelExport from '@/components/orders/OrderExcelExport';
 import type { Destinazione, Order } from '@/types';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 const PREVIEW_SORT_KEY = 'preview-sort';
 const SORT_OPTIONS = [
@@ -51,6 +52,7 @@ export default function CustomerOrdersView() {
   const { ordine } = useSettings();
   const { data: session } = useSession();
   const isOperator = session?.user.role === 'OPERATOR';
+  const { mondiEspositivi } = useFeatureFlags();
 
   // Cart (bozza corrente)
   const { items: cartItems, collectionId: cartCollectionId, notes: cartNotes, clearCart } = useCartStore();
@@ -248,6 +250,13 @@ export default function CustomerOrdersView() {
                 </select>
               )}
 
+              <Link
+                href="/catalog"
+                className="w-full py-2 text-xs font-medium rounded border border-amber-400 text-amber-700 hover:bg-amber-50 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Pencil size={11} /> Modifica bozza
+              </Link>
+
               <button
                 onClick={handleCreateFromDraft}
                 disabled={draftSubmitting}
@@ -397,6 +406,28 @@ export default function CustomerOrdersView() {
                         {duplicatingId === order.id ? t('duplicating') : t('duplicateOrder')}
                       </span>
                     </button>
+                  )}
+
+                  {/* Mondi Espositivi / Calendario */}
+                  {mondiEspositivi && (
+                    <>
+                      <button
+                        onClick={() => router.push(`/catalog/orders/${order.id}/preview?tab=esposizione`)}
+                        className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
+                        title="Mondi Espositivi"
+                      >
+                        <Layers size={11} />
+                        <span className="hidden sm:inline">Mondi</span>
+                      </button>
+                      <button
+                        onClick={() => router.push(`/catalog/orders/${order.id}/preview?tab=calendario`)}
+                        className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
+                        title="Calendario Esposizione"
+                      >
+                        <CalendarDays size={11} />
+                        <span className="hidden sm:inline">Calendario</span>
+                      </button>
+                    </>
                   )}
 
                   {/* Elimina */}
