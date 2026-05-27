@@ -2,6 +2,12 @@ import { Resend } from 'resend';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
+const FROM = process.env.RESEND_FROM ?? 'ON EARTH B2B <onboarding@resend.dev>';
+
+if (!resend) {
+  console.warn('[email] RESEND_API_KEY non configurato — le email non verranno inviate');
+}
+
 export async function sendAccessRequestNotification(data: {
   nome: string;
   cognome: string;
@@ -9,15 +15,15 @@ export async function sendAccessRequestNotification(data: {
   email: string;
   telefono?: string | null;
 }) {
-  if (!resend) {
-    console.log('[email] RESEND_API_KEY non configurato, email non inviata');
-    return;
-  }
+  if (!resend) return;
+  const to = 'e.mazzolari@meridiano361.it';
+  const subject = `Nuova richiesta di accesso - ${data.nome} ${data.cognome} - ${data.organizzazione}`;
+  console.log('[email] Invio notifica richiesta accesso a:', to, '- Oggetto:', subject);
   try {
-    await resend.emails.send({
-      from: 'onboarding@resend.dev',
-      to: 'e.mazzolari@meridiano361.it',
-      subject: `Nuova richiesta di accesso - ${data.nome} ${data.cognome} - ${data.organizzazione}`,
+    const result = await resend.emails.send({
+      from: FROM,
+      to,
+      subject,
       html: `
         <h2>Nuova richiesta di accesso al portale ON EARTH B2B</h2>
         <p><strong>Organizzazione:</strong> ${data.organizzazione}</p>
@@ -29,8 +35,9 @@ export async function sendAccessRequestNotification(data: {
         <a href="https://app.b2b.on-earth.it/admin/access-requests">Gestisci la richiesta</a>
       `,
     });
+    console.log('[email] Notifica richiesta accesso inviata:', JSON.stringify(result));
   } catch (error) {
-    console.error('Errore invio email:', error);
+    console.error('[email] ERRORE invio notifica richiesta accesso:', error);
   }
 }
 
@@ -42,9 +49,12 @@ export async function sendCredenziali(params: {
   noteCliente?: string | null;
 }): Promise<{ sent: boolean }> {
   if (!resend) {
-    console.log('[email] RESEND_API_KEY non configurato — credenziali non inviate');
+    console.warn('[email] RESEND_API_KEY non configurato — credenziali non inviate a:', params.email);
     return { sent: false };
   }
+  const to = params.email;
+  const subject = 'Benvenuto su ON EARTH B2B — Le tue credenziali di accesso';
+  console.log('[email] Invio credenziali a:', to, '- Org:', params.orgNome);
   const notaHtml = params.noteCliente
     ? `<div style="border-left:3px solid #C17A5A;padding:12px 16px;margin:0 0 24px;background:#FDFAF7;border-radius:4px;">
         <p style="color:#374151;font-size:14px;margin:0;line-height:1.6;">${params.noteCliente.replace(/\n/g, '<br>')}</p>
@@ -94,15 +104,11 @@ export async function sendCredenziali(params: {
 </body>
 </html>`;
   try {
-    await resend.emails.send({
-      from: 'onboarding@resend.dev',
-      to: params.email,
-      subject: 'Benvenuto su ON EARTH B2B — Le tue credenziali di accesso',
-      html,
-    });
+    const result = await resend.emails.send({ from: FROM, to, subject, html });
+    console.log('[email] Credenziali inviate a:', to, '- Risultato:', JSON.stringify(result));
     return { sent: true };
   } catch (error) {
-    console.error('[email] Errore invio credenziali:', error);
+    console.error('[email] ERRORE invio credenziali a:', to, '-', error);
     return { sent: false };
   }
 }

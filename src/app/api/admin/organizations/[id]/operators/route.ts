@@ -5,6 +5,7 @@ import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { sendCredenziali } from '@/lib/email';
 
 const createSchema = z.object({
   nome: z.string().min(1),
@@ -14,6 +15,8 @@ const createSchema = z.object({
   ruolo: z.string().optional().nullable(),
   password: z.string().min(6),
   attivo: z.boolean().default(true),
+  inviaMail: z.boolean().default(false),
+  noteCliente: z.string().optional().nullable(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -50,8 +53,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       },
     });
 
+    let mailInviata = false;
+    if (data.inviaMail) {
+      const org = await prisma.organization.findUnique({ where: { id: params.id }, select: { nome: true } });
+      const result = await sendCredenziali({
+        nome: data.nome.trim(),
+        email,
+        password: data.password,
+        orgNome: org?.nome ?? '',
+        noteCliente: data.noteCliente,
+      });
+      mailInviata = result.sent;
+    }
+
     return NextResponse.json(
-      { data: { ...operator, createdAt: operator.createdAt.toISOString() } },
+      { data: { ...operator, createdAt: operator.createdAt.toISOString(), mailInviata } },
       { status: 201 }
     );
   } catch (err: any) {
