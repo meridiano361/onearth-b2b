@@ -414,10 +414,10 @@ export default function CustomerOrdersView() {
                       <button
                         onClick={() => router.push(`/catalog/orders/${order.id}/preview?tab=esposizione`)}
                         className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
-                        title="Mondi Espositivi"
+                        title="Esposizione"
                       >
                         <Layers size={11} />
-                        <span className="hidden sm:inline">Mondi</span>
+                        <span className="hidden sm:inline">Esposizione</span>
                       </button>
                       <button
                         onClick={() => router.push(`/catalog/orders/${order.id}/preview?tab=calendario`)}

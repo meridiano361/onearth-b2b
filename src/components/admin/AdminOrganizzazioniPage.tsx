@@ -6,7 +6,7 @@ import {
   Plus, ChevronDown, ChevronRight, Edit2, Trash2,
   ToggleLeft, ToggleRight, KeyRound, Store, Globe, Radio, Package,
   Users, MapPin, Copy, CheckSquare, Square, Loader2,
-  ShoppingBag, Building, ShoppingCart, Tag, Landmark, X, Layers,
+  ShoppingBag, Building, ShoppingCart, Tag, Landmark, X, Layers, Search,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -427,7 +427,7 @@ function OrgOperatorsBulkBar({ count, operatorIds, onDeselect, onDone }: BulkBar
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
       const json = await res.json();
-      toast.success(`Mondi ${enable ? 'abilitati' : 'disabilitati'} per ${json.updated} operatori`);
+      toast.success(`Esposizione ${enable ? 'abilitata' : 'disabilitata'} per ${json.updated} operatori`);
       onDone();
     } catch (e: any) {
       toast.error(e.message || 'Errore durante l\'operazione');
@@ -486,14 +486,14 @@ function OrgOperatorsBulkBar({ count, operatorIds, onDeselect, onDone }: BulkBar
           disabled={loading}
           className="text-2xs px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50 flex items-center gap-1"
         >
-          <Layers size={10} />Abilita Mondi
+          <Layers size={10} />Abilita Esposizione
         </button>
         <button
           onClick={() => runBulkFeature(false)}
           disabled={loading}
           className="text-2xs px-2.5 py-1 bg-[#C17A5A]/70 hover:bg-[#C17A5A] rounded transition-colors disabled:opacity-50 flex items-center gap-1"
         >
-          <Layers size={10} />Disabilita Mondi
+          <Layers size={10} />Disabilita Esposizione
         </button>
         <button
           onClick={handleDelete}
@@ -522,6 +522,7 @@ function OrgOperatorsBulkBar({ count, operatorIds, onDeselect, onDone }: BulkBar
 export default function AdminOrganizzazioniPage() {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [orgSearchText, setOrgSearchText] = useState('');
   const [showNewOrg, setShowNewOrg] = useState(false);
   const [opModal, setOpModal] = useState<{ orgId: string; orgNome: string; operator?: Operator } | null>(null);
   const [destinazioneModal, setDestinazioneModal] = useState<{ orgId: string; destinazione?: Destinazione } | null>(null);
@@ -550,9 +551,12 @@ export default function AdminOrganizzazioniPage() {
     },
   });
 
-  const orgs: Organization[] = data?.data || [];
-  const totalOrgs = orgs.length;
-  const totalOps = orgs.reduce((s, o) => s + (o.operatori?.length || 0), 0);
+  const allOrgs: Organization[] = data?.data || [];
+  const orgs: Organization[] = orgSearchText.trim()
+    ? allOrgs.filter((o) => o.nome.toLowerCase().includes(orgSearchText.toLowerCase()))
+    : allOrgs;
+  const totalOrgs = allOrgs.length;
+  const totalOps = allOrgs.reduce((s, o) => s + (o.operatori?.length || 0), 0);
 
   const allOrgsSelected = orgs.length > 0 && orgs.every((o) => selectedOrgIds.has(o.id));
   const selectedOrgCount = selectedOrgIds.size;
@@ -618,7 +622,7 @@ export default function AdminOrganizzazioniPage() {
       });
       if (!res.ok) throw new Error('Failed');
       refresh();
-      toast.success(op.featureMondiEspositivi ? 'Mondi Espositivi disabilitato' : 'Mondi Espositivi abilitato');
+      toast.success(op.featureMondiEspositivi ? 'Esposizione disabilitata' : 'Esposizione abilitata');
     } catch { toast.error('Errore'); }
   }
 
@@ -665,7 +669,7 @@ export default function AdminOrganizzazioniPage() {
       });
       if (!res.ok) throw new Error('Errore');
       const json = await res.json();
-      toast.success(`Mondi Espositivi ${enable ? 'abilitati' : 'disabilitati'} per ${json.updated} operatori`);
+      toast.success(`Esposizione ${enable ? 'abilitata' : 'disabilitata'} per ${json.updated} operatori`);
       setMondiConfirm(null);
       refresh();
     } catch {
@@ -755,8 +759,8 @@ export default function AdminOrganizzazioniPage() {
             <div className="flex items-center gap-2 bg-cream border border-border rounded px-3 py-2">
               <span className="text-xs text-gray-600">
                 {mondiConfirm === 'enable'
-                  ? `Abilitare Mondi per tutti i ${totalOps} operatori?`
-                  : `Disabilitare Mondi per tutti i ${totalOps} operatori?`}
+                  ? `Abilitare Esposizione per tutti i ${totalOps} operatori?`
+                  : `Disabilitare Esposizione per tutti i ${totalOps} operatori?`}
               </span>
               <button
                 onClick={() => handleGlobalMondi(mondiConfirm === 'enable')}
@@ -779,14 +783,14 @@ export default function AdminOrganizzazioniPage() {
                 className="flex items-center gap-1.5 text-xs border border-border rounded px-3 py-1.5 hover:bg-cream transition-colors text-gray-600"
               >
                 <Layers size={12} />
-                Abilita Mondi per tutti
+                Abilita Esposizione per tutti
               </button>
               <button
                 onClick={() => setMondiConfirm('disable')}
                 className="flex items-center gap-1.5 text-xs border border-[#C17A5A] rounded px-3 py-1.5 hover:bg-orange-50 transition-colors text-[#C17A5A]"
               >
                 <Layers size={12} />
-                Disabilita Mondi per tutti
+                Disabilita Esposizione per tutti
               </button>
             </>
           )}
@@ -832,9 +836,32 @@ export default function AdminOrganizzazioniPage() {
       {isLoading ? (
         <div className="flex justify-center py-16"><LoadingSpinner /></div>
       ) : orgs.length === 0 ? (
-        <p className="text-sm text-gray-400 py-12 text-center">Nessuna organizzazione</p>
+        <p className="text-sm text-gray-400 py-12 text-center">
+          {orgSearchText.trim()
+            ? `Nessuna organizzazione trovata per "${orgSearchText}"`
+            : 'Nessuna organizzazione'}
+        </p>
       ) : (
         <div className="space-y-2">
+          {/* Search bar */}
+          <div className="relative mb-2">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={orgSearchText}
+              onChange={(e) => setOrgSearchText(e.target.value)}
+              placeholder="Cerca organizzazione..."
+              className="w-full pl-8 pr-8 py-2 text-sm bg-white border border-border rounded focus:outline-none focus:border-accent"
+            />
+            {orgSearchText && (
+              <button
+                onClick={() => setOrgSearchText('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
           {/* Select all orgs */}
           <div className="flex items-center gap-2 px-1 pb-1">
             <button onClick={toggleSelectAllOrgs}
@@ -988,7 +1015,7 @@ export default function AdminOrganizzazioniPage() {
                                   <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Nome</th>
                                   <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Email</th>
                                   <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Stato</th>
-                                  <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs hidden xl:table-cell">Mondi</th>
+                                  <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs hidden xl:table-cell">Esposizione</th>
                                   <th className="w-24"></th>
                                 </tr>
                               </thead>
@@ -1029,7 +1056,7 @@ export default function AdminOrganizzazioniPage() {
                                               ? 'bg-violet-100 text-violet-700 hover:bg-violet-200'
                                               : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                                           }`}
-                                          title={op.featureMondiEspositivi ? 'Disabilita Mondi Espositivi' : 'Abilita Mondi Espositivi'}
+                                          title={op.featureMondiEspositivi ? 'Disabilita Esposizione' : 'Abilita Esposizione'}
                                         >
                                           <Layers size={10} />
                                           {op.featureMondiEspositivi ? 'ON' : 'OFF'}
@@ -1054,7 +1081,7 @@ export default function AdminOrganizzazioniPage() {
                                           </button>
                                           <button onClick={() => handleToggleMondiEspositivi(op)}
                                             className="p-1 xl:hidden text-gray-400 hover:text-violet-600 rounded hover:bg-violet-50 transition-colors"
-                                            title={op.featureMondiEspositivi ? 'Disabilita Mondi Espositivi' : 'Abilita Mondi Espositivi'}>
+                                            title={op.featureMondiEspositivi ? 'Disabilita Esposizione' : 'Abilita Esposizione'}>
                                             <Layers size={12} className={op.featureMondiEspositivi ? 'text-violet-500' : ''} />
                                           </button>
                                           <button onClick={() => handleDeleteOperator(op)}
@@ -1136,7 +1163,7 @@ export default function AdminOrganizzazioniPage() {
                                     </button>
                                     <button onClick={() => handleToggleMondiEspositivi(op)}
                                       className="p-1.5 text-gray-400 hover:text-violet-600 rounded hover:bg-violet-50 transition-colors"
-                                      title={op.featureMondiEspositivi ? 'Disabilita Mondi Espositivi' : 'Abilita Mondi Espositivi'}>
+                                      title={op.featureMondiEspositivi ? 'Disabilita Esposizione' : 'Abilita Esposizione'}>
                                       <Layers size={14} className={op.featureMondiEspositivi ? 'text-violet-500' : ''} />
                                     </button>
                                     <button onClick={() => handleDeleteOperator(op)}

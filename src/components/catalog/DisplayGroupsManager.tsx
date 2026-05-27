@@ -273,7 +273,7 @@ function GroupFormModal({
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative z-10 bg-white rounded-lg shadow-2xl w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-primary">{isEdit ? 'Modifica mondo' : 'Nuovo mondo espositivo'}</h3>
+          <h3 className="text-sm font-semibold text-primary">{isEdit ? 'Modifica esposizione' : 'Nuova esposizione'}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-primary p-1 transition-colors"><X size={16} /></button>
         </div>
 
@@ -1010,7 +1010,7 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
         {/* Header toolbar */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-semibold text-primary">Mondi Espositivi</h2>
+            <h2 className="text-sm font-semibold text-primary">Esposizioni</h2>
             <p className="text-2xs text-gray-400 mt-0.5">{groups.length} gruppi · {unassignedItems.length} prodotti non assegnati</p>
           </div>
           <div className="flex items-center gap-2">
@@ -1126,7 +1126,7 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
             <div className="w-14 h-14 rounded-full bg-cream flex items-center justify-center mb-3">
               <LayoutGrid size={24} className="text-gray-300" />
             </div>
-            <p className="text-sm font-medium text-gray-500 mb-1">Nessun mondo espositivo</p>
+            <p className="text-sm font-medium text-gray-500 mb-1">Nessuna esposizione</p>
             <p className="text-xs text-gray-400 mb-4">Crea il primo gruppo per organizzare i prodotti dell&apos;ordine</p>
             <button onClick={() => setNewGroupOpen(true)} className="flex items-center gap-1.5 text-xs bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors">
               <Plus size={13} />Crea primo gruppo

@@ -9,12 +9,9 @@ import type { Order } from '@/types';
 import toast from 'react-hot-toast';
 
 const STATUS_FILTERS = [
-  { value: '', label: 'Tutti' },
-  { value: 'MERCE_DA_ORDINARE',         label: 'Da esportare' },
-  { value: 'MERCE_ORDINATA',            label: 'Ordinata' },
-  { value: 'MERCE_PARZIALMENTE_PRONTA', label: 'Parz. pronta' },
-  { value: 'MERCE_PRONTA_DA_AVVISARE',  label: 'Pronta → da avvisare' },
-  { value: 'MERCE_PRONTA_AVVISATO',     label: 'Pronta: avvisato' },
+  { value: '',               label: 'Tutti' },
+  { value: 'MERCE_DA_ORDINARE', label: 'Da esportare' },
+  { value: 'ESPORTATO',         label: 'Esportato' },
 ];
 
 const STATUS_STYLE: Record<string, { badge: string; label: string }> = {
@@ -474,7 +471,7 @@ export default function AdminOrdersPage() {
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
           <p className="label-luxury text-accent mb-1">Admin</p>
-          <h1 className="font-display text-2xl text-primary font-light">Ordini in corso</h1>
+          <h1 className="font-display text-2xl text-primary font-light">Ordini</h1>
           <p className="text-sm text-gray-400 mt-0.5">{data?.total || 0} ordini totali</p>
         </div>
       </div>

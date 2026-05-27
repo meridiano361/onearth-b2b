@@ -81,6 +81,12 @@ export interface AppSettingsData {
     mostraMargine: boolean;
     mostraRimanente: boolean;
   };
+  comunicazione: {
+    attivo: boolean;
+    titolo: string;
+    testo: string;
+    colore: string;
+  };
 }
 
 export const SOCIAL_KEYS = ['instagram', 'facebook', 'pinterest', 'tiktok', 'website', 'podcast'] as const;
@@ -183,6 +189,12 @@ export const DEFAULT_APP_SETTINGS: AppSettingsData = {
   login: {
     sfondoUrl: '',
     caption: 'Collezione CASA 2027',
+  },
+  comunicazione: {
+    attivo: false,
+    titolo: '',
+    testo: '',
+    colore: '#C17A5A',
   },
 };
 
@@ -305,6 +317,12 @@ export function parseSettingsFromDb(records: { chiave: string; valore: string }[
       mostraGuadagno: bool('ordine.mostraGuadagno',  false),
       mostraMargine:  bool('ordine.mostraMargine',   true),
       mostraRimanente:bool('ordine.mostraRimanente', true),
+    },
+    comunicazione: {
+      attivo: bool('comunicazione.attivo', false),
+      titolo: str('comunicazione.titolo', ''),
+      testo:  str('comunicazione.testo',  ''),
+      colore: str('comunicazione.colore', '#C17A5A'),
     },
   };
 }

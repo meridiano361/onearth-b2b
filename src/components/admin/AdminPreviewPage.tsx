@@ -149,8 +149,22 @@ export default function AdminPreviewPage() {
             {entering ? 'Entrando…' : 'Entra in modalità anteprima'}
           </button>
 
+          <div className="pt-4 border-t border-border">
+            <p className="text-xs font-medium text-gray-700 mb-2">Oppure:</p>
+            <button
+              onClick={() => router.push('/catalog')}
+              className="flex items-center gap-2 px-4 py-2.5 border border-border text-primary text-sm font-medium rounded hover:bg-cream transition-colors w-full"
+            >
+              <Eye size={15} />
+              Anteprima generica (nessuna organizzazione)
+            </button>
+            <p className="text-2xs text-gray-400 mt-2 leading-relaxed">
+              Visualizza il catalogo senza impersonare nessun operatore. Nessun ordine, destinazione o preferito.
+            </p>
+          </div>
+
           <p className="text-2xs text-gray-400 leading-relaxed">
-            In modalità anteprima puoi navigare il catalogo, vedere preferiti, destinazioni e ordini
+            In modalità anteprima specifica puoi navigare il catalogo, vedere preferiti, destinazioni e ordini
             dell&apos;organizzazione selezionata. La creazione di ordini è disabilitata.
             Usa il banner giallo in cima alla pagina per uscire.
           </p>

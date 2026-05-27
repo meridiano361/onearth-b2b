@@ -139,7 +139,7 @@ function SpotlightCard({ product }: { product: Product }) {
 
 export default function CustomerHome() {
   const th = useTranslations('home');
-  const { home: hs, social: ss } = useSettings();
+  const { home: hs, social: ss, comunicazione: cs } = useSettings();
 
   const { data: productsData, isLoading } = useQuery({
     queryKey: ['home-products'],
@@ -192,6 +192,23 @@ export default function CustomerHome() {
             {hs.cta}
           </Link>
         </div>
+
+        {/* ── Comunicazione ────────────────────────────────────── */}
+        {cs.attivo && (cs.titolo || cs.testo) && (
+          <section>
+            <div
+              className="rounded-xl border px-5 py-4 space-y-1"
+              style={{ borderColor: cs.colore, backgroundColor: `${cs.colore}14` }}
+            >
+              {cs.titolo && (
+                <p className="text-sm font-semibold" style={{ color: cs.colore }}>{cs.titolo}</p>
+              )}
+              {cs.testo && (
+                <p className="text-sm text-gray-700">{cs.testo}</p>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* ── Scopri la collezione ─────────────────────────────── */}
         {hs.scrollAttivo && (

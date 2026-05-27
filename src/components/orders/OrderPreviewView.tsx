@@ -838,7 +838,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
           <Layers size={20} className="text-[#C17A5A] flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-primary">Organizza l&apos;esposizione in negozio</p>
-            <p className="text-xs text-gray-500 mt-0.5">Raggruppa i prodotti in mondi espositivi e pianifica le settimane di esposizione.</p>
+            <p className="text-xs text-gray-500 mt-0.5">Raggruppa i prodotti in esposizioni e pianifica le settimane di esposizione.</p>
           </div>
           <button
             onClick={() => setViewMode('mondi')}

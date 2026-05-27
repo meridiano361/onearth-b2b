@@ -113,6 +113,15 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
         {role && role !== 'CUSTOMER' && (
           <p className="px-3 text-2xs text-gray-600 uppercase tracking-widest mb-2">{role.replace('_', ' ')}</p>
         )}
+        <a
+          href="/catalog"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 px-3 py-2.5 w-full rounded text-xs text-gray-500 hover:text-white hover:bg-white/5 transition-all duration-150"
+        >
+          <Eye size={15} />
+          Vai al Catalogo
+        </a>
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           className="flex items-center gap-3 px-3 py-2.5 w-full rounded text-xs text-gray-500 hover:text-white hover:bg-white/5 transition-all duration-150"

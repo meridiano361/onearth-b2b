@@ -1,7 +1,9 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
+import Link from 'next/link';
 import { authOptions } from '@/lib/auth';
+import { isAdminRole } from '@/lib/roles';
 import { getPreviewFromSession } from '@/lib/preview';
 import { prisma } from '@/lib/prisma';
 import Header from '@/components/layout/Header';
@@ -79,6 +81,12 @@ export default async function B2BLayout({
         >
           {previewInfo && (
             <PreviewBanner orgName={previewInfo.orgName} operatorName={previewInfo.operatorName} />
+          )}
+          {isAdminRole(session.user.role) && !previewInfo && (
+            <div className="bg-amber-400 text-amber-900 text-xs font-medium px-4 py-2 flex items-center justify-between">
+              <span>Modalità Anteprima Generica — stai visualizzando il catalogo come admin</span>
+              <Link href="/admin" className="underline hover:no-underline flex-shrink-0 ml-4">← Dashboard</Link>
+            </div>
           )}
           <Header session={session} />
 

@@ -86,6 +86,11 @@ function settingsToFlat(s: AppSettingsData): SettingsFlat {
   for (const [k, v] of Object.entries(s.ordine)) {
     f[`ordine.${k}`] = String(v);
   }
+  // comunicazione
+  f['comunicazione.attivo'] = String(s.comunicazione.attivo);
+  f['comunicazione.titolo'] = s.comunicazione.titolo;
+  f['comunicazione.testo']  = s.comunicazione.testo;
+  f['comunicazione.colore'] = s.comunicazione.colore;
   return f;
 }
 
@@ -445,6 +450,7 @@ export default function AdminPersonalizzazionePage() {
     });
   }
 
+  const comunicazioneKeys = ['comunicazione.attivo', 'comunicazione.titolo', 'comunicazione.testo', 'comunicazione.colore'];
   const homeKeys = [
     'home.titolo1', 'home.titolo1.maiuscolo', 'home.titolo1.colore', 'home.titolo1.size',
     'home.titolo1.font', 'home.titolo1.weight', 'home.titolo1.lineHeight', 'home.titolo1.letterSpacing', 'home.titolo1.transform',
@@ -814,6 +820,54 @@ export default function AdminPersonalizzazionePage() {
           />
         </div>
         <SaveButton onClick={() => saveSection(loginKeys, 'Login')} loading={saving === 'Login'} />
+      </SectionCard>
+
+      {/* ── Messaggi ai clienti ──────────────────────────────── */}
+      <SectionCard title="Messaggi ai clienti">
+        <p className="text-xs text-gray-400">Mostra un messaggio evidenziato nella homepage dei clienti (notizie, promozioni, avvisi).</p>
+        <ToggleRow label="Mostra messaggio" checked={settings.comunicazione.attivo} onChange={(v) => update('comunicazione', { attivo: v })} />
+        {settings.comunicazione.attivo && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Titolo</label>
+              <input
+                type="text"
+                value={settings.comunicazione.titolo}
+                onChange={(e) => update('comunicazione', { titolo: e.target.value })}
+                placeholder="Es. Novità in catalogo"
+                className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Testo</label>
+              <textarea
+                value={settings.comunicazione.testo}
+                onChange={(e) => update('comunicazione', { testo: e.target.value })}
+                placeholder="Es. Abbiamo aggiunto 50 nuovi prodotti per la stagione primavera/estate."
+                rows={3}
+                className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900 resize-none"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Colore bordo / accento</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={settings.comunicazione.colore}
+                  onChange={(e) => update('comunicazione', { colore: e.target.value })}
+                  className="w-9 h-9 rounded border border-border cursor-pointer flex-shrink-0"
+                />
+                <input
+                  type="text"
+                  value={settings.comunicazione.colore}
+                  onChange={(e) => update('comunicazione', { colore: e.target.value })}
+                  className="flex-1 border border-border rounded px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-gray-900"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        <SaveButton onClick={() => saveSection(comunicazioneKeys, 'Comunicazione')} loading={saving === 'Comunicazione'} />
       </SectionCard>
 
       {/* ── Filtri catalogo cliente ───────────────────────────── */}
