@@ -324,7 +324,7 @@ export default function CustomerOrdersView() {
                       </div>
                       <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-2xs">
                         {ordine.mostraCosto && <>
-                          <span className="text-gray-400">Costo</span>
+                          <span className="text-gray-400">Costo (i.e.)</span>
                           <span className="font-medium text-primary text-right">{formatCurrency(cost)}</span>
                         </>}
                         {ordine.mostraVendite && <>
@@ -336,7 +336,7 @@ export default function CustomerOrdersView() {
                           <span className={`font-medium text-right ${guadagno >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatCurrency(guadagno)}</span>
                         </>}
                         {ordine.mostraMargine && <>
-                          <span className="text-gray-400">Margine</span>
+                          <span className="text-gray-400">Margine medio</span>
                           <span className="font-medium text-primary text-right">{margine.toFixed(1)}%</span>
                         </>}
                       </div>

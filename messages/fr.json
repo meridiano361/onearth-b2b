@@ -74,7 +74,7 @@
         "totalPieces": "Pièces totales",
         "orderValue": "Valeur de la commande",
         "costPrices": "Prix de revient h.t.",
-        "costOrder": "Coût commande",
+        "costOrder": "Coût commande (h.t.)",
         "potentialSales": "Ventes potentielles",
         "potentialGain": "Gain potentiel",
         "avgMargin": "Marge moy.",

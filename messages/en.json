@@ -74,7 +74,7 @@
         "totalPieces": "Total pieces",
         "orderValue": "Order Value",
         "costPrices": "Cost prices excl. VAT",
-        "costOrder": "Order cost",
+        "costOrder": "Order cost (excl. VAT)",
         "potentialSales": "Potential sales",
         "potentialGain": "Potential gain",
         "avgMargin": "Avg. margin",
