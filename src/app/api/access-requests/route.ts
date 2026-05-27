@@ -15,13 +15,15 @@ const createSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  let record;
   try {
     const body = await req.json();
     const data = createSchema.parse(body);
-    const record = await prisma.accessRequest.create({ data });
-
-    await sendAccessRequestNotification(data);
-
+    record = await prisma.accessRequest.create({ data });
+    // Fire-and-forget: email failure must not block the 201 response
+    sendAccessRequestNotification(data).catch((err) =>
+      console.error('[EMAIL] sendAccessRequestNotification uncaught:', err)
+    );
     return NextResponse.json({ data: record }, { status: 201 });
   } catch (err: any) {
     if (err.name === 'ZodError') {

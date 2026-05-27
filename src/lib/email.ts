@@ -1,11 +1,37 @@
 import { Resend } from 'resend';
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const FROM = process.env.RESEND_FROM ?? 'onboarding@resend.dev';
 
-const FROM = process.env.RESEND_FROM ?? 'ON EARTH B2B <onboarding@resend.dev>';
+function getResend(): Resend | null {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    console.error('[EMAIL] RESEND_API_KEY mancante — email non inviata');
+    return null;
+  }
+  return new Resend(key);
+}
 
-if (!resend) {
-  console.warn('[email] RESEND_API_KEY non configurato — le email non verranno inviate');
+async function sendEmail({
+  to,
+  subject,
+  html,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<boolean> {
+  const resend = getResend();
+  if (!resend) return false;
+
+  console.log('[EMAIL] Invio a:', to, '— Oggetto:', subject);
+  try {
+    const result = await resend.emails.send({ from: FROM, to, subject, html });
+    console.log('[EMAIL] Inviata — ID:', result.data?.id, '| Errore:', result.error ?? 'nessuno');
+    return !result.error;
+  } catch (error) {
+    console.error('[EMAIL] ERRORE invio a', to, ':', error);
+    return false;
+  }
 }
 
 export async function sendAccessRequestNotification(data: {
@@ -14,31 +40,21 @@ export async function sendAccessRequestNotification(data: {
   organizzazione: string;
   email: string;
   telefono?: string | null;
-}) {
-  if (!resend) return;
-  const to = 'e.mazzolari@meridiano361.it';
-  const subject = `Nuova richiesta di accesso - ${data.nome} ${data.cognome} - ${data.organizzazione}`;
-  console.log('[email] Invio notifica richiesta accesso a:', to, '- Oggetto:', subject);
-  try {
-    const result = await resend.emails.send({
-      from: FROM,
-      to,
-      subject,
-      html: `
-        <h2>Nuova richiesta di accesso al portale ON EARTH B2B</h2>
-        <p><strong>Organizzazione:</strong> ${data.organizzazione}</p>
-        <p><strong>Nome:</strong> ${data.nome} ${data.cognome}</p>
-        <p><strong>Email:</strong> ${data.email}</p>
-        <p><strong>Telefono:</strong> ${data.telefono || 'non fornito'}</p>
-        <p><strong>Data:</strong> ${new Date().toLocaleString('it-IT')}</p>
-        <br>
-        <a href="https://app.b2b.on-earth.it/admin/access-requests">Gestisci la richiesta</a>
-      `,
-    });
-    console.log('[email] Notifica richiesta accesso inviata:', JSON.stringify(result));
-  } catch (error) {
-    console.error('[email] ERRORE invio notifica richiesta accesso:', error);
-  }
+}): Promise<void> {
+  await sendEmail({
+    to: 'e.mazzolari@meridiano361.it',
+    subject: `Nuova richiesta di accesso - ${data.nome} ${data.cognome} - ${data.organizzazione}`,
+    html: `
+      <h2>Nuova richiesta di accesso al portale ON EARTH B2B</h2>
+      <p><strong>Organizzazione:</strong> ${data.organizzazione}</p>
+      <p><strong>Nome:</strong> ${data.nome} ${data.cognome}</p>
+      <p><strong>Email:</strong> ${data.email}</p>
+      <p><strong>Telefono:</strong> ${data.telefono || 'non fornito'}</p>
+      <p><strong>Data:</strong> ${new Date().toLocaleString('it-IT')}</p>
+      <br>
+      <a href="https://app.b2b.on-earth.it/admin/access-requests">Gestisci la richiesta</a>
+    `,
+  });
 }
 
 export async function sendCredenziali(params: {
@@ -48,18 +64,12 @@ export async function sendCredenziali(params: {
   orgNome: string;
   noteCliente?: string | null;
 }): Promise<{ sent: boolean }> {
-  if (!resend) {
-    console.warn('[email] RESEND_API_KEY non configurato — credenziali non inviate a:', params.email);
-    return { sent: false };
-  }
-  const to = params.email;
-  const subject = 'Benvenuto su ON EARTH B2B — Le tue credenziali di accesso';
-  console.log('[email] Invio credenziali a:', to, '- Org:', params.orgNome);
   const notaHtml = params.noteCliente
     ? `<div style="border-left:3px solid #C17A5A;padding:12px 16px;margin:0 0 24px;background:#FDFAF7;border-radius:4px;">
         <p style="color:#374151;font-size:14px;margin:0;line-height:1.6;">${params.noteCliente.replace(/\n/g, '<br>')}</p>
        </div>`
     : '';
+
   const html = `<!DOCTYPE html>
 <html lang="it">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -103,12 +113,11 @@ export async function sendCredenziali(params: {
   </div>
 </body>
 </html>`;
-  try {
-    const result = await resend.emails.send({ from: FROM, to, subject, html });
-    console.log('[email] Credenziali inviate a:', to, '- Risultato:', JSON.stringify(result));
-    return { sent: true };
-  } catch (error) {
-    console.error('[email] ERRORE invio credenziali a:', to, '-', error);
-    return { sent: false };
-  }
+
+  const sent = await sendEmail({
+    to: params.email,
+    subject: 'Benvenuto su ON EARTH B2B — Le tue credenziali di accesso',
+    html,
+  });
+  return { sent };
 }
