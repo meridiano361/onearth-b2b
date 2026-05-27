@@ -138,6 +138,7 @@ const RUOLI = [
 interface OperatorFormData {
   nome: string; cognome: string; email: string; telefono: string;
   ruolo: string; password: string; attivo: boolean;
+  inviaMail: boolean; noteCliente: string;
 }
 
 function OperatorModal({
@@ -153,6 +154,7 @@ function OperatorModal({
     email: operator?.email || '', telefono: operator?.telefono || '',
     ruolo: operator?.ruolo || '',
     password: isEdit ? '' : defaultPwd, attivo: operator?.attivo ?? true,
+    inviaMail: false, noteCliente: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -184,10 +186,18 @@ function OperatorModal({
             nome: form.nome, cognome: form.cognome, email: form.email,
             telefono: form.telefono || null, ruolo: form.ruolo || null,
             password: form.password, attivo: form.attivo,
+            inviaMail: form.inviaMail, noteCliente: form.noteCliente || null,
           }),
         });
         if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
-        toast.success(`Operatore creato, password: ${form.password}`);
+        const json = await res.json();
+        if (json.data?.mailInviata) {
+          toast.success(`Operatore creato. Email con credenziali inviata a ${form.email}`);
+        } else if (form.inviaMail) {
+          toast(`Operatore creato ma email non inviata. Verifica la configurazione email.`, { icon: '⚠️' });
+        } else {
+          toast.success(`Operatore creato. Password: ${form.password}`);
+        }
       }
       onSave();
     } catch (e: any) {
@@ -231,6 +241,28 @@ function OperatorModal({
             className="w-4 h-4 accent-accent" />
           <label htmlFor="op-attivo" className="text-sm text-primary">Attivo (può accedere)</label>
         </div>
+        {!isEdit && (
+          <>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="op-inviamail" checked={form.inviaMail}
+                onChange={(e) => setForm((f) => ({ ...f, inviaMail: e.target.checked }))}
+                className="w-4 h-4 accent-accent" />
+              <label htmlFor="op-inviamail" className="text-sm text-primary">Invia email con credenziali</label>
+            </div>
+            {form.inviaMail && (
+              <div>
+                <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">Nota per il cliente (opzionale)</label>
+                <textarea
+                  value={form.noteCliente}
+                  onChange={(e) => setForm((f) => ({ ...f, noteCliente: e.target.value }))}
+                  placeholder="Es. Benvenuto! Da oggi puoi consultare il catalogo ON EARTH..."
+                  rows={3}
+                  className="w-full px-4 py-2.5 bg-white border border-border rounded text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-accent resize-none"
+                />
+              </div>
+            )}
+          </>
+        )}
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="ghost" onClick={onClose}>Annulla</Button>
           <Button onClick={handleSave} loading={saving}>{isEdit ? 'Salva' : 'Crea operatore'}</Button>
