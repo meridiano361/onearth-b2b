@@ -3,6 +3,8 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import type { AppRole } from '@/types';
+import { checkRateLimit } from '@/lib/rateLimit';
+import { securityLog } from '@/lib/securityLog';
 
 async function repairOperatorOrg(token: any) {
   if (token.role !== 'OPERATOR' || token.organizationId) return;
@@ -18,12 +20,23 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email e password obbligatorie');
         }
 
         const email = credentials.email.toLowerCase().trim();
+        const ip =
+          (req as any)?.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ??
+          (req as any)?.headers?.['x-real-ip'] ??
+          'unknown';
+
+        const ipCheck = checkRateLimit(`login:ip:${ip}`, 30, 15 * 60 * 1000);
+        const emailCheck = checkRateLimit(`login:email:${email}`, 10, 15 * 60 * 1000);
+        if (!ipCheck.allowed || !emailCheck.allowed) {
+          securityLog('rate_limit_hit', { event_detail: 'login', email, ip });
+          throw new Error('Troppi tentativi. Riprova tra qualche minuto.');
+        }
 
         // Try operator first
         const operator = await prisma.operator.findFirst({
@@ -33,7 +46,11 @@ export const authOptions: NextAuthOptions = {
 
         if (operator && operator.attivo) {
           const valid = await bcrypt.compare(credentials.password, operator.passwordHash);
-          if (!valid) throw new Error('Email o password non validi');
+          if (!valid) {
+            securityLog('login_failed', { email, ip, reason: 'wrong_password', userType: 'operator' });
+            throw new Error('Email o password non validi');
+          }
+          securityLog('login_success', { email, ip, userType: 'operator', id: operator.id });
           return {
             id: operator.id,
             email: operator.email,
@@ -54,8 +71,11 @@ export const authOptions: NextAuthOptions = {
         if (!customer.isActive) throw new Error('Account disabilitato. Contatta il supporto.');
 
         const valid = await bcrypt.compare(credentials.password, customer.passwordHash);
-        if (!valid) throw new Error('Email o password non validi');
-
+        if (!valid) {
+          securityLog('login_failed', { email, ip, reason: 'wrong_password', userType: 'customer' });
+          throw new Error('Email o password non validi');
+        }
+        securityLog('login_success', { email, ip, userType: 'customer', id: customer.id });
         return {
           id: customer.id,
           email: customer.email,

@@ -5,6 +5,8 @@ import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { sendAccessRequestNotification } from '@/lib/email';
+import { checkRateLimit } from '@/lib/rateLimit';
+import { securityLog } from '@/lib/securityLog';
 
 const createSchema = z.object({
   organizzazione: z.string().min(1),
@@ -15,6 +17,16 @@ const createSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    req.headers.get('x-real-ip') ??
+    'unknown';
+  const rl = checkRateLimit(`access-request:ip:${ip}`, 5, 60 * 60 * 1000);
+  if (!rl.allowed) {
+    securityLog('rate_limit_hit', { event_detail: 'access_request', ip });
+    return NextResponse.json({ error: 'Troppi tentativi. Riprova più tardi.' }, { status: 429 });
+  }
+
   let record;
   try {
     const body = await req.json();
