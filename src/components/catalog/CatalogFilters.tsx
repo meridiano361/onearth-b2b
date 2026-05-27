@@ -36,8 +36,45 @@ interface CatalogFiltersProps {
   enabledFilters?: string[] | null;
 }
 
-function opts(products: Product[], field: keyof Product): string[] {
-  return [...new Set(products.map((p) => p[field]).filter(Boolean) as string[])].sort();
+type FilterRecord = Record<string, string | null>;
+
+// Apply every active filter EXCEPT excludeKey
+function applyFiltersExcept(products: Product[], filters: FilterRecord, excludeKey: string): Product[] {
+  return products.filter(p =>
+    Object.entries(filters).every(([key, value]) => {
+      if (!value || key === excludeKey) return true;
+      if (key === 'temaColore') {
+        return [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].some(v => v === value);
+      }
+      return (p as unknown as Record<string, unknown>)[key] === value;
+    })
+  );
+}
+
+// Count distinct values for a field from the "exclude self" filtered product set
+function computeOptions(products: Product[], filters: FilterRecord, key: string): { value: string; count: number }[] {
+  const filtered = applyFiltersExcept(products, filters, key);
+
+  if (key === 'temaColore') {
+    const counts = new Map<string, number>();
+    for (const p of filtered) {
+      for (const v of [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5]) {
+        if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
+      }
+    }
+    return Array.from(counts.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([value, count]) => ({ value, count }));
+  }
+
+  const counts = new Map<string, number>();
+  for (const p of filtered) {
+    const v = (p as unknown as Record<string, unknown>)[key] as string | undefined;
+    if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([value, count]) => ({ value, count }));
 }
 
 function FilterSelect({
@@ -50,10 +87,10 @@ function FilterSelect({
   label: string;
   allLabel: string;
   value: string | null;
-  options: string[];
+  options: { value: string; count: number }[];
   onChange: (v: string | null) => void;
 }) {
-  if (options.length === 0) return null;
+  if (options.length === 0 && !value) return null;
   return (
     <div className="mb-3">
       <label className="block text-2xs text-gray-400 uppercase tracking-wider mb-1">{label}</label>
@@ -63,8 +100,8 @@ function FilterSelect({
         className="w-full text-xs border border-border rounded px-2 py-1.5 text-primary bg-white focus:outline-none focus:border-accent transition-colors cursor-pointer"
       >
         <option value="">{allLabel}</option>
-        {options.map((o) => (
-          <option key={o} value={o}>{o}</option>
+        {options.map(({ value: optValue, count }) => (
+          <option key={optValue} value={optValue}>{optValue} ({count})</option>
         ))}
       </select>
     </div>
@@ -91,85 +128,41 @@ export default function CatalogFilters({
   const t = useTranslations('filters');
   const show = (key: string) => !enabledFilters || enabledFilters.length === 0 || enabledFilters.includes(key);
 
-  // ── Cascading product subsets ──────────────────────────────
-  const byGM = useMemo(() =>
-    selectedGruppoMerceologico
-      ? products.filter((p) => p.gruppoMerceologico === selectedGruppoMerceologico)
-      : products,
-    [products, selectedGruppoMerceologico]
-  );
+  // Flat record of all active selections — used by computeOptions for each filter
+  const activeFilters = useMemo<FilterRecord>(() => ({
+    gruppoMerceologico: selectedGruppoMerceologico,
+    famiglia:           selectedFamiglia,
+    classe:             selectedClasse,
+    sottoclasse:        selectedSottoclasse,
+    gruppoOmogeneo:     selectedGruppoOmogeneo,
+    nomLinea:           selectedNomLinea,
+    colore:             selectedColore,
+    temaColore:         selectedTemaColore,
+    stagione:           selectedStagione,
+    collezione:         selectedCollezione,
+    produttore:         selectedProduttore,
+    tranche:            selectedTranche,
+  }), [
+    selectedGruppoMerceologico, selectedFamiglia, selectedClasse, selectedSottoclasse,
+    selectedGruppoOmogeneo, selectedNomLinea, selectedColore, selectedTemaColore,
+    selectedStagione, selectedCollezione, selectedProduttore, selectedTranche,
+  ]);
 
-  const byGMFam = useMemo(() =>
-    selectedFamiglia ? byGM.filter((p) => p.famiglia === selectedFamiglia) : byGM,
-    [byGM, selectedFamiglia]
-  );
-
-  const byGMFamCls = useMemo(() =>
-    selectedClasse ? byGMFam.filter((p) => p.classe === selectedClasse) : byGMFam,
-    [byGMFam, selectedClasse]
-  );
-
-  const byGMFamClsSub = useMemo(() =>
-    selectedSottoclasse ? byGMFamCls.filter((p) => p.sottoclasse === selectedSottoclasse) : byGMFamCls,
-    [byGMFamCls, selectedSottoclasse]
-  );
-
-  // All hierarchy filters applied — used for flat filter options
-  const byHierarchy = useMemo(() =>
-    selectedGruppoOmogeneo
-      ? byGMFamClsSub.filter((p) => p.gruppoOmogeneo === selectedGruppoOmogeneo)
-      : byGMFamClsSub,
-    [byGMFamClsSub, selectedGruppoOmogeneo]
-  );
-
-  // ── Options per level ──────────────────────────────────────
-  const gruppoMerceologicoOpts = useMemo(() => opts(products,      'gruppoMerceologico'), [products]);
-  const famigliaOpts           = useMemo(() => opts(byGM,          'famiglia'),           [byGM]);
-  const classeOpts             = useMemo(() => opts(byGMFam,       'classe'),             [byGMFam]);
-  const sottoclasseOpts        = useMemo(() => opts(byGMFamCls,    'sottoclasse'),        [byGMFamCls]);
-  const gruppoOmogeneoOpts     = useMemo(() => opts(byGMFamClsSub, 'gruppoOmogeneo'),     [byGMFamClsSub]);
-
-  // Flat filters scoped to active hierarchy
-  const nomLineaOpts    = useMemo(() => opts(byHierarchy, 'nomLinea'),    [byHierarchy]);
-  const coloreOpts      = useMemo(() => opts(byHierarchy, 'colore'),      [byHierarchy]);
-  const temaColoreOpts  = useMemo(() => {
-    const set = new Set<string>();
-    for (const p of byHierarchy) {
-      [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].forEach((v) => { if (v) set.add(v); });
-    }
-    return Array.from(set).sort();
-  }, [byHierarchy]);
-  const stagioneOpts    = useMemo(() => opts(byHierarchy, 'stagione'),    [byHierarchy]);
-  const collezioneOpts  = useMemo(() => opts(byHierarchy, 'collezione'),  [byHierarchy]);
-  const produttoreOpts  = useMemo(() => opts(byHierarchy, 'produttore'),  [byHierarchy]);
-  const trancheOpts     = useMemo(() => opts(byHierarchy, 'tranche'),     [byHierarchy]);
-
-  // ── Cascading onChange handlers ────────────────────────────
-  function handleGruppoMerceologicoChange(v: string | null) {
-    onGruppoMerceologicoChange(v);
-    onFamigliaChange(null);
-    onClasseChange(null);
-    onSottoclasseChange(null);
-    onGruppoOmogeneoChange(null);
-  }
-
-  function handleFamigliaChange(v: string | null) {
-    onFamigliaChange(v);
-    onClasseChange(null);
-    onSottoclasseChange(null);
-    onGruppoOmogeneoChange(null);
-  }
-
-  function handleClasseChange(v: string | null) {
-    onClasseChange(v);
-    onSottoclasseChange(null);
-    onGruppoOmogeneoChange(null);
-  }
-
-  function handleSottoclasseChange(v: string | null) {
-    onSottoclasseChange(v);
-    onGruppoOmogeneoChange(null);
-  }
+  // Compute available options for ALL filters in one memo — each uses "exclude self" logic
+  const opts = useMemo(() => ({
+    gruppoMerceologico: computeOptions(products, activeFilters, 'gruppoMerceologico'),
+    famiglia:           computeOptions(products, activeFilters, 'famiglia'),
+    classe:             computeOptions(products, activeFilters, 'classe'),
+    sottoclasse:        computeOptions(products, activeFilters, 'sottoclasse'),
+    gruppoOmogeneo:     computeOptions(products, activeFilters, 'gruppoOmogeneo'),
+    nomLinea:           computeOptions(products, activeFilters, 'nomLinea'),
+    colore:             computeOptions(products, activeFilters, 'colore'),
+    temaColore:         computeOptions(products, activeFilters, 'temaColore'),
+    stagione:           computeOptions(products, activeFilters, 'stagione'),
+    collezione:         computeOptions(products, activeFilters, 'collezione'),
+    produttore:         computeOptions(products, activeFilters, 'produttore'),
+    tranche:            computeOptions(products, activeFilters, 'tranche'),
+  }), [products, activeFilters]);
 
   return (
     <div className="w-56 flex-shrink-0 border-r border-border bg-white overflow-y-auto">
@@ -189,21 +182,18 @@ export default function CatalogFilters({
           )}
         </div>
 
-        {/* Hierarchy */}
-        {show('gruppoMerceologico') && <FilterSelect label={t('gruppoMerceologico')} allLabel={t('all')} value={selectedGruppoMerceologico} options={gruppoMerceologicoOpts} onChange={handleGruppoMerceologicoChange} />}
-        {show('famiglia')           && <FilterSelect label={t('famiglia')}           allLabel={t('all')} value={selectedFamiglia}           options={famigliaOpts}           onChange={handleFamigliaChange} />}
-        {show('classe')             && <FilterSelect label={t('classe')}             allLabel={t('all')} value={selectedClasse}             options={classeOpts}             onChange={handleClasseChange} />}
-        {show('sottoclasse')        && <FilterSelect label={t('sottoclasse')}        allLabel={t('all')} value={selectedSottoclasse}        options={sottoclasseOpts}        onChange={handleSottoclasseChange} />}
-        {show('gruppoOmogeneo')     && <FilterSelect label={t('gruppoOmogeneo')}     allLabel={t('all')} value={selectedGruppoOmogeneo}     options={gruppoOmogeneoOpts}     onChange={onGruppoOmogeneoChange} />}
-
-        {/* Flat filters scoped to hierarchy */}
-        {show('nomLinea')    && <FilterSelect label={t('linea')}      allLabel={t('all')} value={selectedNomLinea}    options={nomLineaOpts}    onChange={onNomLineaChange} />}
-        {show('colore')      && <FilterSelect label={t('colore')}     allLabel={t('all')} value={selectedColore}      options={coloreOpts}      onChange={onColoreChange} />}
-        {show('temaColore')  && <FilterSelect label={t('temaColore')} allLabel={t('all')} value={selectedTemaColore}  options={temaColoreOpts}  onChange={onTemaColoreChange} />}
-        {show('stagione')    && <FilterSelect label={t('stagione')}   allLabel={t('all')} value={selectedStagione}    options={stagioneOpts}    onChange={onStagioneChange} />}
-        {show('collezione')  && <FilterSelect label={t('collezione')} allLabel={t('all')} value={selectedCollezione}  options={collezioneOpts}  onChange={onCollezioneChange} />}
-        {show('produttore')  && <FilterSelect label={t('produttore')} allLabel={t('all')} value={selectedProduttore}  options={produttoreOpts}  onChange={onProduttoreChange} />}
-        {show('tranche')     && <FilterSelect label={t('tranche')}    allLabel={t('all')} value={selectedTranche}     options={trancheOpts}     onChange={onTrancheChange} />}
+        {show('gruppoMerceologico') && <FilterSelect label={t('gruppoMerceologico')} allLabel={t('all')} value={selectedGruppoMerceologico} options={opts.gruppoMerceologico} onChange={onGruppoMerceologicoChange} />}
+        {show('famiglia')           && <FilterSelect label={t('famiglia')}           allLabel={t('all')} value={selectedFamiglia}           options={opts.famiglia}           onChange={onFamigliaChange} />}
+        {show('classe')             && <FilterSelect label={t('classe')}             allLabel={t('all')} value={selectedClasse}             options={opts.classe}             onChange={onClasseChange} />}
+        {show('sottoclasse')        && <FilterSelect label={t('sottoclasse')}        allLabel={t('all')} value={selectedSottoclasse}        options={opts.sottoclasse}        onChange={onSottoclasseChange} />}
+        {show('gruppoOmogeneo')     && <FilterSelect label={t('gruppoOmogeneo')}     allLabel={t('all')} value={selectedGruppoOmogeneo}     options={opts.gruppoOmogeneo}     onChange={onGruppoOmogeneoChange} />}
+        {show('nomLinea')           && <FilterSelect label={t('linea')}              allLabel={t('all')} value={selectedNomLinea}           options={opts.nomLinea}           onChange={onNomLineaChange} />}
+        {show('colore')             && <FilterSelect label={t('colore')}             allLabel={t('all')} value={selectedColore}             options={opts.colore}             onChange={onColoreChange} />}
+        {show('temaColore')         && <FilterSelect label={t('temaColore')}         allLabel={t('all')} value={selectedTemaColore}         options={opts.temaColore}         onChange={onTemaColoreChange} />}
+        {show('stagione')           && <FilterSelect label={t('stagione')}           allLabel={t('all')} value={selectedStagione}           options={opts.stagione}           onChange={onStagioneChange} />}
+        {show('collezione')         && <FilterSelect label={t('collezione')}         allLabel={t('all')} value={selectedCollezione}         options={opts.collezione}         onChange={onCollezioneChange} />}
+        {show('produttore')         && <FilterSelect label={t('produttore')}         allLabel={t('all')} value={selectedProduttore}         options={opts.produttore}         onChange={onProduttoreChange} />}
+        {show('tranche')            && <FilterSelect label={t('tranche')}            allLabel={t('all')} value={selectedTranche}           options={opts.tranche}            onChange={onTrancheChange} />}
 
       </div>
     </div>

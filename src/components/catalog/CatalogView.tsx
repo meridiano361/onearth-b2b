@@ -32,6 +32,50 @@ type Filters = {
   tranche:            string | null;
 };
 
+// ── Bidirectional filter invalidation helpers ─────────────────────────────────
+
+function filterMatchesProduct(p: Product, key: keyof Filters, value: string): boolean {
+  if (key === 'temaColore') {
+    return [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].some(v => v === value);
+  }
+  return (p as unknown as Record<string, unknown>)[key] === value;
+}
+
+function getAvailableValues(products: Product[], filters: Filters, key: keyof Filters): Set<string> {
+  const result = new Set<string>();
+  for (const p of products) {
+    // Check all filters EXCEPT key
+    const matches = (Object.keys(filters) as (keyof Filters)[]).every(k => {
+      const v = filters[k];
+      if (!v || k === key) return true;
+      return filterMatchesProduct(p, k, v);
+    });
+    if (!matches) continue;
+    if (key === 'temaColore') {
+      for (const v of [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5]) {
+        if (v) result.add(v);
+      }
+    } else {
+      const v = (p as unknown as Record<string, unknown>)[key] as string | undefined;
+      if (v) result.add(v);
+    }
+  }
+  return result;
+}
+
+// After changing one filter, clear any other selected filters that have 0 matching products
+function clearInvalidFilters(products: Product[], filters: Filters, changedKey: keyof Filters): Filters {
+  let next = { ...filters };
+  for (const k of Object.keys(next) as (keyof Filters)[]) {
+    if (!next[k] || k === changedKey) continue;
+    const available = getAvailableValues(products, next, k);
+    if (!available.has(next[k] as string)) {
+      next = { ...next, [k]: null };
+    }
+  }
+  return next;
+}
+
 const EMPTY_FILTERS: Filters = {
   gruppoMerceologico: null, famiglia: null, classe: null, sottoclasse: null,
   gruppoOmogeneo: null, nomLinea: null, colore: null, temaColore: null,
@@ -108,7 +152,8 @@ export default function CatalogView() {
   // ── Filter setters (update state + URL) ─────────────────────
   function setFilter(key: keyof Filters, value: string | null) {
     setFilters(prev => {
-      const next = { ...prev, [key]: value };
+      const withNew = { ...prev, [key]: value };
+      const next = clearInvalidFilters(products, withNew, key);
       updateUrl(next, sortBy, search);
       return next;
     });
@@ -144,7 +189,10 @@ export default function CatalogView() {
   }
 
   function setPendingFilter(key: keyof Filters, value: string | null) {
-    setPendingFilters(prev => ({ ...prev, [key]: value }));
+    setPendingFilters(prev => {
+      const withNew = { ...prev, [key]: value };
+      return clearInvalidFilters(products, withNew, key);
+    });
   }
 
   function applyMobileFilters() {
@@ -249,10 +297,10 @@ export default function CatalogView() {
   function makeFilterProps(currentFilters: Filters, onFilterChange: (key: keyof Filters, value: string | null) => void) {
     return {
       products,
-      selectedGruppoMerceologico: currentFilters.gruppoMerceologico, onGruppoMerceologicoChange: (v: string | null) => { onFilterChange('gruppoMerceologico', v); onFilterChange('famiglia', null); onFilterChange('classe', null); onFilterChange('sottoclasse', null); onFilterChange('gruppoOmogeneo', null); },
-      selectedFamiglia:           currentFilters.famiglia,           onFamigliaChange:           (v: string | null) => { onFilterChange('famiglia', v); onFilterChange('classe', null); onFilterChange('sottoclasse', null); onFilterChange('gruppoOmogeneo', null); },
-      selectedClasse:             currentFilters.classe,             onClasseChange:             (v: string | null) => { onFilterChange('classe', v); onFilterChange('sottoclasse', null); onFilterChange('gruppoOmogeneo', null); },
-      selectedSottoclasse:        currentFilters.sottoclasse,        onSottoclasseChange:        (v: string | null) => { onFilterChange('sottoclasse', v); onFilterChange('gruppoOmogeneo', null); },
+      selectedGruppoMerceologico: currentFilters.gruppoMerceologico, onGruppoMerceologicoChange: (v: string | null) => onFilterChange('gruppoMerceologico', v),
+      selectedFamiglia:           currentFilters.famiglia,           onFamigliaChange:           (v: string | null) => onFilterChange('famiglia', v),
+      selectedClasse:             currentFilters.classe,             onClasseChange:             (v: string | null) => onFilterChange('classe', v),
+      selectedSottoclasse:        currentFilters.sottoclasse,        onSottoclasseChange:        (v: string | null) => onFilterChange('sottoclasse', v),
       selectedGruppoOmogeneo:     currentFilters.gruppoOmogeneo,     onGruppoOmogeneoChange:     (v: string | null) => onFilterChange('gruppoOmogeneo', v),
       selectedNomLinea:           currentFilters.nomLinea,           onNomLineaChange:           (v: string | null) => onFilterChange('nomLinea', v),
       selectedColore:             currentFilters.colore,             onColoreChange:             (v: string | null) => onFilterChange('colore', v),
