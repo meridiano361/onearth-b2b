@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent,
+  useDraggable, useDroppable, pointerWithin, CollisionDetection,
 } from '@dnd-kit/core';
 import {
   SortableContext, useSortable, verticalListSortingStrategy, rectSortingStrategy, arrayMove,
@@ -83,6 +84,23 @@ function getActiveSchedule(schedules: DisplayGroupSchedule[] | undefined): Displ
   return schedules.find((s) => s.anno === year) ?? schedules[0];
 }
 
+// ─── Custom collision detection ───────────────────────────────────────────────
+
+const customCollisionDetection: CollisionDetection = (args) => {
+  const activeType = (args.active.data.current as any)?.type;
+
+  // Group reordering: use closestCenter among group sortables
+  if (activeType === 'group') {
+    return closestCenter(args);
+  }
+
+  // For available cards and grid items: prefer pointer containment
+  const pointerCollisions = pointerWithin(args);
+  if (pointerCollisions.length > 0) return pointerCollisions;
+
+  return closestCenter(args);
+};
+
 // ─── FlameButton ──────────────────────────────────────────────────────────────
 
 function FlameButton({
@@ -100,7 +118,7 @@ function FlameButton({
   );
 }
 
-// ─── Product views (used in GroupRow) ─────────────────────────────────────────
+// ─── ProductListaView ─────────────────────────────────────────────────────────
 
 function ProductListaView({
   items, orderId, groupId, onRemove, onToggleFocus, deletingItemId,
@@ -163,15 +181,21 @@ function ProductListaView({
   );
 }
 
+// ─── SortableBoardItem ─────────────────────────────────────────────────────────
+
 function SortableBoardItem({
-  item, onRemove, onToggleFocus, deletingItemId,
+  item, groupId, onRemove, onToggleFocus, deletingItemId,
 }: {
   item: DisplayGroupItem;
+  groupId: string;
   onRemove: (item: DisplayGroupItem) => void;
   onToggleFocus: (item: DisplayGroupItem) => void;
   deletingItemId: string | null;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+    data: { type: 'gridItem', groupId, orderItemId: item.orderItemId },
+  });
   const p = item.orderItem.product;
   return (
     <div
@@ -218,6 +242,8 @@ function SortableBoardItem({
   );
 }
 
+// ─── ProductBoardView ─────────────────────────────────────────────────────────
+
 function ProductBoardView({
   items, orderId, groupId, onRemove, onToggleFocus, deletingItemId,
 }: {
@@ -228,49 +254,155 @@ function ProductBoardView({
   onToggleFocus: (item: DisplayGroupItem) => void;
   deletingItemId: string | null;
 }) {
-  const [localItems, setLocalItems] = useState<DisplayGroupItem[]>(() =>
-    [...items].sort((a, b) => a.posizione - b.posizione)
+  return (
+    <SortableContext items={items.map(i => i.id)} strategy={rectSortingStrategy}>
+      <div className="grid grid-cols-3 sm:grid-cols-6 xl:grid-cols-10 gap-2">
+        {items.map((item) => (
+          <SortableBoardItem
+            key={item.id}
+            item={item}
+            groupId={groupId}
+            onRemove={onRemove}
+            onToggleFocus={onToggleFocus}
+            deletingItemId={deletingItemId}
+          />
+        ))}
+      </div>
+    </SortableContext>
   );
+}
 
-  useEffect(() => {
-    setLocalItems([...items].sort((a, b) => a.posizione - b.posizione));
-  }, [items]);
+// ─── GroupBoardDropZone ───────────────────────────────────────────────────────
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
-
-  async function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIdx = localItems.findIndex(i => i.id === active.id);
-    const newIdx = localItems.findIndex(i => i.id === over.id);
-    if (oldIdx === -1 || newIdx === -1) return;
-    const reordered = arrayMove(localItems, oldIdx, newIdx);
-    setLocalItems(reordered);
-    try {
-      await fetch(`/api/catalog/orders/${orderId}/display-groups/${groupId}/items/reorder`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: reordered.map((it, i) => ({ orderItemId: it.orderItemId, posizione: i })) }),
-      });
-    } catch { /* silent — next refresh will restore server order */ }
-  }
+function GroupBoardDropZone({
+  groupId, isEmpty, children,
+}: {
+  groupId: string;
+  isEmpty: boolean;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `group-board-${groupId}`,
+    data: { type: 'groupBoard', groupId },
+  });
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={localItems.map(i => i.id)} strategy={rectSortingStrategy}>
-        <div className="grid grid-cols-3 sm:grid-cols-6 xl:grid-cols-10 gap-2">
-          {localItems.map((item) => (
-            <SortableBoardItem
-              key={item.id}
-              item={item}
-              onRemove={onRemove}
-              onToggleFocus={onToggleFocus}
-              deletingItemId={deletingItemId}
-            />
-          ))}
+    <div
+      ref={setNodeRef}
+      className={`min-h-[60px] rounded-lg transition-all ${isOver ? 'ring-2 ring-accent/50 bg-accent/5' : ''}`}
+    >
+      {isEmpty && isOver ? (
+        <div className="flex items-center justify-center h-16 border-2 border-dashed border-accent/40 rounded-lg">
+          <p className="text-sm text-accent">Rilascia qui</p>
         </div>
-      </SortableContext>
-    </DndContext>
+      ) : children}
+    </div>
+  );
+}
+
+// ─── DraggableAvailableCard ────────────────────────────────────────────────────
+
+function DraggableAvailableCard({ item }: { item: OrderItem }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `available-${item.id}`,
+    data: { type: 'available', orderItemId: item.id },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      style={{
+        transform: transform ? CSS.Transform.toString(transform) : undefined,
+        opacity: isDragging ? 0.4 : 1,
+        zIndex: isDragging ? 50 : undefined,
+        backgroundColor: '#F3F4F6',
+        border: '1px solid #E5E7EB',
+      }}
+      className="relative group/ua aspect-square rounded-[6px] overflow-hidden cursor-grab active:cursor-grabbing"
+    >
+      {item.product?.imageUrl
+        ? <ProductImage src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+        : <div className="w-full h-full bg-gray-200" />
+      }
+      <div className="absolute inset-0 bg-black/0 group-hover/ua:bg-black/40 transition-colors rounded-[6px]" />
+      <div className="absolute inset-0 opacity-0 group-hover/ua:opacity-100 transition-opacity flex items-end p-1 pointer-events-none">
+        <span className="text-white leading-tight" style={{ fontSize: 10 }}>{item.product?.code}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── AvailablePanel ────────────────────────────────────────────────────────────
+
+function AvailablePanel({ items }: { items: OrderItem[] }) {
+  const [search, setSearch] = useState('');
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'available-panel',
+    data: { type: 'availablePanel' },
+  });
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    if (!q) return items;
+    return items.filter(it =>
+      it.product?.code?.toLowerCase().includes(q) ||
+      it.product?.name?.toLowerCase().includes(q)
+    );
+  }, [items, search]);
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex flex-col bg-white border rounded-xl overflow-hidden transition-all ${
+        isOver ? 'ring-2 ring-accent border-accent/40' : 'border-border'
+      }`}
+      style={{ maxHeight: 'calc(100vh - 120px)' }}
+    >
+      {/* Header */}
+      <div className="px-3 py-2.5 border-b border-border flex-shrink-0">
+        <p className="text-xs font-semibold text-amber-700 flex items-center gap-1.5 mb-2">
+          <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+          {items.length} non assegnat{items.length !== 1 ? 'i' : 'o'}
+        </p>
+        <div className="flex items-center gap-2 border border-border rounded px-2 py-1.5">
+          <Search size={11} className="text-gray-400 flex-shrink-0" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cerca…"
+            className="flex-1 text-xs outline-none bg-transparent text-primary placeholder-gray-400"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="text-gray-300 hover:text-gray-500">
+              <X size={10} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Drop hint */}
+      {isOver && (
+        <div className="mx-2 mt-2 flex-shrink-0 border-2 border-dashed border-accent/40 rounded-lg flex items-center justify-center py-2.5">
+          <p className="text-xs text-accent">Rilascia per rimuovere dal gruppo</p>
+        </div>
+      )}
+
+      {/* Grid */}
+      <div className="flex-1 overflow-y-auto p-2">
+        {filtered.length === 0 ? (
+          <p className="text-center text-xs text-gray-400 py-8">Nessun prodotto</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-1">
+            {filtered.map(item => (
+              <DraggableAvailableCard key={item.id} item={item} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -336,7 +468,6 @@ function GroupFormModal({
       const resJson = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error();
 
-      // Auto-add products matching the selected template
       if (!isEdit && (templateKeywords || monoColor)) {
         const groupId = resJson?.group?.id;
         if (groupId) {
@@ -633,101 +764,25 @@ function AddItemsModal({
   );
 }
 
-// ─── AssignToGroupPopover ──────────────────────────────────────────────────────
-
-function AssignToGroupPopover({
-  item, orderId, groups, onClose, onAssigned, onCreateGroup,
-}: {
-  item: OrderItem;
-  orderId: string;
-  groups: DisplayGroup[];
-  onClose: () => void;
-  onAssigned: () => void;
-  onCreateGroup: () => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [assigning, setAssigning] = useState<string | null>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [onClose]);
-
-  async function assignTo(groupId: string) {
-    setAssigning(groupId);
-    try {
-      const res = await fetch(`/api/catalog/orders/${orderId}/display-groups/${groupId}/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderItemId: item.id }),
-      });
-      if (!res.ok) throw new Error();
-      toast.success('Prodotto assegnato');
-      onAssigned();
-    } catch {
-      toast.error('Errore nell\'assegnazione');
-    } finally {
-      setAssigning(null);
-    }
-  }
-
-  return (
-    <div
-      ref={ref}
-      className="absolute z-40 bg-white border border-border rounded-lg shadow-xl py-1 min-w-[180px]"
-      style={{ top: '100%', left: 0, marginTop: 4 }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <p className="px-3 py-1.5 text-2xs font-semibold text-gray-400 uppercase tracking-wider">Aggiungi a gruppo</p>
-      {groups.length === 0 && (
-        <p className="px-3 py-2 text-xs text-gray-400 italic">Nessun gruppo ancora</p>
-      )}
-      {groups.map((g) => (
-        <button
-          key={g.id}
-          onClick={() => assignTo(g.id)}
-          disabled={assigning === g.id}
-          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-cream transition-colors"
-        >
-          {assigning === g.id
-            ? <Loader2 size={10} className="animate-spin text-gray-400" />
-            : g.coloreTag
-            ? <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: g.coloreTag }} />
-            : <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-gray-200" />
-          }
-          <span className="truncate">{g.nome}</span>
-        </button>
-      ))}
-      <div className="border-t border-border mt-1 pt-1">
-        <button
-          onClick={() => { onClose(); onCreateGroup(); }}
-          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-accent hover:bg-accent/5 transition-colors"
-        >
-          <Plus size={11} />Crea nuovo gruppo
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ─── GroupCard (board — full width, vertical stack) ───────────────────────────
 
 function GroupCard({
-  group, orderId, orderItems, onEdit, onDuplicate, onDelete, onRefresh,
+  group, orderId, orderItems, gridItems, onEdit, onDuplicate, onDelete, onRefresh,
 }: {
   group: DisplayGroup;
   orderId: string;
   orderItems: OrderItem[];
+  gridItems: DisplayGroupItem[];
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onRefresh: () => void;
 }) {
   const queryClient = useQueryClient();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: group.id,
+    data: { type: 'group' },
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const [addItemsOpen, setAddItemsOpen] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
@@ -786,7 +841,6 @@ function GroupCard({
       >
         {/* ── Header ──────────────────────────────────────────── */}
         <div className="flex items-center gap-3 px-5 py-4">
-          {/* Drag handle */}
           <button
             {...attributes} {...listeners}
             className="text-gray-300 hover:text-gray-400 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
@@ -794,7 +848,6 @@ function GroupCard({
             <GripVertical size={16} />
           </button>
 
-          {/* Color dot + name */}
           <div className="flex items-center gap-2 flex-1 min-w-0">
             {group.coloreTag && (
               <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: group.coloreTag }} />
@@ -802,17 +855,14 @@ function GroupCard({
             <span className="text-xl font-semibold text-primary truncate">{group.nome}</span>
           </div>
 
-          {/* Schedule badge */}
           {activeSchedule && (
             <span className="text-2xs text-[#8FAF8F] bg-[#F0F5F0] border border-[#D0E0D0] rounded px-1.5 py-0.5 flex items-center gap-0.5 flex-shrink-0">
               <Calendar size={9} />S{activeSchedule.settimanaIn}→S{activeSchedule.settimanaFn}
             </span>
           )}
 
-          {/* Product count */}
           <span className="text-sm text-gray-400 flex-shrink-0">{group.prodotti.length} pz.</span>
 
-          {/* Lista / Board toggle */}
           <div className="flex items-center bg-cream rounded border border-border overflow-hidden flex-shrink-0">
             <button
               onClick={() => setProductView('lista')}
@@ -828,7 +878,6 @@ function GroupCard({
             </button>
           </div>
 
-          {/* + Aggiungi */}
           <button
             onClick={() => setAddItemsOpen(true)}
             className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors flex-shrink-0"
@@ -836,7 +885,6 @@ function GroupCard({
             <Plus size={12} />Aggiungi
           </button>
 
-          {/* ··· Menu */}
           <div className="relative flex-shrink-0">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
@@ -859,35 +907,37 @@ function GroupCard({
 
         {/* ── Products area ─────────────────────────────────── */}
         <div className="px-5 pb-5">
-          {group.prodotti.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center border border-dashed border-gray-200 rounded-lg">
-              <p className="text-sm text-gray-300 italic mb-2">Nessun prodotto</p>
-              <button
-                onClick={() => setAddItemsOpen(true)}
-                className="text-xs text-accent hover:text-accent/80 transition-colors"
-              >
-                + Aggiungi prodotti
-              </button>
-            </div>
-          ) : productView === 'board' ? (
-            <ProductBoardView
-              items={group.prodotti}
-              orderId={orderId}
-              groupId={group.id}
-              onRemove={removeItem}
-              onToggleFocus={toggleFocus}
-              deletingItemId={deletingItemId}
-            />
-          ) : (
-            <ProductListaView
-              items={group.prodotti}
-              orderId={orderId}
-              groupId={group.id}
-              onRemove={removeItem}
-              onToggleFocus={toggleFocus}
-              deletingItemId={deletingItemId}
-            />
-          )}
+          <GroupBoardDropZone groupId={group.id} isEmpty={group.prodotti.length === 0}>
+            {group.prodotti.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center border border-dashed border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-300 italic mb-2">Nessun prodotto</p>
+                <button
+                  onClick={() => setAddItemsOpen(true)}
+                  className="text-xs text-accent hover:text-accent/80 transition-colors"
+                >
+                  + Aggiungi prodotti
+                </button>
+              </div>
+            ) : productView === 'board' ? (
+              <ProductBoardView
+                items={gridItems}
+                orderId={orderId}
+                groupId={group.id}
+                onRemove={removeItem}
+                onToggleFocus={toggleFocus}
+                deletingItemId={deletingItemId}
+              />
+            ) : (
+              <ProductListaView
+                items={group.prodotti}
+                orderId={orderId}
+                groupId={group.id}
+                onRemove={removeItem}
+                onToggleFocus={toggleFocus}
+                deletingItemId={deletingItemId}
+              />
+            )}
+          </GroupBoardDropZone>
         </div>
       </div>
 
@@ -906,18 +956,22 @@ function GroupCard({
 // ─── GroupRow (list/accordion) ─────────────────────────────────────────────────
 
 function GroupRow({
-  group, orderId, orderItems, onEdit, onDuplicate, onDelete, onRefresh,
+  group, orderId, orderItems, gridItems, onEdit, onDuplicate, onDelete, onRefresh,
 }: {
   group: DisplayGroup;
   orderId: string;
   orderItems: OrderItem[];
+  gridItems: DisplayGroupItem[];
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onRefresh: () => void;
 }) {
   const queryClient = useQueryClient();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: group.id,
+    data: { type: 'group' },
+  });
   const [open, setOpen] = useState(false);
   const [addItemsOpen, setAddItemsOpen] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
@@ -1004,13 +1058,15 @@ function GroupRow({
               </button>
             </div>
 
-            {group.prodotti.length === 0 ? (
-              <p className="text-sm text-gray-300 text-center py-4 italic">Nessun prodotto</p>
-            ) : productView === 'lista' ? (
-              <ProductListaView items={group.prodotti} orderId={orderId} groupId={group.id} onRemove={removeItem} onToggleFocus={toggleFocus} deletingItemId={deletingItemId} />
-            ) : (
-              <ProductBoardView items={group.prodotti} orderId={orderId} groupId={group.id} onRemove={removeItem} onToggleFocus={toggleFocus} deletingItemId={deletingItemId} />
-            )}
+            <GroupBoardDropZone groupId={group.id} isEmpty={group.prodotti.length === 0}>
+              {group.prodotti.length === 0 ? (
+                <p className="text-sm text-gray-300 text-center py-4 italic">Nessun prodotto</p>
+              ) : productView === 'lista' ? (
+                <ProductListaView items={group.prodotti} orderId={orderId} groupId={group.id} onRemove={removeItem} onToggleFocus={toggleFocus} deletingItemId={deletingItemId} />
+              ) : (
+                <ProductBoardView items={gridItems} orderId={orderId} groupId={group.id} onRemove={removeItem} onToggleFocus={toggleFocus} deletingItemId={deletingItemId} />
+              )}
+            </GroupBoardDropZone>
 
             {group.prodotti.length > 0 && (
               <button onClick={() => setAddItemsOpen(true)}
@@ -1047,8 +1103,7 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
   const [newGroupOpen, setNewGroupOpen] = useState(false);
   const [editGroup, setEditGroup] = useState<DisplayGroup | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
-  const [unassignedView, setUnassignedView] = useState<'board' | 'list'>('board');
-  const [openPopoverItemId, setOpenPopoverItemId] = useState<string | null>(null);
+  const [localGridItems, setLocalGridItems] = useState<Record<string, DisplayGroupItem[]>>({});
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -1059,9 +1114,20 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
   });
 
   const groups = data?.groups ?? [];
+
   const refresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['display-groups', orderId] });
   }, [queryClient, orderId]);
+
+  // Sync local grid items with server data
+  useEffect(() => {
+    if (!data?.groups) return;
+    const next: Record<string, DisplayGroupItem[]> = {};
+    data.groups.forEach(g => {
+      next[g.id] = [...g.prodotti].sort((a, b) => a.posizione - b.posizione);
+    });
+    setLocalGridItems(next);
+  }, [data]);
 
   const assignedOrderItemIds = useMemo(() => {
     const set = new Set<string>();
@@ -1110,21 +1176,100 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
     finally { setExportingPdf(false); }
   }
 
-  async function handleDragEnd(event: DragEndEvent) {
+  async function handleGlobalDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = groups.findIndex((g) => g.id === active.id);
-    const newIndex = groups.findIndex((g) => g.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(groups, oldIndex, newIndex);
-    queryClient.setQueryData(['display-groups', orderId], { groups: reordered.map((g, i) => ({ ...g, posizione: i })) });
-    try {
-      await fetch(`/api/catalog/orders/${orderId}/display-groups/reorder`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gruppi: reordered.map((g, i) => ({ id: g.id, posizione: i })) }),
+    if (!over) return;
+
+    const activeType = (active.data.current as any)?.type as string | undefined;
+    const overType = (over.data.current as any)?.type as string | undefined;
+
+    // 1. Group reorder
+    if (activeType === 'group') {
+      // Resolve target group: over could be a group, gridItem, or groupBoard
+      let targetGroupId = over.id as string;
+      if (overType === 'gridItem' || overType === 'groupBoard') {
+        targetGroupId = (over.data.current as any).groupId;
+      }
+      if (active.id === targetGroupId) return;
+      const oldIndex = groups.findIndex((g) => g.id === active.id);
+      const newIndex = groups.findIndex((g) => g.id === targetGroupId);
+      if (oldIndex === -1 || newIndex === -1) return;
+      const reordered = arrayMove(groups, oldIndex, newIndex);
+      queryClient.setQueryData(['display-groups', orderId], {
+        groups: reordered.map((g, i) => ({ ...g, posizione: i })),
       });
-    } catch { toast.error('Errore nel riordinamento'); refresh(); }
+      try {
+        await fetch(`/api/catalog/orders/${orderId}/display-groups/reorder`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gruppi: reordered.map((g, i) => ({ id: g.id, posizione: i })) }),
+        });
+      } catch { toast.error('Errore nel riordinamento'); refresh(); }
+      return;
+    }
+
+    // 2. Grid item reorder within same group
+    if (activeType === 'gridItem' && overType === 'gridItem') {
+      const activeGroupId = (active.data.current as any).groupId as string;
+      const overGroupId = (over.data.current as any).groupId as string;
+      if (activeGroupId === overGroupId && active.id !== over.id) {
+        const items = localGridItems[activeGroupId] ?? [];
+        const oldIdx = items.findIndex(i => i.id === active.id);
+        const newIdx = items.findIndex(i => i.id === over.id);
+        if (oldIdx === -1 || newIdx === -1) return;
+        const reordered = arrayMove(items, oldIdx, newIdx);
+        setLocalGridItems(prev => ({ ...prev, [activeGroupId]: reordered }));
+        try {
+          await fetch(`/api/catalog/orders/${orderId}/display-groups/${activeGroupId}/items/reorder`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: reordered.map((it, i) => ({ orderItemId: it.orderItemId, posizione: i })) }),
+          });
+        } catch { /* silent — next refresh restores server order */ }
+        return;
+      }
+    }
+
+    // 3. Available card dropped onto a group board or grid item
+    if (activeType === 'available') {
+      const orderItemId = (active.data.current as any).orderItemId as string;
+      let targetGroupId: string | null = null;
+      if (overType === 'groupBoard') {
+        targetGroupId = (over.data.current as any).groupId;
+      } else if (overType === 'gridItem') {
+        targetGroupId = (over.data.current as any).groupId;
+      } else if (overType === 'group') {
+        targetGroupId = over.id as string;
+      }
+      if (!targetGroupId) return;
+      try {
+        const res = await fetch(`/api/catalog/orders/${orderId}/display-groups/${targetGroupId}/items`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderItemIds: [orderItemId] }),
+        });
+        if (!res.ok) throw new Error();
+        toast.success('Prodotto aggiunto al gruppo');
+        refresh();
+      } catch { toast.error('Errore nell\'aggiunta'); }
+      return;
+    }
+
+    // 4. Grid item dropped onto available panel → remove from group
+    if (activeType === 'gridItem' && (over.id === 'available-panel' || overType === 'availablePanel')) {
+      const orderItemId = (active.data.current as any).orderItemId as string;
+      const groupId = (active.data.current as any).groupId as string;
+      try {
+        const res = await fetch(
+          `/api/catalog/orders/${orderId}/display-groups/${groupId}/items/${orderItemId}`,
+          { method: 'DELETE' }
+        );
+        if (!res.ok) throw new Error();
+        toast.success('Prodotto rimosso dal gruppo');
+        refresh();
+      } catch { toast.error('Errore nella rimozione'); }
+      return;
+    }
   }
 
   if (isLoading) {
@@ -1133,6 +1278,7 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
 
   const sharedGroupProps = (group: DisplayGroup) => ({
     group, orderId, orderItems,
+    gridItems: localGridItems[group.id] ?? [...group.prodotti].sort((a, b) => a.posizione - b.posizione),
     onEdit: () => setEditGroup(group),
     onDuplicate: () => handleDuplicate(group),
     onDelete: () => handleDelete(group),
@@ -1185,114 +1331,45 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
           </div>
         </div>
 
-        {/* Prodotti non assegnati */}
-        {unassignedItems.length > 0 && (
-          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-amber-800 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
-                {unassignedItems.length} prodott{unassignedItems.length !== 1 ? 'i non assegnati' : 'o non assegnato'}
-              </p>
-              <div className="flex items-center bg-white rounded border border-amber-200 overflow-hidden">
-                <button onClick={() => setUnassignedView('board')} className={`p-1 transition-colors ${unassignedView === 'board' ? 'bg-amber-100 text-amber-700' : 'text-gray-400 hover:text-amber-600'}`} title="Vista foto">
-                  <LayoutGrid size={12} />
-                </button>
-                <button onClick={() => setUnassignedView('list')} className={`p-1 transition-colors ${unassignedView === 'list' ? 'bg-amber-100 text-amber-700' : 'text-gray-400 hover:text-amber-600'}`} title="Vista lista">
-                  <List size={12} />
-                </button>
-              </div>
-            </div>
+        {/* DnD area: groups + available panel */}
+        <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragEnd={handleGlobalDragEnd}>
+          <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-            {unassignedView === 'board' ? (
-              <div className="grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-10 gap-1">
-                {unassignedItems.map((it) => (
-                  <div key={it.id} className="relative">
-                    <div
-                      className="relative group/ua aspect-square rounded-[6px] overflow-hidden cursor-pointer"
-                      style={{ backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB' }}
-                      onClick={() => setOpenPopoverItemId(openPopoverItemId === it.id ? null : it.id)}
-                    >
-                      {it.product?.imageUrl
-                        ? <ProductImage src={it.product.imageUrl} alt={it.product.name} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full bg-gray-200" />
-                      }
-                      <div className="absolute inset-0 bg-black/0 group-hover/ua:bg-black/40 transition-colors rounded-[6px]" />
-                      <div className="absolute inset-0 opacity-0 group-hover/ua:opacity-100 transition-opacity flex items-end p-1 pointer-events-none">
-                        <span className="text-white leading-tight" style={{ fontSize: 10 }}>{it.product?.code}</span>
-                      </div>
-                    </div>
-                    {openPopoverItemId === it.id && (
-                      <AssignToGroupPopover
-                        item={it}
-                        orderId={orderId}
-                        groups={groups}
-                        onClose={() => setOpenPopoverItemId(null)}
-                        onAssigned={() => { setOpenPopoverItemId(null); refresh(); }}
-                        onCreateGroup={() => { setOpenPopoverItemId(null); setNewGroupOpen(true); }}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="divide-y divide-amber-100 rounded overflow-hidden">
-                {unassignedItems.map((it, idx) => (
-                  <div
-                    key={it.id}
-                    className={`relative flex items-center gap-2.5 px-1 py-1.5 cursor-pointer hover:bg-amber-100/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/50'}`}
-                    onClick={() => setOpenPopoverItemId(openPopoverItemId === it.id ? null : it.id)}
-                  >
-                    {it.product?.imageUrl
-                      ? <ProductImage src={it.product.imageUrl} alt={it.product.name} className="w-10 h-10 object-cover rounded flex-shrink-0 border border-[#E5E7EB]" />
-                      : <div className="w-10 h-10 rounded flex-shrink-0" style={{ backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB' }} />
-                    }
-                    <p className="flex-1 text-xs text-primary truncate min-w-0">{it.product?.name}</p>
-                    <p className="text-2xs text-gray-400 font-mono flex-shrink-0">{it.product?.code}</p>
-                    <p className="text-2xs text-gray-400 flex-shrink-0">× {it.quantity}</p>
-                    {openPopoverItemId === it.id && (
-                      <AssignToGroupPopover
-                        item={it}
-                        orderId={orderId}
-                        groups={groups}
-                        onClose={() => setOpenPopoverItemId(null)}
-                        onAssigned={() => { setOpenPopoverItemId(null); refresh(); }}
-                        onCreateGroup={() => { setOpenPopoverItemId(null); setNewGroupOpen(true); }}
-                      />
-                    )}
-                  </div>
-                ))}
+            {/* Available panel — mobile: first (order-first), desktop: right column (order-last) */}
+            {unassignedItems.length > 0 && (
+              <div className="w-full lg:w-64 lg:flex-shrink-0 lg:sticky lg:top-4 order-first lg:order-last">
+                <AvailablePanel items={unassignedItems} />
               </div>
             )}
-          </div>
-        )}
 
-        {/* Empty state */}
-        {groups.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-14 h-14 rounded-full bg-cream flex items-center justify-center mb-3">
-              <LayoutGrid size={24} className="text-gray-300" />
+            {/* Groups */}
+            <div className="flex-1 min-w-0 w-full order-last lg:order-first">
+              {groups.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-14 h-14 rounded-full bg-cream flex items-center justify-center mb-3">
+                    <LayoutGrid size={24} className="text-gray-300" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-500 mb-1">Nessuna esposizione</p>
+                  <p className="text-xs text-gray-400 mb-4">Crea il primo gruppo per organizzare i prodotti dell&apos;ordine</p>
+                  <button onClick={() => setNewGroupOpen(true)} className="flex items-center gap-1.5 text-xs bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors">
+                    <Plus size={13} />Crea primo gruppo
+                  </button>
+                </div>
+              )}
+
+              <SortableContext items={groups.map((g) => g.id)} strategy={verticalListSortingStrategy}>
+                {view === 'board' ? (
+                  <div className="flex flex-col gap-6 w-full">
+                    {groups.map((group) => <GroupCard key={group.id} {...sharedGroupProps(group)} />)}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {groups.map((group) => <GroupRow key={group.id} {...sharedGroupProps(group)} />)}
+                  </div>
+                )}
+              </SortableContext>
             </div>
-            <p className="text-sm font-medium text-gray-500 mb-1">Nessuna esposizione</p>
-            <p className="text-xs text-gray-400 mb-4">Crea il primo gruppo per organizzare i prodotti dell&apos;ordine</p>
-            <button onClick={() => setNewGroupOpen(true)} className="flex items-center gap-1.5 text-xs bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors">
-              <Plus size={13} />Crea primo gruppo
-            </button>
           </div>
-        )}
-
-        {/* Groups */}
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={groups.map((g) => g.id)} strategy={verticalListSortingStrategy}>
-            {view === 'board' ? (
-              <div className="flex flex-col gap-6 w-full">
-                {groups.map((group) => <GroupCard key={group.id} {...sharedGroupProps(group)} />)}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {groups.map((group) => <GroupRow key={group.id} {...sharedGroupProps(group)} />)}
-              </div>
-            )}
-          </SortableContext>
         </DndContext>
       </div>
     </>
