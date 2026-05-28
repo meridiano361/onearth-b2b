@@ -1,32 +1,60 @@
-// AGGIORNARE QUESTA PAGINA ad ogni modifica delle funzionalità dell'app cliente.
-// Sezioni da verificare: indice, descrizioni funzionalità, schermate di esempio.
+// AGGIORNATO: 2026-05-28 — aggiornare ad ogni nuova funzionalità
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
-  Eye, Download, Smartphone, HelpCircle, Layers, CalendarDays, Wallet,
+  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe,
 } from 'lucide-react';
 
 export const metadata = { title: 'Guida all\'app — ON EARTH' };
 
 const SECTIONS = [
-  { id: 'installare-app',   label: 'Installare l\'app',       icon: Smartphone },
-  { id: 'come-accedere',    label: 'Come accedere',          icon: LogIn },
-  { id: 'catalogo',         label: 'Il catalogo',             icon: BookOpen },
-  { id: 'preferiti',        label: 'Preferiti',               icon: Heart },
-  { id: 'creare-ordine',    label: 'Creare un ordine',        icon: ShoppingBag },
-  { id: 'destinazioni',     label: 'Destinazioni',            icon: MapPin },
-  { id: 'miei-ordini',      label: 'I miei ordini',           icon: Package },
-  { id: 'anteprima-pdf',    label: 'Anteprima e PDF',         icon: Eye },
-  { id: 'demetra',          label: 'Esportazione Demetra',    icon: Download },
-  { id: 'mondi-espositivi', label: 'Mondi Espositivi',        icon: Layers },
-  { id: 'calendario',       label: 'Calendario Esposizione',  icon: CalendarDays },
-  { id: 'budget-ordine',    label: 'Budget ordine',           icon: Wallet },
-  { id: 'assistenza-tecnica', label: 'Assistenza tecnica',    icon: HelpCircle },
+  { id: 'installare-app',     label: 'Installare l\'app sul dispositivo', icon: Smartphone },
+  { id: 'come-accedere',      label: 'Come accedere',                     icon: LogIn },
+  { id: 'catalogo',           label: 'Il Catalogo',                       icon: BookOpen },
+  { id: 'preferiti',          label: 'Preferiti',                         icon: Heart },
+  { id: 'creare-ordine',      label: 'Creare un Ordine',                  icon: ShoppingBag },
+  { id: 'destinazioni',       label: 'Le Destinazioni',                   icon: MapPin },
+  { id: 'miei-ordini',        label: 'I miei Ordini',                     icon: Package },
+  { id: 'anteprima',          label: 'Anteprima e Raggruppamento',        icon: Eye },
+  { id: 'demetra',            label: 'Esportare in Demetra',              icon: Download },
+  { id: 'esposizioni',        label: 'Esposizioni',                       icon: Layers },
+  { id: 'risorse',            label: 'Risorse e Media',                   icon: Film },
+  { id: 'mie-destinazioni',   label: 'Le mie Destinazioni',               icon: MapPin },
+  { id: 'multilingua',        label: 'Multilingua',                       icon: Globe },
+  { id: 'assistenza-tecnica', label: 'Assistenza tecnica',                icon: HelpCircle },
 ];
+
+function Bullet({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex gap-2 text-sm text-gray-600">
+      <span className="text-accent mt-1 flex-shrink-0">·</span>
+      <span>{children}</span>
+    </li>
+  );
+}
+
+function Step({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <li className="flex gap-2 text-sm text-gray-600">
+      <span className="text-accent font-medium flex-shrink-0 w-4">{n}.</span>
+      <span>{children}</span>
+    </li>
+  );
+}
+
+function SectionHeader({ n, icon: Icon, label }: { n: number; icon: React.ElementType; label: string }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <Icon size={16} className="text-accent flex-shrink-0" />
+      <h2 className="text-sm font-semibold text-primary tracking-wide">{n}. {label}</h2>
+    </div>
+  );
+}
 
 export default function AssistenzaPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+
       {/* Header */}
       <div className="mb-8">
         <p className="label-luxury text-accent mb-1">Guida</p>
@@ -47,7 +75,7 @@ export default function AssistenzaPage() {
                   href={`#${s.id}`}
                   className="flex items-center gap-2.5 text-sm text-gray-600 hover:text-accent transition-colors group"
                 >
-                  <span className="text-xs text-gray-300 w-4 text-right flex-shrink-0">{i + 1}.</span>
+                  <span className="text-xs text-gray-300 w-5 text-right flex-shrink-0">{i + 1}.</span>
                   <Icon size={13} className="text-gray-300 group-hover:text-accent flex-shrink-0 transition-colors" />
                   <span>{s.label}</span>
                 </a>
@@ -62,39 +90,33 @@ export default function AssistenzaPage() {
 
         {/* 1. Installare l'app */}
         <section id="installare-app" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Smartphone size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">1. Installare l&apos;app</h2>
-          </div>
+          <SectionHeader n={1} icon={Smartphone} label="Installare l'app sul dispositivo" />
           <div className="space-y-5">
             {[
               {
                 label: 'iPhone / iPad (Safari)',
                 steps: [
-                  "Apri app.b2b.on-earth.it in Safari",
-                  "Tocca l'icona di condivisione (quadrato con freccia in su) in basso",
+                  'Apri app.b2b.on-earth.it in Safari',
+                  'Tocca l\'icona di condivisione (quadrato con freccia) in basso',
                   'Scorri e tocca "Aggiungi a schermata Home"',
-                  'Tocca "Aggiungi" in alto a destra',
-                  "L'app apparirà come icona sulla tua schermata home",
+                  'Tocca "Aggiungi"',
                 ],
               },
               {
                 label: 'Android (Chrome)',
                 steps: [
-                  "Apri app.b2b.on-earth.it in Chrome",
-                  "Tocca i tre puntini in alto a destra",
+                  'Apri app.b2b.on-earth.it in Chrome',
+                  'Tocca i tre puntini in alto a destra',
                   'Tocca "Aggiungi a schermata Home" o "Installa app"',
                   'Tocca "Aggiungi"',
-                  "L'app apparirà come icona sulla tua schermata home",
                 ],
               },
               {
                 label: 'Mac / PC (Chrome o Edge)',
                 steps: [
-                  "Apri app.b2b.on-earth.it",
-                  "Clicca sull'icona di installazione nella barra degli indirizzi",
+                  'Apri app.b2b.on-earth.it',
+                  'Clicca sull\'icona di installazione nella barra degli indirizzi',
                   'Clicca "Installa"',
-                  "L'app si aprirà come applicazione desktop",
                 ],
               },
             ].map((platform) => (
@@ -102,10 +124,7 @@ export default function AssistenzaPage() {
                 <p className="text-xs font-semibold text-primary mb-2">{platform.label}</p>
                 <ol className="space-y-1 ml-1">
                   {platform.steps.map((step, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-gray-600">
-                      <span className="text-accent font-medium flex-shrink-0 w-4">{i + 1}.</span>
-                      <span>{step}</span>
-                    </li>
+                    <Step key={i} n={i + 1}>{step}</Step>
                   ))}
                 </ol>
               </div>
@@ -115,174 +134,160 @@ export default function AssistenzaPage() {
 
         {/* 2. Come accedere */}
         <section id="come-accedere" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <LogIn size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">2. Come accedere</h2>
-          </div>
+          <SectionHeader n={2} icon={LogIn} label="Come accedere" />
           <ul className="space-y-2">
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Apri l&apos;app all&apos;indirizzo <span className="font-mono text-primary">app.b2b.on-earth.it</span> e inserisci email e password fornite da ON EARTH.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>La password predefinita segue il formato <span className="font-mono text-primary">onearth_</span> seguito dai primi 5 caratteri del nome della tua organizzazione (minuscoli, senza spazi).</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Esempio: se la tua organizzazione si chiama <span className="font-medium text-primary">Le Rondini</span>, la password sarà <span className="font-mono text-primary">onearth_leron</span>.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Puoi salvare le credenziali nel browser o installare l&apos;app come shortcut (vedi sezione <a href="#installare-app" className="text-accent hover:underline">Installare l&apos;app</a>).</span></li>
+            <Bullet>Vai su <span className="font-mono text-primary">app.b2b.on-earth.it</span></Bullet>
+            <Bullet>Inserisci la tua email e la password ricevuta.</Bullet>
+            <Bullet>La password predefinita è <span className="font-mono text-primary">onearth_</span> seguito dalle prime 5 lettere della tua organizzazione (minuscole, senza spazi).</Bullet>
+            <Bullet>Esempio: organizzazione <span className="font-medium text-primary">Le Rondini</span> → password: <span className="font-mono text-primary">onearth_leron</span></Bullet>
+            <Bullet>Se non hai ancora le credenziali clicca <span className="font-medium">Richiedi credenziali per accesso</span> nella pagina di login.</Bullet>
           </ul>
         </section>
 
-        {/* 3. Il catalogo */}
+        {/* 3. Il Catalogo */}
         <section id="catalogo" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <BookOpen size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">3. Il catalogo</h2>
-          </div>
+          <SectionHeader n={3} icon={BookOpen} label="Il Catalogo" />
           <ul className="space-y-2">
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Dal menu in basso tocca <span className="font-medium">Catalogo</span> per sfogliare tutti i prodotti attivi.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Usa la barra di ricerca per trovare un prodotto per nome o codice.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Filtra i prodotti per: Gruppo merceologico, Famiglia, Classe, Sottoclasse, Gruppo omogeneo, Linea, Stagione, Collezione, Colore, Tema colore.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Tocca il cuore ♥ su un prodotto per aggiungerlo ai preferiti.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Ogni prodotto mostra il prezzo di costo e il numero di pezzi per lotto. I pulsanti +/− permettono di aggiungere al carrello per multipli del lotto.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Nel carrello (icona in alto a destra) sono visibili le proiezioni di vendita e il margine stimato.</span></li>
+            <Bullet>Accedi al catalogo dalla voce <span className="font-medium">Catalogo</span> nel menu in alto.</Bullet>
+            <Bullet>Sfoglia i prodotti della collezione CASA 2027.</Bullet>
+            <Bullet>Usa i filtri a sinistra per filtrare per: Gruppo merceologico, Famiglia, Classe, Sottoclasse, Gruppo omogeneo, Linea, Colore, Tema colore, Collezione, Stagione, Produttore, Tranche.</Bullet>
+            <Bullet><span className="font-medium">I filtri sono intelligenti:</span> selezionando un valore, tutti gli altri filtri aggiornano automaticamente le proprie opzioni mostrando solo i valori compatibili con la selezione corrente. Accanto a ogni opzione è indicato il numero di prodotti disponibili.</Bullet>
+            <Bullet>Ordina i prodotti con <span className="font-medium">Ordina per…</span>: A→Z, Z→A, Prezzo crescente, Prezzo decrescente, Novità (CA27), Continuativi.</Bullet>
+            <Bullet>Cerca per codice, nome o linea nella barra di ricerca.</Bullet>
+            <Bullet>Scegli la modalità di visualizzazione: griglia, lista orizzontale o lookbook.</Bullet>
+            <Bullet>Clicca ❤️ su un prodotto per aggiungerlo ai Preferiti.</Bullet>
+            <Bullet>Usa <span className="font-medium">+</span> e <span className="font-medium">−</span> per aggiungere quantità all&apos;ordine corrente nella barra a destra.</Bullet>
+            <Bullet>I prodotti CA27 hanno il badge <span className="font-medium">NUOVO</span>.</Bullet>
           </ul>
         </section>
 
         {/* 4. Preferiti */}
         <section id="preferiti" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Heart size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">4. Preferiti</h2>
-          </div>
+          <SectionHeader n={4} icon={Heart} label="Preferiti" />
           <ul className="space-y-2">
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Tocca il cuore ♥ su qualsiasi prodotto nel catalogo per salvarlo tra i preferiti.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Accedi ai preferiti dal menu in basso o dal filtro "Preferiti" nel catalogo.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>I preferiti sono salvati sul tuo profilo e rimangono disponibili tra una sessione e l&apos;altra.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Puoi aggiungere al carrello direttamente dalla lista preferiti senza tornare al catalogo.</span></li>
+            <Bullet>Clicca il cuore ❤️ su qualsiasi prodotto per salvarlo nei preferiti.</Bullet>
+            <Bullet>Accedi ai tuoi preferiti dalla voce <span className="font-medium">Preferiti</span> nel menu in alto.</Bullet>
+            <Bullet>Puoi aggiungere prodotti preferiti all&apos;ordine direttamente dalla pagina Preferiti.</Bullet>
           </ul>
         </section>
 
-        {/* 5. Creare un ordine */}
+        {/* 5. Creare un Ordine */}
         <section id="creare-ordine" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <ShoppingBag size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">5. Creare un ordine</h2>
-          </div>
+          <SectionHeader n={5} icon={ShoppingBag} label="Creare un Ordine" />
           <ul className="space-y-2">
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Aggiungi prodotti al carrello dal catalogo usando il pulsante <span className="font-medium">+ Aggiungi</span>.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Apri il carrello e verifica i prodotti selezionati, le quantità e le proiezioni economiche.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Tocca <span className="font-medium">Crea ordine</span>: se hai più destinazioni attive, ti verrà chiesto di selezionarne una.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Se non hai ancora nessuna destinazione, l&apos;app ti guiderà a crearne una prima di procedere (vedi sezione <a href="#destinazioni" className="text-accent hover:underline">Destinazioni</a>).</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>L&apos;ordine viene salvato e puoi modificarlo finché non viene esportato.</span></li>
+            <Bullet>Aggiungi prodotti dal catalogo usando i pulsanti <span className="font-medium">+</span> e <span className="font-medium">−</span>.</Bullet>
+            <Bullet>Nella barra a destra vedi l&apos;ordine corrente con: costo totale, vendite potenziali, margine medio.</Bullet>
+            <Bullet>Clicca <span className="font-medium">Crea Ordine</span> per salvare.</Bullet>
+            <Bullet>Se hai più destinazioni ti verrà chiesto di selezionarne una.</Bullet>
+            <Bullet>Se non hai destinazioni, creane una prima (vedi sezione <a href="#destinazioni" className="text-accent hover:underline">Le Destinazioni</a>).</Bullet>
+            <Bullet>Dopo la creazione vieni portato automaticamente alla pagina Ordini.</Bullet>
           </ul>
         </section>
 
-        {/* 6. Destinazioni */}
+        {/* 6. Le Destinazioni */}
         <section id="destinazioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <MapPin size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">6. Destinazioni</h2>
-          </div>
+          <SectionHeader n={6} icon={MapPin} label="Le Destinazioni" />
           <ul className="space-y-2">
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Le destinazioni rappresentano i tuoi punti vendita (botteghe, mercati, fiere, ecc.).</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Gestisci le tue destinazioni dal menu in basso → <span className="font-medium">Destinazioni</span>.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Per ogni destinazione puoi impostare un <span className="font-medium">budget</span>: il carrello mostrerà una barra di avanzamento che indica quanto budget è stato utilizzato con l&apos;ordine corrente.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Ogni ordine deve essere associato a una destinazione: è obbligatoria per garantire la corretta gestione logistica.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Puoi avere più destinazioni attive contemporaneamente e creare ordini distinti per ciascuna.</span></li>
+            <Bullet>Le destinazioni sono i tuoi punti vendita (bottega, emporio, online, ecc.).</Bullet>
+            <Bullet>Gestiscile dalla voce <span className="font-medium">Destinazioni</span> nel menu.</Bullet>
+            <Bullet>Per ogni destinazione puoi impostare un <span className="font-medium">budget</span>: l&apos;app ti avvisa quando ti avvicini al limite.</Bullet>
+            <Bullet>Ogni ordine è associato a una destinazione.</Bullet>
+            <Bullet>Tipi disponibili: Bottega, Emporio, Distretto, Store, Outlet, Tendone, Fiera, Online, Altro.</Bullet>
           </ul>
         </section>
 
-        {/* 7. I miei ordini */}
+        {/* 7. I miei Ordini */}
         <section id="miei-ordini" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Package size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">7. I miei ordini</h2>
-          </div>
+          <SectionHeader n={7} icon={Package} label="I miei Ordini" />
           <ul className="space-y-2">
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Dal menu in basso tocca <span className="font-medium">Ordini</span> per vedere tutti i tuoi ordini.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Per ogni ordine sono visibili: numero di articoli, pezzi totali, costo, vendite potenziali, guadagno stimato e margine %.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Finché l&apos;ordine non è stato esportato puoi modificarlo: aggiungi o rimuovi prodotti, cambia le quantità.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Tocca <span className="font-medium">Anteprima</span> per visualizzare il dettaglio completo dell&apos;ordine.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Gli stati possibili sono: ESPORTATO oppure NON ESPORTATO</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Gli ordini con stato ESPORTATO non sono modificabili ma possono essere duplicati per creare un nuovo ordine con gli stessi prodotti.</span></li>
+            <Bullet>Visualizza tutti i tuoi ordini dalla voce <span className="font-medium">Ordini</span> nel menu.</Bullet>
+            <Bullet>Gli stati possibili sono: <span className="font-medium">Da esportare</span> | <span className="font-medium">Esportato</span>.</Bullet>
+            <Bullet>Per ogni ordine puoi:
+              <ul className="mt-1.5 ml-2 space-y-1">
+                <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Modificare quantità e prodotti</span></li>
+                <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Vedere l&apos;anteprima visiva raggruppata</span></li>
+                <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Esportare in PDF con raggruppamento personalizzato</span></li>
+                <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Esportare in Demetra (CSV per il gestionale)</span></li>
+                <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Duplicare un ordine esportato come base per uno nuovo</span></li>
+                <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Eliminare un ordine non ancora esportato</span></li>
+              </ul>
+            </Bullet>
           </ul>
         </section>
 
-        {/* 8. Anteprima e PDF */}
-        <section id="anteprima-pdf" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Eye size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">8. Anteprima e PDF</h2>
-          </div>
+        {/* 8. Anteprima e Raggruppamento */}
+        <section id="anteprima" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={8} icon={Eye} label="Anteprima e Raggruppamento" />
           <ul className="space-y-2">
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Dall&apos;elenco ordini tocca <span className="font-medium">Anteprima</span> per vedere il dettaglio completo con immagini e prezzi.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Scegli il criterio di raggruppamento (per famiglia, linea, colore, ecc.) per organizzare la visualizzazione.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Usa il pulsante <span className="font-medium">Scarica PDF</span> per esportare una copia dell&apos;ordine da condividere o archiviare.</span></li>
+            <Bullet>Clicca <span className="font-medium">Anteprima</span> su un ordine per vedere i prodotti raggruppati visivamente.</Bullet>
+            <Bullet>Scegli il criterio di raggruppamento: Linea, Collezione, Colore, Tema colore, Classe, Sottoclasse, Famiglia, Gruppo omogeneo, Stagione, Tranche.</Bullet>
+            <Bullet>Modifica quantità direttamente dall&apos;anteprima con i pulsanti <span className="font-medium">+</span> e <span className="font-medium">−</span>.</Bullet>
+            <Bullet>In fondo alla pagina vedi il riepilogo con subtotali per gruppo e totale generale.</Bullet>
+            <Bullet>Esporta il <span className="font-medium">PDF</span> con le foto dei prodotti raggruppati.</Bullet>
+            <Bullet>Esporta in <span className="font-medium">Excel multi-foglio</span>: un foglio per ogni criterio di classificazione (linea, collezione, colore, ecc.).</Bullet>
           </ul>
         </section>
 
-        {/* 9. Esportazione Demetra */}
+        {/* 9. Esportare in Demetra */}
         <section id="demetra" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Download size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">9. Esportazione Demetra</h2>
-          </div>
+          <SectionHeader n={9} icon={Download} label="Esportare in Demetra" />
           <ul className="space-y-2">
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Il pulsante <span className="font-medium">Esporta Demetra</span> genera un file CSV compatibile con il gestionale Demetra.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Dopo l&apos;esportazione l&apos;ordine cambia stato in ESPORTATO e non può più essere modificato.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Se hai bisogno di modificare un ordine già esportato, usa il pulsante <span className="font-medium">Duplica</span> per creare un nuovo ordine con gli stessi prodotti e apportare le variazioni necessarie.</span></li>
+            <Bullet>Clicca <span className="font-medium">Esporta in Demetra</span> per scaricare il file CSV da importare nel gestionale.</Bullet>
+            <Bullet>Dopo l&apos;export l&apos;ordine diventa <span className="font-medium">Esportato</span> e non è più modificabile.</Bullet>
+            <Bullet>Puoi duplicarlo per creare un nuovo ordine basato su quello esportato.</Bullet>
           </ul>
         </section>
 
-        {/* 10. Mondi Espositivi */}
-        <section id="mondi-espositivi" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Layers size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">10. Mondi Espositivi</h2>
-          </div>
+        {/* 10. Esposizioni */}
+        <section id="esposizioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={10} icon={Layers} label="Esposizioni" />
           <ul className="space-y-2">
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Dall&apos;anteprima di un ordine tocca il tab <span className="font-medium">Esposizione</span> per organizzare i prodotti in gruppi espositivi (es. Vetrina, Isola, Parete).</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Crea un nuovo gruppo con il pulsante <span className="font-medium">+ Gruppo</span>: assegna nome, colore e template.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Trascina i prodotti non assegnati (sezione in basso) per spostarli in un gruppo, oppure clicca su un prodotto per selezionare il gruppo dal menu.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Usa l&apos;icona fiamma 🔥 per marcare i prodotti <span className="font-medium">focus</span> del gruppo: prodotti di punta che meritano massima visibilità.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Ogni gruppo mostra una griglia dei prodotti assegnati, con separatori per linea. Puoi visualizzarli in modalità Lista o Board.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Esporta il PDF Mondi Espositivi con il pulsante <span className="font-medium">Scarica PDF</span>: include griglia prodotti, colori e note.</span></li>
+            <Bullet>Dall&apos;anteprima di un ordine tocca il tab <span className="font-medium">Esposizione</span> per organizzare i prodotti in gruppi espositivi (es. Vetrina, Isola, Parete).</Bullet>
+            <Bullet>Crea un nuovo gruppo con il pulsante <span className="font-medium">+ Gruppo</span>: assegna nome, colore e template.</Bullet>
+            <Bullet>Assegna i prodotti non assegnati a un gruppo usando il menu a tendina su ciascun prodotto.</Bullet>
+            <Bullet>Usa l&apos;icona 🔥 per marcare i prodotti <span className="font-medium">focus</span> del gruppo: prodotti di punta che meritano massima visibilità.</Bullet>
+            <Bullet>Esporta il PDF Esposizioni con il pulsante <span className="font-medium">Scarica PDF</span>: include griglia prodotti, colori e note.</Bullet>
+            <Bullet>Dal tab <span className="font-medium">Calendario</span> pianifica quando ogni gruppo sarà esposto, settimana per settimana, suddiviso per spazi espositivi.</Bullet>
           </ul>
         </section>
 
-        {/* 11. Calendario Esposizione */}
-        <section id="calendario" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <CalendarDays size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">11. Calendario Esposizione</h2>
-          </div>
+        {/* 11. Risorse e Media */}
+        <section id="risorse" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={11} icon={Film} label="Risorse e Media" />
           <ul className="space-y-2">
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Dal tab <span className="font-medium">Calendario</span> nell&apos;anteprima ordine puoi pianificare quando ogni gruppo sarà esposto, settimana per settimana.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Crea gli <span className="font-medium">spazi espositivi</span> (es. Vetrina destra, Isola centrale) con il pulsante <span className="font-medium">+ Spazio</span>: ogni spazio diventa una colonna nel calendario.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Clicca su una cella vuota per assegnare un gruppo espositivo a quello spazio, specificando settimana di inizio e fine.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Le celle occupate si colorano con il colore del gruppo. Clicca su una cella colorata per modificare il periodo o aggiungere una nota.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Rinomina o elimina uno spazio passando il mouse sull&apos;intestazione della colonna e usando le icone che appaiono.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Su mobile il calendario mostra un trimestre alla volta: usa le frecce per navigare tra i trimestri.</span></li>
+            <Bullet>Accedi alle Risorse dal menu in basso (icona cartella) o dalla homepage.</Bullet>
+            <Bullet>Trovi documenti PDF, video e audio condivisi da ON EARTH.</Bullet>
+            <Bullet><span className="font-medium">PDF:</span> scaricabili direttamente.</Bullet>
+            <Bullet><span className="font-medium">Video:</span> visualizzabili inline.</Bullet>
+            <Bullet><span className="font-medium">Audio:</span> ascoltabili con player integrato.</Bullet>
           </ul>
         </section>
 
-        {/* 12. Budget ordine */}
-        <section id="budget-ordine" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Wallet size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">12. Budget ordine</h2>
-          </div>
+        {/* 12. Le mie Destinazioni */}
+        <section id="mie-destinazioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={12} icon={MapPin} label="Le mie Destinazioni" />
           <ul className="space-y-2">
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Nell&apos;anteprima di un ordine (feature Mondi Espositivi attiva), clicca su <span className="font-medium">+ budget</span> in alto a destra per impostare un tetto di spesa.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Una volta impostato, il totale ordine mostra una <span className="font-medium">barra di avanzamento</span>: verde se entro budget, arancio terracotta se superato.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>La differenza rispetto al budget (positiva o negativa) è indicata accanto alla barra.</span></li>
-            <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent mt-1 flex-shrink-0">·</span><span>Clicca sull&apos;icona matita per modificare o azzerare il budget in qualsiasi momento.</span></li>
+            <Bullet>Gestisci i tuoi punti vendita dalla voce <span className="font-medium">Destinazioni</span>.</Bullet>
+            <Bullet>Aggiungi nuove destinazioni con: tipo, città, indirizzo e budget.</Bullet>
+            <Bullet>Il budget è indicativo e ti aiuta a gestire gli acquisti: l&apos;app mostra quanto budget è stato utilizzato con gli ordini associati.</Bullet>
           </ul>
         </section>
 
-        {/* 13. Assistenza tecnica */}
+        {/* 13. Multilingua */}
+        <section id="multilingua" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={13} icon={Globe} label="Multilingua" />
+          <ul className="space-y-2">
+            <Bullet>L&apos;app è disponibile in: <span className="font-medium">Italiano, Inglese, Tedesco, Francese, Spagnolo</span>.</Bullet>
+            <Bullet>Cambia lingua dal selettore in alto a destra (IT / EN / DE / FR / ES).</Bullet>
+            <Bullet>Su mobile usa il menu a tendina per selezionare la lingua.</Bullet>
+          </ul>
+        </section>
+
+        {/* 14. Assistenza tecnica */}
         <section id="assistenza-tecnica" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <HelpCircle size={16} className="text-accent flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-primary tracking-wide">13. Assistenza tecnica</h2>
-          </div>
+          <SectionHeader n={14} icon={HelpCircle} label="Assistenza tecnica" />
           <p className="text-sm text-gray-600">
-            Per problemi tecnici o richieste di supporto,{' '}
+            Per problemi tecnici{' '}
             <a
               href="mailto:e.mazzolari@meridiano361.it"
               className="text-accent hover:underline font-medium"
