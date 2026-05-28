@@ -86,6 +86,36 @@ export interface AppSettingsData {
     titolo: string;
     testo: string;
     colore: string;
+    // Position
+    posizione: string;
+    // Text style
+    font: string;
+    fontSizeTitolo: number;
+    fontSizeTesto: number;
+    pesoTitolo: string;
+    pesoTesto: string;
+    allineamento: string;
+    trasformazione: string;
+    corsivoTitolo: boolean;
+    corsivoTesto: boolean;
+    // Box style
+    sfondo: string;
+    coloreTesto: string;
+    coloreTitolo: string;
+    bordo: string;
+    coloreBordo: string;
+    raggio: number;
+    ombra: string;
+    padding: number;
+    larghezza: string;
+    // Icon
+    mostraIcona: boolean;
+    icona: string;
+    posizioneIcona: string;
+    // Behavior
+    chiudibile: boolean;
+    soloUnaVolta: boolean;
+    scadenza: string;
   };
 }
 
@@ -195,6 +225,31 @@ export const DEFAULT_APP_SETTINGS: AppSettingsData = {
     titolo: '',
     testo: '',
     colore: '#C17A5A',
+    posizione: 'after-cta',
+    font: 'system',
+    fontSizeTitolo: 15,
+    fontSizeTesto: 13,
+    pesoTitolo: 'semibold',
+    pesoTesto: 'normal',
+    allineamento: 'left',
+    trasformazione: 'none',
+    corsivoTitolo: false,
+    corsivoTesto: false,
+    sfondo: '#FFFBEB',
+    coloreTesto: '#374151',
+    coloreTitolo: '#111827',
+    bordo: 'thin',
+    coloreBordo: '#C17A5A',
+    raggio: 12,
+    ombra: 'none',
+    padding: 16,
+    larghezza: 'full',
+    mostraIcona: false,
+    icona: '📢',
+    posizioneIcona: 'before',
+    chiudibile: false,
+    soloUnaVolta: false,
+    scadenza: '',
   },
 };
 
@@ -319,10 +374,35 @@ export function parseSettingsFromDb(records: { chiave: string; valore: string }[
       mostraRimanente:bool('ordine.mostraRimanente', true),
     },
     comunicazione: {
-      attivo: bool('comunicazione.attivo', false),
-      titolo: str('comunicazione.titolo', ''),
-      testo:  str('comunicazione.testo',  ''),
-      colore: str('comunicazione.colore', '#C17A5A'),
+      attivo:          bool('comunicazione.attivo',          false),
+      titolo:          str('comunicazione.titolo',           ''),
+      testo:           str('comunicazione.testo',            ''),
+      colore:          str('comunicazione.colore',           '#C17A5A'),
+      posizione:       str('comunicazione.posizione',        'after-cta'),
+      font:            str('comunicazione.font',             'system'),
+      fontSizeTitolo:  num('comunicazione.fontSizeTitolo',   15),
+      fontSizeTesto:   num('comunicazione.fontSizeTesto',    13),
+      pesoTitolo:      str('comunicazione.pesoTitolo',       'semibold'),
+      pesoTesto:       str('comunicazione.pesoTesto',        'normal'),
+      allineamento:    str('comunicazione.allineamento',     'left'),
+      trasformazione:  str('comunicazione.trasformazione',   'none'),
+      corsivoTitolo:   bool('comunicazione.corsivoTitolo',   false),
+      corsivoTesto:    bool('comunicazione.corsivoTesto',    false),
+      sfondo:          str('comunicazione.sfondo',           '#FFFBEB'),
+      coloreTesto:     str('comunicazione.coloreTesto',      '#374151'),
+      coloreTitolo:    str('comunicazione.coloreTitolo',     '#111827'),
+      bordo:           str('comunicazione.bordo',            'thin'),
+      coloreBordo:     str('comunicazione.coloreBordo',      '#C17A5A'),
+      raggio:          num('comunicazione.raggio',           12),
+      ombra:           str('comunicazione.ombra',            'none'),
+      padding:         num('comunicazione.padding',          16),
+      larghezza:       str('comunicazione.larghezza',        'full'),
+      mostraIcona:     bool('comunicazione.mostraIcona',     false),
+      icona:           str('comunicazione.icona',            '📢'),
+      posizioneIcona:  str('comunicazione.posizioneIcona',   'before'),
+      chiudibile:      bool('comunicazione.chiudibile',      false),
+      soloUnaVolta:    bool('comunicazione.soloUnaVolta',    false),
+      scadenza:        str('comunicazione.scadenza',         ''),
     },
   };
 }

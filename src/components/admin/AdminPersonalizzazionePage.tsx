@@ -87,10 +87,35 @@ function settingsToFlat(s: AppSettingsData): SettingsFlat {
     f[`ordine.${k}`] = String(v);
   }
   // comunicazione
-  f['comunicazione.attivo'] = String(s.comunicazione.attivo);
-  f['comunicazione.titolo'] = s.comunicazione.titolo;
-  f['comunicazione.testo']  = s.comunicazione.testo;
-  f['comunicazione.colore'] = s.comunicazione.colore;
+  f['comunicazione.attivo']         = String(s.comunicazione.attivo);
+  f['comunicazione.titolo']         = s.comunicazione.titolo;
+  f['comunicazione.testo']          = s.comunicazione.testo;
+  f['comunicazione.colore']         = s.comunicazione.colore;
+  f['comunicazione.posizione']      = s.comunicazione.posizione;
+  f['comunicazione.font']           = s.comunicazione.font;
+  f['comunicazione.fontSizeTitolo'] = String(s.comunicazione.fontSizeTitolo);
+  f['comunicazione.fontSizeTesto']  = String(s.comunicazione.fontSizeTesto);
+  f['comunicazione.pesoTitolo']     = s.comunicazione.pesoTitolo;
+  f['comunicazione.pesoTesto']      = s.comunicazione.pesoTesto;
+  f['comunicazione.allineamento']   = s.comunicazione.allineamento;
+  f['comunicazione.trasformazione'] = s.comunicazione.trasformazione;
+  f['comunicazione.corsivoTitolo']  = String(s.comunicazione.corsivoTitolo);
+  f['comunicazione.corsivoTesto']   = String(s.comunicazione.corsivoTesto);
+  f['comunicazione.sfondo']         = s.comunicazione.sfondo;
+  f['comunicazione.coloreTesto']    = s.comunicazione.coloreTesto;
+  f['comunicazione.coloreTitolo']   = s.comunicazione.coloreTitolo;
+  f['comunicazione.bordo']          = s.comunicazione.bordo;
+  f['comunicazione.coloreBordo']    = s.comunicazione.coloreBordo;
+  f['comunicazione.raggio']         = String(s.comunicazione.raggio);
+  f['comunicazione.ombra']          = s.comunicazione.ombra;
+  f['comunicazione.padding']        = String(s.comunicazione.padding);
+  f['comunicazione.larghezza']      = s.comunicazione.larghezza;
+  f['comunicazione.mostraIcona']    = String(s.comunicazione.mostraIcona);
+  f['comunicazione.icona']          = s.comunicazione.icona;
+  f['comunicazione.posizioneIcona'] = s.comunicazione.posizioneIcona;
+  f['comunicazione.chiudibile']     = String(s.comunicazione.chiudibile);
+  f['comunicazione.soloUnaVolta']   = String(s.comunicazione.soloUnaVolta);
+  f['comunicazione.scadenza']       = s.comunicazione.scadenza;
   return f;
 }
 
@@ -140,6 +165,126 @@ function SaveButton({ onClick, loading }: { onClick: () => void; loading: boolea
       >
         {loading ? 'Salvataggio…' : 'Salva'}
       </button>
+    </div>
+  );
+}
+
+function ColorPickerWithPalette({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const palette = ['#FFFFFF','#F5F0EA','#FFFBEB','#F3F4F6','#111827','#374151','#6B7280',
+                   '#C17A5A','#B45309','#DC2626','#2563EB','#059669','#7C3AED'];
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5">
+        {palette.map(c => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onChange(c)}
+            title={c}
+            className="w-6 h-6 rounded border border-border transition-transform hover:scale-110"
+            style={{ backgroundColor: c, outline: value === c ? '2px solid #111827' : undefined, outlineOffset: '2px' }}
+          />
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-8 h-8 rounded border border-border cursor-pointer flex-shrink-0"
+        />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1 border border-border rounded px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-gray-900 font-mono"
+        />
+      </div>
+    </div>
+  );
+}
+
+function ComunicazionePreview({ cs }: { cs: AppSettingsData['comunicazione'] }) {
+  const fontFamily = cs.font === 'system' ? undefined : cs.font === 'serif' ? 'Georgia, serif' : cs.font === 'mono' ? 'monospace' : undefined;
+  const borderWidth = cs.bordo === 'none' ? 0 : cs.bordo === 'thin' ? 1 : cs.bordo === 'medium' ? 2 : 3;
+  const boxShadow = cs.ombra === 'sm' ? '0 1px 3px rgba(0,0,0,0.12)' : cs.ombra === 'md' ? '0 4px 12px rgba(0,0,0,0.15)' : cs.ombra === 'lg' ? '0 8px 24px rgba(0,0,0,0.18)' : undefined;
+  const maxWidth = cs.larghezza === 'sm' ? '320px' : cs.larghezza === 'md' ? '480px' : cs.larghezza === 'lg' ? '640px' : '100%';
+  const textAlign = cs.allineamento as React.CSSProperties['textAlign'];
+
+  const titleEl = (cs.titolo || 'Titolo del messaggio') ? (
+    <p style={{
+      fontSize: cs.fontSizeTitolo,
+      fontWeight: cs.pesoTitolo,
+      fontStyle: cs.corsivoTitolo ? 'italic' : undefined,
+      textTransform: cs.trasformazione as React.CSSProperties['textTransform'],
+      color: cs.coloreTitolo,
+      margin: 0,
+      fontFamily,
+    }}>
+      {cs.titolo || 'Titolo del messaggio'}
+    </p>
+  ) : null;
+
+  const textEl = (cs.testo || 'Testo del messaggio di esempio per la preview.') ? (
+    <p style={{
+      fontSize: cs.fontSizeTesto,
+      fontWeight: cs.pesoTesto,
+      fontStyle: cs.corsivoTesto ? 'italic' : undefined,
+      color: cs.coloreTesto,
+      margin: 0,
+      fontFamily,
+    }}>
+      {cs.testo || 'Testo del messaggio di esempio per la preview.'}
+    </p>
+  ) : null;
+
+  const icon = cs.mostraIcona && cs.icona ? (
+    <span style={{ fontSize: cs.fontSizeTitolo + 2 }}>{cs.icona}</span>
+  ) : null;
+
+  return (
+    <div style={{ maxWidth }}>
+      <div style={{
+        backgroundColor: cs.sfondo,
+        borderRadius: cs.raggio,
+        borderWidth,
+        borderStyle: borderWidth > 0 ? 'solid' : undefined,
+        borderColor: cs.coloreBordo,
+        padding: cs.padding,
+        boxShadow,
+        textAlign,
+      }}>
+        {cs.posizioneIcona === 'before' ? (
+          <div style={{ display: 'flex', flexDirection: cs.allineamento === 'center' ? 'column' : 'row', alignItems: cs.allineamento === 'center' ? 'center' : 'flex-start', gap: 8 }}>
+            {icon}
+            <div style={{ flex: 1 }}>
+              {titleEl}
+              {titleEl && textEl && <div style={{ height: 4 }} />}
+              {textEl}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ display: 'flex', justifyContent: cs.allineamento === 'right' ? 'flex-end' : cs.allineamento === 'center' ? 'center' : 'flex-start', gap: 8 }}>
+              {titleEl}
+              {icon}
+            </div>
+            {titleEl && textEl && <div style={{ height: 4 }} />}
+            {textEl}
+          </div>
+        )}
+        {cs.chiudibile && (
+          <div style={{ textAlign: 'right', marginTop: 8 }}>
+            <span style={{ fontSize: 11, color: cs.coloreTesto, opacity: 0.5, cursor: 'pointer' }}>✕ chiudi</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -450,7 +595,17 @@ export default function AdminPersonalizzazionePage() {
     });
   }
 
-  const comunicazioneKeys = ['comunicazione.attivo', 'comunicazione.titolo', 'comunicazione.testo', 'comunicazione.colore'];
+  const comunicazioneKeys = [
+    'comunicazione.attivo', 'comunicazione.titolo', 'comunicazione.testo', 'comunicazione.colore',
+    'comunicazione.posizione', 'comunicazione.font', 'comunicazione.fontSizeTitolo', 'comunicazione.fontSizeTesto',
+    'comunicazione.pesoTitolo', 'comunicazione.pesoTesto', 'comunicazione.allineamento', 'comunicazione.trasformazione',
+    'comunicazione.corsivoTitolo', 'comunicazione.corsivoTesto',
+    'comunicazione.sfondo', 'comunicazione.coloreTesto', 'comunicazione.coloreTitolo',
+    'comunicazione.bordo', 'comunicazione.coloreBordo', 'comunicazione.raggio', 'comunicazione.ombra',
+    'comunicazione.padding', 'comunicazione.larghezza',
+    'comunicazione.mostraIcona', 'comunicazione.icona', 'comunicazione.posizioneIcona',
+    'comunicazione.chiudibile', 'comunicazione.soloUnaVolta', 'comunicazione.scadenza',
+  ];
   const homeKeys = [
     'home.titolo1', 'home.titolo1.maiuscolo', 'home.titolo1.colore', 'home.titolo1.size',
     'home.titolo1.font', 'home.titolo1.weight', 'home.titolo1.lineHeight', 'home.titolo1.letterSpacing', 'home.titolo1.transform',
@@ -825,46 +980,258 @@ export default function AdminPersonalizzazionePage() {
       {/* ── Messaggi ai clienti ──────────────────────────────── */}
       <SectionCard title="Messaggi ai clienti">
         <p className="text-xs text-gray-400">Mostra un messaggio evidenziato nella homepage dei clienti (notizie, promozioni, avvisi).</p>
+
         <ToggleRow label="Mostra messaggio" checked={settings.comunicazione.attivo} onChange={(v) => update('comunicazione', { attivo: v })} />
+
         {settings.comunicazione.attivo && (
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Titolo</label>
-              <input
-                type="text"
-                value={settings.comunicazione.titolo}
-                onChange={(e) => update('comunicazione', { titolo: e.target.value })}
-                placeholder="Es. Novità in catalogo"
-                className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Testo</label>
-              <textarea
-                value={settings.comunicazione.testo}
-                onChange={(e) => update('comunicazione', { testo: e.target.value })}
-                placeholder="Es. Abbiamo aggiunto 50 nuovi prodotti per la stagione primavera/estate."
-                rows={3}
-                className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900 resize-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Colore bordo / accento</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={settings.comunicazione.colore}
-                  onChange={(e) => update('comunicazione', { colore: e.target.value })}
-                  className="w-9 h-9 rounded border border-border cursor-pointer flex-shrink-0"
-                />
+          <div className="space-y-5">
+
+            {/* Contenuto */}
+            <div className="space-y-3">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Contenuto</p>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Titolo</label>
                 <input
                   type="text"
-                  value={settings.comunicazione.colore}
-                  onChange={(e) => update('comunicazione', { colore: e.target.value })}
-                  className="flex-1 border border-border rounded px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-gray-900"
+                  value={settings.comunicazione.titolo}
+                  onChange={(e) => update('comunicazione', { titolo: e.target.value })}
+                  placeholder="Es. Novità in catalogo"
+                  className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Testo</label>
+                <textarea
+                  value={settings.comunicazione.testo}
+                  onChange={(e) => update('comunicazione', { testo: e.target.value })}
+                  placeholder="Es. Abbiamo aggiunto 50 nuovi prodotti per la stagione primavera/estate."
+                  rows={3}
+                  className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900 resize-none"
                 />
               </div>
             </div>
+
+            {/* Posizione */}
+            <div className="space-y-2">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Posizione nella homepage</p>
+              <select
+                value={settings.comunicazione.posizione}
+                onChange={(e) => update('comunicazione', { posizione: e.target.value })}
+                className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+              >
+                <option value="top">In cima (sopra l&apos;immagine hero)</option>
+                <option value="after-cta">Dopo il tasto CTA</option>
+                <option value="after-products">Dopo la griglia prodotti</option>
+                <option value="bottom">In fondo alla pagina</option>
+                <option value="banner-top">Banner fisso in alto</option>
+                <option value="banner-bottom">Banner fisso in basso</option>
+              </select>
+            </div>
+
+            {/* Stile testo */}
+            <div className="space-y-3">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Stile testo</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Font</label>
+                  <select
+                    value={settings.comunicazione.font}
+                    onChange={(e) => update('comunicazione', { font: e.target.value })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                  >
+                    <option value="system">Sistema</option>
+                    <option value="serif">Serif</option>
+                    <option value="mono">Mono</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Allineamento</label>
+                  <select
+                    value={settings.comunicazione.allineamento}
+                    onChange={(e) => update('comunicazione', { allineamento: e.target.value })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                  >
+                    <option value="left">Sinistra</option>
+                    <option value="center">Centro</option>
+                    <option value="right">Destra</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Dim. titolo (px)</label>
+                  <input type="number" min={10} max={40} value={settings.comunicazione.fontSizeTitolo}
+                    onChange={(e) => update('comunicazione', { fontSizeTitolo: Number(e.target.value) })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Dim. testo (px)</label>
+                  <input type="number" min={10} max={30} value={settings.comunicazione.fontSizeTesto}
+                    onChange={(e) => update('comunicazione', { fontSizeTesto: Number(e.target.value) })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Peso titolo</label>
+                  <select value={settings.comunicazione.pesoTitolo}
+                    onChange={(e) => update('comunicazione', { pesoTitolo: e.target.value })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                  >
+                    <option value="normal">Normale</option>
+                    <option value="medium">Medium</option>
+                    <option value="semibold">Semibold</option>
+                    <option value="bold">Bold</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Peso testo</label>
+                  <select value={settings.comunicazione.pesoTesto}
+                    onChange={(e) => update('comunicazione', { pesoTesto: e.target.value })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                  >
+                    <option value="normal">Normale</option>
+                    <option value="medium">Medium</option>
+                    <option value="semibold">Semibold</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Trasformazione testo</label>
+                <select value={settings.comunicazione.trasformazione}
+                  onChange={(e) => update('comunicazione', { trasformazione: e.target.value })}
+                  className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                >
+                  <option value="none">Nessuna</option>
+                  <option value="uppercase">MAIUSCOLO</option>
+                  <option value="lowercase">minuscolo</option>
+                  <option value="capitalize">Prima Lettera</option>
+                </select>
+              </div>
+              <div className="flex gap-4">
+                <ToggleRow label="Titolo corsivo" checked={settings.comunicazione.corsivoTitolo} onChange={(v) => update('comunicazione', { corsivoTitolo: v })} />
+                <ToggleRow label="Testo corsivo" checked={settings.comunicazione.corsivoTesto} onChange={(v) => update('comunicazione', { corsivoTesto: v })} />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Colore titolo</label>
+                <ColorPickerWithPalette value={settings.comunicazione.coloreTitolo} onChange={(v) => update('comunicazione', { coloreTitolo: v })} />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Colore testo</label>
+                <ColorPickerWithPalette value={settings.comunicazione.coloreTesto} onChange={(v) => update('comunicazione', { coloreTesto: v })} />
+              </div>
+            </div>
+
+            {/* Stile box */}
+            <div className="space-y-3">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Stile box</p>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Sfondo</label>
+                <ColorPickerWithPalette value={settings.comunicazione.sfondo} onChange={(v) => update('comunicazione', { sfondo: v })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Bordo</label>
+                  <select value={settings.comunicazione.bordo}
+                    onChange={(e) => update('comunicazione', { bordo: e.target.value })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                  >
+                    <option value="none">Nessuno</option>
+                    <option value="thin">Sottile (1px)</option>
+                    <option value="medium">Medio (2px)</option>
+                    <option value="thick">Spesso (3px)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Raggio (px)</label>
+                  <input type="number" min={0} max={40} value={settings.comunicazione.raggio}
+                    onChange={(e) => update('comunicazione', { raggio: Number(e.target.value) })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Ombra</label>
+                  <select value={settings.comunicazione.ombra}
+                    onChange={(e) => update('comunicazione', { ombra: e.target.value })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                  >
+                    <option value="none">Nessuna</option>
+                    <option value="sm">Leggera</option>
+                    <option value="md">Media</option>
+                    <option value="lg">Forte</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Padding (px)</label>
+                  <input type="number" min={8} max={48} value={settings.comunicazione.padding}
+                    onChange={(e) => update('comunicazione', { padding: Number(e.target.value) })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Colore bordo</label>
+                <ColorPickerWithPalette value={settings.comunicazione.coloreBordo} onChange={(v) => update('comunicazione', { coloreBordo: v })} />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Larghezza</label>
+                <select value={settings.comunicazione.larghezza}
+                  onChange={(e) => update('comunicazione', { larghezza: e.target.value })}
+                  className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                >
+                  <option value="full">Piena larghezza</option>
+                  <option value="lg">Larga (640px)</option>
+                  <option value="md">Media (480px)</option>
+                  <option value="sm">Stretta (320px)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Icona / Emoji */}
+            <div className="space-y-3">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Icona / Emoji</p>
+              <ToggleRow label="Mostra icona" checked={settings.comunicazione.mostraIcona} onChange={(v) => update('comunicazione', { mostraIcona: v })} />
+              {settings.comunicazione.mostraIcona && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Emoji</label>
+                    <input type="text" value={settings.comunicazione.icona}
+                      onChange={(e) => update('comunicazione', { icona: e.target.value })}
+                      className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Posizione icona</label>
+                    <select value={settings.comunicazione.posizioneIcona}
+                      onChange={(e) => update('comunicazione', { posizioneIcona: e.target.value })}
+                      className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                    >
+                      <option value="before">Prima del titolo</option>
+                      <option value="after">Dopo il titolo</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Comportamento */}
+            <div className="space-y-3">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Comportamento</p>
+              <ToggleRow label="Chiudibile dall'utente" checked={settings.comunicazione.chiudibile} onChange={(v) => update('comunicazione', { chiudibile: v })} />
+              <ToggleRow label="Mostra solo una volta (per sessione)" checked={settings.comunicazione.soloUnaVolta} onChange={(v) => update('comunicazione', { soloUnaVolta: v })} />
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Scadenza (lascia vuoto per nessuna)</label>
+                <input type="date" value={settings.comunicazione.scadenza}
+                  onChange={(e) => update('comunicazione', { scadenza: e.target.value })}
+                  className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                />
+              </div>
+            </div>
+
+            {/* Preview */}
+            <div className="space-y-2">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Anteprima</p>
+              <ComunicazionePreview cs={settings.comunicazione} />
+            </div>
+
           </div>
         )}
         <SaveButton onClick={() => saveSection(comunicazioneKeys, 'Comunicazione')} loading={saving === 'Comunicazione'} />

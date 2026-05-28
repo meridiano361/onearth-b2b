@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useMemo, useState, useEffect, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { Globe, Mic, ShoppingBag, Check, Heart, Film } from 'lucide-react';
+import { Globe, Mic, ShoppingBag, Check, Heart, Film, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -137,6 +137,104 @@ function SpotlightCard({ product }: { product: Product }) {
   );
 }
 
+function MessageBox({ cs }: { cs: ReturnType<typeof useSettings>['comunicazione'] }) {
+  const [dismissed, setDismissed] = useState(false);
+  const storageKey = `comunicazione-dismissed-${cs.titolo}-${cs.testo}`.slice(0, 80);
+
+  useEffect(() => {
+    if (cs.soloUnaVolta && sessionStorage.getItem(storageKey) === '1') {
+      setDismissed(true);
+    }
+  }, [storageKey, cs.soloUnaVolta]);
+
+  if (dismissed) return null;
+  if (!cs.attivo || (!cs.titolo && !cs.testo)) return null;
+  if (cs.scadenza && Date.now() > new Date(cs.scadenza).getTime()) return null;
+
+  function handleDismiss() {
+    setDismissed(true);
+    if (cs.soloUnaVolta) sessionStorage.setItem(storageKey, '1');
+  }
+
+  const fontFamily = cs.font === 'serif' ? 'Georgia, serif' : cs.font === 'mono' ? 'monospace' : undefined;
+  const borderWidth = cs.bordo === 'none' ? 0 : cs.bordo === 'thin' ? 1 : cs.bordo === 'medium' ? 2 : 3;
+  const boxShadow = cs.ombra === 'sm' ? '0 1px 3px rgba(0,0,0,0.12)' : cs.ombra === 'md' ? '0 4px 12px rgba(0,0,0,0.15)' : cs.ombra === 'lg' ? '0 8px 24px rgba(0,0,0,0.18)' : undefined;
+  const maxWidth = cs.larghezza === 'sm' ? 320 : cs.larghezza === 'md' ? 480 : cs.larghezza === 'lg' ? 640 : undefined;
+
+  const boxStyle: CSSProperties = {
+    backgroundColor: cs.sfondo,
+    borderRadius: cs.raggio,
+    borderWidth: borderWidth || undefined,
+    borderStyle: borderWidth > 0 ? 'solid' : undefined,
+    borderColor: cs.coloreBordo,
+    padding: cs.padding,
+    boxShadow,
+    maxWidth,
+    textAlign: cs.allineamento as CSSProperties['textAlign'],
+    position: 'relative',
+    fontFamily,
+  };
+
+  const titleStyle: CSSProperties = {
+    fontSize: cs.fontSizeTitolo,
+    fontWeight: cs.pesoTitolo as CSSProperties['fontWeight'],
+    fontStyle: cs.corsivoTitolo ? 'italic' : undefined,
+    textTransform: cs.trasformazione as CSSProperties['textTransform'],
+    color: cs.coloreTitolo,
+    margin: 0,
+  };
+
+  const textStyle: CSSProperties = {
+    fontSize: cs.fontSizeTesto,
+    fontWeight: cs.pesoTesto as CSSProperties['fontWeight'],
+    fontStyle: cs.corsivoTesto ? 'italic' : undefined,
+    color: cs.coloreTesto,
+    margin: 0,
+  };
+
+  const icon = cs.mostraIcona && cs.icona ? (
+    <span style={{ fontSize: cs.fontSizeTitolo + 2, lineHeight: 1 }}>{cs.icona}</span>
+  ) : null;
+
+  const titleEl = cs.titolo ? <p style={titleStyle}>{cs.titolo}</p> : null;
+  const textEl  = cs.testo  ? <p style={textStyle}>{cs.testo}</p>   : null;
+
+  return (
+    <div style={boxStyle}>
+      {cs.chiudibile && (
+        <button
+          onClick={handleDismiss}
+          style={{ position: 'absolute', top: 10, right: 10, color: cs.coloreTesto, opacity: 0.5 }}
+          aria-label="Chiudi"
+        >
+          <X size={14} />
+        </button>
+      )}
+      {cs.posizioneIcona === 'before' && icon ? (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          {icon}
+          <div style={{ flex: 1 }}>
+            {titleEl}
+            {titleEl && textEl && <div style={{ height: 4 }} />}
+            {textEl}
+          </div>
+        </div>
+      ) : (
+        <div>
+          {titleEl && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: cs.allineamento === 'right' ? 'flex-end' : cs.allineamento === 'center' ? 'center' : 'flex-start' }}>
+              {titleEl}
+              {cs.posizioneIcona === 'after' && icon}
+            </div>
+          )}
+          {titleEl && textEl && <div style={{ height: 4 }} />}
+          {textEl}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CustomerHome() {
   const th = useTranslations('home');
   const { home: hs, social: ss, comunicazione: cs } = useSettings();
@@ -179,9 +277,24 @@ export default function CustomerHome() {
     color: hs.titolo2Colore,
   };
 
+  const commBox = <MessageBox cs={cs} />;
+  const isBannerTop    = cs.posizione === 'banner-top';
+  const isBannerBottom = cs.posizione === 'banner-bottom';
+
   return (
     <div className="min-h-screen bg-cream">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10 space-y-10">
+
+      {/* ── Comunicazione: banner fisso in alto ─────────────── */}
+      {isBannerTop && (
+        <div className="fixed top-0 left-0 right-0 z-50 px-4 py-2 flex justify-center">
+          {commBox}
+        </div>
+      )}
+
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10 space-y-10" style={isBannerTop ? { paddingTop: 60 } : undefined}>
+
+        {/* ── Comunicazione: in cima ───────────────────────────── */}
+        {cs.posizione === 'top' && <section>{commBox}</section>}
 
         {/* ── Top CTA ─────────────────────────────────────────── */}
         <div className="flex justify-center">
@@ -193,22 +306,8 @@ export default function CustomerHome() {
           </Link>
         </div>
 
-        {/* ── Comunicazione ────────────────────────────────────── */}
-        {cs.attivo && (cs.titolo || cs.testo) && (
-          <section>
-            <div
-              className="rounded-xl border px-5 py-4 space-y-1"
-              style={{ borderColor: cs.colore, backgroundColor: `${cs.colore}14` }}
-            >
-              {cs.titolo && (
-                <p className="text-sm font-semibold" style={{ color: cs.colore }}>{cs.titolo}</p>
-              )}
-              {cs.testo && (
-                <p className="text-sm text-gray-700">{cs.testo}</p>
-              )}
-            </div>
-          </section>
-        )}
+        {/* ── Comunicazione: dopo CTA ──────────────────────────── */}
+        {cs.posizione === 'after-cta' && <section>{commBox}</section>}
 
         {/* ── Scopri la collezione ─────────────────────────────── */}
         {hs.scrollAttivo && (
@@ -254,6 +353,9 @@ export default function CustomerHome() {
             </div>
           </section>
         )}
+
+        {/* ── Comunicazione: dopo prodotti ─────────────────────── */}
+        {cs.posizione === 'after-products' && <section>{commBox}</section>}
 
         {/* ── Risorse e media ──────────────────────────────────── */}
         <section>
@@ -313,7 +415,18 @@ export default function CustomerHome() {
           </div>
         </section>
 
+        {/* ── Comunicazione: in fondo ──────────────────────────── */}
+        {cs.posizione === 'bottom' && <section>{commBox}</section>}
+
       </div>
+
+      {/* ── Comunicazione: banner fisso in basso ────────────── */}
+      {isBannerBottom && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 py-2 flex justify-center">
+          {commBox}
+        </div>
+      )}
+
     </div>
   );
 }
