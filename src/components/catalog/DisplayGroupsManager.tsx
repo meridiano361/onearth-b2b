@@ -6,7 +6,7 @@ import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
+  SortableContext, useSortable, verticalListSortingStrategy, rectSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
@@ -46,11 +46,13 @@ const COLOR_PALETTE = [
   { label: 'Giallo',       value: '#FDE68A' },
 ];
 
-const TEMPLATES = [
-  { nome: 'Vetrina' },
-  { nome: 'Isola' },
-  { nome: 'Parete' },
-];
+const COLOR_TEMPLATES = [
+  { nome: 'Toni Naturali',  keywords: ['naturale','beige','terra','sabbia','ocra','miele','lino'] },
+  { nome: 'Toni Vivaci',    keywords: ['rosso','arancio','giallo','verde','blu','viola','fucsia','turchese'] },
+  { nome: 'Toni Freddi',    keywords: ['azzurro','blu','grigio','bianco','ghiaccio','argento','freddo'] },
+  { nome: 'Toni Caldi',     keywords: ['rosso','arancio','giallo','rame','terracotta','caldo','ruggine'] },
+  { nome: 'Toni Neutri',    keywords: ['bianco','nero','grigio','beige','ecru','panna'] },
+] as const;
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
@@ -161,8 +163,63 @@ function ProductListaView({
   );
 }
 
+function SortableBoardItem({
+  item, onRemove, onToggleFocus, deletingItemId,
+}: {
+  item: DisplayGroupItem;
+  onRemove: (item: DisplayGroupItem) => void;
+  onToggleFocus: (item: DisplayGroupItem) => void;
+  deletingItemId: string | null;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const p = item.orderItem.product;
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+        zIndex: isDragging ? 50 : undefined,
+        backgroundColor: '#F3F4F6',
+        border: item.isFocus ? '2px solid #F97316' : isDragging ? '2px dashed #3B82F6' : '2px solid transparent',
+      }}
+      className="relative group/item rounded-[8px] overflow-hidden cursor-grab active:cursor-grabbing"
+      {...attributes}
+      {...listeners}
+    >
+      <div className="aspect-square overflow-hidden">
+        {p?.imageUrl
+          ? <ProductImage src={p.imageUrl} alt={p?.name ?? ''} className="w-full h-full object-cover" />
+          : <div className="w-full h-full bg-gray-200" />
+        }
+      </div>
+      <p className="text-[9px] text-[#6B7280] text-center py-0.5 px-0.5 truncate leading-tight">{p?.code}</p>
+      <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/40 transition-colors rounded-[8px]" />
+      <div className="absolute top-1 right-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleFocus(item); }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="w-5 h-5 bg-white/90 rounded-full flex items-center justify-center"
+          title={item.isFocus ? 'Rimuovi focus' : 'Focus'}
+        >
+          <Flame size={10} color={item.isFocus ? '#F97316' : '#9CA3AF'} fill={item.isFocus ? '#F97316' : 'none'} />
+        </button>
+      </div>
+      <button
+        onClick={(e) => { e.stopPropagation(); onRemove(item); }}
+        onPointerDown={(e) => e.stopPropagation()}
+        disabled={deletingItemId === item.id}
+        className="absolute top-1 left-1 w-5 h-5 bg-red-500 text-white rounded-full items-center justify-center hidden group-hover/item:flex z-10"
+      >
+        {deletingItemId === item.id ? <Loader2 size={9} className="animate-spin" /> : <X size={9} />}
+      </button>
+    </div>
+  );
+}
+
 function ProductBoardView({
-  items, onRemove, onToggleFocus, deletingItemId,
+  items, orderId, groupId, onRemove, onToggleFocus, deletingItemId,
 }: {
   items: DisplayGroupItem[];
   orderId: string;
@@ -171,48 +228,49 @@ function ProductBoardView({
   onToggleFocus: (item: DisplayGroupItem) => void;
   deletingItemId: string | null;
 }) {
-  const sorted = sortProductsForDisplay(items);
+  const [localItems, setLocalItems] = useState<DisplayGroupItem[]>(() =>
+    [...items].sort((a, b) => a.posizione - b.posizione)
+  );
+
+  useEffect(() => {
+    setLocalItems([...items].sort((a, b) => a.posizione - b.posizione));
+  }, [items]);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = localItems.findIndex(i => i.id === active.id);
+    const newIdx = localItems.findIndex(i => i.id === over.id);
+    if (oldIdx === -1 || newIdx === -1) return;
+    const reordered = arrayMove(localItems, oldIdx, newIdx);
+    setLocalItems(reordered);
+    try {
+      await fetch(`/api/catalog/orders/${orderId}/display-groups/${groupId}/items/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: reordered.map((it, i) => ({ orderItemId: it.orderItemId, posizione: i })) }),
+      });
+    } catch { /* silent — next refresh will restore server order */ }
+  }
+
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-6 xl:grid-cols-10 gap-2">
-      {sorted.map((item) => {
-        const p = item.orderItem.product;
-        return (
-          <div
-            key={item.id}
-            className="relative group/item rounded-[8px] overflow-hidden"
-            style={{
-              backgroundColor: '#F3F4F6',
-              border: item.isFocus ? '2px solid #F97316' : '2px solid transparent',
-            }}
-          >
-            <div className="aspect-square overflow-hidden">
-              {p?.imageUrl
-                ? <ProductImage src={p.imageUrl} alt={p?.name ?? ''} className="w-full h-full object-cover" />
-                : <div className="w-full h-full bg-gray-200" />
-              }
-            </div>
-            <p className="text-[9px] text-[#6B7280] text-center py-0.5 px-0.5 truncate leading-tight">{p?.code}</p>
-            <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/40 transition-colors rounded-[8px]" />
-            <div className="absolute top-1 right-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
-              <button
-                onClick={() => onToggleFocus(item)}
-                className="w-5 h-5 bg-white/90 rounded-full flex items-center justify-center"
-                title={item.isFocus ? 'Rimuovi focus' : 'Focus'}
-              >
-                <Flame size={10} color={item.isFocus ? '#F97316' : '#9CA3AF'} fill={item.isFocus ? '#F97316' : 'none'} />
-              </button>
-            </div>
-            <button
-              onClick={() => onRemove(item)}
-              disabled={deletingItemId === item.id}
-              className="absolute top-1 left-1 w-5 h-5 bg-red-500 text-white rounded-full items-center justify-center hidden group-hover/item:flex z-10"
-            >
-              {deletingItemId === item.id ? <Loader2 size={9} className="animate-spin" /> : <X size={9} />}
-            </button>
-          </div>
-        );
-      })}
-    </div>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={localItems.map(i => i.id)} strategy={rectSortingStrategy}>
+        <div className="grid grid-cols-3 sm:grid-cols-6 xl:grid-cols-10 gap-2">
+          {localItems.map((item) => (
+            <SortableBoardItem
+              key={item.id}
+              item={item}
+              onRemove={onRemove}
+              onToggleFocus={onToggleFocus}
+              deletingItemId={deletingItemId}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
 
@@ -222,11 +280,20 @@ interface GroupFormData {
   nome: string; descrizione: string; coloreTag: string; stagione: string; temaTag: string;
 }
 
+function matchesColorTemplate(product: OrderItem['product'], keywords: readonly string[]): boolean {
+  if (!product) return false;
+  const themes = [product.temaColore, (product as any).temaColore2, (product as any).temaColore3, (product as any).temaColore4, (product as any).temaColore5]
+    .filter(Boolean)
+    .map((t: string) => t.toLowerCase());
+  return keywords.some(kw => themes.some(t => t.includes(kw)));
+}
+
 function GroupFormModal({
-  orderId, group, onClose, onSaved,
+  orderId, group, orderItems, onClose, onSaved,
 }: {
   orderId: string;
   group?: DisplayGroup;
+  orderItems: OrderItem[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -239,6 +306,14 @@ function GroupFormModal({
     temaTag: group?.temaTag ?? '',
   });
   const [saving, setSaving] = useState(false);
+  const [templateKeywords, setTemplateKeywords] = useState<readonly string[] | null>(null);
+  const [monoColor, setMonoColor] = useState('');
+
+  const uniqueColors = useMemo(() => {
+    const set = new Set<string>();
+    orderItems.forEach(it => { if (it.product?.colore) set.add(it.product.colore); });
+    return [...set].sort();
+  }, [orderItems]);
 
   async function handleSave() {
     if (!form.nome.trim()) { toast.error('Nome obbligatorio'); return; }
@@ -258,8 +333,39 @@ function GroupFormModal({
           temaTag: form.temaTag.trim() || null,
         }),
       });
+      const resJson = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error();
-      toast.success(isEdit ? 'Gruppo aggiornato' : 'Gruppo creato');
+
+      // Auto-add products matching the selected template
+      if (!isEdit && (templateKeywords || monoColor)) {
+        const groupId = resJson?.group?.id;
+        if (groupId) {
+          let matchingIds: string[];
+          if (monoColor) {
+            matchingIds = orderItems
+              .filter(it => it.product?.colore === monoColor)
+              .map(it => it.id);
+          } else {
+            matchingIds = orderItems
+              .filter(it => matchesColorTemplate(it.product, templateKeywords!))
+              .map(it => it.id);
+          }
+          if (matchingIds.length > 0) {
+            await fetch(`/api/catalog/orders/${orderId}/display-groups/${groupId}/items`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderItemIds: matchingIds }),
+            });
+            toast.success(`${matchingIds.length} prodotti aggiunti automaticamente`);
+          } else {
+            toast(`Nessun prodotto corrisponde al template`, { icon: 'ℹ️' });
+          }
+        }
+      }
+
+      if (!(!isEdit && (templateKeywords || monoColor))) {
+        toast.success(isEdit ? 'Gruppo aggiornato' : 'Gruppo creato');
+      }
       onSaved();
     } catch {
       toast.error('Errore nel salvataggio');
@@ -279,18 +385,57 @@ function GroupFormModal({
 
         {!isEdit && (
           <div className="mb-4">
-            <p className="text-2xs text-gray-400 uppercase tracking-wider mb-2">Template rapidi</p>
-            <div className="flex gap-2">
-              {TEMPLATES.map((t) => (
-                <button
-                  key={t.nome}
-                  onClick={() => setForm((f) => ({ ...f, nome: t.nome }))}
-                  className="px-3 py-1.5 text-xs text-gray-700 border border-border rounded hover:border-gray-400 hover:bg-gray-50 transition-colors"
-                >
-                  {t.nome}
-                </button>
-              ))}
+            <p className="text-2xs text-gray-400 uppercase tracking-wider mb-2">Template palette colore</p>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {COLOR_TEMPLATES.map((t) => {
+                const active = templateKeywords === t.keywords && !monoColor;
+                return (
+                  <button
+                    key={t.nome}
+                    onClick={() => {
+                      setTemplateKeywords(active ? null : t.keywords);
+                      setMonoColor('');
+                      setForm((f) => ({ ...f, nome: active ? f.nome : t.nome }));
+                    }}
+                    className={`px-2.5 py-1 text-xs rounded border transition-colors ${active ? 'bg-primary text-white border-primary' : 'text-gray-700 border-border hover:border-gray-400 hover:bg-gray-50'}`}
+                  >
+                    {t.nome}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => {
+                  setTemplateKeywords(null);
+                  setForm((f) => ({ ...f, nome: monoColor ? f.nome : 'Monocromatico' }));
+                  setMonoColor(monoColor ? '' : (uniqueColors[0] ?? ''));
+                }}
+                className={`px-2.5 py-1 text-xs rounded border transition-colors ${monoColor ? 'bg-primary text-white border-primary' : 'text-gray-700 border-border hover:border-gray-400 hover:bg-gray-50'}`}
+              >
+                Monocromatico
+              </button>
             </div>
+            {monoColor && uniqueColors.length > 0 && (
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-2xs text-gray-500">Colore:</span>
+                <select
+                  value={monoColor}
+                  onChange={(e) => setMonoColor(e.target.value)}
+                  className="text-xs border border-border rounded px-2 py-1 focus:outline-none focus:border-accent"
+                >
+                  {uniqueColors.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            )}
+            {(templateKeywords || monoColor) && (
+              <p className="text-2xs text-accent mt-1.5">
+                {(() => {
+                  const count = monoColor
+                    ? orderItems.filter(it => it.product?.colore === monoColor).length
+                    : orderItems.filter(it => matchesColorTemplate(it.product, templateKeywords!)).length;
+                  return `${count} prodotti verranno aggiunti automaticamente`;
+                })()}
+              </p>
+            )}
           </div>
         )}
 
@@ -1000,6 +1145,7 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
         <GroupFormModal
           orderId={orderId}
           group={editGroup ?? undefined}
+          orderItems={orderItems}
           onClose={() => { setNewGroupOpen(false); setEditGroup(null); }}
           onSaved={() => { setNewGroupOpen(false); setEditGroup(null); refresh(); }}
         />

@@ -110,7 +110,12 @@ function ProductCard({
       {/* Body */}
       <div className="p-2.5 flex flex-col gap-1.5 grow">
         <div>
-          <p className="text-2xs font-mono text-gray-400 tracking-wider leading-none">{product.code}</p>
+          <div className="flex items-center gap-1.5 leading-none">
+            <p className="text-2xs font-mono text-gray-400 tracking-wider">{product.code}</p>
+            {product.collezione === 'CA27' && (
+              <span className="bg-black text-white text-[8px] font-bold px-1 py-px rounded-sm leading-none flex-shrink-0">NUOVO</span>
+            )}
+          </div>
           <p className="text-xs font-medium text-primary leading-snug mt-1 h-10 overflow-hidden">{product.name}</p>
         </div>
 
@@ -269,7 +274,12 @@ function AddProductsModal({
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-2xs font-mono text-gray-400 truncate">{product.code}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-2xs font-mono text-gray-400 truncate">{product.code}</p>
+                    {product.collezione === 'CA27' && (
+                      <span className="bg-black text-white text-[8px] font-bold px-1 py-px rounded-sm leading-none flex-shrink-0">NUOVO</span>
+                    )}
+                  </div>
                   <p className="text-xs text-primary h-10 overflow-hidden font-medium">{product.name}</p>
                   <p className="text-2xs text-gray-400">{formatCurrency(product.costPrice)}</p>
                 </div>

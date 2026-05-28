@@ -15,6 +15,7 @@ const GROUP_INCLUDE = {
               id: true, code: true, name: true, description: true,
               imageUrl: true, retailPrice: true, costPrice: true, lotSize: true,
               nomLinea: true, colore: true, stagione: true, collezione: true,
+              temaColore: true, temaColore2: true, temaColore3: true, temaColore4: true, temaColore5: true,
             },
           },
         },

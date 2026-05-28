@@ -25,9 +25,14 @@ export default function CartItem({ item }: CartItemProps) {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="text-2xs font-medium tracking-wide uppercase text-gray-400 leading-none mb-0.5">
-            {item.product.code}
-          </p>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <p className="text-2xs font-medium tracking-wide uppercase text-gray-400 leading-none">
+              {item.product.code}
+            </p>
+            {item.product.collezione === 'CA27' && (
+              <span className="bg-black text-white text-[8px] font-bold px-1 py-px rounded-sm leading-none flex-shrink-0">NUOVO</span>
+            )}
+          </div>
           <p className="text-xs font-medium text-primary leading-snug h-10 overflow-hidden mb-1.5">
             {item.product.name}
           </p>

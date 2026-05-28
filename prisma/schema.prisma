@@ -69,8 +69,11 @@ model Product {
   produttore         String?
   gruppoMerceologico String?
   classe             String?
+  classe2            String?
   sottoclasse        String?
+  sottoclasse2       String?
   gruppoOmogeneo     String?
+  gruppoOmogeneo2    String?
   stagione           String?
   temaColore         String?
   temaColore2        String?

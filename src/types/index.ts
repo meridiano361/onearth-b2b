@@ -58,8 +58,11 @@ export interface Product {
   produttore: string | null;
   gruppoMerceologico: string | null;
   classe: string | null;
+  classe2: string | null;
   sottoclasse: string | null;
+  sottoclasse2: string | null;
   gruppoOmogeneo: string | null;
+  gruppoOmogeneo2: string | null;
   stagione: string | null;
   temaColore: string | null;
   temaColore2: string | null;

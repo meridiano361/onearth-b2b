@@ -38,15 +38,33 @@ interface CatalogFiltersProps {
 
 type FilterRecord = Record<string, string | null>;
 
+// Fields that have a secondary value (OR logic)
+const MULTI_VALUE_FIELDS: Record<string, string> = {
+  classe: 'classe2',
+  sottoclasse: 'sottoclasse2',
+  gruppoOmogeneo: 'gruppoOmogeneo2',
+};
+
+function productMatchesFilter(p: Product, key: string, value: string): boolean {
+  if (key === 'temaColore') {
+    return [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].some(v => v === value);
+  }
+  const primary = (p as unknown as Record<string, unknown>)[key] as string | undefined;
+  if (primary === value) return true;
+  const secondary = MULTI_VALUE_FIELDS[key];
+  if (secondary) {
+    const sec = (p as unknown as Record<string, unknown>)[secondary] as string | undefined;
+    return sec === value;
+  }
+  return false;
+}
+
 // Apply every active filter EXCEPT excludeKey
 function applyFiltersExcept(products: Product[], filters: FilterRecord, excludeKey: string): Product[] {
   return products.filter(p =>
     Object.entries(filters).every(([key, value]) => {
       if (!value || key === excludeKey) return true;
-      if (key === 'temaColore') {
-        return [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].some(v => v === value);
-      }
-      return (p as unknown as Record<string, unknown>)[key] === value;
+      return productMatchesFilter(p, key, value);
     })
   );
 }
@@ -69,8 +87,13 @@ function computeOptions(products: Product[], filters: FilterRecord, key: string)
 
   const counts = new Map<string, number>();
   for (const p of filtered) {
-    const v = (p as unknown as Record<string, unknown>)[key] as string | undefined;
-    if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
+    const primary = (p as unknown as Record<string, unknown>)[key] as string | undefined;
+    if (primary) counts.set(primary, (counts.get(primary) ?? 0) + 1);
+    const secondary = MULTI_VALUE_FIELDS[key];
+    if (secondary) {
+      const sec = (p as unknown as Record<string, unknown>)[secondary] as string | undefined;
+      if (sec && sec !== primary) counts.set(sec, (counts.get(sec) ?? 0) + 1);
+    }
   }
   return Array.from(counts.entries())
     .sort(([a], [b]) => a.localeCompare(b))

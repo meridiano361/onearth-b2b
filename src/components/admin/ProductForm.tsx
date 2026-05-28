@@ -25,8 +25,11 @@ const schema = z
     gruppoMerceologico: z.string().optional(),
     famiglia: z.string().optional(),
     classe: z.string().optional(),
+    classe2: z.string().optional(),
     sottoclasse: z.string().optional(),
+    sottoclasse2: z.string().optional(),
     gruppoOmogeneo: z.string().optional(),
+    gruppoOmogeneo2: z.string().optional(),
     nomLinea: z.string().optional(),
     stagione: z.string().optional(),
     collezione: z.string().optional(),
@@ -122,8 +125,11 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           gruppoMerceologico: product.gruppoMerceologico || '',
           famiglia: product.famiglia || '',
           classe: product.classe || '',
+          classe2: (product as any).classe2 || '',
           sottoclasse: product.sottoclasse || '',
+          sottoclasse2: (product as any).sottoclasse2 || '',
           gruppoOmogeneo: product.gruppoOmogeneo || '',
+          gruppoOmogeneo2: (product as any).gruppoOmogeneo2 || '',
           nomLinea: product.nomLinea || '',
           stagione: product.stagione || '',
           collezione: product.collezione || '',
@@ -241,8 +247,11 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           gruppoMerceologico: v.gruppoMerceologico || null,
           famiglia: v.famiglia || null,
           classe: v.classe || null,
+          classe2: (v as any).classe2 || null,
           sottoclasse: v.sottoclasse || null,
+          sottoclasse2: (v as any).sottoclasse2 || null,
           gruppoOmogeneo: v.gruppoOmogeneo || null,
+          gruppoOmogeneo2: (v as any).gruppoOmogeneo2 || null,
           nomLinea: v.nomLinea || null,
           stagione: v.stagione || null,
           collezione: v.collezione || null,
@@ -356,6 +365,26 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           field="sottoclasse"
           value={watch('sottoclasse') || ''}
           onChange={(v) => setValue('sottoclasse', v)}
+        />
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        <Combobox
+          label="Classe 2"
+          field="classe"
+          value={(watch as any)('classe2') || ''}
+          onChange={(v) => (setValue as any)('classe2', v)}
+        />
+        <Combobox
+          label="Sottoclasse 2"
+          field="sottoclasse"
+          value={(watch as any)('sottoclasse2') || ''}
+          onChange={(v) => (setValue as any)('sottoclasse2', v)}
+        />
+        <Combobox
+          label="Gruppo omogeneo 2"
+          field="gruppoOmogeneo"
+          value={(watch as any)('gruppoOmogeneo2') || ''}
+          onChange={(v) => (setValue as any)('gruppoOmogeneo2', v)}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">

@@ -34,17 +34,26 @@ type Filters = {
 
 // ── Bidirectional filter invalidation helpers ─────────────────────────────────
 
+const FILTER_SECONDARY: Partial<Record<keyof Filters, string>> = {
+  classe: 'classe2',
+  sottoclasse: 'sottoclasse2',
+  gruppoOmogeneo: 'gruppoOmogeneo2',
+};
+
 function filterMatchesProduct(p: Product, key: keyof Filters, value: string): boolean {
   if (key === 'temaColore') {
     return [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].some(v => v === value);
   }
-  return (p as unknown as Record<string, unknown>)[key] === value;
+  const primary = (p as unknown as Record<string, unknown>)[key] as string | undefined;
+  if (primary === value) return true;
+  const sec = FILTER_SECONDARY[key];
+  if (sec) return (p as unknown as Record<string, unknown>)[sec] === value;
+  return false;
 }
 
 function getAvailableValues(products: Product[], filters: Filters, key: keyof Filters): Set<string> {
   const result = new Set<string>();
   for (const p of products) {
-    // Check all filters EXCEPT key
     const matches = (Object.keys(filters) as (keyof Filters)[]).every(k => {
       const v = filters[k];
       if (!v || k === key) return true;
@@ -56,8 +65,13 @@ function getAvailableValues(products: Product[], filters: Filters, key: keyof Fi
         if (v) result.add(v);
       }
     } else {
-      const v = (p as unknown as Record<string, unknown>)[key] as string | undefined;
-      if (v) result.add(v);
+      const primary = (p as unknown as Record<string, unknown>)[key] as string | undefined;
+      if (primary) result.add(primary);
+      const sec = FILTER_SECONDARY[key];
+      if (sec) {
+        const sv = (p as unknown as Record<string, unknown>)[sec] as string | undefined;
+        if (sv) result.add(sv);
+      }
     }
   }
   return result;
@@ -261,9 +275,9 @@ export default function CatalogView() {
     const { gruppoMerceologico, famiglia, classe, sottoclasse, gruppoOmogeneo, nomLinea, colore, temaColore, stagione, collezione, produttore, tranche } = filters;
     if (gruppoMerceologico) result = result.filter((p) => p.gruppoMerceologico === gruppoMerceologico);
     if (famiglia)           result = result.filter((p) => p.famiglia           === famiglia);
-    if (classe)             result = result.filter((p) => p.classe             === classe);
-    if (sottoclasse)        result = result.filter((p) => p.sottoclasse        === sottoclasse);
-    if (gruppoOmogeneo)     result = result.filter((p) => p.gruppoOmogeneo     === gruppoOmogeneo);
+    if (classe)             result = result.filter((p) => p.classe === classe || (p as any).classe2 === classe);
+    if (sottoclasse)        result = result.filter((p) => p.sottoclasse === sottoclasse || (p as any).sottoclasse2 === sottoclasse);
+    if (gruppoOmogeneo)     result = result.filter((p) => p.gruppoOmogeneo === gruppoOmogeneo || (p as any).gruppoOmogeneo2 === gruppoOmogeneo);
     if (nomLinea)           result = result.filter((p) => p.nomLinea           === nomLinea);
     if (colore)             result = result.filter((p) => p.colore             === colore);
     if (temaColore)         result = result.filter((p) => [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].includes(temaColore));
