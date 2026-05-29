@@ -1035,11 +1035,6 @@ export default function AdminOrganizzazioniPage() {
                                       <td className="px-3 py-2">
                                         <div className="flex items-center gap-1.5">
                                           <span className="font-medium text-primary">{op.nome} {op.cognome}</span>
-                                          {op.featureMondiEspositivi && (
-                                            <span className="text-2xs font-bold px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 tracking-wide flex items-center gap-0.5">
-                                              <Layers size={9} />TESTER
-                                            </span>
-                                          )}
                                         </div>
                                       </td>
                                       <td className="px-3 py-2 text-gray-500">{op.email}</td>
@@ -1120,11 +1115,6 @@ export default function AdminOrganizzazioniPage() {
                                     <div className="min-w-0">
                                       <div className="flex items-center gap-1.5 flex-wrap">
                                         <p className="font-medium text-primary text-sm">{op.nome} {op.cognome}</p>
-                                        {op.featureMondiEspositivi && (
-                                          <span className="text-2xs font-bold px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 tracking-wide flex items-center gap-0.5">
-                                            <Layers size={9} />TESTER
-                                          </span>
-                                        )}
                                       </div>
                                       <p
                                         className="text-xs text-gray-500 mt-0.5"
