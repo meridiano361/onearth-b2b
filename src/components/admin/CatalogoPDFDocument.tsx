@@ -272,6 +272,22 @@ export type CatalogConfig = {
     quantita: number;
     layout: 'grande-thumbnail' | 'griglia-2x2' | 'prima-disponibile';
   };
+  suddividiPerTranche?: boolean;
+  trancheGroups?: TrancheGroup[];
+  separatoreTrancheAttivo?: boolean;
+  stileSeparatoreTranche?: TrancheSeparatoreStyle;
+  includeTrancheSenzaNome?: boolean;
+  ordineTranche?: 'az' | 'za' | 'custom';
+  trancheOrder?: string[];
+};
+
+export type TrancheSeparatoreStyle = {
+  bgColor: string;
+  color: string;
+  fontSize: number;
+  bold: boolean;
+  uppercase: boolean;
+  mostraNProdotti: boolean;
 };
 
 export type ProductForPDF = {
@@ -296,11 +312,18 @@ export type ProductForPDF = {
   sottoclasse: string | null;
   famiglia: string | null;
   gruppoOmogeneo: string | null;
+  tranche?: string | null;
 };
 
 export type GroupForPDF = {
   key: string;
   products: ProductForPDF[];
+};
+
+export type TrancheGroup = {
+  tranche: string;
+  productCount: number;
+  groups: GroupForPDF[];
 };
 
 // ── Page size / margin constants ──────────────────────────────────────────────
@@ -1917,6 +1940,39 @@ function NewRowGroupHeader({
   );
 }
 
+// ── Tranche separator page ────────────────────────────────────────────────────
+
+function TrancheSeparatorPage({
+  tranche, productCount, config, layout, today,
+}: {
+  tranche: string; productCount: number; config: CatalogConfig; layout: Layout; today: string;
+}) {
+  const st: TrancheSeparatoreStyle = config.stileSeparatoreTranche ?? {
+    bgColor: '#1C1C1C', color: '#FFFFFF', fontSize: 36, bold: true, uppercase: true, mostraNProdotti: true,
+  };
+  const font = st.bold ? 'Helvetica-Bold' : 'Helvetica';
+  const displayName = st.uppercase ? tranche.toUpperCase() : tranche;
+  const { pageW, pageH } = layout;
+
+  return (
+    <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: st.bgColor, paddingTop: 20, paddingBottom: 20, paddingLeft: 20, paddingRight: 20 }}>
+      <CatalogHeader config={config} today={today} layout={layout} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 }}>
+        <View style={{ width: 60, height: 2, backgroundColor: st.color, marginBottom: 20, opacity: 0.6 }} />
+        <Text style={{ fontSize: st.fontSize, fontFamily: font, color: st.color, letterSpacing: 4, textAlign: 'center' }}>
+          {displayName}
+        </Text>
+        {st.mostraNProdotti && (
+          <Text style={{ fontSize: 11, fontFamily: 'Helvetica', color: st.color, marginTop: 20, opacity: 0.6, letterSpacing: 2 }}>
+            {productCount} {productCount === 1 ? 'prodotto' : 'prodotti'}
+          </Text>
+        )}
+      </View>
+      <CatalogFooter config={config} layout={layout} />
+    </Page>
+  );
+}
+
 // ── Main document ─────────────────────────────────────────────────────────────
 
 export interface CatalogoPDFDocumentProps {
@@ -1946,12 +2002,12 @@ export function CatalogoPDFDocument({ groups, config }: CatalogoPDFDocumentProps
   };
 
   // Inline / nuova-riga: all groups on continuous pages, no separate separator pages
-  const renderInlineOrNewRow = () => {
+  const renderInlineOrNewRow = (groupsToRender: GroupForPDF[]) => {
     const isNewRow = separatorMode === 'nuova-riga';
     return (
       <Page size={[pageW, pageH] as [number, number]} style={pageStyle}>
         <CatalogHeader config={config} today={today} layout={layout} />
-        {groups.map((group, gi) => {
+        {groupsToRender.map((group, gi) => {
           const rows: (ProductForPDF | null)[][] = [];
           for (let i = 0; i < group.products.length; i += layout.COLS) {
             const row: (ProductForPDF | null)[] = group.products.slice(i, i + layout.COLS);
@@ -2019,6 +2075,33 @@ export function CatalogoPDFDocument({ groups, config }: CatalogoPDFDocumentProps
     );
   };
 
+  const renderGroupsInMode = (groupsToRender: GroupForPDF[], showSep: boolean) => {
+    if (separatorMode === 'pagina-intera') {
+      return groupsToRender.map((group, gi) => (
+        <React.Fragment key={gi}>
+          {showSep && group.key && (
+            <SeparatorPageFull
+              groupKey={group.key}
+              productCount={group.products.length}
+              config={config}
+              layout={layout}
+              today={today}
+            />
+          )}
+          <Page size={[pageW, pageH] as [number, number]} style={pageStyle}>
+            <CatalogHeader config={config} today={today} layout={layout} />
+            <ProductGrid products={group.products} config={config} layout={layout} />
+            <CatalogFooter config={config} layout={layout} />
+          </Page>
+        </React.Fragment>
+      ));
+    }
+    return renderInlineOrNewRow(groupsToRender);
+  };
+
+  const trancheGroups = config.trancheGroups;
+  const useTrancheMode = config.suddividiPerTranche && trancheGroups && trancheGroups.length > 0;
+
   return (
     <Document>
       {/* Cover page */}
@@ -2027,7 +2110,22 @@ export function CatalogoPDFDocument({ groups, config }: CatalogoPDFDocumentProps
       )}
 
       {/* Product pages */}
-      {separatorMode === 'pagina-intera' ? (
+      {useTrancheMode ? (
+        trancheGroups!.map((tg, ti) => (
+          <React.Fragment key={ti}>
+            {config.separatoreTrancheAttivo !== false && (
+              <TrancheSeparatorPage
+                tranche={tg.tranche}
+                productCount={tg.productCount}
+                config={config}
+                layout={layout}
+                today={today}
+              />
+            )}
+            {renderGroupsInMode(tg.groups, true)}
+          </React.Fragment>
+        ))
+      ) : separatorMode === 'pagina-intera' ? (
         groups.map((group, gi) => (
           <React.Fragment key={gi}>
             {hasGrouping && (
@@ -2047,7 +2145,7 @@ export function CatalogoPDFDocument({ groups, config }: CatalogoPDFDocumentProps
           </React.Fragment>
         ))
       ) : (
-        renderInlineOrNewRow()
+        renderInlineOrNewRow(groups)
       )}
 
       {/* Penultima page */}

@@ -172,6 +172,19 @@ interface FormState {
     quantita: number;
     layout: 'grande-thumbnail' | 'griglia-2x2' | 'prima-disponibile';
   };
+  suddividiPerTranche: boolean;
+  ordineTranche: 'az' | 'za' | 'custom';
+  trancheOrder: string[];
+  includeTrancheSenzaNome: boolean;
+  separatoreTrancheAttivo: boolean;
+  stileSeparatoreTranche: {
+    bgColor: string;
+    color: string;
+    fontSize: number;
+    bold: boolean;
+    uppercase: boolean;
+    mostraNProdotti: boolean;
+  };
 }
 
 interface Template {
@@ -186,6 +199,8 @@ interface PreviewResult {
   pages: number;
   productPages: number;
   groupPages: number;
+  trancheSepPages?: number;
+  trancheStats?: { tranche: string; count: number }[] | null;
   fotoStats?: { senza: number; una: number; multiple: number } | null;
 }
 
@@ -365,6 +380,19 @@ const DEFAULT_STATE: FormState = {
     quantita: 1,
     layout: 'grande-thumbnail' as const,
   },
+  suddividiPerTranche: false,
+  ordineTranche: 'az' as const,
+  trancheOrder: [] as string[],
+  includeTrancheSenzaNome: false,
+  separatoreTrancheAttivo: true,
+  stileSeparatoreTranche: {
+    bgColor: '#1C1C1C',
+    color: '#FFFFFF',
+    fontSize: 36,
+    bold: true,
+    uppercase: true,
+    mostraNProdotti: true,
+  },
 };
 
 // Merge a saved (possibly old) template config with DEFAULT_STATE so that
@@ -390,6 +418,8 @@ function mergeWithDefaults(saved: any): FormState {
     nuovoBadge: { ...DEFAULT_STATE.nuovoBadge, ...saved?.nuovoBadge },
     fotoConfig: { ...DEFAULT_STATE.fotoConfig, ...saved?.fotoConfig },
     sezioniPersonalizzate: saved?.sezioniPersonalizzate ?? DEFAULT_STATE.sezioniPersonalizzate,
+    stileSeparatoreTranche: { ...DEFAULT_STATE.stileSeparatoreTranche, ...saved?.stileSeparatoreTranche },
+    trancheOrder: saved?.trancheOrder ?? DEFAULT_STATE.trancheOrder,
   };
 }
 
@@ -1480,6 +1510,17 @@ function SortableSection({
   );
 }
 
+function SortableTranche({ id, label }: { id: string; label: string }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 p-2 bg-white border border-border rounded">
+      <span {...attributes} {...listeners} className="cursor-grab text-gray-300 hover:text-gray-500 select-none text-base leading-none" title="Trascina per riordinare">⠿</span>
+      <p className="flex-1 text-xs font-medium text-primary">{label}</p>
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function AdminCatalogoPDFPage() {
@@ -1518,6 +1559,8 @@ export default function AdminCatalogoPDFPage() {
     sezioniPersonalizzate: false,
     nuovoBadge: false,
     fotoConfig: false,
+    tranche: false,
+    stileSeparatoreTrancheSection: false,
   });
 
   // Custom sections editing state
@@ -1680,6 +1723,12 @@ export default function AdminCatalogoPDFPage() {
   const setNuovoBadge = useCallback(
     (patch: Partial<FormState['nuovoBadge']>) =>
       setConfig((c) => ({ ...c, nuovoBadge: { ...c.nuovoBadge, ...patch } })),
+    []
+  );
+
+  const setSepTranche = useCallback(
+    (patch: Partial<FormState['stileSeparatoreTranche']>) =>
+      setConfig((c) => ({ ...c, stileSeparatoreTranche: { ...c.stileSeparatoreTranche, ...patch } })),
     []
   );
 
@@ -3791,6 +3840,104 @@ export default function AdminCatalogoPDFPage() {
           )}
         </div>
 
+        {/* ── Suddivisione per tranche ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.tranche} onToggle={() => toggleSection('tranche')}>
+            Suddivisione per tranche
+          </SectionTitle>
+          {sections.tranche && (
+            <div className="p-4 space-y-4">
+              <CheckboxField
+                label="Suddividi il catalogo per tranche"
+                checked={config.suddividiPerTranche}
+                onChange={(v) => set('suddividiPerTranche', v)}
+              />
+              {config.suddividiPerTranche && (
+                <div className="space-y-3 pl-2 border-l-2 border-border">
+                  <CheckboxField
+                    label="Includi prodotti senza tranche assegnata"
+                    checked={config.includeTrancheSenzaNome}
+                    onChange={(v) => set('includeTrancheSenzaNome', v)}
+                  />
+                  <CheckboxField
+                    label="Mostra pagina separatrice per ogni tranche"
+                    checked={config.separatoreTrancheAttivo}
+                    onChange={(v) => set('separatoreTrancheAttivo', v)}
+                  />
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Ordine tranche</label>
+                    <select
+                      value={config.ordineTranche}
+                      onChange={(e) => set('ordineTranche', e.target.value as 'az' | 'za' | 'custom')}
+                      className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    >
+                      <option value="az">Alfabetico A→Z</option>
+                      <option value="za">Alfabetico Z→A</option>
+                      <option value="custom">Personalizzato (drag &amp; drop)</option>
+                    </select>
+                  </div>
+                  {config.ordineTranche === 'custom' && tranches.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-2xs text-gray-500 mb-1">Trascina per riordinare</p>
+                      {(() => {
+                        const list = config.trancheOrder.length > 0 ? config.trancheOrder : [...tranches].sort();
+                        return (
+                          <DndContext
+                            collisionDetection={closestCenter}
+                            onDragEnd={({ active, over }) => {
+                              if (!over || active.id === over.id) return;
+                              const oldIdx = list.indexOf(active.id as string);
+                              const newIdx = list.indexOf(over.id as string);
+                              if (oldIdx >= 0 && newIdx >= 0) set('trancheOrder', arrayMove(list, oldIdx, newIdx));
+                            }}
+                          >
+                            <SortableContext items={list} strategy={verticalListSortingStrategy}>
+                              <div className="space-y-1">
+                                {list.map((t) => (
+                                  <SortableTranche key={t} id={t} label={t} />
+                                ))}
+                              </div>
+                            </SortableContext>
+                          </DndContext>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Stile separatore tranche ── */}
+        {config.suddividiPerTranche && config.separatoreTrancheAttivo && (
+          <div className="border border-border rounded overflow-hidden">
+            <SectionTitle open={sections.stileSeparatoreTrancheSection} onToggle={() => toggleSection('stileSeparatoreTrancheSection')}>
+              Stile separatore tranche
+            </SectionTitle>
+            {sections.stileSeparatoreTrancheSection && (
+              <div className="p-4 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione font (pt)</label>
+                    <input type="number" min={16} max={60} value={config.stileSeparatoreTranche.fontSize}
+                      onChange={(e) => setSepTranche({ fontSize: parseFloat(e.target.value) || 36 })}
+                      className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-gray-500 w-20">Stile testo</span>
+                  <ToggleBtn active={config.stileSeparatoreTranche.bold} onClick={() => setSepTranche({ bold: !config.stileSeparatoreTranche.bold })}><span className="font-bold">B</span></ToggleBtn>
+                  <ToggleBtn active={config.stileSeparatoreTranche.uppercase} onClick={() => setSepTranche({ uppercase: !config.stileSeparatoreTranche.uppercase })} title="Tutto maiuscolo">AA</ToggleBtn>
+                </div>
+                <CheckboxField label="Mostra numero prodotti" checked={config.stileSeparatoreTranche.mostraNProdotti} onChange={(v) => setSepTranche({ mostraNProdotti: v })} />
+                <ColorSwatchPicker label="Colore sfondo" value={config.stileSeparatoreTranche.bgColor} onChange={(v) => setSepTranche({ bgColor: v })} />
+                <ColorSwatchPicker label="Colore testo" value={config.stileSeparatoreTranche.color} onChange={(v) => setSepTranche({ color: v })} />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Salva configurazione ── */}
         <div className="border border-border rounded p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -3897,8 +4044,25 @@ export default function AdminCatalogoPDFPage() {
               </div>
               {preview.groupPages > 0 && (
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Pagine separatore</span>
+                  <span className="text-gray-500">Pagine separatore sezioni</span>
                   <span className="font-semibold text-primary">{preview.groupPages}</span>
+                </div>
+              )}
+              {(preview.trancheSepPages ?? 0) > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-500">Pagine separatore tranche</span>
+                  <span className="font-semibold text-primary">{preview.trancheSepPages}</span>
+                </div>
+              )}
+              {preview.trancheStats && preview.trancheStats.length > 0 && (
+                <div className="border-t border-border pt-1 mt-1 space-y-1">
+                  <p className="text-2xs text-gray-400 font-medium uppercase tracking-wide">{preview.trancheStats.length} tranche trovate</p>
+                  {preview.trancheStats.map((ts) => (
+                    <div key={ts.tranche} className="flex justify-between text-xs">
+                      <span className="text-gray-500 truncate mr-2">{ts.tranche}</span>
+                      <span className="font-semibold text-primary flex-shrink-0">{ts.count}</span>
+                    </div>
+                  ))}
                 </div>
               )}
               <div className="flex justify-between text-xs border-t border-border pt-1 mt-1">

@@ -8,7 +8,7 @@ import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
 import { CatalogoPDFDocument } from '@/components/admin/CatalogoPDFDocument';
-import type { CatalogConfig, CatalogFields, GroupForPDF, ProductForPDF, CustomSection } from '@/components/admin/CatalogoPDFDocument';
+import type { CatalogConfig, CatalogFields, GroupForPDF, ProductForPDF, CustomSection, TrancheGroup } from '@/components/admin/CatalogoPDFDocument';
 
 function productMatchesSection(product: ProductForPDF, criteri: CustomSection['criteri']): boolean {
   const checks = [
@@ -114,6 +114,7 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
       sottoclasse: true,
       famiglia: true,
       gruppoOmogeneo: true,
+      tranche: true,
     },
   });
 
@@ -173,72 +174,97 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
     sottoclasse: p.sottoclasse,
     famiglia: p.famiglia,
     gruppoOmogeneo: p.gruppoOmogeneo,
+    tranche: p.tranche,
   }));
+
+  function buildSectionGroups(prods: ProductForPDF[], fc: Partial<CatalogConfig>): GroupForPDF[] {
+    if (fc.useSezioniPersonalizzate && fc.sezioniPersonalizzate && fc.sezioniPersonalizzate.length > 0) {
+      const customGroups: GroupForPDF[] = [];
+      const assignedIds = new Set<string>();
+      const sectionSortMap: Record<string, (a: ProductForPDF, b: ProductForPDF) => number> = {
+        code: (a, b) => a.code.localeCompare(b.code),
+        name: (a, b) => (a.name || '').localeCompare(b.name || ''),
+        costPrice_asc: (a, b) => a.costPrice - b.costPrice,
+        costPrice_desc: (a, b) => b.costPrice - a.costPrice,
+        nomLinea: (a, b) => (a.nomLinea || '').localeCompare(b.nomLinea || ''),
+      };
+      for (const sezione of fc.sezioniPersonalizzate) {
+        const sectionProducts = prods
+          .filter((p) => productMatchesSection(p, sezione.criteri))
+          .sort(sectionSortMap[sezione.ordinamento] ?? sectionSortMap.code);
+        sectionProducts.forEach((p) => assignedIds.add(p.id));
+        if (sezione.mostraSottosezioni) {
+          const subMap = new Map<string, ProductForPDF[]>();
+          for (const p of sectionProducts) {
+            const subKey = p.sottoclasse || p.classe || p.famiglia || p.gruppoOmogeneo || p.nomLinea || 'Non specificato';
+            if (!subMap.has(subKey)) subMap.set(subKey, []);
+            subMap.get(subKey)!.push(p);
+          }
+          for (const [subKey, subProducts] of subMap.entries()) {
+            customGroups.push({ key: `${sezione.nome} — ${subKey}`, products: subProducts });
+          }
+        } else {
+          if (sectionProducts.length > 0) customGroups.push({ key: sezione.nome, products: sectionProducts });
+        }
+      }
+      if (fc.includiProdottiNonAssegnati !== false) {
+        const unassigned = prods.filter((p) => !assignedIds.has(p.id));
+        if (unassigned.length > 0) customGroups.push({ key: 'Altri prodotti', products: unassigned });
+      }
+      return customGroups;
+    } else {
+      const groupField = RAGGRUPPAMENTO_FIELD[raggruppa];
+      if (raggruppa && groupField) {
+        const map = new Map<string, ProductForPDF[]>();
+        for (const p of prods) {
+          const key = (p[groupField] as string | null) || 'Non specificato';
+          if (!map.has(key)) map.set(key, []);
+          map.get(key)!.push(p);
+        }
+        return Array.from(map.entries())
+          .sort(([a], [b]) => a.localeCompare(b, 'it'))
+          .map(([key, ps]) => ({ key, products: ps }));
+      } else {
+        return [{ key: '', products: prods }];
+      }
+    }
+  }
 
   // Build groups
   let groups: GroupForPDF[];
+  let trancheGroups: TrancheGroup[] | undefined;
 
-  // ITEM 6D: Custom sections logic
-  if (fullConfig?.useSezioniPersonalizzate && fullConfig.sezioniPersonalizzate && fullConfig.sezioniPersonalizzate.length > 0) {
-    const customGroups: GroupForPDF[] = [];
-    const assignedIds = new Set<string>();
-
-    const sectionSortMap: Record<string, (a: ProductForPDF, b: ProductForPDF) => number> = {
-      code: (a, b) => a.code.localeCompare(b.code),
-      name: (a, b) => (a.name || '').localeCompare(b.name || ''),
-      costPrice_asc: (a, b) => a.costPrice - b.costPrice,
-      costPrice_desc: (a, b) => b.costPrice - a.costPrice,
-      nomLinea: (a, b) => (a.nomLinea || '').localeCompare(b.nomLinea || ''),
-    };
-
-    for (const sezione of fullConfig.sezioniPersonalizzate) {
-      const sectionProducts = productsForPDF
-        .filter((p) => productMatchesSection(p, sezione.criteri))
-        .sort(sectionSortMap[sezione.ordinamento] ?? sectionSortMap.code);
-
-      sectionProducts.forEach((p) => assignedIds.add(p.id));
-
-      if (sezione.mostraSottosezioni) {
-        // Group by the most specific criterion available
-        const subMap = new Map<string, ProductForPDF[]>();
-        for (const p of sectionProducts) {
-          const subKey = p.sottoclasse || p.classe || p.famiglia || p.gruppoOmogeneo || p.nomLinea || 'Non specificato';
-          if (!subMap.has(subKey)) subMap.set(subKey, []);
-          subMap.get(subKey)!.push(p);
-        }
-        for (const [subKey, subProducts] of subMap.entries()) {
-          customGroups.push({ key: `${sezione.nome} — ${subKey}`, products: subProducts });
-        }
+  if (fullConfig?.suddividiPerTranche) {
+    // Group products by tranche
+    const trancheMap = new Map<string, ProductForPDF[]>();
+    for (const p of productsForPDF) {
+      const key = p.tranche || null;
+      if (key === null && !fullConfig?.includeTrancheSenzaNome) continue;
+      const label = key ?? 'Non assegnato';
+      if (!trancheMap.has(label)) trancheMap.set(label, []);
+      trancheMap.get(label)!.push(p);
+    }
+    let trancheKeys = Array.from(trancheMap.keys());
+    if (fullConfig.ordineTranche === 'za') {
+      trancheKeys.sort((a, b) => b.localeCompare(a, 'it'));
+    } else if (fullConfig.ordineTranche === 'custom') {
+      const customOrder: string[] = fullConfig.trancheOrder ?? [];
+      if (customOrder.length > 0) {
+        const orderMap = new Map(customOrder.map((t, i) => [t, i]));
+        trancheKeys.sort((a, b) => (orderMap.get(a) ?? 9999) - (orderMap.get(b) ?? 9999));
       } else {
-        if (sectionProducts.length > 0) {
-          customGroups.push({ key: sezione.nome, products: sectionProducts });
-        }
+        trancheKeys.sort((a, b) => a.localeCompare(b, 'it'));
       }
-    }
-
-    if (fullConfig.includiProdottiNonAssegnati !== false) {
-      const unassigned = productsForPDF.filter((p) => !assignedIds.has(p.id));
-      if (unassigned.length > 0) {
-        customGroups.push({ key: 'Altri prodotti', products: unassigned });
-      }
-    }
-
-    groups = customGroups;
-  } else {
-    const groupField = RAGGRUPPAMENTO_FIELD[raggruppa];
-    if (raggruppa && groupField) {
-      const map = new Map<string, ProductForPDF[]>();
-      for (const p of productsForPDF) {
-        const key = (p[groupField] as string | null) || 'Non specificato';
-        if (!map.has(key)) map.set(key, []);
-        map.get(key)!.push(p);
-      }
-      groups = Array.from(map.entries())
-        .sort(([a], [b]) => a.localeCompare(b, 'it'))
-        .map(([key, prods]) => ({ key, products: prods }));
     } else {
-      groups = [{ key: '', products: productsForPDF }];
+      trancheKeys.sort((a, b) => a.localeCompare(b, 'it'));
     }
+    trancheGroups = trancheKeys.map((tranche) => {
+      const trancheProds = trancheMap.get(tranche)!;
+      return { tranche, productCount: trancheProds.length, groups: buildSectionGroups(trancheProds, fullConfig ?? {}) };
+    });
+    groups = [{ key: '', products: productsForPDF }];
+  } else {
+    groups = buildSectionGroups(productsForPDF, fullConfig ?? {});
   }
 
   const config: CatalogConfig = {
@@ -337,6 +363,10 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
       posizione: 'image-top-right',
     },
     fotoConfig: fotoConfig ?? fullConfig?.fotoConfig,
+    suddividiPerTranche: fullConfig?.suddividiPerTranche ?? false,
+    trancheGroups,
+    separatoreTrancheAttivo: fullConfig?.separatoreTrancheAttivo ?? true,
+    stileSeparatoreTranche: fullConfig?.stileSeparatoreTranche,
   };
 
   // If a cover image was provided separately (e.g. from GET route), inject it
@@ -521,7 +551,13 @@ export async function POST(req: NextRequest) {
         sezioniPersonalizzate: body.sezioniPersonalizzate,
         includiProdottiNonAssegnati: body.includiProdottiNonAssegnati,
         nuovoBadge: body.nuovoBadge,
-      },
+        suddividiPerTranche: body.suddividiPerTranche,
+        separatoreTrancheAttivo: body.separatoreTrancheAttivo,
+        stileSeparatoreTranche: body.stileSeparatoreTranche,
+        includeTrancheSenzaNome: body.includeTrancheSenzaNome,
+        ordineTranche: body.ordineTranche,
+        trancheOrder: body.trancheOrder,
+      } as Partial<CatalogConfig>,
     });
 
     const pdfBuffer = await renderToBuffer(

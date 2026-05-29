@@ -56,6 +56,24 @@ export async function POST(req: NextRequest) {
     const penultimaPage = body.paginaPenultima?.attiva ? 1 : 0;
     const finalPage = body.paginaFinale?.attiva ? 1 : 0;
 
+    // Tranche stats
+    let trancheStats: { tranche: string; count: number }[] | null = null;
+    let trancheSepPages = 0;
+    if (body.suddividiPerTranche && count > 0) {
+      const trancheRows = await prisma.product.groupBy({
+        by: ['tranche'],
+        where,
+        _count: { id: true },
+      });
+      trancheStats = trancheRows
+        .filter((r) => r.tranche !== null || body.includeTrancheSenzaNome)
+        .map((r) => ({ tranche: r.tranche ?? 'Non assegnato', count: r._count.id }))
+        .sort((a, b) => a.tranche.localeCompare(b.tranche, 'it'));
+      if (body.separatoreTrancheAttivo !== false) {
+        trancheSepPages = trancheStats.length;
+      }
+    }
+
     // Photo stats (only when foto field is enabled)
     let fotoStats: { senza: number; una: number; multiple: number } | null = null;
     if (body.campi?.foto && count > 0) {
@@ -75,9 +93,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       count,
-      pages: productPages + groupPages + coverPage + penultimaPage + finalPage,
+      pages: productPages + groupPages + trancheSepPages + coverPage + penultimaPage + finalPage,
       productPages,
       groupPages,
+      trancheSepPages,
+      trancheStats,
       fotoStats,
     });
   } catch (err) {
