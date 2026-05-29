@@ -3,23 +3,19 @@
 import { useState, useEffect } from 'react';
 
 export default function WhatsAppWidget() {
-  const [visible, setVisible] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const [disabled, setDisabled] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    // Pulizia: il vecchio comportamento scriveva 'true' in localStorage alla chiusura —
-    // lo spostiamo su sessionStorage così riappare alla prossima visita.
-    if (localStorage.getItem('whatsapp_widget_hidden') === 'true' &&
-        localStorage.getItem('whatsapp_widget_disabled') !== 'true') {
-      localStorage.removeItem('whatsapp_widget_hidden');
-      sessionStorage.setItem('whatsapp_widget_closed', 'true');
-    }
+    // Pulizia chiave vecchia lasciata da versioni precedenti
+    localStorage.removeItem('whatsapp_widget_hidden');
 
     const update = () => {
-      const permanentlyHidden = localStorage.getItem('whatsapp_widget_disabled') === 'true';
-      const closedThisSession = sessionStorage.getItem('whatsapp_widget_closed') === 'true';
-      setVisible(!permanentlyHidden && !closedThisSession);
+      setDisabled(localStorage.getItem('whatsapp_widget_disabled') === 'true');
     };
     update();
+    setInitialized(true);
     window.addEventListener('storage', update);
     return () => window.removeEventListener('storage', update);
   }, []);
@@ -27,16 +23,14 @@ export default function WhatsAppWidget() {
   const handleClose = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Solo per questa sessione: torna visibile alla prossima visita
-    sessionStorage.setItem('whatsapp_widget_closed', 'true');
-    setVisible(false);
+    // Solo React state: torna visibile al prossimo login/refresh
+    setDismissed(true);
   };
 
-  if (!visible) return null;
+  if (!initialized || disabled || dismissed) return null;
 
   return (
     <div className="fixed bottom-20 right-4 md:bottom-6 md:right-5 z-[9999] flex flex-col items-end gap-1">
-      {/* Close button */}
       <button
         onClick={handleClose}
         className="w-4 h-4 rounded-full bg-gray-400 hover:bg-gray-500 text-white flex items-center justify-center text-[9px] leading-none transition-colors"
@@ -45,8 +39,6 @@ export default function WhatsAppWidget() {
       >
         ×
       </button>
-
-      {/* WhatsApp button */}
       <a
         href="https://wa.me/393297919706"
         target="_blank"
@@ -55,7 +47,6 @@ export default function WhatsAppWidget() {
         className="w-9 h-9 rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-shadow"
         style={{ backgroundColor: '#25D366' }}
       >
-        {/* WhatsApp SVG inline */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
