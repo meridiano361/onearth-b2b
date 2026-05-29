@@ -418,17 +418,18 @@ model OrderItem {
 // ─── Mondi Espositivi (Display Groups) ───────────────────────────────────────
 
 model DisplayGroup {
-  id          String   @id @default(cuid())
-  orderId     String
-  nome        String
-  descrizione String?
-  coloreTag   String?
-  stagione    String?
-  temaTag     String?
-  posizione   Int      @default(0)
-  nomiLivelli String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  orderId      String
+  nome         String
+  descrizione  String?
+  coloreTag    String?
+  stagione     String?
+  temaTag      String?
+  posizione    Int      @default(0)
+  nomiLivelli  String?
+  hasFocusCard Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   order     Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
   prodotti  DisplayGroupItem[]

@@ -171,6 +171,7 @@ export interface DisplayGroup {
   temaTag: string | null;
   posizione: number;
   nomiLivelli: string | null;
+  hasFocusCard: boolean;
   createdAt: string;
   prodotti: DisplayGroupItem[];
   schedules?: DisplayGroupSchedule[];

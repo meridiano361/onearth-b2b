@@ -27,22 +27,27 @@ export async function POST(req: NextRequest, { params }: { params: { orderId: st
   }
 
   const livello = typeof body.livello === 'number' && body.livello >= 1 ? body.livello : 1;
+  const forceFocus = body.isFocus === true;
 
   const lastItem = await prisma.displayGroupItem.findFirst({
     where: { groupId: params.groupId },
     orderBy: { posizione: 'desc' },
     select: { posizione: true },
   });
+  const isFirstAdd = !lastItem;
   let posizione = (lastItem?.posizione ?? -1) + 1;
+  let isFirstItem = isFirstAdd;
 
   await prisma.$transaction(
-    validItems.map((item) =>
-      prisma.displayGroupItem.upsert({
+    validItems.map((item) => {
+      const isFocus = forceFocus || isFirstItem;
+      isFirstItem = false;
+      return prisma.displayGroupItem.upsert({
         where: { groupId_orderItemId: { groupId: params.groupId, orderItemId: item.id } },
         update: {},
-        create: { groupId: params.groupId, orderItemId: item.id, posizione: posizione++, livello },
-      })
-    )
+        create: { groupId: params.groupId, orderItemId: item.id, posizione: posizione++, livello, isFocus },
+      });
+    })
   );
 
   return NextResponse.json({ ok: true }, { status: 201 });

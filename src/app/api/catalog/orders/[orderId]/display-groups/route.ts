@@ -13,9 +13,14 @@ const GROUP_INCLUDE = {
           product: {
             select: {
               id: true, code: true, name: true, description: true,
-              imageUrl: true, retailPrice: true, costPrice: true, lotSize: true,
+              imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true,
+              retailPrice: true, costPrice: true, lotSize: true,
               nomLinea: true, colore: true, stagione: true, collezione: true,
               temaColore: true, temaColore2: true, temaColore3: true, temaColore4: true, temaColore5: true,
+              produttore: true, paese: true, misura: true,
+              classe: true, classe2: true, sottoclasse: true, sottoclasse2: true,
+              gruppoOmogeneo: true, gruppoOmogeneo2: true,
+              fasciaSconto: true, fasciaRicarico: true,
             },
           },
         },
