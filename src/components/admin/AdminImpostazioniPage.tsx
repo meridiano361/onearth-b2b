@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, Power, X, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -214,7 +214,19 @@ function UserModal({ user, onClose, onSaved }: ModalProps) {
 
 export default function AdminImpostazioniPage({ currentUserId }: { currentUserId: string }) {
   const qc = useQueryClient();
-  const [modalUser, setModalUser] = useState<AdminUser | null | undefined>(undefined); // undefined=closed, null=new
+  const [modalUser, setModalUser] = useState<AdminUser | null | undefined>(undefined);
+  const [whatsappVisible, setWhatsappVisible] = useState(true);
+
+  useEffect(() => {
+    const hidden = localStorage.getItem('whatsapp_widget_hidden');
+    setWhatsappVisible(hidden !== 'true');
+  }, []);
+
+  function toggleWhatsapp(checked: boolean) {
+    setWhatsappVisible(checked);
+    localStorage.setItem('whatsapp_widget_hidden', checked ? 'false' : 'true');
+    window.dispatchEvent(new Event('storage'));
+  } // undefined=closed, null=new
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -410,6 +422,35 @@ export default function AdminImpostazioniPage({ currentUserId }: { currentUserId
               <p className="text-2xs text-gray-500">{ROLE_DESC[r]}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Section: Preferenze interfaccia */}
+      <section className="mt-10">
+        <div className="mb-4">
+          <h2 className="text-sm font-semibold text-primary">Preferenze interfaccia</h2>
+          <p className="text-2xs text-gray-400 mt-0.5">Impostazioni visive salvate nel browser</p>
+        </div>
+        <div className="bg-white border border-border rounded p-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium text-primary">Pulsante WhatsApp</p>
+            <p className="text-2xs text-gray-400 mt-0.5">Mostra il widget WhatsApp flottante in basso a destra</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => toggleWhatsapp(!whatsappVisible)}
+            className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+              whatsappVisible ? 'bg-green-500' : 'bg-gray-200'
+            }`}
+            role="switch"
+            aria-checked={whatsappVisible}
+          >
+            <span
+              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ${
+                whatsappVisible ? 'translate-x-4' : 'translate-x-0'
+              }`}
+            />
+          </button>
         </div>
       </section>
 

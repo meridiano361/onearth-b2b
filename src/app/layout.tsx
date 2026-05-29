@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import ToasterWrapper from '@/components/layout/ToasterWrapper';
 import Providers from '@/components/layout/Providers';
+import WhatsAppWidget from '@/components/WhatsAppWidget';
 import './globals.css';
 
 const nunito = Nunito({
@@ -53,6 +54,7 @@ export default async function RootLayout({
           <Providers>
             {children}
             <ToasterWrapper />
+            <WhatsAppWidget />
           </Providers>
         </NextIntlClientProvider>
       </body>
