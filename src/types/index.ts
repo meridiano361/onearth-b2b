@@ -139,6 +139,7 @@ export interface DisplayGroupItem {
   nota: string | null;
   posizione: number;
   isFocus: boolean;
+  livello: number;
   orderItem: OrderItem;
 }
 
@@ -169,6 +170,7 @@ export interface DisplayGroup {
   stagione: string | null;
   temaTag: string | null;
   posizione: number;
+  nomiLivelli: string | null;
   createdAt: string;
   prodotti: DisplayGroupItem[];
   schedules?: DisplayGroupSchedule[];

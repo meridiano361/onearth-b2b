@@ -26,6 +26,8 @@ export async function POST(req: NextRequest, { params }: { params: { orderId: st
     return NextResponse.json({ error: 'Nessun prodotto valido' }, { status: 400 });
   }
 
+  const livello = typeof body.livello === 'number' && body.livello >= 1 ? body.livello : 1;
+
   const lastItem = await prisma.displayGroupItem.findFirst({
     where: { groupId: params.groupId },
     orderBy: { posizione: 'desc' },
@@ -38,7 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: { orderId: st
       prisma.displayGroupItem.upsert({
         where: { groupId_orderItemId: { groupId: params.groupId, orderItemId: item.id } },
         update: {},
-        create: { groupId: params.groupId, orderItemId: item.id, posizione: posizione++ },
+        create: { groupId: params.groupId, orderItemId: item.id, posizione: posizione++, livello },
       })
     )
   );

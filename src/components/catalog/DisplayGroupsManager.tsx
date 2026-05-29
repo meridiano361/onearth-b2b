@@ -3,7 +3,8 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent,
+  DndContext, DragOverlay, closestCenter, PointerSensor, TouchSensor,
+  useSensor, useSensors, DragEndEvent, DragStartEvent,
   useDraggable, useDroppable, pointerWithin, CollisionDetection,
 } from '@dnd-kit/core';
 import {
@@ -13,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Plus, LayoutGrid, List, Pencil, Copy, Trash2,
   GripVertical, X, Search, Check, Download, Loader2, ChevronDown, ChevronRight,
-  MoreHorizontal, Flame, Calendar,
+  MoreHorizontal, Flame, Calendar, Layers,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ProductImage } from '@/components/ui/ProductImage';
@@ -84,22 +85,165 @@ function getActiveSchedule(schedules: DisplayGroupSchedule[] | undefined): Displ
   return schedules.find((s) => s.anno === year) ?? schedules[0];
 }
 
+function parseLevelNames(raw: string | null | undefined): Record<number, string> {
+  if (!raw) return {};
+  try { return JSON.parse(raw); } catch { return {}; }
+}
+
 // ─── Custom collision detection ───────────────────────────────────────────────
 
 const customCollisionDetection: CollisionDetection = (args) => {
   const activeType = (args.active.data.current as any)?.type;
-
-  // Group reordering: use closestCenter among group sortables
-  if (activeType === 'group') {
-    return closestCenter(args);
-  }
-
-  // For available cards and grid items: prefer pointer containment
+  if (activeType === 'group') return closestCenter(args);
   const pointerCollisions = pointerWithin(args);
   if (pointerCollisions.length > 0) return pointerCollisions;
-
   return closestCenter(args);
 };
+
+// ─── ProductCardMini (for DragOverlay) ────────────────────────────────────────
+
+function ProductCardMini({ product }: { product: any }) {
+  return (
+    <div className="bg-white border-2 border-accent/50 rounded-lg p-2 shadow-2xl cursor-grabbing w-[72px] rotate-2">
+      <div className="aspect-square overflow-hidden rounded bg-[#f8fafc]">
+        {product?.imageUrl
+          ? <ProductImage src={product.imageUrl} alt={product.name ?? ''} className="w-full h-full object-contain" />
+          : <div className="w-full h-full bg-gray-100" />
+        }
+      </div>
+      <p className="text-[9px] text-[#94a3b8] text-center mt-1 truncate leading-none">{product?.code}</p>
+    </div>
+  );
+}
+
+// ─── ContextMenuPortal ────────────────────────────────────────────────────────
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  orderItemId: string;
+  product: { name: string; code: string | null; imageUrl?: string | null } | null;
+  fromGroupId?: string;
+}
+
+function ContextMenuPortal({
+  state, groups, groupCountByOrderItemId, orderId, onClose, onRefresh,
+}: {
+  state: ContextMenuState;
+  groups: DisplayGroup[];
+  groupCountByOrderItemId: Record<string, number>;
+  orderId: string;
+  onClose: () => void;
+  onRefresh: () => void;
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    function onMouse() { onClose(); }
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onMouse);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onMouse);
+    };
+  }, [onClose]);
+
+  async function addToGroup(groupId: string) {
+    try {
+      const res = await fetch(`/api/catalog/orders/${orderId}/display-groups/${groupId}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderItemIds: [state.orderItemId] }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Prodotto aggiunto');
+      onRefresh();
+    } catch { toast.error('Errore'); }
+    onClose();
+  }
+
+  async function removeFromGroup() {
+    if (!state.fromGroupId) return;
+    try {
+      await fetch(`/api/catalog/orders/${orderId}/display-groups/${state.fromGroupId}/items/${state.orderItemId}`, { method: 'DELETE' });
+      toast.success('Rimosso dal gruppo');
+      onRefresh();
+    } catch { toast.error('Errore'); }
+    onClose();
+  }
+
+  async function removeFromAll() {
+    try {
+      await Promise.all(
+        groups
+          .filter(g => g.prodotti.some(p => p.orderItemId === state.orderItemId))
+          .map(g => fetch(`/api/catalog/orders/${orderId}/display-groups/${g.id}/items/${state.orderItemId}`, { method: 'DELETE' }))
+      );
+      toast.success('Rimosso da tutti i gruppi');
+      onRefresh();
+    } catch { toast.error('Errore'); }
+    onClose();
+  }
+
+  const groupCount = groupCountByOrderItemId[state.orderItemId] ?? 0;
+
+  return (
+    <div
+      className="fixed z-[9999] bg-white border border-border rounded-xl shadow-2xl py-1.5 min-w-[220px]"
+      style={{ top: state.y, left: state.x }}
+      onMouseDown={e => e.stopPropagation()}
+    >
+      {state.product && (
+        <div className="px-3 py-2 border-b border-border mb-1">
+          <p className="text-2xs text-gray-400 font-mono">{state.product.code}</p>
+          <p className="text-xs font-medium text-primary truncate max-w-[200px]">{state.product.name}</p>
+        </div>
+      )}
+
+      <p className="px-3 pt-1 pb-0.5 text-2xs text-gray-400 uppercase tracking-wider font-semibold">Aggiungi al gruppo</p>
+      {groups.length === 0 && <p className="px-3 py-2 text-xs text-gray-400 italic">Nessun gruppo</p>}
+      {groups.map(g => {
+        const isIn = g.prodotti.some(p => p.orderItemId === state.orderItemId);
+        return (
+          <button
+            key={g.id}
+            onClick={() => !isIn && addToGroup(g.id)}
+            disabled={isIn}
+            className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors ${
+              isIn ? 'opacity-50 cursor-default' : 'hover:bg-cream'
+            }`}
+          >
+            {g.coloreTag
+              ? <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: g.coloreTag }} />
+              : <span className="w-2 h-2 rounded-full flex-shrink-0 bg-gray-200" />
+            }
+            <span className="flex-1 truncate">{g.nome}</span>
+            {isIn && <Check size={10} className="text-green-500 flex-shrink-0" />}
+          </button>
+        );
+      })}
+
+      {groupCount > 0 && (
+        <>
+          <div className="border-t border-border my-1" />
+          {state.fromGroupId && (
+            <button
+              onClick={removeFromGroup}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 transition-colors"
+            >
+              <X size={11} />Rimuovi da questo gruppo
+            </button>
+          )}
+          <button
+            onClick={removeFromAll}
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 transition-colors"
+          >
+            <Trash2 size={11} />Rimuovi da tutti i gruppi
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 
 // ─── FlameButton ──────────────────────────────────────────────────────────────
 
@@ -121,7 +265,7 @@ function FlameButton({
 // ─── ProductListaView ─────────────────────────────────────────────────────────
 
 function ProductListaView({
-  items, orderId, groupId, onRemove, onToggleFocus, deletingItemId,
+  items, orderId, groupId, onRemove, onToggleFocus, deletingItemId, onContextMenu,
 }: {
   items: DisplayGroupItem[];
   orderId: string;
@@ -129,6 +273,7 @@ function ProductListaView({
   onRemove: (item: DisplayGroupItem) => void;
   onToggleFocus: (item: DisplayGroupItem) => void;
   deletingItemId: string | null;
+  onContextMenu: (e: React.MouseEvent, orderItemId: string, fromGroupId: string) => void;
 }) {
   const sorted = sortProductsForDisplay(items);
   const grouped = groupByLinea(sorted);
@@ -148,6 +293,7 @@ function ProductListaView({
             return (
               <div
                 key={item.id}
+                onContextMenu={(e) => { e.preventDefault(); onContextMenu(e, item.orderItemId, groupId); }}
                 className={`flex items-center gap-2.5 px-2 py-2 group/item ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/70'}`}
               >
                 {p?.imageUrl
@@ -184,17 +330,18 @@ function ProductListaView({
 // ─── SortableBoardItem ─────────────────────────────────────────────────────────
 
 function SortableBoardItem({
-  item, groupId, onRemove, onToggleFocus, deletingItemId,
+  item, groupId, onRemove, onToggleFocus, deletingItemId, onContextMenu,
 }: {
   item: DisplayGroupItem;
   groupId: string;
   onRemove: (item: DisplayGroupItem) => void;
   onToggleFocus: (item: DisplayGroupItem) => void;
   deletingItemId: string | null;
+  onContextMenu: (e: React.MouseEvent, orderItemId: string, fromGroupId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
-    data: { type: 'gridItem', groupId, orderItemId: item.orderItemId },
+    data: { type: 'gridItem', groupId, orderItemId: item.orderItemId, livello: item.livello },
   });
   const p = item.orderItem.product;
   return (
@@ -203,11 +350,12 @@ function SortableBoardItem({
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.4 : 1,
+        opacity: isDragging ? 0.3 : 1,
         zIndex: isDragging ? 50 : undefined,
         backgroundColor: '#F3F4F6',
         border: item.isFocus ? '2px solid #F97316' : isDragging ? '2px dashed #3B82F6' : '2px solid transparent',
       }}
+      onContextMenu={(e) => { e.preventDefault(); onContextMenu(e, item.orderItemId, groupId); }}
       className="relative group/item rounded-[8px] overflow-hidden cursor-grab active:cursor-grabbing"
       {...attributes}
       {...listeners}
@@ -225,7 +373,6 @@ function SortableBoardItem({
           onClick={(e) => { e.stopPropagation(); onToggleFocus(item); }}
           onPointerDown={(e) => e.stopPropagation()}
           className="w-5 h-5 bg-white/90 rounded-full flex items-center justify-center"
-          title={item.isFocus ? 'Rimuovi focus' : 'Focus'}
         >
           <Flame size={10} color={item.isFocus ? '#F97316' : '#9CA3AF'} fill={item.isFocus ? '#F97316' : 'none'} />
         </button>
@@ -242,67 +389,169 @@ function SortableBoardItem({
   );
 }
 
+// ─── LevelSection ─────────────────────────────────────────────────────────────
+
+function LevelSection({
+  groupId, livello, levelName, items, canRemove,
+  onRemove, onToggleFocus, deletingItemId, onContextMenu, onRenameLevel, onRemoveLevel,
+}: {
+  groupId: string;
+  livello: number;
+  levelName: string;
+  items: DisplayGroupItem[];
+  canRemove: boolean;
+  onRemove: (item: DisplayGroupItem) => void;
+  onToggleFocus: (item: DisplayGroupItem) => void;
+  deletingItemId: string | null;
+  onContextMenu: (e: React.MouseEvent, orderItemId: string, fromGroupId: string) => void;
+  onRenameLevel: (livello: number, nome: string) => void;
+  onRemoveLevel: (livello: number) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `level-${groupId}-${livello}`,
+    data: { type: 'levelBoard', groupId, livello },
+  });
+  const [editing, setEditing] = useState(false);
+  const [nameInput, setNameInput] = useState(levelName);
+  useEffect(() => { setNameInput(levelName); }, [levelName]);
+
+  return (
+    <div>
+      {/* Level header */}
+      <div className="flex items-center gap-2 mb-1.5 px-0.5">
+        <Layers size={11} className="text-gray-300 flex-shrink-0" />
+        {editing ? (
+          <input
+            value={nameInput}
+            onChange={e => setNameInput(e.target.value)}
+            onBlur={() => { onRenameLevel(livello, nameInput); setEditing(false); }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { onRenameLevel(livello, nameInput); setEditing(false); }
+              if (e.key === 'Escape') { setNameInput(levelName); setEditing(false); }
+            }}
+            autoFocus
+            className="text-[11px] font-semibold border border-accent/40 rounded px-2 py-0.5 outline-none focus:border-accent max-w-[140px]"
+          />
+        ) : (
+          <button
+            onClick={() => setEditing(true)}
+            className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide hover:text-primary transition-colors"
+            title="Clicca per rinominare"
+          >
+            {levelName}
+          </button>
+        )}
+        <span className="text-2xs text-gray-300">{items.length} pz.</span>
+        {canRemove && (
+          <button
+            onClick={() => onRemoveLevel(livello)}
+            className="ml-auto p-0.5 text-gray-300 hover:text-red-400 transition-colors"
+            title="Rimuovi livello"
+          >
+            <X size={11} />
+          </button>
+        )}
+      </div>
+
+      {/* Drop zone */}
+      <div
+        ref={setNodeRef}
+        className={`min-h-[52px] rounded-lg transition-all ${isOver ? 'ring-2 ring-accent/50 bg-accent/5' : ''}`}
+      >
+        {items.length === 0 ? (
+          <div className={`flex items-center justify-center h-12 border border-dashed rounded-lg transition-colors ${
+            isOver ? 'border-accent/50 text-accent' : 'border-gray-200 text-gray-300'
+          }`}>
+            <p className="text-xs italic">{isOver ? 'Rilascia qui' : 'Vuoto'}</p>
+          </div>
+        ) : (
+          <SortableContext items={items.map(i => i.id)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-3 sm:grid-cols-6 xl:grid-cols-10 gap-2">
+              {items.map(item => (
+                <SortableBoardItem
+                  key={item.id}
+                  item={item}
+                  groupId={groupId}
+                  onRemove={onRemove}
+                  onToggleFocus={onToggleFocus}
+                  deletingItemId={deletingItemId}
+                  onContextMenu={onContextMenu}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── ProductBoardView ─────────────────────────────────────────────────────────
 
 function ProductBoardView({
-  items, orderId, groupId, onRemove, onToggleFocus, deletingItemId,
+  items, orderId, groupId, numLivelli, levelNames,
+  onRemove, onToggleFocus, deletingItemId, onContextMenu,
+  onRenameLevel, onRemoveLevel, onAddLevel,
 }: {
   items: DisplayGroupItem[];
   orderId: string;
   groupId: string;
+  numLivelli: number;
+  levelNames: Record<number, string>;
   onRemove: (item: DisplayGroupItem) => void;
   onToggleFocus: (item: DisplayGroupItem) => void;
   deletingItemId: string | null;
+  onContextMenu: (e: React.MouseEvent, orderItemId: string, fromGroupId: string) => void;
+  onRenameLevel: (livello: number, nome: string) => void;
+  onRemoveLevel: (livello: number) => void;
+  onAddLevel: () => void;
 }) {
+  const levels = Array.from({ length: numLivelli }, (_, i) => i + 1);
+
   return (
-    <SortableContext items={items.map(i => i.id)} strategy={rectSortingStrategy}>
-      <div className="grid grid-cols-3 sm:grid-cols-6 xl:grid-cols-10 gap-2">
-        {items.map((item) => (
-          <SortableBoardItem
-            key={item.id}
-            item={item}
+    <div className="space-y-4">
+      {levels.map(livello => {
+        const levelItems = items.filter(it => it.livello === livello);
+        const levelName = levelNames[livello] ?? `Livello ${livello}`;
+        const canRemove = livello === numLivelli && livello > 1 && levelItems.length === 0;
+        return (
+          <LevelSection
+            key={livello}
             groupId={groupId}
+            livello={livello}
+            levelName={levelName}
+            items={levelItems}
+            canRemove={canRemove}
             onRemove={onRemove}
             onToggleFocus={onToggleFocus}
             deletingItemId={deletingItemId}
+            onContextMenu={onContextMenu}
+            onRenameLevel={onRenameLevel}
+            onRemoveLevel={onRemoveLevel}
           />
-        ))}
-      </div>
-    </SortableContext>
-  );
-}
-
-// ─── GroupBoardDropZone ───────────────────────────────────────────────────────
-
-function GroupBoardDropZone({
-  groupId, isEmpty, children,
-}: {
-  groupId: string;
-  isEmpty: boolean;
-  children: React.ReactNode;
-}) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: `group-board-${groupId}`,
-    data: { type: 'groupBoard', groupId },
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`min-h-[60px] rounded-lg transition-all ${isOver ? 'ring-2 ring-accent/50 bg-accent/5' : ''}`}
-    >
-      {isEmpty && isOver ? (
-        <div className="flex items-center justify-center h-16 border-2 border-dashed border-accent/40 rounded-lg">
-          <p className="text-sm text-accent">Rilascia qui</p>
-        </div>
-      ) : children}
+        );
+      })}
+      {numLivelli < 5 && (
+        <button
+          onClick={onAddLevel}
+          className="w-full flex items-center justify-center gap-1 text-2xs text-gray-400 hover:text-accent border border-dashed border-gray-200 hover:border-accent/30 rounded-lg py-2 transition-colors"
+        >
+          <Plus size={10} />Aggiungi livello
+        </button>
+      )}
     </div>
   );
 }
 
 // ─── DraggableAvailableCard ────────────────────────────────────────────────────
 
-function DraggableAvailableCard({ item }: { item: OrderItem }) {
+function DraggableAvailableCard({
+  item, groupCount, onContextMenu,
+}: {
+  item: OrderItem;
+  groupCount: number;
+  onContextMenu: (e: React.MouseEvent, orderItemId: string) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `available-${item.id}`,
     data: { type: 'available', orderItemId: item.id },
@@ -313,12 +562,13 @@ function DraggableAvailableCard({ item }: { item: OrderItem }) {
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      onContextMenu={(e) => { e.preventDefault(); onContextMenu(e, item.id); }}
       style={{
         transform: transform ? CSS.Transform.toString(transform) : undefined,
         opacity: isDragging ? 0.35 : 1,
         zIndex: isDragging ? 50 : undefined,
       }}
-      className="bg-white border border-[#e2e8f0] rounded-lg p-1.5 cursor-grab active:cursor-grabbing hover:shadow-md hover:-translate-y-0.5 transition-all select-none"
+      className="relative bg-white border border-[#e2e8f0] rounded-lg p-1.5 cursor-grab active:cursor-grabbing hover:shadow-md hover:-translate-y-0.5 transition-all select-none"
     >
       <div className="aspect-square overflow-hidden rounded bg-[#f8fafc]">
         {item.product?.imageUrl
@@ -329,13 +579,26 @@ function DraggableAvailableCard({ item }: { item: OrderItem }) {
       <p className="text-[10px] text-[#94a3b8] text-center mt-1 truncate leading-none px-0.5">
         {item.product?.code}
       </p>
+      {groupCount > 0 && (
+        <div className="absolute top-1 right-1">
+          <span className="bg-green-500 text-white text-[8px] font-bold px-1 py-px rounded-full leading-none shadow-sm">
+            {groupCount}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── AvailablePanel ────────────────────────────────────────────────────────────
 
-function AvailablePanel({ items }: { items: OrderItem[] }) {
+function AvailablePanel({
+  items, groupCountByOrderItemId, onContextMenu,
+}: {
+  items: OrderItem[];
+  groupCountByOrderItemId: Record<string, number>;
+  onContextMenu: (e: React.MouseEvent, orderItemId: string) => void;
+}) {
   const [search, setSearch] = useState('');
   const { setNodeRef, isOver } = useDroppable({
     id: 'available-panel',
@@ -351,6 +614,8 @@ function AvailablePanel({ items }: { items: OrderItem[] }) {
     );
   }, [items, search]);
 
+  const unassignedCount = items.filter(it => !groupCountByOrderItemId[it.id]).length;
+
   return (
     <div
       ref={setNodeRef}
@@ -361,9 +626,9 @@ function AvailablePanel({ items }: { items: OrderItem[] }) {
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-[#e2e8f0] flex-shrink-0">
         <span className="text-[#F59E0B] text-sm leading-none">●</span>
-        <span className="text-[11px] font-bold text-[#1e293b] flex-1 uppercase tracking-widest">Non assegnati</span>
+        <span className="text-[11px] font-bold text-[#1e293b] flex-1 uppercase tracking-widest">Prodotti</span>
         <span className="bg-[#e2e8f0] text-[#64748b] text-[11px] font-bold px-2 py-0.5 rounded-full">
-          {items.length}
+          {unassignedCount} liberi
         </span>
       </div>
 
@@ -400,7 +665,12 @@ function AvailablePanel({ items }: { items: OrderItem[] }) {
         ) : (
           <div className="grid grid-cols-2 gap-2">
             {filtered.map(item => (
-              <DraggableAvailableCard key={item.id} item={item} />
+              <DraggableAvailableCard
+                key={item.id}
+                item={item}
+                groupCount={groupCountByOrderItemId[item.id] ?? 0}
+                onContextMenu={onContextMenu}
+              />
             ))}
           </div>
         )}
@@ -476,13 +746,9 @@ function GroupFormModal({
         if (groupId) {
           let matchingIds: string[];
           if (monoColor) {
-            matchingIds = orderItems
-              .filter(it => it.product?.colore === monoColor)
-              .map(it => it.id);
+            matchingIds = orderItems.filter(it => it.product?.colore === monoColor).map(it => it.id);
           } else {
-            matchingIds = orderItems
-              .filter(it => matchesColorTemplate(it.product, templateKeywords!))
-              .map(it => it.id);
+            matchingIds = orderItems.filter(it => matchesColorTemplate(it.product, templateKeywords!)).map(it => it.id);
           }
           if (matchingIds.length > 0) {
             await fetch(`/api/catalog/orders/${orderId}/display-groups/${groupId}/items`, {
@@ -524,38 +790,21 @@ function GroupFormModal({
               {COLOR_TEMPLATES.map((t) => {
                 const active = templateKeywords === t.keywords && !monoColor;
                 return (
-                  <button
-                    key={t.nome}
-                    onClick={() => {
-                      setTemplateKeywords(active ? null : t.keywords);
-                      setMonoColor('');
-                      setForm((f) => ({ ...f, nome: active ? f.nome : t.nome }));
-                    }}
+                  <button key={t.nome}
+                    onClick={() => { setTemplateKeywords(active ? null : t.keywords); setMonoColor(''); setForm((f) => ({ ...f, nome: active ? f.nome : t.nome })); }}
                     className={`px-2.5 py-1 text-xs rounded border transition-colors ${active ? 'bg-primary text-white border-primary' : 'text-gray-700 border-border hover:border-gray-400 hover:bg-gray-50'}`}
-                  >
-                    {t.nome}
-                  </button>
+                  >{t.nome}</button>
                 );
               })}
               <button
-                onClick={() => {
-                  setTemplateKeywords(null);
-                  setForm((f) => ({ ...f, nome: monoColor ? f.nome : 'Monocromatico' }));
-                  setMonoColor(monoColor ? '' : (uniqueColors[0] ?? ''));
-                }}
+                onClick={() => { setTemplateKeywords(null); setForm((f) => ({ ...f, nome: monoColor ? f.nome : 'Monocromatico' })); setMonoColor(monoColor ? '' : (uniqueColors[0] ?? '')); }}
                 className={`px-2.5 py-1 text-xs rounded border transition-colors ${monoColor ? 'bg-primary text-white border-primary' : 'text-gray-700 border-border hover:border-gray-400 hover:bg-gray-50'}`}
-              >
-                Monocromatico
-              </button>
+              >Monocromatico</button>
             </div>
             {monoColor && uniqueColors.length > 0 && (
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-2xs text-gray-500">Colore:</span>
-                <select
-                  value={monoColor}
-                  onChange={(e) => setMonoColor(e.target.value)}
-                  className="text-xs border border-border rounded px-2 py-1 focus:outline-none focus:border-accent"
-                >
+                <select value={monoColor} onChange={(e) => setMonoColor(e.target.value)} className="text-xs border border-border rounded px-2 py-1 focus:outline-none focus:border-accent">
                   {uniqueColors.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
@@ -576,74 +825,31 @@ function GroupFormModal({
         <div className="space-y-3">
           <div>
             <label className="block text-2xs text-gray-400 uppercase tracking-wider mb-1">Nome *</label>
-            <input
-              value={form.nome}
-              onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-              placeholder="Vetrina Principale…"
-              className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent transition-colors"
-              autoFocus
-            />
+            <input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Vetrina Principale…" className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent transition-colors" autoFocus />
           </div>
-
           <div>
             <label className="block text-2xs text-gray-400 uppercase tracking-wider mb-1">Descrizione</label>
-            <input
-              value={form.descrizione}
-              onChange={(e) => setForm((f) => ({ ...f, descrizione: e.target.value }))}
-              placeholder="Note opzionali…"
-              className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent transition-colors"
-            />
+            <input value={form.descrizione} onChange={(e) => setForm((f) => ({ ...f, descrizione: e.target.value }))} placeholder="Note opzionali…" className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent transition-colors" />
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-2xs text-gray-400 uppercase tracking-wider mb-1">Stagione</label>
-              <input
-                value={form.stagione}
-                onChange={(e) => setForm((f) => ({ ...f, stagione: e.target.value }))}
-                placeholder="SS27…"
-                className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent transition-colors"
-              />
+              <input value={form.stagione} onChange={(e) => setForm((f) => ({ ...f, stagione: e.target.value }))} placeholder="SS27…" className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent transition-colors" />
             </div>
             <div>
               <label className="block text-2xs text-gray-400 uppercase tracking-wider mb-1">Tag tema</label>
-              <input
-                value={form.temaTag}
-                onChange={(e) => setForm((f) => ({ ...f, temaTag: e.target.value }))}
-                placeholder="Naturale…"
-                className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent transition-colors"
-              />
+              <input value={form.temaTag} onChange={(e) => setForm((f) => ({ ...f, temaTag: e.target.value }))} placeholder="Naturale…" className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent transition-colors" />
             </div>
           </div>
-
           <div>
             <label className="block text-2xs text-gray-400 uppercase tracking-wider mb-2">Colore tag</label>
             <div className="grid grid-cols-8 gap-1.5">
-              <button
-                onClick={() => setForm((f) => ({ ...f, coloreTag: '' }))}
-                className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
-                  !form.coloreTag ? 'border-gray-500 ring-2 ring-offset-1 ring-gray-400' : 'border-gray-200 hover:border-gray-400'
-                }`}
-                style={{ backgroundColor: '#E5E7EB' }}
-                title="Nessun colore"
-              >
+              <button onClick={() => setForm((f) => ({ ...f, coloreTag: '' }))} className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${!form.coloreTag ? 'border-gray-500 ring-2 ring-offset-1 ring-gray-400' : 'border-gray-200 hover:border-gray-400'}`} style={{ backgroundColor: '#E5E7EB' }} title="Nessun colore">
                 <X size={10} className="text-gray-500" />
               </button>
               {COLOR_PALETTE.map((c) => (
-                <button
-                  key={c.value}
-                  onClick={() => setForm((f) => ({ ...f, coloreTag: c.value }))}
-                  className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
-                    form.coloreTag === c.value
-                      ? 'border-gray-600 ring-2 ring-offset-1 ring-gray-500 scale-110'
-                      : 'border-gray-200 hover:border-gray-400'
-                  }`}
-                  style={{ backgroundColor: c.value }}
-                  title={c.label}
-                >
-                  {form.coloreTag === c.value && (
-                    <Check size={10} className="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" />
-                  )}
+                <button key={c.value} onClick={() => setForm((f) => ({ ...f, coloreTag: c.value }))} className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${form.coloreTag === c.value ? 'border-gray-600 ring-2 ring-offset-1 ring-gray-500 scale-110' : 'border-gray-200 hover:border-gray-400'}`} style={{ backgroundColor: c.value }} title={c.label}>
+                  {form.coloreTag === c.value && <Check size={10} className="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" />}
                 </button>
               ))}
             </div>
@@ -651,14 +857,8 @@ function GroupFormModal({
         </div>
 
         <div className="flex gap-3 pt-4 mt-4 border-t border-border">
-          <button onClick={onClose} className="flex-1 py-2 text-xs border border-border rounded text-gray-500 hover:bg-cream transition-colors">
-            Annulla
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !form.nome.trim()}
-            className="flex-1 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
-          >
+          <button onClick={onClose} className="flex-1 py-2 text-xs border border-border rounded text-gray-500 hover:bg-cream transition-colors">Annulla</button>
+          <button onClick={handleSave} disabled={saving || !form.nome.trim()} className="flex-1 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
             {saving ? <Loader2 size={11} className="animate-spin" /> : null}
             {isEdit ? 'Salva modifiche' : 'Crea gruppo'}
           </button>
@@ -686,9 +886,7 @@ function AddItemsModal({
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return orderItems.filter((it) =>
-      !q || it.product?.code?.toLowerCase().includes(q) || it.product?.name?.toLowerCase().includes(q)
-    );
+    return orderItems.filter((it) => !q || it.product?.code?.toLowerCase().includes(q) || it.product?.name?.toLowerCase().includes(q));
   }, [orderItems, search]);
 
   function toggleItem(id: string) {
@@ -701,16 +899,14 @@ function AddItemsModal({
     setSaving(true);
     try {
       const res = await fetch(`/api/catalog/orders/${orderId}/display-groups/${groupId}/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderItemIds: Array.from(selected) }),
       });
       if (!res.ok) throw new Error();
       toast.success(`${selected.size} prodott${selected.size === 1 ? 'o aggiunto' : 'i aggiunti'}`);
       onAdded();
-    } catch {
-      toast.error('Errore nell\'aggiunta dei prodotti');
-    } finally { setSaving(false); }
+    } catch { toast.error('Errore nell\'aggiunta dei prodotti'); }
+    finally { setSaving(false); }
   }
 
   return (
@@ -724,9 +920,7 @@ function AddItemsModal({
         <div className="px-4 py-3 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2 border border-border rounded px-3 py-2">
             <Search size={13} className="text-gray-400" />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cerca per codice o nome…"
-              className="flex-1 text-xs outline-none bg-transparent text-primary placeholder-gray-400" />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cerca per codice o nome…" className="flex-1 text-xs outline-none bg-transparent text-primary placeholder-gray-400" />
           </div>
         </div>
         <div className="flex-1 overflow-y-auto divide-y divide-border">
@@ -735,9 +929,7 @@ function AddItemsModal({
             const isSelected = selected.has(item.id);
             return (
               <button key={item.id} onClick={() => toggleItem(item.id)} disabled={isAssigned}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                  isAssigned ? 'opacity-50 cursor-default' : isSelected ? 'bg-accent/8' : 'hover:bg-cream/50'
-                }`}>
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${isAssigned ? 'opacity-50 cursor-default' : isSelected ? 'bg-accent/8' : 'hover:bg-cream/50'}`}>
                 <div className="flex-shrink-0 w-4 h-4">
                   {isAssigned ? <Check size={14} className="text-green-500" />
                     : isSelected ? <div className="w-4 h-4 rounded bg-accent flex items-center justify-center"><Check size={10} className="text-white" /></div>
@@ -756,10 +948,8 @@ function AddItemsModal({
         </div>
         <div className="px-4 py-3 border-t border-border flex items-center justify-between flex-shrink-0">
           <span className="text-xs text-gray-400">{selected.size} selezionati</span>
-          <button onClick={handleAdd} disabled={selected.size === 0 || saving}
-            className="px-4 py-2 bg-primary text-white text-xs rounded hover:bg-primary/90 transition-colors flex items-center gap-1.5 disabled:opacity-50">
-            {saving && <Loader2 size={11} className="animate-spin" />}
-            Aggiungi selezionati
+          <button onClick={handleAdd} disabled={selected.size === 0 || saving} className="px-4 py-2 bg-primary text-white text-xs rounded hover:bg-primary/90 transition-colors flex items-center gap-1.5 disabled:opacity-50">
+            {saving && <Loader2 size={11} className="animate-spin" />}Aggiungi selezionati
           </button>
         </div>
       </div>
@@ -767,10 +957,10 @@ function AddItemsModal({
   );
 }
 
-// ─── GroupCard (board — full width, vertical stack) ───────────────────────────
+// ─── GroupCard ────────────────────────────────────────────────────────────────
 
 function GroupCard({
-  group, orderId, orderItems, gridItems, onEdit, onDuplicate, onDelete, onRefresh,
+  group, orderId, orderItems, gridItems, onEdit, onDuplicate, onDelete, onRefresh, onContextMenu,
 }: {
   group: DisplayGroup;
   orderId: string;
@@ -780,6 +970,7 @@ function GroupCard({
   onDuplicate: () => void;
   onDelete: () => void;
   onRefresh: () => void;
+  onContextMenu: (e: React.MouseEvent, orderItemId: string, fromGroupId: string) => void;
 }) {
   const queryClient = useQueryClient();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -790,6 +981,12 @@ function GroupCard({
   const [addItemsOpen, setAddItemsOpen] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [productView, setProductView] = useState<'board' | 'lista'>('board');
+
+  const maxLivelloFromItems = useMemo(() => Math.max(1, ...group.prodotti.map(p => p.livello)), [group.prodotti]);
+  const [numLivelli, setNumLivelli] = useState(maxLivelloFromItems);
+  useEffect(() => { setNumLivelli(prev => Math.max(prev, maxLivelloFromItems)); }, [maxLivelloFromItems]);
+
+  const levelNames = useMemo(() => parseLevelNames(group.nomiLivelli), [group.nomiLivelli]);
 
   const assignedItemIds = useMemo(() => new Set(group.prodotti.map((p) => p.orderItemId)), [group.prodotti]);
   const activeSchedule = getActiveSchedule(group.schedules);
@@ -830,69 +1027,75 @@ function GroupCard({
     } catch { toast.error('Errore'); onRefresh(); }
   }
 
+  async function renameLevel(livello: number, nome: string) {
+    const trimmed = nome.trim();
+    const updated = { ...levelNames };
+    if (trimmed && trimmed !== `Livello ${livello}`) {
+      updated[livello] = trimmed;
+    } else {
+      delete updated[livello];
+    }
+    queryClient.setQueryData(['display-groups', orderId], (old: any) => ({
+      ...old,
+      groups: old.groups.map((g: DisplayGroup) =>
+        g.id === group.id ? { ...g, nomiLivelli: JSON.stringify(updated) } : g
+      ),
+    }));
+    try {
+      await fetch(`/api/catalog/orders/${orderId}/display-groups/${group.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nomiLivelli: JSON.stringify(updated) }),
+      });
+    } catch { onRefresh(); }
+  }
+
+  function addLevel() { setNumLivelli(prev => Math.min(prev + 1, 5)); }
+  function removeLevel(livello: number) {
+    if (livello !== numLivelli) return;
+    setNumLivelli(prev => Math.max(1, prev - 1));
+  }
+
   return (
     <>
       <div
         ref={setNodeRef}
-        style={{
-          ...style,
-          border: '1px solid #E8DDD0',
-          borderRadius: 12,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-        }}
+        style={{ ...style, border: '1px solid #E8DDD0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
         className="bg-white w-full overflow-hidden"
       >
-        {/* ── Header ──────────────────────────────────────────── */}
+        {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4">
-          <button
-            {...attributes} {...listeners}
-            className="text-gray-300 hover:text-gray-400 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
-          >
+          <button {...attributes} {...listeners} className="text-gray-300 hover:text-gray-400 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none">
             <GripVertical size={16} />
           </button>
-
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            {group.coloreTag && (
-              <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: group.coloreTag }} />
-            )}
+            {group.coloreTag && <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: group.coloreTag }} />}
             <span className="text-xl font-semibold text-primary truncate">{group.nome}</span>
           </div>
-
+          {numLivelli > 1 && (
+            <span className="text-2xs text-gray-400 flex items-center gap-0.5 flex-shrink-0">
+              <Layers size={10} />{numLivelli} livelli
+            </span>
+          )}
           {activeSchedule && (
             <span className="text-2xs text-[#8FAF8F] bg-[#F0F5F0] border border-[#D0E0D0] rounded px-1.5 py-0.5 flex items-center gap-0.5 flex-shrink-0">
               <Calendar size={9} />S{activeSchedule.settimanaIn}→S{activeSchedule.settimanaFn}
             </span>
           )}
-
           <span className="text-sm text-gray-400 flex-shrink-0">{group.prodotti.length} pz.</span>
-
           <div className="flex items-center bg-cream rounded border border-border overflow-hidden flex-shrink-0">
-            <button
-              onClick={() => setProductView('lista')}
-              className={`px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${productView === 'lista' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}
-            >
+            <button onClick={() => setProductView('lista')} className={`px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${productView === 'lista' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}>
               <List size={12} />Lista
             </button>
-            <button
-              onClick={() => setProductView('board')}
-              className={`px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${productView === 'board' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}
-            >
+            <button onClick={() => setProductView('board')} className={`px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${productView === 'board' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}>
               <LayoutGrid size={12} />Board
             </button>
           </div>
-
-          <button
-            onClick={() => setAddItemsOpen(true)}
-            className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors flex-shrink-0"
-          >
+          <button onClick={() => setAddItemsOpen(true)} className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors flex-shrink-0">
             <Plus size={12} />Aggiungi
           </button>
-
           <div className="relative flex-shrink-0">
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
-            >
+            <button onClick={() => setMenuOpen(!menuOpen)} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors">
               <MoreHorizontal size={16} />
             </button>
             {menuOpen && (
@@ -908,39 +1111,29 @@ function GroupCard({
           </div>
         </div>
 
-        {/* ── Products area ─────────────────────────────────── */}
+        {/* Products area */}
         <div className="px-5 pb-5">
-          <GroupBoardDropZone groupId={group.id} isEmpty={group.prodotti.length === 0}>
-            {group.prodotti.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center border border-dashed border-gray-200 rounded-lg">
-                <p className="text-sm text-gray-300 italic mb-2">Nessun prodotto</p>
-                <button
-                  onClick={() => setAddItemsOpen(true)}
-                  className="text-xs text-accent hover:text-accent/80 transition-colors"
-                >
-                  + Aggiungi prodotti
-                </button>
-              </div>
-            ) : productView === 'board' ? (
-              <ProductBoardView
-                items={gridItems}
-                orderId={orderId}
-                groupId={group.id}
-                onRemove={removeItem}
-                onToggleFocus={toggleFocus}
-                deletingItemId={deletingItemId}
-              />
-            ) : (
-              <ProductListaView
-                items={group.prodotti}
-                orderId={orderId}
-                groupId={group.id}
-                onRemove={removeItem}
-                onToggleFocus={toggleFocus}
-                deletingItemId={deletingItemId}
-              />
-            )}
-          </GroupBoardDropZone>
+          {group.prodotti.length === 0 ? (
+            <LevelSection
+              groupId={group.id} livello={1} levelName="Livello 1" items={[]} canRemove={false}
+              onRemove={removeItem} onToggleFocus={toggleFocus} deletingItemId={deletingItemId}
+              onContextMenu={onContextMenu} onRenameLevel={renameLevel} onRemoveLevel={removeLevel}
+            />
+          ) : productView === 'board' ? (
+            <ProductBoardView
+              items={gridItems} orderId={orderId} groupId={group.id}
+              numLivelli={numLivelli} levelNames={levelNames}
+              onRemove={removeItem} onToggleFocus={toggleFocus} deletingItemId={deletingItemId}
+              onContextMenu={onContextMenu} onRenameLevel={renameLevel}
+              onRemoveLevel={removeLevel} onAddLevel={addLevel}
+            />
+          ) : (
+            <ProductListaView
+              items={group.prodotti} orderId={orderId} groupId={group.id}
+              onRemove={removeItem} onToggleFocus={toggleFocus} deletingItemId={deletingItemId}
+              onContextMenu={onContextMenu}
+            />
+          )}
         </div>
       </div>
 
@@ -959,7 +1152,7 @@ function GroupCard({
 // ─── GroupRow (list/accordion) ─────────────────────────────────────────────────
 
 function GroupRow({
-  group, orderId, orderItems, gridItems, onEdit, onDuplicate, onDelete, onRefresh,
+  group, orderId, orderItems, gridItems, onEdit, onDuplicate, onDelete, onRefresh, onContextMenu,
 }: {
   group: DisplayGroup;
   orderId: string;
@@ -969,6 +1162,7 @@ function GroupRow({
   onDuplicate: () => void;
   onDelete: () => void;
   onRefresh: () => void;
+  onContextMenu: (e: React.MouseEvent, orderItemId: string, fromGroupId: string) => void;
 }) {
   const queryClient = useQueryClient();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -980,14 +1174,15 @@ function GroupRow({
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [productView, setProductView] = useState<'lista' | 'board'>('lista');
 
+  const maxLivelloFromItems = useMemo(() => Math.max(1, ...group.prodotti.map(p => p.livello)), [group.prodotti]);
+  const [numLivelli, setNumLivelli] = useState(maxLivelloFromItems);
+  useEffect(() => { setNumLivelli(prev => Math.max(prev, maxLivelloFromItems)); }, [maxLivelloFromItems]);
+  const levelNames = useMemo(() => parseLevelNames(group.nomiLivelli), [group.nomiLivelli]);
+
   const assignedItemIds = useMemo(() => new Set(group.prodotti.map((p) => p.orderItemId)), [group.prodotti]);
   const activeSchedule = getActiveSchedule(group.schedules);
 
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
+  const style: React.CSSProperties = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
 
   async function removeItem(item: DisplayGroupItem) {
     setDeletingItemId(item.id);
@@ -1011,12 +1206,30 @@ function GroupRow({
     }));
     try {
       await fetch(`/api/catalog/orders/${orderId}/display-groups/${group.id}/items/${item.orderItemId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isFocus: newVal }),
       });
     } catch { toast.error('Errore'); onRefresh(); }
   }
+
+  async function renameLevel(livello: number, nome: string) {
+    const trimmed = nome.trim();
+    const updated = { ...levelNames };
+    if (trimmed && trimmed !== `Livello ${livello}`) { updated[livello] = trimmed; } else { delete updated[livello]; }
+    queryClient.setQueryData(['display-groups', orderId], (old: any) => ({
+      ...old,
+      groups: old.groups.map((g: DisplayGroup) => g.id === group.id ? { ...g, nomiLivelli: JSON.stringify(updated) } : g),
+    }));
+    try {
+      await fetch(`/api/catalog/orders/${orderId}/display-groups/${group.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nomiLivelli: JSON.stringify(updated) }),
+      });
+    } catch { onRefresh(); }
+  }
+
+  function addLevel() { setNumLivelli(prev => Math.min(prev + 1, 5)); }
+  function removeLevel(livello: number) { if (livello !== numLivelli) return; setNumLivelli(prev => Math.max(1, prev - 1)); }
 
   return (
     <>
@@ -1037,9 +1250,9 @@ function GroupRow({
             {open ? <ChevronDown size={13} className="text-gray-400 flex-shrink-0" /> : <ChevronRight size={13} className="text-gray-400 flex-shrink-0" />}
           </button>
           <div className="flex items-center gap-0.5 flex-shrink-0">
-            <button onClick={onEdit} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica"><Pencil size={12} /></button>
-            <button onClick={onDuplicate} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Duplica"><Copy size={12} /></button>
-            <button onClick={onDelete} className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina"><Trash2 size={12} /></button>
+            <button onClick={onEdit} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"><Pencil size={12} /></button>
+            <button onClick={onDuplicate} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"><Copy size={12} /></button>
+            <button onClick={onDelete} className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"><Trash2 size={12} /></button>
           </div>
         </div>
 
@@ -1047,12 +1260,10 @@ function GroupRow({
           <div className="border-t border-border px-3 py-3 bg-cream/20 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center bg-white rounded border border-border overflow-hidden">
-                <button onClick={() => setProductView('lista')}
-                  className={`px-3 py-1 text-xs flex items-center gap-1.5 transition-colors ${productView === 'lista' ? 'bg-primary text-white' : 'text-gray-400 hover:text-primary'}`}>
+                <button onClick={() => setProductView('lista')} className={`px-3 py-1 text-xs flex items-center gap-1.5 transition-colors ${productView === 'lista' ? 'bg-primary text-white' : 'text-gray-400 hover:text-primary'}`}>
                   <List size={12} />Lista
                 </button>
-                <button onClick={() => setProductView('board')}
-                  className={`px-3 py-1 text-xs flex items-center gap-1.5 transition-colors ${productView === 'board' ? 'bg-primary text-white' : 'text-gray-400 hover:text-primary'}`}>
+                <button onClick={() => setProductView('board')} className={`px-3 py-1 text-xs flex items-center gap-1.5 transition-colors ${productView === 'board' ? 'bg-primary text-white' : 'text-gray-400 hover:text-primary'}`}>
                   <LayoutGrid size={12} />Board
                 </button>
               </div>
@@ -1061,19 +1272,22 @@ function GroupRow({
               </button>
             </div>
 
-            <GroupBoardDropZone groupId={group.id} isEmpty={group.prodotti.length === 0}>
-              {group.prodotti.length === 0 ? (
-                <p className="text-sm text-gray-300 text-center py-4 italic">Nessun prodotto</p>
-              ) : productView === 'lista' ? (
-                <ProductListaView items={group.prodotti} orderId={orderId} groupId={group.id} onRemove={removeItem} onToggleFocus={toggleFocus} deletingItemId={deletingItemId} />
-              ) : (
-                <ProductBoardView items={gridItems} orderId={orderId} groupId={group.id} onRemove={removeItem} onToggleFocus={toggleFocus} deletingItemId={deletingItemId} />
-              )}
-            </GroupBoardDropZone>
+            {group.prodotti.length === 0 ? (
+              <p className="text-sm text-gray-300 text-center py-4 italic">Nessun prodotto</p>
+            ) : productView === 'lista' ? (
+              <ProductListaView items={group.prodotti} orderId={orderId} groupId={group.id} onRemove={removeItem} onToggleFocus={toggleFocus} deletingItemId={deletingItemId} onContextMenu={onContextMenu} />
+            ) : (
+              <ProductBoardView
+                items={gridItems} orderId={orderId} groupId={group.id}
+                numLivelli={numLivelli} levelNames={levelNames}
+                onRemove={removeItem} onToggleFocus={toggleFocus} deletingItemId={deletingItemId}
+                onContextMenu={onContextMenu} onRenameLevel={renameLevel}
+                onRemoveLevel={removeLevel} onAddLevel={addLevel}
+              />
+            )}
 
             {group.prodotti.length > 0 && (
-              <button onClick={() => setAddItemsOpen(true)}
-                className="w-full flex items-center justify-center gap-1 text-2xs text-accent hover:text-accent/80 border border-dashed border-accent/30 hover:border-accent/60 rounded py-1.5 transition-colors">
+              <button onClick={() => setAddItemsOpen(true)} className="w-full flex items-center justify-center gap-1 text-2xs text-accent hover:text-accent/80 border border-dashed border-accent/30 hover:border-accent/60 rounded py-1.5 transition-colors">
                 <Plus size={10} />Aggiungi prodotto
               </button>
             )}
@@ -1107,8 +1321,13 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
   const [editGroup, setEditGroup] = useState<DisplayGroup | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [localGridItems, setLocalGridItems] = useState<Record<string, DisplayGroupItem[]>>({});
+  const [activeDragProduct, setActiveDragProduct] = useState<any>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
+  );
 
   const { data, isLoading } = useQuery<{ groups: DisplayGroup[] }>({
     queryKey: ['display-groups', orderId],
@@ -1122,7 +1341,6 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
     queryClient.invalidateQueries({ queryKey: ['display-groups', orderId] });
   }, [queryClient, orderId]);
 
-  // Sync local grid items with server data
   useEffect(() => {
     if (!data?.groups) return;
     const next: Record<string, DisplayGroupItem[]> = {};
@@ -1132,16 +1350,32 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
     setLocalGridItems(next);
   }, [data]);
 
-  const assignedOrderItemIds = useMemo(() => {
-    const set = new Set<string>();
-    groups.forEach((g) => g.prodotti.forEach((p) => set.add(p.orderItemId)));
-    return set;
+  const allProductItems = useMemo(
+    () => orderItems.filter(it => it.product != null),
+    [orderItems]
+  );
+
+  const groupCountByOrderItemId = useMemo<Record<string, number>>(() => {
+    const map: Record<string, number> = {};
+    groups.forEach(g => g.prodotti.forEach(p => {
+      map[p.orderItemId] = (map[p.orderItemId] ?? 0) + 1;
+    }));
+    return map;
   }, [groups]);
 
-  const unassignedItems = useMemo(
-    () => orderItems.filter((it) => !assignedOrderItemIds.has(it.id) && it.product != null),
-    [orderItems, assignedOrderItemIds]
-  );
+  const unassignedCount = allProductItems.filter(it => !groupCountByOrderItemId[it.id]).length;
+
+  function handleContextMenu(e: React.MouseEvent, orderItemId: string, fromGroupId?: string) {
+    e.preventDefault();
+    const orderItem = orderItems.find(it => it.id === orderItemId);
+    setContextMenu({
+      x: Math.min(e.clientX, window.innerWidth - 240),
+      y: Math.min(e.clientY, window.innerHeight - 300),
+      orderItemId,
+      product: orderItem?.product ? { name: orderItem.product.name, code: orderItem.product.code, imageUrl: orderItem.product.imageUrl } : null,
+      fromGroupId,
+    });
+  }
 
   async function handleDelete(group: DisplayGroup) {
     if (!confirm(`Eliminare il gruppo "${group.nome}"?`)) return;
@@ -1179,7 +1413,20 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
     finally { setExportingPdf(false); }
   }
 
+  function handleGlobalDragStart(event: DragStartEvent) {
+    const data = event.active.data.current as any;
+    if (data?.type === 'available') {
+      const oi = orderItems.find(it => it.id === data.orderItemId);
+      setActiveDragProduct(oi?.product ?? null);
+    } else if (data?.type === 'gridItem') {
+      const items = localGridItems[data.groupId] ?? [];
+      const local = items.find(it => it.orderItemId === data.orderItemId);
+      setActiveDragProduct(local?.orderItem?.product ?? null);
+    }
+  }
+
   async function handleGlobalDragEnd(event: DragEndEvent) {
+    setActiveDragProduct(null);
     const { active, over } = event;
     if (!over) return;
 
@@ -1188,30 +1435,24 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
 
     // 1. Group reorder
     if (activeType === 'group') {
-      // Resolve target group: over could be a group, gridItem, or groupBoard
       let targetGroupId = over.id as string;
-      if (overType === 'gridItem' || overType === 'groupBoard') {
-        targetGroupId = (over.data.current as any).groupId;
-      }
+      if (overType === 'gridItem' || overType === 'levelBoard') targetGroupId = (over.data.current as any).groupId;
       if (active.id === targetGroupId) return;
       const oldIndex = groups.findIndex((g) => g.id === active.id);
       const newIndex = groups.findIndex((g) => g.id === targetGroupId);
       if (oldIndex === -1 || newIndex === -1) return;
       const reordered = arrayMove(groups, oldIndex, newIndex);
-      queryClient.setQueryData(['display-groups', orderId], {
-        groups: reordered.map((g, i) => ({ ...g, posizione: i })),
-      });
+      queryClient.setQueryData(['display-groups', orderId], { groups: reordered.map((g, i) => ({ ...g, posizione: i })) });
       try {
         await fetch(`/api/catalog/orders/${orderId}/display-groups/reorder`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ gruppi: reordered.map((g, i) => ({ id: g.id, posizione: i })) }),
         });
       } catch { toast.error('Errore nel riordinamento'); refresh(); }
       return;
     }
 
-    // 2. Grid item reorder within same group
+    // 2. Grid item reorder within same group + same level
     if (activeType === 'gridItem' && overType === 'gridItem') {
       const activeGroupId = (active.data.current as any).groupId as string;
       const overGroupId = (over.data.current as any).groupId as string;
@@ -1224,32 +1465,69 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
         setLocalGridItems(prev => ({ ...prev, [activeGroupId]: reordered }));
         try {
           await fetch(`/api/catalog/orders/${orderId}/display-groups/${activeGroupId}/items/reorder`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ items: reordered.map((it, i) => ({ orderItemId: it.orderItemId, posizione: i })) }),
           });
-        } catch { /* silent — next refresh restores server order */ }
+        } catch { /* silent */ }
         return;
       }
     }
 
-    // 3. Available card dropped onto a group board or grid item
+    // 3. Grid item moved to a level zone (same or different group)
+    if (activeType === 'gridItem' && overType === 'levelBoard') {
+      const activeOrderItemId = (active.data.current as any).orderItemId as string;
+      const activeGroupId = (active.data.current as any).groupId as string;
+      const { groupId: targetGroupId, livello } = over.data.current as any;
+
+      if (activeGroupId === targetGroupId) {
+        // Change level within same group
+        setLocalGridItems(prev => ({
+          ...prev,
+          [activeGroupId]: (prev[activeGroupId] ?? []).map(it =>
+            it.orderItemId === activeOrderItemId ? { ...it, livello } : it
+          ),
+        }));
+        try {
+          await fetch(`/api/catalog/orders/${orderId}/display-groups/${activeGroupId}/items/${activeOrderItemId}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ livello }),
+          });
+        } catch { refresh(); }
+      } else {
+        try {
+          await fetch(`/api/catalog/orders/${orderId}/display-groups/${activeGroupId}/items/${activeOrderItemId}`, { method: 'DELETE' });
+          await fetch(`/api/catalog/orders/${orderId}/display-groups/${targetGroupId}/items`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderItemIds: [activeOrderItemId], livello }),
+          });
+          toast.success('Prodotto spostato');
+          refresh();
+        } catch { toast.error('Errore nello spostamento'); }
+      }
+      return;
+    }
+
+    // 4. Available card dropped onto a level zone or grid item (add to group)
     if (activeType === 'available') {
       const orderItemId = (active.data.current as any).orderItemId as string;
       let targetGroupId: string | null = null;
-      if (overType === 'groupBoard') {
+      let livello = 1;
+
+      if (overType === 'levelBoard') {
         targetGroupId = (over.data.current as any).groupId;
+        livello = (over.data.current as any).livello ?? 1;
       } else if (overType === 'gridItem') {
         targetGroupId = (over.data.current as any).groupId;
+        livello = (over.data.current as any).livello ?? 1;
       } else if (overType === 'group') {
         targetGroupId = over.id as string;
       }
+
       if (!targetGroupId) return;
       try {
         const res = await fetch(`/api/catalog/orders/${orderId}/display-groups/${targetGroupId}/items`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderItemIds: [orderItemId] }),
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderItemIds: [orderItemId], livello }),
         });
         if (!res.ok) throw new Error();
         toast.success('Prodotto aggiunto al gruppo');
@@ -1258,15 +1536,12 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
       return;
     }
 
-    // 4. Grid item dropped onto available panel → remove from group
+    // 5. Grid item dropped onto available panel → remove from group
     if (activeType === 'gridItem' && (over.id === 'available-panel' || overType === 'availablePanel')) {
       const orderItemId = (active.data.current as any).orderItemId as string;
       const groupId = (active.data.current as any).groupId as string;
       try {
-        const res = await fetch(
-          `/api/catalog/orders/${orderId}/display-groups/${groupId}/items/${orderItemId}`,
-          { method: 'DELETE' }
-        );
+        const res = await fetch(`/api/catalog/orders/${orderId}/display-groups/${groupId}/items/${orderItemId}`, { method: 'DELETE' });
         if (!res.ok) throw new Error();
         toast.success('Prodotto rimosso dal gruppo');
         refresh();
@@ -1286,6 +1561,7 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
     onDuplicate: () => handleDuplicate(group),
     onDelete: () => handleDelete(group),
     onRefresh: refresh,
+    onContextMenu: handleContextMenu,
   });
 
   return (
@@ -1300,19 +1576,29 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
         />
       )}
 
+      {contextMenu && (
+        <ContextMenuPortal
+          state={contextMenu}
+          groups={groups}
+          groupCountByOrderItemId={groupCountByOrderItemId}
+          orderId={orderId}
+          onClose={() => setContextMenu(null)}
+          onRefresh={refresh}
+        />
+      )}
+
       {/* Header toolbar */}
       <div className="px-4 sm:px-6 pt-6 pb-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-0">
             <h2 className="text-[20px] font-bold text-[#1e293b] leading-none">Esposizioni</h2>
-            <p className="text-[13px] text-[#94a3b8] mt-1">{groups.length} gruppi · {unassignedItems.length} prodotti non assegnati</p>
+            <p className="text-[13px] text-[#94a3b8] mt-1">{groups.length} gruppi · {unassignedCount} prodotti non assegnati</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportPdf}
               disabled={exportingPdf || groups.length === 0}
               className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary border border-border rounded px-2.5 py-1.5 hover:bg-cream transition-colors disabled:opacity-40"
-              title="Esporta PDF"
             >
               {exportingPdf ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}PDF
             </button>
@@ -1335,17 +1621,24 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
       </div>
 
       {/* DnD area — full height, edge to edge */}
-      <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragEnd={handleGlobalDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={customCollisionDetection}
+        onDragStart={handleGlobalDragStart}
+        onDragEnd={handleGlobalDragEnd}
+      >
         <div
           className="flex flex-col-reverse md:flex-row border-t border-[#e2e8f0] overflow-hidden"
           style={{ height: 'calc(100vh - 200px)' }}
         >
-          {/* Left column — Non assegnati (mobile: 250px bottom, tablet: 40%, desktop: 35%) */}
-          {unassignedItems.length > 0 && (
-            <div className="h-[250px] flex-shrink-0 border-t border-[#e2e8f0] md:h-full md:w-[40%] md:border-t-0 md:border-r md:border-[#e2e8f0] lg:w-[35%]">
-              <AvailablePanel items={unassignedItems} />
-            </div>
-          )}
+          {/* Left column — Prodotti (mobile: 250px bottom, tablet: 40%, desktop: 35%) */}
+          <div className="h-[250px] flex-shrink-0 border-t border-[#e2e8f0] md:h-full md:w-[40%] md:border-t-0 md:border-r md:border-[#e2e8f0] lg:w-[35%]">
+            <AvailablePanel
+              items={allProductItems}
+              groupCountByOrderItemId={groupCountByOrderItemId}
+              onContextMenu={(e, orderItemId) => handleContextMenu(e, orderItemId)}
+            />
+          </div>
 
           {/* Right column — Gruppi */}
           <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-5 bg-white">
@@ -1375,6 +1668,10 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
             </SortableContext>
           </div>
         </div>
+
+        <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+          {activeDragProduct ? <ProductCardMini product={activeDragProduct} /> : null}
+        </DragOverlay>
       </DndContext>
     </>
   );

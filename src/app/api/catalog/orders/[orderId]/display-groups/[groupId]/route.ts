@@ -9,7 +9,7 @@ export async function PUT(req: NextRequest, { params }: { params: { orderId: str
   if (!operatorId) return FORBIDDEN;
 
   const body = await req.json();
-  const { nome, descrizione, coloreTag, stagione, temaTag } = body as Record<string, string | undefined | null>;
+  const { nome, descrizione, coloreTag, stagione, temaTag, nomiLivelli } = body as Record<string, string | undefined | null>;
 
   const group = await prisma.displayGroup.update({
     where: { id: params.groupId, orderId: params.orderId },
@@ -19,6 +19,7 @@ export async function PUT(req: NextRequest, { params }: { params: { orderId: str
       ...(coloreTag !== undefined && { coloreTag: coloreTag || null }),
       ...(stagione !== undefined && { stagione: stagione?.trim() || null }),
       ...(temaTag !== undefined && { temaTag: temaTag?.trim() || null }),
+      ...(nomiLivelli !== undefined && { nomiLivelli: nomiLivelli || null }),
     },
     include: {
       prodotti: {

@@ -12,11 +12,13 @@ export async function PATCH(
   if (!operatorId) return FORBIDDEN;
 
   const body = await req.json();
-  const isFocus = Boolean(body.isFocus);
+  const updateData: { isFocus?: boolean; livello?: number } = {};
+  if (body.isFocus !== undefined) updateData.isFocus = Boolean(body.isFocus);
+  if (typeof body.livello === 'number' && body.livello >= 1) updateData.livello = body.livello;
 
   await prisma.displayGroupItem.updateMany({
     where: { groupId: params.groupId, orderItemId: params.orderItemId },
-    data: { isFocus },
+    data: updateData,
   });
 
   return NextResponse.json({ ok: true });
