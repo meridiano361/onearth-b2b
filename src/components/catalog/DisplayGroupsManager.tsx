@@ -355,7 +355,7 @@ function AvailablePanel({ items }: { items: OrderItem[] }) {
     <div
       ref={setNodeRef}
       className={`flex flex-col h-full overflow-hidden transition-colors ${
-        isOver ? 'bg-blue-50/40' : 'bg-[#f1f5f9]'
+        isOver ? 'bg-blue-100/60' : 'bg-gray-200'
       }`}
     >
       {/* Header */}
@@ -394,7 +394,7 @@ function AvailablePanel({ items }: { items: OrderItem[] }) {
       )}
 
       {/* Grid */}
-      <div className="flex-1 overflow-y-auto px-3 pb-3">
+      <div className="flex-1 overflow-y-auto p-4">
         {filtered.length === 0 ? (
           <p className="text-center text-xs text-gray-400 py-8">Nessun prodotto</p>
         ) : (
@@ -1337,12 +1337,12 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
       {/* DnD area — full height, edge to edge */}
       <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragEnd={handleGlobalDragEnd}>
         <div
-          className="flex flex-col lg:flex-row border-t border-[#e2e8f0] overflow-hidden"
+          className="flex flex-col-reverse md:flex-row border-t border-[#e2e8f0] overflow-hidden"
           style={{ height: 'calc(100vh - 200px)' }}
         >
-          {/* Left column — Non assegnati (mobile: 300px, desktop: 280px full-height) */}
+          {/* Left column — Non assegnati (mobile: 250px bottom, tablet: 40%, desktop: 35%) */}
           {unassignedItems.length > 0 && (
-            <div className="h-[300px] flex-shrink-0 border-b border-[#e2e8f0] lg:h-full lg:w-[280px] lg:border-b-0 lg:border-r lg:border-[#e2e8f0]">
+            <div className="h-[250px] flex-shrink-0 border-t border-[#e2e8f0] md:h-full md:w-[40%] md:border-t-0 md:border-r md:border-[#e2e8f0] lg:w-[35%]">
               <AvailablePanel items={unassignedItems} />
             </div>
           )}
