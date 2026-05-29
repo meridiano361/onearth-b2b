@@ -218,13 +218,17 @@ export default function AdminImpostazioniPage({ currentUserId }: { currentUserId
   const [whatsappVisible, setWhatsappVisible] = useState(true);
 
   useEffect(() => {
-    const hidden = localStorage.getItem('whatsapp_widget_hidden');
-    setWhatsappVisible(hidden !== 'true');
+    const disabled = localStorage.getItem('whatsapp_widget_disabled');
+    setWhatsappVisible(disabled !== 'true');
   }, []);
 
   function toggleWhatsapp(checked: boolean) {
     setWhatsappVisible(checked);
-    localStorage.setItem('whatsapp_widget_hidden', checked ? 'false' : 'true');
+    if (checked) {
+      localStorage.removeItem('whatsapp_widget_disabled');
+    } else {
+      localStorage.setItem('whatsapp_widget_disabled', 'true');
+    }
     window.dispatchEvent(new Event('storage'));
   } // undefined=closed, null=new
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);

@@ -6,9 +6,18 @@ export default function WhatsAppWidget() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    // Pulizia: il vecchio comportamento scriveva 'true' in localStorage alla chiusura —
+    // lo spostiamo su sessionStorage così riappare alla prossima visita.
+    if (localStorage.getItem('whatsapp_widget_hidden') === 'true' &&
+        localStorage.getItem('whatsapp_widget_disabled') !== 'true') {
+      localStorage.removeItem('whatsapp_widget_hidden');
+      sessionStorage.setItem('whatsapp_widget_closed', 'true');
+    }
+
     const update = () => {
-      const hidden = localStorage.getItem('whatsapp_widget_hidden');
-      setVisible(hidden !== 'true');
+      const permanentlyHidden = localStorage.getItem('whatsapp_widget_disabled') === 'true';
+      const closedThisSession = sessionStorage.getItem('whatsapp_widget_closed') === 'true';
+      setVisible(!permanentlyHidden && !closedThisSession);
     };
     update();
     window.addEventListener('storage', update);
@@ -18,8 +27,9 @@ export default function WhatsAppWidget() {
   const handleClose = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    // Solo per questa sessione: torna visibile alla prossima visita
+    sessionStorage.setItem('whatsapp_widget_closed', 'true');
     setVisible(false);
-    localStorage.setItem('whatsapp_widget_hidden', 'true');
   };
 
   if (!visible) return null;
