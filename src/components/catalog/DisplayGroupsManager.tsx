@@ -315,21 +315,20 @@ function DraggableAvailableCard({ item }: { item: OrderItem }) {
       {...listeners}
       style={{
         transform: transform ? CSS.Transform.toString(transform) : undefined,
-        opacity: isDragging ? 0.4 : 1,
+        opacity: isDragging ? 0.35 : 1,
         zIndex: isDragging ? 50 : undefined,
-        backgroundColor: '#F3F4F6',
-        border: '1px solid #E5E7EB',
       }}
-      className="relative group/ua aspect-square rounded-[6px] overflow-hidden cursor-grab active:cursor-grabbing"
+      className="bg-white border border-[#e2e8f0] rounded-lg p-1.5 cursor-grab active:cursor-grabbing hover:shadow-md hover:-translate-y-0.5 transition-all select-none"
     >
-      {item.product?.imageUrl
-        ? <ProductImage src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
-        : <div className="w-full h-full bg-gray-200" />
-      }
-      <div className="absolute inset-0 bg-black/0 group-hover/ua:bg-black/40 transition-colors rounded-[6px]" />
-      <div className="absolute inset-0 opacity-0 group-hover/ua:opacity-100 transition-opacity flex items-end p-1 pointer-events-none">
-        <span className="text-white leading-tight" style={{ fontSize: 10 }}>{item.product?.code}</span>
+      <div className="aspect-square overflow-hidden rounded bg-[#f8fafc]">
+        {item.product?.imageUrl
+          ? <ProductImage src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-contain" />
+          : <div className="w-full h-full bg-gray-100" />
+        }
       </div>
+      <p className="text-[10px] text-[#94a3b8] text-center mt-1 truncate leading-none px-0.5">
+        {item.product?.code}
+      </p>
     </div>
   );
 }
@@ -355,25 +354,29 @@ function AvailablePanel({ items }: { items: OrderItem[] }) {
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col bg-white border rounded-xl overflow-hidden transition-all ${
-        isOver ? 'ring-2 ring-accent border-accent/40' : 'border-border'
+      className={`flex flex-col h-full overflow-hidden transition-colors ${
+        isOver ? 'bg-blue-50/40' : 'bg-[#f1f5f9]'
       }`}
-      style={{ maxHeight: 'calc(100vh - 120px)' }}
     >
       {/* Header */}
-      <div className="px-3 py-2.5 border-b border-border flex-shrink-0">
-        <p className="text-xs font-semibold text-amber-700 flex items-center gap-1.5 mb-2">
-          <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
-          {items.length} non assegnat{items.length !== 1 ? 'i' : 'o'}
-        </p>
-        <div className="flex items-center gap-2 border border-border rounded px-2 py-1.5">
-          <Search size={11} className="text-gray-400 flex-shrink-0" />
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-[#e2e8f0] flex-shrink-0">
+        <span className="text-[#F59E0B] text-sm leading-none">●</span>
+        <span className="text-[11px] font-bold text-[#1e293b] flex-1 uppercase tracking-widest">Non assegnati</span>
+        <span className="bg-[#e2e8f0] text-[#64748b] text-[11px] font-bold px-2 py-0.5 rounded-full">
+          {items.length}
+        </span>
+      </div>
+
+      {/* Search */}
+      <div className="px-3 py-2 flex-shrink-0">
+        <div className="flex items-center gap-2 bg-white border border-[#e2e8f0] rounded-md px-3 py-2 focus-within:border-accent transition-colors">
+          <Search size={12} className="text-gray-400 flex-shrink-0" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cerca…"
-            className="flex-1 text-xs outline-none bg-transparent text-primary placeholder-gray-400"
+            placeholder="Cerca..."
+            className="flex-1 text-[13px] outline-none bg-transparent text-primary placeholder-[#94a3b8]"
           />
           {search && (
             <button onClick={() => setSearch('')} className="text-gray-300 hover:text-gray-500">
@@ -385,17 +388,17 @@ function AvailablePanel({ items }: { items: OrderItem[] }) {
 
       {/* Drop hint */}
       {isOver && (
-        <div className="mx-2 mt-2 flex-shrink-0 border-2 border-dashed border-accent/40 rounded-lg flex items-center justify-center py-2.5">
-          <p className="text-xs text-accent">Rilascia per rimuovere dal gruppo</p>
+        <div className="mx-3 mb-1 flex-shrink-0 border-2 border-dashed border-accent/40 rounded-lg flex items-center justify-center py-2">
+          <p className="text-xs text-accent">Rilascia per rimuovere</p>
         </div>
       )}
 
       {/* Grid */}
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto px-3 pb-3">
         {filtered.length === 0 ? (
           <p className="text-center text-xs text-gray-400 py-8">Nessun prodotto</p>
         ) : (
-          <div className="grid grid-cols-3 gap-1">
+          <div className="grid grid-cols-2 gap-2">
             {filtered.map(item => (
               <DraggableAvailableCard key={item.id} item={item} />
             ))}
@@ -1297,13 +1300,12 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
         />
       )}
 
-      <div className="px-4 sm:px-6 py-6 pb-32 lg:pb-24">
-
-        {/* Header toolbar */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
+      {/* Header toolbar */}
+      <div className="px-4 sm:px-6 pt-6 pb-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-semibold text-primary">Esposizioni</h2>
-            <p className="text-2xs text-gray-400 mt-0.5">{groups.length} gruppi · {unassignedItems.length} prodotti non assegnati</p>
+            <h2 className="text-[20px] font-bold text-[#1e293b] leading-none">Esposizioni</h2>
+            <p className="text-[13px] text-[#94a3b8] mt-1">{groups.length} gruppi · {unassignedItems.length} prodotti non assegnati</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -1330,48 +1332,50 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
             </button>
           </div>
         </div>
+      </div>
 
-        {/* DnD area: groups + available panel */}
-        <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragEnd={handleGlobalDragEnd}>
-          <div className="flex flex-col lg:flex-row gap-6 items-start">
+      {/* DnD area — full height, edge to edge */}
+      <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragEnd={handleGlobalDragEnd}>
+        <div
+          className="flex flex-col lg:flex-row border-t border-[#e2e8f0] overflow-hidden"
+          style={{ height: 'calc(100vh - 200px)' }}
+        >
+          {/* Left column — Non assegnati (mobile: 300px, desktop: 280px full-height) */}
+          {unassignedItems.length > 0 && (
+            <div className="h-[300px] flex-shrink-0 border-b border-[#e2e8f0] lg:h-full lg:w-[280px] lg:border-b-0 lg:border-r lg:border-[#e2e8f0]">
+              <AvailablePanel items={unassignedItems} />
+            </div>
+          )}
 
-            {/* Available panel — mobile: first (order-first), desktop: right column (order-last) */}
-            {unassignedItems.length > 0 && (
-              <div className="w-full lg:w-64 lg:flex-shrink-0 lg:sticky lg:top-4 order-first lg:order-last">
-                <AvailablePanel items={unassignedItems} />
+          {/* Right column — Gruppi */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-5 bg-white">
+            {groups.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-14 h-14 rounded-full bg-cream flex items-center justify-center mb-3">
+                  <LayoutGrid size={24} className="text-gray-300" />
+                </div>
+                <p className="text-sm font-medium text-gray-500 mb-1">Nessuna esposizione</p>
+                <p className="text-xs text-gray-400 mb-4">Crea il primo gruppo per organizzare i prodotti dell&apos;ordine</p>
+                <button onClick={() => setNewGroupOpen(true)} className="flex items-center gap-1.5 text-xs bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors">
+                  <Plus size={13} />Crea primo gruppo
+                </button>
               </div>
             )}
 
-            {/* Groups */}
-            <div className="flex-1 min-w-0 w-full order-last lg:order-first">
-              {groups.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="w-14 h-14 rounded-full bg-cream flex items-center justify-center mb-3">
-                    <LayoutGrid size={24} className="text-gray-300" />
-                  </div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Nessuna esposizione</p>
-                  <p className="text-xs text-gray-400 mb-4">Crea il primo gruppo per organizzare i prodotti dell&apos;ordine</p>
-                  <button onClick={() => setNewGroupOpen(true)} className="flex items-center gap-1.5 text-xs bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors">
-                    <Plus size={13} />Crea primo gruppo
-                  </button>
+            <SortableContext items={groups.map((g) => g.id)} strategy={verticalListSortingStrategy}>
+              {view === 'board' ? (
+                <div className="flex flex-col gap-6 w-full">
+                  {groups.map((group) => <GroupCard key={group.id} {...sharedGroupProps(group)} />)}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {groups.map((group) => <GroupRow key={group.id} {...sharedGroupProps(group)} />)}
                 </div>
               )}
-
-              <SortableContext items={groups.map((g) => g.id)} strategy={verticalListSortingStrategy}>
-                {view === 'board' ? (
-                  <div className="flex flex-col gap-6 w-full">
-                    {groups.map((group) => <GroupCard key={group.id} {...sharedGroupProps(group)} />)}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {groups.map((group) => <GroupRow key={group.id} {...sharedGroupProps(group)} />)}
-                  </div>
-                )}
-              </SortableContext>
-            </div>
+            </SortableContext>
           </div>
-        </DndContext>
-      </div>
+        </div>
+      </DndContext>
     </>
   );
 }
