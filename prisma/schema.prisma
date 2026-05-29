@@ -521,3 +521,34 @@ model CatalogSettings {
 
   @@map("catalog_settings")
 }
+
+model Notification {
+  id           String             @id @default(cuid())
+  titolo       String
+  testo        String
+  icona        String             @default("📢")
+  tipo         String             @default("Informazione")
+  coloreSfondo String             @default("#000000")
+  coloreTesto  String             @default("#FFFFFF")
+  destinatari  String             @default("tutti")
+  dataInizio   DateTime           @default(now())
+  dataScadenza DateTime?
+  linkUrl      String?
+  linkTesto    String?
+  attiva       Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+  reads        NotificationRead[]
+
+  @@map("notifications")
+}
+
+model NotificationRead {
+  id             String       @id @default(cuid())
+  notificationId String
+  operatorId     String
+  readAt         DateTime     @default(now())
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, operatorId])
+  @@map("notification_reads")
+}

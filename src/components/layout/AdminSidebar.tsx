@@ -18,6 +18,7 @@ import {
   Image as ImageIcon,
   BookOpen,
   Paintbrush,
+  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -41,6 +42,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/admin/foto',             label: 'Foto',               icon: ImageIcon,       roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/catalogo-pdf',     label: 'Catalogo PDF',       icon: BookOpen,        roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/preview',          label: 'Anteprima cliente',  icon: Eye,             roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { href: '/admin/notifiche',         label: 'Notifiche',          icon: Bell,            roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/personalizzazione', label: 'Personalizzazione', icon: Paintbrush,      roles: ['SUPER_ADMIN'] },
   { href: '/admin/impostazioni',     label: 'Impostazioni',       icon: Settings,        roles: ['SUPER_ADMIN'] },
 ];

@@ -9,6 +9,7 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import LanguageSelector from '@/components/layout/LanguageSelector';
+import NotificationBell from '@/components/layout/NotificationBell';
 import { useSettings } from '@/contexts/SettingsContext';
 
 const NAV_CONFIG: Record<string, { href: string; isActive: (p: string) => boolean }> = {
@@ -80,6 +81,9 @@ export default function Header({ session }: HeaderProps) {
           className={pathname.startsWith('/catalog/preferiti') ? 'fill-gray-900 text-gray-900' : ''}
         />
       </Link>
+
+      {/* Notification bell */}
+      <NotificationBell />
 
       {/* Language selector */}
       <LanguageSelector />

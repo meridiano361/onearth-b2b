@@ -116,6 +116,36 @@ function settingsToFlat(s: AppSettingsData): SettingsFlat {
   f['comunicazione.chiudibile']     = String(s.comunicazione.chiudibile);
   f['comunicazione.soloUnaVolta']   = String(s.comunicazione.soloUnaVolta);
   f['comunicazione.scadenza']       = s.comunicazione.scadenza;
+  // comunicazione2
+  f['comunicazione2.attivo']         = String(s.comunicazione2.attivo);
+  f['comunicazione2.titolo']         = s.comunicazione2.titolo;
+  f['comunicazione2.testo']          = s.comunicazione2.testo;
+  f['comunicazione2.colore']         = s.comunicazione2.colore;
+  f['comunicazione2.posizione']      = s.comunicazione2.posizione;
+  f['comunicazione2.font']           = s.comunicazione2.font;
+  f['comunicazione2.fontSizeTitolo'] = String(s.comunicazione2.fontSizeTitolo);
+  f['comunicazione2.fontSizeTesto']  = String(s.comunicazione2.fontSizeTesto);
+  f['comunicazione2.pesoTitolo']     = s.comunicazione2.pesoTitolo;
+  f['comunicazione2.pesoTesto']      = s.comunicazione2.pesoTesto;
+  f['comunicazione2.allineamento']   = s.comunicazione2.allineamento;
+  f['comunicazione2.trasformazione'] = s.comunicazione2.trasformazione;
+  f['comunicazione2.corsivoTitolo']  = String(s.comunicazione2.corsivoTitolo);
+  f['comunicazione2.corsivoTesto']   = String(s.comunicazione2.corsivoTesto);
+  f['comunicazione2.sfondo']         = s.comunicazione2.sfondo;
+  f['comunicazione2.coloreTesto']    = s.comunicazione2.coloreTesto;
+  f['comunicazione2.coloreTitolo']   = s.comunicazione2.coloreTitolo;
+  f['comunicazione2.bordo']          = s.comunicazione2.bordo;
+  f['comunicazione2.coloreBordo']    = s.comunicazione2.coloreBordo;
+  f['comunicazione2.raggio']         = String(s.comunicazione2.raggio);
+  f['comunicazione2.ombra']          = s.comunicazione2.ombra;
+  f['comunicazione2.padding']        = String(s.comunicazione2.padding);
+  f['comunicazione2.larghezza']      = s.comunicazione2.larghezza;
+  f['comunicazione2.mostraIcona']    = String(s.comunicazione2.mostraIcona);
+  f['comunicazione2.icona']          = s.comunicazione2.icona;
+  f['comunicazione2.posizioneIcona'] = s.comunicazione2.posizioneIcona;
+  f['comunicazione2.chiudibile']     = String(s.comunicazione2.chiudibile);
+  f['comunicazione2.soloUnaVolta']   = String(s.comunicazione2.soloUnaVolta);
+  f['comunicazione2.scadenza']       = s.comunicazione2.scadenza;
   return f;
 }
 
@@ -605,6 +635,17 @@ export default function AdminPersonalizzazionePage() {
     'comunicazione.padding', 'comunicazione.larghezza',
     'comunicazione.mostraIcona', 'comunicazione.icona', 'comunicazione.posizioneIcona',
     'comunicazione.chiudibile', 'comunicazione.soloUnaVolta', 'comunicazione.scadenza',
+  ];
+  const comunicazione2Keys = [
+    'comunicazione2.attivo', 'comunicazione2.titolo', 'comunicazione2.testo', 'comunicazione2.colore',
+    'comunicazione2.posizione', 'comunicazione2.font', 'comunicazione2.fontSizeTitolo', 'comunicazione2.fontSizeTesto',
+    'comunicazione2.pesoTitolo', 'comunicazione2.pesoTesto', 'comunicazione2.allineamento', 'comunicazione2.trasformazione',
+    'comunicazione2.corsivoTitolo', 'comunicazione2.corsivoTesto',
+    'comunicazione2.sfondo', 'comunicazione2.coloreTesto', 'comunicazione2.coloreTitolo',
+    'comunicazione2.bordo', 'comunicazione2.coloreBordo', 'comunicazione2.raggio', 'comunicazione2.ombra',
+    'comunicazione2.padding', 'comunicazione2.larghezza',
+    'comunicazione2.mostraIcona', 'comunicazione2.icona', 'comunicazione2.posizioneIcona',
+    'comunicazione2.chiudibile', 'comunicazione2.soloUnaVolta', 'comunicazione2.scadenza',
   ];
   const homeKeys = [
     'home.titolo1', 'home.titolo1.maiuscolo', 'home.titolo1.colore', 'home.titolo1.size',
@@ -1235,6 +1276,233 @@ export default function AdminPersonalizzazionePage() {
           </div>
         )}
         <SaveButton onClick={() => saveSection(comunicazioneKeys, 'Comunicazione')} loading={saving === 'Comunicazione'} />
+      </SectionCard>
+
+      {/* ── Secondo messaggio homepage ───────────────────────── */}
+      <SectionCard title="Secondo messaggio homepage">
+        <p className="text-xs text-gray-400">Un secondo messaggio indipendente, con posizione e stile propri.</p>
+
+        <ToggleRow label="Mostra secondo messaggio" checked={settings.comunicazione2.attivo} onChange={(v) => update('comunicazione2', { attivo: v })} />
+
+        {settings.comunicazione2.attivo && (
+          <div className="space-y-5">
+
+            <div className="space-y-3">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Contenuto</p>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Titolo</label>
+                <input type="text" value={settings.comunicazione2.titolo}
+                  onChange={(e) => update('comunicazione2', { titolo: e.target.value })}
+                  placeholder="Es. Offerta speciale" className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Testo</label>
+                <textarea value={settings.comunicazione2.testo}
+                  onChange={(e) => update('comunicazione2', { testo: e.target.value })}
+                  placeholder="Testo del secondo messaggio…" rows={3}
+                  className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900 resize-none" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Posizione nella homepage</p>
+              <select value={settings.comunicazione2.posizione}
+                onChange={(e) => update('comunicazione2', { posizione: e.target.value })}
+                className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900">
+                <option value="top">In cima (sopra l&apos;immagine hero)</option>
+                <option value="after-cta">Dopo il tasto CTA</option>
+                <option value="after-products">Dopo la griglia prodotti</option>
+                <option value="bottom">In fondo alla pagina</option>
+                <option value="banner-top">Banner fisso in alto</option>
+                <option value="banner-bottom">Banner fisso in basso</option>
+              </select>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Stile testo</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Font</label>
+                  <select value={settings.comunicazione2.font}
+                    onChange={(e) => update('comunicazione2', { font: e.target.value })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900">
+                    <option value="system">Sistema</option>
+                    <option value="serif">Serif</option>
+                    <option value="mono">Mono</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Allineamento</label>
+                  <select value={settings.comunicazione2.allineamento}
+                    onChange={(e) => update('comunicazione2', { allineamento: e.target.value })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900">
+                    <option value="left">Sinistra</option>
+                    <option value="center">Centro</option>
+                    <option value="right">Destra</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Dim. titolo (px)</label>
+                  <input type="number" min={10} max={40} value={settings.comunicazione2.fontSizeTitolo}
+                    onChange={(e) => update('comunicazione2', { fontSizeTitolo: Number(e.target.value) })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Dim. testo (px)</label>
+                  <input type="number" min={10} max={30} value={settings.comunicazione2.fontSizeTesto}
+                    onChange={(e) => update('comunicazione2', { fontSizeTesto: Number(e.target.value) })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Peso titolo</label>
+                  <select value={settings.comunicazione2.pesoTitolo}
+                    onChange={(e) => update('comunicazione2', { pesoTitolo: e.target.value })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900">
+                    <option value="normal">Normale</option>
+                    <option value="medium">Medium</option>
+                    <option value="semibold">Semibold</option>
+                    <option value="bold">Bold</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Peso testo</label>
+                  <select value={settings.comunicazione2.pesoTesto}
+                    onChange={(e) => update('comunicazione2', { pesoTesto: e.target.value })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900">
+                    <option value="normal">Normale</option>
+                    <option value="medium">Medium</option>
+                    <option value="semibold">Semibold</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Trasformazione testo</label>
+                <select value={settings.comunicazione2.trasformazione}
+                  onChange={(e) => update('comunicazione2', { trasformazione: e.target.value })}
+                  className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900">
+                  <option value="none">Nessuna</option>
+                  <option value="uppercase">MAIUSCOLO</option>
+                  <option value="lowercase">minuscolo</option>
+                  <option value="capitalize">Prima Lettera</option>
+                </select>
+              </div>
+              <div className="flex gap-4">
+                <ToggleRow label="Titolo corsivo" checked={settings.comunicazione2.corsivoTitolo} onChange={(v) => update('comunicazione2', { corsivoTitolo: v })} />
+                <ToggleRow label="Testo corsivo" checked={settings.comunicazione2.corsivoTesto} onChange={(v) => update('comunicazione2', { corsivoTesto: v })} />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Colore titolo</label>
+                <ColorPickerWithPalette value={settings.comunicazione2.coloreTitolo} onChange={(v) => update('comunicazione2', { coloreTitolo: v })} />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Colore testo</label>
+                <ColorPickerWithPalette value={settings.comunicazione2.coloreTesto} onChange={(v) => update('comunicazione2', { coloreTesto: v })} />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Stile box</p>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Sfondo</label>
+                <ColorPickerWithPalette value={settings.comunicazione2.sfondo} onChange={(v) => update('comunicazione2', { sfondo: v })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Bordo</label>
+                  <select value={settings.comunicazione2.bordo}
+                    onChange={(e) => update('comunicazione2', { bordo: e.target.value })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900">
+                    <option value="none">Nessuno</option>
+                    <option value="thin">Sottile (1px)</option>
+                    <option value="medium">Medio (2px)</option>
+                    <option value="thick">Spesso (3px)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Raggio (px)</label>
+                  <input type="number" min={0} max={40} value={settings.comunicazione2.raggio}
+                    onChange={(e) => update('comunicazione2', { raggio: Number(e.target.value) })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Ombra</label>
+                  <select value={settings.comunicazione2.ombra}
+                    onChange={(e) => update('comunicazione2', { ombra: e.target.value })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900">
+                    <option value="none">Nessuna</option>
+                    <option value="sm">Leggera</option>
+                    <option value="md">Media</option>
+                    <option value="lg">Forte</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Padding (px)</label>
+                  <input type="number" min={8} max={48} value={settings.comunicazione2.padding}
+                    onChange={(e) => update('comunicazione2', { padding: Number(e.target.value) })}
+                    className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Colore bordo</label>
+                <ColorPickerWithPalette value={settings.comunicazione2.coloreBordo} onChange={(v) => update('comunicazione2', { coloreBordo: v })} />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Larghezza</label>
+                <select value={settings.comunicazione2.larghezza}
+                  onChange={(e) => update('comunicazione2', { larghezza: e.target.value })}
+                  className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900">
+                  <option value="full">Piena larghezza</option>
+                  <option value="lg">Larga (640px)</option>
+                  <option value="md">Media (480px)</option>
+                  <option value="sm">Stretta (320px)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Icona / Emoji</p>
+              <ToggleRow label="Mostra icona" checked={settings.comunicazione2.mostraIcona} onChange={(v) => update('comunicazione2', { mostraIcona: v })} />
+              {settings.comunicazione2.mostraIcona && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Emoji</label>
+                    <input type="text" value={settings.comunicazione2.icona}
+                      onChange={(e) => update('comunicazione2', { icona: e.target.value })}
+                      className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Posizione icona</label>
+                    <select value={settings.comunicazione2.posizioneIcona}
+                      onChange={(e) => update('comunicazione2', { posizioneIcona: e.target.value })}
+                      className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900">
+                      <option value="before">Prima del titolo</option>
+                      <option value="after">Dopo il titolo</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Comportamento</p>
+              <ToggleRow label="Chiudibile dall'utente" checked={settings.comunicazione2.chiudibile} onChange={(v) => update('comunicazione2', { chiudibile: v })} />
+              <ToggleRow label="Mostra solo una volta (per sessione)" checked={settings.comunicazione2.soloUnaVolta} onChange={(v) => update('comunicazione2', { soloUnaVolta: v })} />
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Scadenza (lascia vuoto per nessuna)</label>
+                <input type="date" value={settings.comunicazione2.scadenza}
+                  onChange={(e) => update('comunicazione2', { scadenza: e.target.value })}
+                  className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Anteprima</p>
+              <ComunicazionePreview cs={settings.comunicazione2} />
+            </div>
+
+          </div>
+        )}
+        <SaveButton onClick={() => saveSection(comunicazione2Keys, 'Comunicazione2')} loading={saving === 'Comunicazione2'} />
       </SectionCard>
 
       {/* ── Filtri catalogo cliente ───────────────────────────── */}

@@ -235,9 +235,96 @@ function MessageBox({ cs }: { cs: ReturnType<typeof useSettings>['comunicazione'
   );
 }
 
+type NotificationItem = {
+  id: string;
+  titolo: string;
+  testo: string;
+  icona: string;
+  coloreSfondo: string;
+  coloreTesto: string;
+  linkUrl?: string | null;
+  linkTesto?: string | null;
+};
+
+function NotificationPopup({ notification, onClose }: { notification: NotificationItem; onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 8000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  async function handleClose() {
+    onClose();
+    try {
+      await fetch(`/api/notifications/${notification.id}/read`, { method: 'POST' });
+    } catch {}
+  }
+
+  return (
+    <div
+      className="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:w-80 z-50 rounded-xl shadow-xl overflow-hidden"
+      style={{ backgroundColor: notification.coloreSfondo, color: notification.coloreTesto }}
+    >
+      <div className="p-4 pr-10 relative">
+        <button
+          onClick={handleClose}
+          className="absolute top-3 right-3 opacity-60 hover:opacity-100 transition-opacity"
+          aria-label="Chiudi"
+          style={{ color: notification.coloreTesto }}
+        >
+          <X size={16} />
+        </button>
+        {notification.icona && (
+          <span className="text-xl mr-2">{notification.icona}</span>
+        )}
+        <p className="font-semibold text-sm inline">{notification.titolo}</p>
+        {notification.testo && (
+          <p className="text-xs mt-1 opacity-90">{notification.testo}</p>
+        )}
+        {notification.linkUrl && (
+          <a
+            href={notification.linkUrl}
+            onClick={handleClose}
+            className="inline-block mt-2 text-xs font-medium underline underline-offset-2"
+            style={{ color: notification.coloreTesto }}
+          >
+            {notification.linkTesto || 'Scopri di più'}
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function CustomerHome() {
   const th = useTranslations('home');
-  const { home: hs, social: ss, comunicazione: cs } = useSettings();
+  const { home: hs, social: ss, comunicazione: cs, comunicazione2: cs2 } = useSettings();
+
+  const [popupDismissed, setPopupDismissed] = useState(false);
+
+  const { data: notifications } = useQuery<NotificationItem[]>({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const res = await fetch('/api/notifications');
+      if (!res.ok) return [];
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+
+  const popupNotification = (() => {
+    if (popupDismissed || !notifications?.length) return null;
+    const first = notifications[0];
+    const key = `notif-popup-${first.id}`;
+    if (typeof window !== 'undefined' && sessionStorage.getItem(key) === '1') return null;
+    return first;
+  })();
+
+  function handlePopupClose() {
+    setPopupDismissed(true);
+    if (popupNotification) {
+      sessionStorage.setItem(`notif-popup-${popupNotification.id}`, '1');
+    }
+  }
 
   const { data: productsData, isLoading } = useQuery({
     queryKey: ['home-products'],
@@ -281,6 +368,10 @@ export default function CustomerHome() {
   const isBannerTop    = cs.posizione === 'banner-top';
   const isBannerBottom = cs.posizione === 'banner-bottom';
 
+  const commBox2 = <MessageBox cs={cs2} />;
+  const isBannerTop2    = cs2.posizione === 'banner-top';
+  const isBannerBottom2 = cs2.posizione === 'banner-bottom';
+
   return (
     <div className="min-h-screen bg-cream">
 
@@ -290,11 +381,17 @@ export default function CustomerHome() {
           {commBox}
         </div>
       )}
+      {isBannerTop2 && (
+        <div className="fixed top-0 left-0 right-0 z-49 px-4 py-2 flex justify-center" style={{ top: isBannerTop ? 48 : 0 }}>
+          {commBox2}
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10 space-y-10" style={isBannerTop ? { paddingTop: 60 } : undefined}>
 
         {/* ── Comunicazione: in cima ───────────────────────────── */}
         {cs.posizione === 'top' && <section>{commBox}</section>}
+        {cs2.posizione === 'top' && <section>{commBox2}</section>}
 
         {/* ── Top CTA ─────────────────────────────────────────── */}
         <div className="flex justify-center">
@@ -308,6 +405,7 @@ export default function CustomerHome() {
 
         {/* ── Comunicazione: dopo CTA ──────────────────────────── */}
         {cs.posizione === 'after-cta' && <section>{commBox}</section>}
+        {cs2.posizione === 'after-cta' && <section>{commBox2}</section>}
 
         {/* ── Scopri la collezione ─────────────────────────────── */}
         {hs.scrollAttivo && (
@@ -356,6 +454,7 @@ export default function CustomerHome() {
 
         {/* ── Comunicazione: dopo prodotti ─────────────────────── */}
         {cs.posizione === 'after-products' && <section>{commBox}</section>}
+        {cs2.posizione === 'after-products' && <section>{commBox2}</section>}
 
         {/* ── Risorse e media ──────────────────────────────────── */}
         <section>
@@ -417,6 +516,7 @@ export default function CustomerHome() {
 
         {/* ── Comunicazione: in fondo ──────────────────────────── */}
         {cs.posizione === 'bottom' && <section>{commBox}</section>}
+        {cs2.posizione === 'bottom' && <section>{commBox2}</section>}
 
       </div>
 
@@ -425,6 +525,16 @@ export default function CustomerHome() {
         <div className="fixed bottom-0 left-0 right-0 z-50 px-4 py-2 flex justify-center">
           {commBox}
         </div>
+      )}
+      {isBannerBottom2 && (
+        <div className="fixed left-0 right-0 z-49 px-4 py-2 flex justify-center" style={{ bottom: isBannerBottom ? 48 : 0 }}>
+          {commBox2}
+        </div>
+      )}
+
+      {/* ── Notifica popup ──────────────────────────────────── */}
+      {popupNotification && (
+        <NotificationPopup notification={popupNotification} onClose={handlePopupClose} />
       )}
 
     </div>

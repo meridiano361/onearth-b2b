@@ -86,9 +86,7 @@ export interface AppSettingsData {
     titolo: string;
     testo: string;
     colore: string;
-    // Position
     posizione: string;
-    // Text style
     font: string;
     fontSizeTitolo: number;
     fontSizeTesto: number;
@@ -98,7 +96,6 @@ export interface AppSettingsData {
     trasformazione: string;
     corsivoTitolo: boolean;
     corsivoTesto: boolean;
-    // Box style
     sfondo: string;
     coloreTesto: string;
     coloreTitolo: string;
@@ -108,11 +105,40 @@ export interface AppSettingsData {
     ombra: string;
     padding: number;
     larghezza: string;
-    // Icon
     mostraIcona: boolean;
     icona: string;
     posizioneIcona: string;
-    // Behavior
+    chiudibile: boolean;
+    soloUnaVolta: boolean;
+    scadenza: string;
+  };
+  comunicazione2: {
+    attivo: boolean;
+    titolo: string;
+    testo: string;
+    colore: string;
+    posizione: string;
+    font: string;
+    fontSizeTitolo: number;
+    fontSizeTesto: number;
+    pesoTitolo: string;
+    pesoTesto: string;
+    allineamento: string;
+    trasformazione: string;
+    corsivoTitolo: boolean;
+    corsivoTesto: boolean;
+    sfondo: string;
+    coloreTesto: string;
+    coloreTitolo: string;
+    bordo: string;
+    coloreBordo: string;
+    raggio: number;
+    ombra: string;
+    padding: number;
+    larghezza: string;
+    mostraIcona: boolean;
+    icona: string;
+    posizioneIcona: string;
     chiudibile: boolean;
     soloUnaVolta: boolean;
     scadenza: string;
@@ -240,6 +266,37 @@ export const DEFAULT_APP_SETTINGS: AppSettingsData = {
     coloreTitolo: '#111827',
     bordo: 'thin',
     coloreBordo: '#C17A5A',
+    raggio: 12,
+    ombra: 'none',
+    padding: 16,
+    larghezza: 'full',
+    mostraIcona: false,
+    icona: '📢',
+    posizioneIcona: 'before',
+    chiudibile: false,
+    soloUnaVolta: false,
+    scadenza: '',
+  },
+  comunicazione2: {
+    attivo: false,
+    titolo: '',
+    testo: '',
+    colore: '#C17A5A',
+    posizione: 'bottom',
+    font: 'system',
+    fontSizeTitolo: 15,
+    fontSizeTesto: 13,
+    pesoTitolo: 'semibold',
+    pesoTesto: 'normal',
+    allineamento: 'left',
+    trasformazione: 'none',
+    corsivoTitolo: false,
+    corsivoTesto: false,
+    sfondo: '#EFF6FF',
+    coloreTesto: '#374151',
+    coloreTitolo: '#111827',
+    bordo: 'thin',
+    coloreBordo: '#3B82F6',
     raggio: 12,
     ombra: 'none',
     padding: 16,
@@ -403,6 +460,37 @@ export function parseSettingsFromDb(records: { chiave: string; valore: string }[
       chiudibile:      bool('comunicazione.chiudibile',      false),
       soloUnaVolta:    bool('comunicazione.soloUnaVolta',    false),
       scadenza:        str('comunicazione.scadenza',         ''),
+    },
+    comunicazione2: {
+      attivo:          bool('comunicazione2.attivo',          false),
+      titolo:          str('comunicazione2.titolo',           ''),
+      testo:           str('comunicazione2.testo',            ''),
+      colore:          str('comunicazione2.colore',           '#C17A5A'),
+      posizione:       str('comunicazione2.posizione',        'bottom'),
+      font:            str('comunicazione2.font',             'system'),
+      fontSizeTitolo:  num('comunicazione2.fontSizeTitolo',   15),
+      fontSizeTesto:   num('comunicazione2.fontSizeTesto',    13),
+      pesoTitolo:      str('comunicazione2.pesoTitolo',       'semibold'),
+      pesoTesto:       str('comunicazione2.pesoTesto',        'normal'),
+      allineamento:    str('comunicazione2.allineamento',     'left'),
+      trasformazione:  str('comunicazione2.trasformazione',   'none'),
+      corsivoTitolo:   bool('comunicazione2.corsivoTitolo',   false),
+      corsivoTesto:    bool('comunicazione2.corsivoTesto',    false),
+      sfondo:          str('comunicazione2.sfondo',           '#EFF6FF'),
+      coloreTesto:     str('comunicazione2.coloreTesto',      '#374151'),
+      coloreTitolo:    str('comunicazione2.coloreTitolo',     '#111827'),
+      bordo:           str('comunicazione2.bordo',            'thin'),
+      coloreBordo:     str('comunicazione2.coloreBordo',      '#3B82F6'),
+      raggio:          num('comunicazione2.raggio',           12),
+      ombra:           str('comunicazione2.ombra',            'none'),
+      padding:         num('comunicazione2.padding',          16),
+      larghezza:       str('comunicazione2.larghezza',        'full'),
+      mostraIcona:     bool('comunicazione2.mostraIcona',     false),
+      icona:           str('comunicazione2.icona',            '📢'),
+      posizioneIcona:  str('comunicazione2.posizioneIcona',   'before'),
+      chiudibile:      bool('comunicazione2.chiudibile',      false),
+      soloUnaVolta:    bool('comunicazione2.soloUnaVolta',    false),
+      scadenza:        str('comunicazione2.scadenza',         ''),
     },
   };
 }

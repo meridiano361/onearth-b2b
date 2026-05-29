@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
+import { useQuery } from '@tanstack/react-query';
 
 type NavItem = {
   icon: React.ElementType;
@@ -14,6 +15,7 @@ type NavItem = {
   href: string;
   isActive: (pathname: string) => boolean;
   badge?: boolean;
+  notifBadge?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -22,6 +24,7 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Home',
     href: '/catalog',
     isActive: (p) => p === '/catalog' || p === '/home',
+    notifBadge: true,
   },
   {
     icon: LayoutGrid,
@@ -61,13 +64,24 @@ export default function MobileNav() {
   const { getTotalItems } = useCartStore();
   const totalItems = getTotalItems();
 
+  const { data: notifications = [] } = useQuery<{ letta: boolean }[]>({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const res = await fetch('/api/notifications');
+      if (!res.ok) return [];
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+  const unreadCount = notifications.filter((n) => !n.letta).length;
+
   return (
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-30"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-stretch h-[52px]">
-        {NAV_ITEMS.map(({ icon: Icon, label, href, isActive, badge }) => {
+        {NAV_ITEMS.map(({ icon: Icon, label, href, isActive, badge, notifBadge }) => {
           const active = isActive(pathname);
           return (
             <Link
@@ -87,6 +101,11 @@ export default function MobileNav() {
                 {badge && totalItems > 0 && (
                   <span className="absolute -top-[6px] -right-[10px] bg-red-500 text-white text-[8px] font-bold min-w-[13px] h-[13px] rounded-full flex items-center justify-center leading-none px-[2px]">
                     {totalItems > 9 ? '9+' : totalItems}
+                  </span>
+                )}
+                {notifBadge && unreadCount > 0 && (
+                  <span className="absolute -top-[6px] -right-[10px] bg-red-500 text-white text-[8px] font-bold min-w-[13px] h-[13px] rounded-full flex items-center justify-center leading-none px-[2px]">
+                    {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </div>
