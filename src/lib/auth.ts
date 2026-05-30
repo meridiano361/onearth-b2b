@@ -6,6 +6,13 @@ import type { AppRole } from '@/types';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { securityLog } from '@/lib/securityLog';
 
+function detectDevice(ua: string | undefined): string {
+  if (!ua) return 'desktop';
+  if (/ipad|tablet|android(?!.*mobile)/i.test(ua)) return 'tablet';
+  if (/mobile|android|iphone|ipod/i.test(ua)) return 'mobile';
+  return 'desktop';
+}
+
 async function repairOperatorOrg(token: any) {
   if (token.role !== 'OPERATOR' || token.organizationId) return;
   const op = await prisma.operator.findUnique({ where: { id: token.id }, select: { organizationId: true } });
@@ -51,6 +58,15 @@ export const authOptions: NextAuthOptions = {
             throw new Error('Email o password non validi');
           }
           securityLog('login_success', { email, ip, userType: 'operator', id: operator.id });
+          const ua = (req as any)?.headers?.['user-agent'] ?? undefined;
+          prisma.accessLog.create({
+            data: {
+              operatorId: operator.id,
+              ipAddress: ip !== 'unknown' ? ip : undefined,
+              userAgent: ua ? String(ua).slice(0, 500) : undefined,
+              dispositivo: detectDevice(ua),
+            },
+          }).catch(() => {});
           return {
             id: operator.id,
             email: operator.email,

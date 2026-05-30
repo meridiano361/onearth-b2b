@@ -552,3 +552,14 @@ model NotificationRead {
   @@unique([notificationId, operatorId])
   @@map("notification_reads")
 }
+
+model AccessLog {
+  id          String   @id @default(cuid())
+  operatorId  String
+  loginAt     DateTime @default(now())
+  ipAddress   String?
+  userAgent   String?
+  dispositivo String?  // "mobile" | "tablet" | "desktop"
+
+  @@map("access_logs")
+}
