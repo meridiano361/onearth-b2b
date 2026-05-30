@@ -18,6 +18,7 @@ type NotificationItem = {
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
 
@@ -36,12 +37,24 @@ export default function NotificationBell() {
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     }
     if (open) document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
   }, [open]);
 
   async function markRead(id: string) {
@@ -61,8 +74,9 @@ export default function NotificationBell() {
   }
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative">
       <button
+        ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
         className="relative p-1.5 text-gray-400 hover:text-primary transition-colors"
         aria-label="Notifiche"
@@ -76,64 +90,115 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-border rounded-xl shadow-lg z-50 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <span className="text-xs font-semibold text-primary">Notifiche</span>
-            <div className="flex items-center gap-3">
-              {unread > 0 && (
-                <button
-                  onClick={markAllRead}
-                  className="text-2xs text-gray-400 hover:text-primary transition-colors"
-                >
-                  Segna tutte come lette
-                </button>
-              )}
-              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-primary transition-colors">
-                <X size={14} />
-              </button>
-            </div>
-          </div>
+        <>
+          {/* Backdrop — mobile only */}
+          <div
+            className="md:hidden fixed inset-0 bg-black/20 z-40"
+            onClick={() => setOpen(false)}
+          />
 
-          <div className="max-h-[400px] overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-xs text-gray-400">Nessuna notifica</div>
-            ) : (
-              notifications.map((n) => (
-                <div
-                  key={n.id}
-                  onClick={() => markRead(n.id)}
-                  className="cursor-pointer hover:opacity-90 transition-opacity"
-                  style={{ backgroundColor: n.coloreSfondo, color: n.coloreTesto }}
+          {/* Panel: fixed on mobile, absolute on desktop */}
+          <div
+            ref={panelRef}
+            className="
+              fixed left-4 right-4 top-16 z-50
+              md:absolute md:left-auto md:right-0 md:top-8 md:w-[380px]
+              bg-white rounded-xl shadow-2xl border border-border
+              max-h-[70vh] md:max-h-[80vh] overflow-hidden flex flex-col
+            "
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-primary">Notifiche</span>
+                {unread > 0 && (
+                  <span className="text-2xs bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold leading-none">
+                    {unread}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {unread > 0 && (
+                  <button
+                    onClick={markAllRead}
+                    className="text-xs text-gray-400 hover:text-primary transition-colors"
+                  >
+                    Segna tutte come lette
+                  </button>
+                )}
+                <button
+                  onClick={() => setOpen(false)}
+                  className="text-gray-400 hover:text-primary transition-colors p-1"
+                  aria-label="Chiudi"
                 >
-                  <div className="px-4 py-3 border-b border-black/10 flex gap-3 items-start">
-                    {n.icona && <span className="text-base flex-shrink-0">{n.icona}</span>}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start gap-2">
-                        <p className="text-xs font-semibold flex-1 leading-snug">{n.titolo}</p>
-                        {!n.letta && (
-                          <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-white mt-1 opacity-80" />
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Notification list */}
+            <div className="overflow-y-auto flex-1">
+              {notifications.length === 0 ? (
+                <div className="px-4 py-10 text-center text-sm text-gray-400">
+                  Nessuna notifica
+                </div>
+              ) : (
+                notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    className="border-b last:border-0"
+                    style={{ borderColor: 'rgba(0,0,0,0.08)' }}
+                  >
+                    <div
+                      className="p-4"
+                      style={{ backgroundColor: n.coloreSfondo, color: n.coloreTesto }}
+                    >
+                      <div className="flex items-start gap-3">
+                        {n.icona && (
+                          <span className="text-2xl flex-shrink-0 leading-none">{n.icona}</span>
                         )}
-                      </div>
-                      {n.testo && (
-                        <p className="text-xs mt-0.5 opacity-80 line-clamp-2">{n.testo}</p>
-                      )}
-                      {n.linkUrl && (
-                        <a
-                          href={n.linkUrl}
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-block mt-1 text-xs font-medium underline underline-offset-2"
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-semibold text-sm leading-snug">{n.titolo}</p>
+                            {!n.letta && (
+                              <span className="flex-shrink-0 w-2 h-2 rounded-full bg-white mt-1 opacity-80" />
+                            )}
+                          </div>
+                          {n.testo && (
+                            <p
+                              className="text-sm mt-1 leading-relaxed break-words whitespace-normal"
+                              style={{ opacity: 0.9 }}
+                            >
+                              {n.testo}
+                            </p>
+                          )}
+                          {n.linkUrl && (
+                            <a
+                              href={n.linkUrl}
+                              className="inline-block mt-2 text-sm font-medium underline underline-offset-2"
+                              style={{ color: n.coloreTesto }}
+                            >
+                              {n.linkTesto || 'Scopri di più'}
+                            </a>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => markRead(n.id)}
+                          className="flex-shrink-0 p-1 opacity-50 hover:opacity-100 transition-opacity"
                           style={{ color: n.coloreTesto }}
+                          aria-label="Segna come letta"
+                          title="Segna come letta"
                         >
-                          {n.linkTesto || 'Scopri di più'}
-                        </a>
-                      )}
+                          <X size={14} />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

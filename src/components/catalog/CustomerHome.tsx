@@ -261,35 +261,45 @@ function NotificationPopup({ notification, onClose }: { notification: Notificati
 
   return (
     <div
-      className="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:w-80 z-50 rounded-xl shadow-xl overflow-hidden"
-      style={{ backgroundColor: notification.coloreSfondo, color: notification.coloreTesto }}
+      className="fixed left-4 right-4 md:left-auto md:right-6 md:w-80 z-50 rounded-xl shadow-xl overflow-hidden"
+      style={{
+        top: 80,
+        backgroundColor: notification.coloreSfondo,
+        color: notification.coloreTesto,
+      }}
     >
-      <div className="p-4 pr-10 relative">
-        <button
-          onClick={handleClose}
-          className="absolute top-3 right-3 opacity-60 hover:opacity-100 transition-opacity"
-          aria-label="Chiudi"
-          style={{ color: notification.coloreTesto }}
-        >
-          <X size={16} />
-        </button>
-        {notification.icona && (
-          <span className="text-xl mr-2">{notification.icona}</span>
-        )}
-        <p className="font-semibold text-sm inline">{notification.titolo}</p>
-        {notification.testo && (
-          <p className="text-xs mt-1 opacity-90">{notification.testo}</p>
-        )}
-        {notification.linkUrl && (
-          <a
-            href={notification.linkUrl}
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          {notification.icona && (
+            <span className="text-2xl flex-shrink-0 leading-none">{notification.icona}</span>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm leading-snug">{notification.titolo}</p>
+            {notification.testo && (
+              <p className="text-sm mt-1 leading-relaxed break-words whitespace-normal opacity-90">
+                {notification.testo}
+              </p>
+            )}
+            {notification.linkUrl && (
+              <a
+                href={notification.linkUrl}
+                onClick={handleClose}
+                className="inline-block mt-2 text-sm font-medium underline underline-offset-2"
+                style={{ color: notification.coloreTesto }}
+              >
+                {notification.linkTesto || 'Scopri di più'}
+              </a>
+            )}
+          </div>
+          <button
             onClick={handleClose}
-            className="inline-block mt-2 text-xs font-medium underline underline-offset-2"
+            className="flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2 -mt-1 opacity-60 hover:opacity-100 transition-opacity"
+            aria-label="Chiudi"
             style={{ color: notification.coloreTesto }}
           >
-            {notification.linkTesto || 'Scopri di più'}
-          </a>
-        )}
+            <X size={18} />
+          </button>
+        </div>
       </div>
     </div>
   );

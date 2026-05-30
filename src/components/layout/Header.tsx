@@ -38,7 +38,7 @@ export default function Header({ session }: HeaderProps) {
           alt="On Earth"
           height={24}
           width={153}
-          className="object-contain"
+          className="object-contain w-[110px] sm:w-[153px]"
           priority
         />
       </Link>
