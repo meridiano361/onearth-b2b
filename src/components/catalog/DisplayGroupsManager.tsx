@@ -859,12 +859,14 @@ function DraggableAvailableCard({
 // ─── AvailablePanel ────────────────────────────────────────────────────────────
 
 function AvailablePanel({
-  items, groupCountByOrderItemId, onContextMenu, onCardClick,
+  items, groupCountByOrderItemId, onContextMenu, onCardClick, mobileOpen, onToggleMobile,
 }: {
   items: OrderItem[];
   groupCountByOrderItemId: Record<string, number>;
   onContextMenu: (e: React.MouseEvent, orderItemId: string) => void;
   onCardClick: (orderItemId: string) => void;
+  mobileOpen?: boolean;
+  onToggleMobile?: () => void;
 }) {
   const [search, setSearch] = useState('');
   const { setNodeRef, isOver } = useDroppable({ id: 'available-panel', data: { type: 'availablePanel' } });
@@ -883,6 +885,9 @@ function AvailablePanel({
         <span className="text-[#F59E0B] text-sm leading-none">●</span>
         <span className="text-[11px] font-bold text-[#1e293b] flex-1 uppercase tracking-widest">Prodotti</span>
         <span className="bg-[#e2e8f0] text-[#64748b] text-[11px] font-bold px-2 py-0.5 rounded-full">{unassignedCount} liberi</span>
+        <button onClick={onToggleMobile} className="md:hidden p-1 text-gray-400 hover:text-primary transition-colors" aria-label={mobileOpen ? 'Chiudi pannello prodotti' : 'Apri pannello prodotti'}>
+          <ChevronDown size={14} className={`transition-transform duration-200 ${mobileOpen ? 'rotate-180' : ''}`} />
+        </button>
       </div>
       <div className="px-3 py-2 flex-shrink-0">
         <div className="flex items-center gap-2 bg-white border border-[#e2e8f0] rounded-md px-3 py-2 focus-within:border-accent transition-colors">
@@ -1235,36 +1240,71 @@ function GroupCard({
       <div ref={setNodeRef}
         style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, border: '1px solid #E8DDD0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
         className="bg-white w-full overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-4">
-          <button {...attributes} {...listeners} className="text-gray-300 hover:text-gray-400 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"><GripVertical size={16} /></button>
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            {group.coloreTag && <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: group.coloreTag }} />}
-            <span className="text-xl font-semibold text-primary truncate">{group.nome}</span>
-          </div>
-          {numLivelli > 1 && <span className="text-2xs text-gray-400 flex items-center gap-0.5 flex-shrink-0"><Layers size={10} />{numLivelli} livelli</span>}
-          {activeSchedule && (
-            <span className="text-2xs text-[#8FAF8F] bg-[#F0F5F0] border border-[#D0E0D0] rounded px-1.5 py-0.5 flex items-center gap-0.5 flex-shrink-0">
-              <Calendar size={9} />S{activeSchedule.settimanaIn}→S{activeSchedule.settimanaFn}
-            </span>
-          )}
-          <span className="text-sm text-gray-400 flex-shrink-0">{group.prodotti.length} pz.</span>
-          <div className="flex items-center bg-cream rounded border border-border overflow-hidden flex-shrink-0">
-            <button onClick={() => setProductView('lista')} className={`px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${productView === 'lista' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}><List size={12} />Lista</button>
-            <button onClick={() => setProductView('board')} className={`px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${productView === 'board' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}><LayoutGrid size={12} />Board</button>
-          </div>
-          <button onClick={() => setAddItemsOpen(true)} className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors flex-shrink-0"><Plus size={12} />Aggiungi</button>
-          <div className="relative flex-shrink-0">
-            <button onClick={() => setMenuOpen(!menuOpen)} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"><MoreHorizontal size={16} /></button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-border rounded-lg shadow-lg py-1 min-w-[150px]">
-                  <button onClick={() => { setMenuOpen(false); onEdit(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream"><Pencil size={11} />Rinomina</button>
-                  <button onClick={() => { setMenuOpen(false); onDuplicate(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream"><Copy size={11} />Duplica</button>
-                  <button onClick={() => { setMenuOpen(false); onDelete(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50"><Trash2 size={11} />Elimina</button>
-                </div>
-              </>
+        <div className="px-4 sm:px-5 py-3 sm:py-4">
+          {/* Row 1 — always visible */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button {...attributes} {...listeners} className="text-gray-300 hover:text-gray-400 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"><GripVertical size={16} /></button>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {group.coloreTag && <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: group.coloreTag }} />}
+              <span className="text-xl font-semibold text-primary truncate">{group.nome}</span>
+            </div>
+            {/* Mobile: count + more menu */}
+            <span className="md:hidden text-sm text-gray-400 flex-shrink-0">{group.prodotti.length} pz.</span>
+            <div className="relative flex-shrink-0 md:hidden">
+              <button onClick={() => setMenuOpen(!menuOpen)} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"><MoreHorizontal size={16} /></button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-border rounded-lg shadow-lg py-1 min-w-[150px]">
+                    <button onClick={() => { setMenuOpen(false); onEdit(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream"><Pencil size={11} />Rinomina</button>
+                    <button onClick={() => { setMenuOpen(false); onDuplicate(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream"><Copy size={11} />Duplica</button>
+                    <button onClick={() => { setMenuOpen(false); onDelete(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50"><Trash2 size={11} />Elimina</button>
+                  </div>
+                </>
+              )}
+            </div>
+            {/* Desktop: all controls inline */}
+            {numLivelli > 1 && <span className="hidden md:flex text-2xs text-gray-400 items-center gap-0.5 flex-shrink-0"><Layers size={10} />{numLivelli} livelli</span>}
+            {activeSchedule && (
+              <span className="hidden md:flex text-2xs text-[#8FAF8F] bg-[#F0F5F0] border border-[#D0E0D0] rounded px-1.5 py-0.5 items-center gap-0.5 flex-shrink-0">
+                <Calendar size={9} />S{activeSchedule.settimanaIn}→S{activeSchedule.settimanaFn}
+              </span>
             )}
+            <span className="hidden md:block text-sm text-gray-400 flex-shrink-0">{group.prodotti.length} pz.</span>
+            <div className="hidden md:flex items-center bg-cream rounded border border-border overflow-hidden flex-shrink-0">
+              <button onClick={() => setProductView('lista')} className={`px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${productView === 'lista' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}><List size={12} />Lista</button>
+              <button onClick={() => setProductView('board')} className={`px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${productView === 'board' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}><LayoutGrid size={12} />Board</button>
+            </div>
+            <button onClick={() => setAddItemsOpen(true)} className="hidden md:flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors flex-shrink-0"><Plus size={12} />Aggiungi</button>
+            <div className="hidden md:block relative flex-shrink-0">
+              <button onClick={() => setMenuOpen(!menuOpen)} className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"><MoreHorizontal size={16} /></button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-border rounded-lg shadow-lg py-1 min-w-[150px]">
+                    <button onClick={() => { setMenuOpen(false); onEdit(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream"><Pencil size={11} />Rinomina</button>
+                    <button onClick={() => { setMenuOpen(false); onDuplicate(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-cream"><Copy size={11} />Duplica</button>
+                    <button onClick={() => { setMenuOpen(false); onDelete(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50"><Trash2 size={11} />Elimina</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          {/* Row 2 — mobile only: badges + view toggle + add */}
+          <div className="flex items-center gap-2 mt-2 md:hidden pl-6">
+            {numLivelli > 1 && <span className="text-2xs text-gray-400 flex items-center gap-0.5 flex-shrink-0"><Layers size={10} />{numLivelli} livelli</span>}
+            {activeSchedule && (
+              <span className="text-2xs text-[#8FAF8F] bg-[#F0F5F0] border border-[#D0E0D0] rounded px-1.5 py-0.5 flex items-center gap-0.5 flex-shrink-0">
+                <Calendar size={9} />S{activeSchedule.settimanaIn}→S{activeSchedule.settimanaFn}
+              </span>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              <div className="flex items-center bg-cream rounded border border-border overflow-hidden">
+                <button onClick={() => setProductView('lista')} className={`px-2 py-1 text-xs flex items-center transition-colors ${productView === 'lista' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}><List size={12} /></button>
+                <button onClick={() => setProductView('board')} className={`px-2 py-1 text-xs flex items-center transition-colors ${productView === 'board' ? 'bg-white shadow-sm text-primary' : 'text-gray-400 hover:text-primary'}`}><LayoutGrid size={12} /></button>
+              </div>
+              <button onClick={() => setAddItemsOpen(true)} className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors"><Plus size={12} />Aggiungi</button>
+            </div>
           </div>
         </div>
         <div className="px-5 pb-5">
@@ -1386,6 +1426,7 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
   const [activeDragProduct, setActiveDragProduct] = useState<any>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [productModal, setProductModal] = useState<ProductModalState | null>(null);
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -1687,13 +1728,15 @@ export default function DisplayGroupsManager({ orderId, orderItems }: DisplayGro
       <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragStart={handleGlobalDragStart} onDragEnd={handleGlobalDragEnd}>
         <div className="flex flex-col-reverse md:flex-row border-t border-[#e2e8f0] overflow-hidden" style={{ height: 'calc(100vh - 200px)' }}>
 
-          {/* Left — Prodotti (mobile: 250px bottom, desktop: 2/5) */}
-          <div className="h-[250px] flex-shrink-0 border-t border-[#e2e8f0] md:h-full md:w-2/5 md:border-t-0 md:border-r md:border-[#e2e8f0]">
+          {/* Left — Prodotti (mobile: collapsible bottom bar, desktop: 2/5) */}
+          <div className={`flex-shrink-0 border-t border-[#e2e8f0] md:h-full md:w-2/5 md:border-t-0 md:border-r md:border-[#e2e8f0] transition-[height] duration-200 ${mobilePanelOpen ? 'h-[250px]' : 'h-[44px]'}`}>
             <AvailablePanel
               items={allProductItems}
               groupCountByOrderItemId={groupCountByOrderItemId}
               onContextMenu={(e, orderItemId) => handleContextMenu(e, orderItemId)}
               onCardClick={(orderItemId) => handleCardClick(orderItemId)}
+              mobileOpen={mobilePanelOpen}
+              onToggleMobile={() => setMobilePanelOpen(v => !v)}
             />
           </div>
 
