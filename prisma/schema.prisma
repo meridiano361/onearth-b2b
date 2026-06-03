@@ -563,3 +563,28 @@ model AccessLog {
 
   @@map("access_logs")
 }
+
+model Album {
+  id          String      @id @default(cuid())
+  nome        String
+  descrizione String?
+  copertina   String?
+  visibile    Boolean     @default(false)
+  ordine      Int         @default(0)
+  createdAt   DateTime    @default(now())
+  foto        AlbumFoto[]
+
+  @@map("albums")
+}
+
+model AlbumFoto {
+  id         String   @id @default(cuid())
+  albumId    String
+  url        String
+  didascalia String?
+  ordine     Int      @default(0)
+  createdAt  DateTime @default(now())
+  album      Album    @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  @@map("album_foto")
+}
