@@ -477,7 +477,7 @@ export default function CustomerHome() {
             </div>
             <div>
               <p className="text-sm font-semibold text-primary">Risorse e media</p>
-              <p className="text-xs text-gray-400">Video, audio e documenti PDF</p>
+              <p className="text-xs text-gray-400">Documenti PDF, foto, video e altro</p>
             </div>
             <span className="ml-auto text-gray-300 group-hover:text-primary transition-colors">›</span>
           </Link>
