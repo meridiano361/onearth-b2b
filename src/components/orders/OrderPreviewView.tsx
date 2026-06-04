@@ -188,52 +188,23 @@ function AddProductsModal({
   // ── Catalog tab state ──────────────────────────────────────
   const [filters, setFilters] = useState<Record<string, string>>({});
 
-  const { data: stagioni } = useQuery<string[]>({
-    queryKey: ['lookup-stagione'],
-    queryFn: () => fetch('/api/lookup/stagione').then(r => r.json()).then(d => (d.data as Array<{ nome: string }>).map(x => x.nome)),
-    staleTime: 60_000,
+  type FilterOptions = Record<string, string[]>;
+  const { data: filterOptions } = useQuery<FilterOptions>({
+    queryKey: ['products-filter-options'],
+    queryFn: () => fetch('/api/products/filters').then(r => r.json()).then(d => d.data as FilterOptions),
+    staleTime: 5 * 60_000,
     enabled: tab === 'catalogo',
   });
-  const { data: colori } = useQuery<string[]>({
-    queryKey: ['lookup-colore'],
-    queryFn: () => fetch('/api/lookup/colore').then(r => r.json()).then(d => (d.data as Array<{ nome: string }>).map(x => x.nome)),
-    staleTime: 60_000,
-    enabled: tab === 'catalogo',
-  });
-  const { data: temiColore } = useQuery<string[]>({
-    queryKey: ['lookup-temaColore'],
-    queryFn: () => fetch('/api/lookup/temaColore').then(r => r.json()).then(d => (d.data as Array<{ nome: string }>).map(x => x.nome)),
-    staleTime: 60_000,
-    enabled: tab === 'catalogo',
-  });
-  const { data: collezioni } = useQuery<string[]>({
-    queryKey: ['lookup-collezione'],
-    queryFn: () => fetch('/api/lookup/collezione').then(r => r.json()).then(d => (d.data as Array<{ nome: string }>).map(x => x.nome)),
-    staleTime: 60_000,
-    enabled: tab === 'catalogo',
-  });
-  const { data: trancheList } = useQuery<string[]>({
-    queryKey: ['lookup-tranche'],
-    queryFn: () => fetch('/api/lookup/tranche').then(r => r.json()).then(d => (d.data as Array<{ nome: string }>).map(x => x.nome)),
-    staleTime: 60_000,
-    enabled: tab === 'catalogo',
-  });
-  const { data: linee } = useQuery<string[]>({
-    queryKey: ['lookup-linea'],
-    queryFn: () => fetch('/api/lookup/linea').then(r => r.json()).then(d => (d.data as Array<{ nome: string }>).map(x => x.nome)),
-    staleTime: 60_000,
-    enabled: tab === 'catalogo',
-  });
+  const fo = filterOptions ?? {};
 
   const catalogParams = useMemo(() => {
-    const p = new URLSearchParams({ active: 'true', limit: '100' });
-    if (filters.stagione) p.set('stagione', filters.stagione);
-    if (filters.colore) p.set('colore', filters.colore);
-    if (filters.temaColore) p.set('temaColore', filters.temaColore);
-    if (filters.collezione) p.set('collezione', filters.collezione);
-    if (filters.tranche) p.set('tranche', filters.tranche);
-    if (filters.nomLinea) p.set('nomLinea', filters.nomLinea);
-    if (filters.gruppoMerceologico) p.set('gruppoMerceologico', filters.gruppoMerceologico);
+    const p = new URLSearchParams({ active: 'true', limit: '200' });
+    const keys = [
+      'stagione','colore','temaColore','collezione','tranche',
+      'nomLinea','famiglia','sottofamiglia','gruppoOmogeneo',
+      'classe','sottoclasse','gruppoMerceologico','produttore',
+    ];
+    keys.forEach(k => { if (filters[k]) p.set(k, filters[k]); });
     return p.toString();
   }, [filters]);
 
@@ -392,68 +363,40 @@ function AddProductsModal({
         {tab === 'catalogo' && (
           <>
             {/* Filters */}
-            <div className="px-4 py-3 border-b border-border flex-shrink-0 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  value={filters.stagione ?? ''}
-                  onChange={e => setFilters(f => ({ ...f, stagione: e.target.value }))}
-                  className="h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
-                >
-                  <option value="">Stagione (tutti)</option>
-                  {(stagioni ?? []).map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-                <select
-                  value={filters.colore ?? ''}
-                  onChange={e => setFilters(f => ({ ...f, colore: e.target.value }))}
-                  className="h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
-                >
-                  <option value="">Colore (tutti)</option>
-                  {(colori ?? []).map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-                <select
-                  value={filters.temaColore ?? ''}
-                  onChange={e => setFilters(f => ({ ...f, temaColore: e.target.value }))}
-                  className="h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
-                >
-                  <option value="">Tema colore (tutti)</option>
-                  {(temiColore ?? []).map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-                <select
-                  value={filters.collezione ?? ''}
-                  onChange={e => setFilters(f => ({ ...f, collezione: e.target.value }))}
-                  className="h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
-                >
-                  <option value="">Collezione (tutti)</option>
-                  {(collezioni ?? []).map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-                <select
-                  value={filters.tranche ?? ''}
-                  onChange={e => setFilters(f => ({ ...f, tranche: e.target.value }))}
-                  className="h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
-                >
-                  <option value="">Tranche (tutti)</option>
-                  {(trancheList ?? []).map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-                <select
-                  value={filters.nomLinea ?? ''}
-                  onChange={e => setFilters(f => ({ ...f, nomLinea: e.target.value }))}
-                  className="h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
-                >
-                  <option value="">Linea (tutti)</option>
-                  {(linee ?? []).map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
+            <div className="px-4 pt-3 pb-2 border-b border-border flex-shrink-0">
+              <div className="max-h-[200px] overflow-y-auto pr-0.5 space-y-1.5">
+                {([
+                  ['stagione',          'Stagione'],
+                  ['colore',            'Colore'],
+                  ['temaColore',        'Tema colore'],
+                  ['collezione',        'Collezione'],
+                  ['tranche',           'Tranche'],
+                  ['nomLinea',          'Linea'],
+                  ['famiglia',          'Famiglia'],
+                  ['sottofamiglia',     'Sottofamiglia'],
+                  ['gruppoOmogeneo',    'Gruppo omogeneo'],
+                  ['classe',            'Classe'],
+                  ['sottoclasse',       'Sottoclasse'],
+                  ['gruppoMerceologico','Gruppo merceologico'],
+                  ['produttore',        'Produttore'],
+                ] as [string, string][]).map(([key, label]) =>
+                  (fo[key]?.length ?? 0) > 0 ? (
+                    <select
+                      key={key}
+                      value={filters[key] ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, [key]: e.target.value }))}
+                      className="w-full h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
+                    >
+                      <option value="">{label} (tutti)</option>
+                      {fo[key].map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  ) : null
+                )}
               </div>
-              <input
-                type="text"
-                value={filters.gruppoMerceologico ?? ''}
-                onChange={e => setFilters(f => ({ ...f, gruppoMerceologico: e.target.value }))}
-                placeholder="Gruppo merceologico..."
-                className="w-full h-8 border border-border rounded px-3 text-xs text-primary focus:outline-none focus:ring-1 focus:ring-accent"
-              />
               {Object.values(filters).some(Boolean) && (
                 <button
                   onClick={() => setFilters({})}
-                  className="text-2xs text-gray-400 hover:text-primary transition-colors"
+                  className="mt-1.5 text-2xs text-gray-400 hover:text-primary transition-colors"
                 >
                   × Azzera filtri
                 </button>

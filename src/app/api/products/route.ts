@@ -97,6 +97,20 @@ export async function GET(req: NextRequest) {
     if (tranche) where.tranche = tranche;
     if (nomLinea) where.nomLinea = nomLinea;
 
+    const famiglia = searchParams.get('famiglia');
+    const sottofamiglia = searchParams.get('sottofamiglia');
+    const gruppoOmogeneo = searchParams.get('gruppoOmogeneo');
+    const classe = searchParams.get('classe');
+    const sottoclasse = searchParams.get('sottoclasse');
+    const produttore = searchParams.get('produttore');
+
+    if (famiglia) where.famiglia = famiglia;
+    if (sottofamiglia) where.sottofamiglia = sottofamiglia;
+    if (gruppoOmogeneo) where.gruppoOmogeneo = gruppoOmogeneo;
+    if (classe) where.classe = classe;
+    if (sottoclasse) where.sottoclasse = sottoclasse;
+    if (produttore) where.produttore = produttore;
+
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
