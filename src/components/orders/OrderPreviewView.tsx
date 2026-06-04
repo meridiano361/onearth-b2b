@@ -191,7 +191,12 @@ function AddProductsModal({
   type FilterOptions = Record<string, string[]>;
   const { data: filterOptions } = useQuery<FilterOptions>({
     queryKey: ['products-filter-options'],
-    queryFn: () => fetch('/api/products/filters').then(r => r.json()).then(d => d.data as FilterOptions),
+    queryFn: async () => {
+      const res = await fetch('/api/products/filters');
+      if (!res.ok) throw new Error(`products/filters ${res.status}`);
+      const d = await res.json();
+      return (d.data ?? {}) as FilterOptions;
+    },
     staleTime: 5 * 60_000,
     enabled: tab === 'catalogo',
   });

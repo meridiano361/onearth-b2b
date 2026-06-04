@@ -3,41 +3,72 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-const FIELDS = [
-  'stagione',
-  'colore',
-  'temaColore',
-  'collezione',
-  'tranche',
-  'nomLinea',
-  'famiglia',
-  'sottofamiglia',
-  'gruppoOmogeneo',
-  'classe',
-  'sottoclasse',
-  'gruppoMerceologico',
-  'produttore',
-] as const;
+async function distinct(
+  field: 'stagione' | 'colore' | 'temaColore' | 'collezione' | 'tranche' |
+         'nomLinea' | 'famiglia' | 'sottofamiglia' | 'gruppoOmogeneo' |
+         'classe' | 'sottoclasse' | 'gruppoMerceologico' | 'produttore'
+): Promise<string[]> {
+  const rows = await prisma.product.findMany({
+    where: { isActive: true, [field]: { not: null } },
+    select: { [field]: true } as Record<typeof field, true>,
+    distinct: [field],
+    orderBy: { [field]: 'asc' } as Record<typeof field, 'asc'>,
+  });
+  return rows.map((r) => (r as any)[field] as string).filter(Boolean);
+}
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const results = await Promise.all(
-      FIELDS.map(async (field) => {
-        const rows = await (prisma.product as any).findMany({
-          where: { isActive: true, [field]: { not: null } },
-          select: { [field]: true },
-          distinct: [field],
-          orderBy: { [field]: 'asc' },
-        });
-        const values: string[] = rows.map((r: any) => r[field]).filter(Boolean);
-        return [field, values] as const;
-      })
-    );
+    const [
+      stagione,
+      colore,
+      temaColore,
+      collezione,
+      tranche,
+      nomLinea,
+      famiglia,
+      sottofamiglia,
+      gruppoOmogeneo,
+      classe,
+      sottoclasse,
+      gruppoMerceologico,
+      produttore,
+    ] = await Promise.all([
+      distinct('stagione'),
+      distinct('colore'),
+      distinct('temaColore'),
+      distinct('collezione'),
+      distinct('tranche'),
+      distinct('nomLinea'),
+      distinct('famiglia'),
+      distinct('sottofamiglia'),
+      distinct('gruppoOmogeneo'),
+      distinct('classe'),
+      distinct('sottoclasse'),
+      distinct('gruppoMerceologico'),
+      distinct('produttore'),
+    ]);
 
-    return NextResponse.json({ data: Object.fromEntries(results) });
+    return NextResponse.json({
+      data: {
+        stagione,
+        colore,
+        temaColore,
+        collezione,
+        tranche,
+        nomLinea,
+        famiglia,
+        sottofamiglia,
+        gruppoOmogeneo,
+        classe,
+        sottoclasse,
+        gruppoMerceologico,
+        produttore,
+      },
+    });
   } catch (err) {
     console.error('GET /api/products/filters error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
