@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 
-const KEYS = ['email_credenziali_oggetto', 'email_credenziali_corpo'] as const;
+const KEYS = ['email_credenziali_oggetto', 'email_credenziali_corpo', 'email_credenziali_corpo_post'] as const;
 
 export async function GET() {
   const session = await getServerSession(authOptions);

@@ -83,15 +83,21 @@ export async function sendCredenziali(params: {
   // Read customized subject and body from AppSettings
   let emailOggetto = 'Benvenuto su ON EARTH B2B — Le tue credenziali di accesso';
   let emailCorpo = `Il tuo accesso alla piattaforma <strong>ON EARTH B2B</strong> è stato attivato. Puoi accedere da qualsiasi dispositivo, anche installando l'app sulla schermata home del telefono.`;
+  let emailCorpoPost = '';
   try {
     const settings = await prisma.appSettings.findMany({
-      where: { chiave: { in: ['email_credenziali_oggetto', 'email_credenziali_corpo'] } },
+      where: { chiave: { in: ['email_credenziali_oggetto', 'email_credenziali_corpo', 'email_credenziali_corpo_post'] } },
     });
     for (const s of settings) {
       if (s.chiave === 'email_credenziali_oggetto' && s.valore) emailOggetto = s.valore;
       if (s.chiave === 'email_credenziali_corpo' && s.valore) emailCorpo = s.valore;
+      if (s.chiave === 'email_credenziali_corpo_post' && s.valore) emailCorpoPost = s.valore;
     }
   } catch { /* fall back to defaults */ }
+
+  const corpoPostHtml = emailCorpoPost
+    ? `<p style="color:#111827;font-size:15px;line-height:1.7;margin:0 0 24px;">${emailCorpoPost.replace(/\n/g, '<br>')}</p>`
+    : '';
 
   const html = `<!DOCTYPE html>
 <html lang="it">
@@ -125,6 +131,7 @@ export async function sendCredenziali(params: {
         </table>
       </div>
       ${notaHtml}
+      ${corpoPostHtml}
       <p style="color:#6B7280;font-size:13px;line-height:1.6;margin:0;">
         Hai domande? Scrivici a <a href="mailto:e.mazzolari@meridiano361.it" style="color:#ACA39A;text-decoration:none;">e.mazzolari@meridiano361.it</a>
       </p>

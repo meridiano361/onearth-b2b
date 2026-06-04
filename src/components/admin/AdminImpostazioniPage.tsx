@@ -212,11 +212,61 @@ function UserModal({ user, onClose, onSaved }: ModalProps) {
 
 // ─── Email Config Section ─────────────────────────────────────────────────────
 
+function buildEmailPreviewHtml(corpo: string, corpoPost: string) {
+  const corpoPostHtml = corpoPost.trim()
+    ? `<p style="color:#111827;font-size:15px;line-height:1.7;margin:0 0 24px;">${corpoPost.replace(/\n/g, '<br>')}</p>`
+    : '';
+  return `<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:16px;background:#F5F4F2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Nunito,Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:0 auto;background:#FFFFFF;border-radius:8px;overflow:hidden;border:1px solid #DEDAD7;">
+    <div style="background:#000000;padding:28px 36px;text-align:center;">
+      <h1 style="color:#F5F4F2;font-size:20px;font-weight:300;letter-spacing:5px;margin:0;">ON EARTH</h1>
+      <p style="color:#ACA39A;font-size:10px;letter-spacing:3px;margin:6px 0 0;text-transform:uppercase;">B2B Platform</p>
+    </div>
+    <div style="padding:36px;">
+      <p style="color:#6B7280;font-size:14px;margin:0 0 8px;">Gentile Mario,</p>
+      <p style="color:#111827;font-size:15px;line-height:1.7;margin:0 0 28px;">${corpo || '(testo prima delle credenziali)'}</p>
+      <div style="background:#F5F4F2;border:1px solid #DEDAD7;border-radius:8px;padding:20px;margin-bottom:24px;">
+        <p style="color:#ACA39A;font-size:10px;text-transform:uppercase;letter-spacing:2px;margin:0 0 14px;font-weight:600;">Le tue credenziali</p>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:5px 0;color:#6B7280;font-size:12px;width:90px;vertical-align:top;">Indirizzo</td>
+            <td style="padding:5px 0;color:#111827;font-size:13px;font-weight:600;">app.b2b.on-earth.it</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0;color:#6B7280;font-size:12px;vertical-align:top;">Email</td>
+            <td style="padding:5px 0;color:#111827;font-size:13px;font-weight:600;">mario@esempio.it</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0;color:#6B7280;font-size:12px;vertical-align:top;">Password</td>
+            <td style="padding:5px 0;color:#111827;font-size:16px;font-weight:700;letter-spacing:2px;">AbcDef123!</td>
+          </tr>
+        </table>
+      </div>
+      ${corpoPostHtml}
+      <p style="color:#6B7280;font-size:13px;line-height:1.6;margin:0;">
+        Hai domande? Scrivici a <a href="mailto:e.mazzolari@meridiano361.it" style="color:#ACA39A;text-decoration:none;">e.mazzolari@meridiano361.it</a>
+      </p>
+    </div>
+    <div style="background:#F5F4F2;border-top:1px solid #DEDAD7;padding:16px 36px;text-align:center;">
+      <p style="color:#9CA3AF;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:0;">ON EARTH · on-earth.it</p>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
 function EmailConfigSection() {
   const [oggetto, setOggetto] = useState('');
   const [corpo, setCorpo] = useState('');
+  const [corpoPost, setCorpoPost] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const DEFAULT_OGGETTO = "Benvenuto su ON EARTH B2B — Le tue credenziali di accesso";
   const DEFAULT_CORPO = "Il tuo accesso alla piattaforma ON EARTH B2B è stato attivato. Puoi accedere da qualsiasi dispositivo, anche installando l'app sulla schermata home del telefono.";
@@ -227,6 +277,7 @@ function EmailConfigSection() {
       .then(d => {
         setOggetto(d.data?.email_credenziali_oggetto || DEFAULT_OGGETTO);
         setCorpo(d.data?.email_credenziali_corpo || DEFAULT_CORPO);
+        setCorpoPost(d.data?.email_credenziali_corpo_post || '');
       })
       .catch(() => {
         setOggetto(DEFAULT_OGGETTO);
@@ -241,7 +292,11 @@ function EmailConfigSection() {
       const res = await fetch('/api/admin/email-config', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email_credenziali_oggetto: oggetto, email_credenziali_corpo: corpo }),
+        body: JSON.stringify({
+          email_credenziali_oggetto: oggetto,
+          email_credenziali_corpo: corpo,
+          email_credenziali_corpo_post: corpoPost,
+        }),
       });
       if (!res.ok) throw new Error();
       toast.success('Configurazione email salvata');
@@ -261,35 +316,67 @@ function EmailConfigSection() {
       {loading ? (
         <p className="text-sm text-gray-400">Caricamento...</p>
       ) : (
-        <div className="bg-white border border-border rounded p-4 space-y-4">
+        <div className="bg-white border border-border rounded p-4 space-y-5">
+          {/* Oggetto */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Oggetto email *</label>
             <input type="text" value={oggetto} onChange={e => setOggetto(e.target.value)}
               className="w-full h-9 border border-border rounded px-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent" />
           </div>
+
+          {/* Corpo pre-credenziali */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Testo principale *</label>
-            <p className="text-2xs text-gray-400 mb-1">Il testo personalizzato che appare nell&apos;email sopra il blocco credenziali</p>
-            <textarea value={corpo} onChange={e => setCorpo(e.target.value)} rows={4}
+            <label className="block text-xs font-medium text-gray-600 mb-1">Testo prima delle credenziali *</label>
+            <textarea value={corpo} onChange={e => setCorpo(e.target.value)} rows={3}
               className="w-full border border-border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent resize-y" />
           </div>
-          <div className="bg-cream/50 border border-border/60 rounded p-3">
-            <p className="text-2xs font-medium text-gray-500 mb-1">Anteprima email</p>
-            <p className="text-xs text-gray-500 italic">Oggetto: {oggetto}</p>
-            <div className="mt-2 text-xs text-gray-600 bg-white border border-border rounded p-3">
-              <p className="font-medium mb-1">Gentile [Nome],</p>
-              <p dangerouslySetInnerHTML={{ __html: corpo }} />
-              <div className="mt-3 bg-gray-50 border border-border rounded p-2 text-2xs text-gray-400">
-                [blocco credenziali — generato automaticamente]
-              </div>
-            </div>
+
+          {/* Blocco credenziali (indicativo) */}
+          <div className="flex items-center gap-2 text-2xs text-gray-400 px-1">
+            <div className="flex-1 h-px bg-border" />
+            <span className="flex-shrink-0 font-medium uppercase tracking-wide">Blocco credenziali (fisso)</span>
+            <div className="flex-1 h-px bg-border" />
           </div>
-          <div className="flex justify-end">
+
+          {/* Corpo post-credenziali */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Testo dopo le credenziali <span className="text-gray-400 font-normal">(opzionale)</span></label>
+            <textarea value={corpoPost} onChange={e => setCorpoPost(e.target.value)} rows={3}
+              placeholder="Es. Ti aspettiamo alla prossima fiera! — Il team ON EARTH"
+              className="w-full border border-border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent resize-y" />
+          </div>
+
+          {/* Azioni */}
+          <div className="flex items-center justify-between pt-1">
+            <button
+              type="button"
+              onClick={() => setShowPreview(p => !p)}
+              className="text-xs border border-border rounded px-3 py-1.5 text-gray-500 hover:bg-cream transition-colors"
+            >
+              {showPreview ? 'Nascondi anteprima' : 'Mostra anteprima email'}
+            </button>
             <button onClick={handleSave} disabled={saving || !oggetto.trim() || !corpo.trim()}
               className="px-4 py-2 text-xs bg-primary text-white rounded hover:bg-warm-darker disabled:opacity-50 transition-colors">
-              {saving ? 'Salvataggio...' : 'Salva configurazione'}
+              {saving ? 'Salvataggio...' : 'Salva'}
             </button>
           </div>
+
+          {/* Anteprima iframe */}
+          {showPreview && (
+            <div className="border border-border rounded overflow-hidden">
+              <div className="bg-cream/60 px-3 py-2 border-b border-border flex items-center gap-2">
+                <span className="text-2xs font-medium text-gray-500 uppercase tracking-wide">Anteprima</span>
+                <span className="text-2xs text-gray-400">— Oggetto: {oggetto}</span>
+              </div>
+              <iframe
+                srcDoc={buildEmailPreviewHtml(corpo, corpoPost)}
+                className="w-full border-0"
+                style={{ height: 580 }}
+                title="Anteprima email credenziali"
+                sandbox="allow-same-origin"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
