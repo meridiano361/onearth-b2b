@@ -212,6 +212,18 @@ function AddProductsModal({
     staleTime: 60_000,
     enabled: tab === 'catalogo',
   });
+  const { data: trancheList } = useQuery<string[]>({
+    queryKey: ['lookup-tranche'],
+    queryFn: () => fetch('/api/lookup/tranche').then(r => r.json()).then(d => (d.data as Array<{ nome: string }>).map(x => x.nome)),
+    staleTime: 60_000,
+    enabled: tab === 'catalogo',
+  });
+  const { data: linee } = useQuery<string[]>({
+    queryKey: ['lookup-linea'],
+    queryFn: () => fetch('/api/lookup/linea').then(r => r.json()).then(d => (d.data as Array<{ nome: string }>).map(x => x.nome)),
+    staleTime: 60_000,
+    enabled: tab === 'catalogo',
+  });
 
   const catalogParams = useMemo(() => {
     const p = new URLSearchParams({ active: 'true', limit: '100' });
@@ -219,7 +231,9 @@ function AddProductsModal({
     if (filters.colore) p.set('colore', filters.colore);
     if (filters.temaColore) p.set('temaColore', filters.temaColore);
     if (filters.collezione) p.set('collezione', filters.collezione);
+    if (filters.tranche) p.set('tranche', filters.tranche);
     if (filters.nomLinea) p.set('nomLinea', filters.nomLinea);
+    if (filters.gruppoMerceologico) p.set('gruppoMerceologico', filters.gruppoMerceologico);
     return p.toString();
   }, [filters]);
 
@@ -412,14 +426,38 @@ function AddProductsModal({
                   <option value="">Collezione (tutti)</option>
                   {(collezioni ?? []).map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
+                <select
+                  value={filters.tranche ?? ''}
+                  onChange={e => setFilters(f => ({ ...f, tranche: e.target.value }))}
+                  className="h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
+                >
+                  <option value="">Tranche (tutti)</option>
+                  {(trancheList ?? []).map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+                <select
+                  value={filters.nomLinea ?? ''}
+                  onChange={e => setFilters(f => ({ ...f, nomLinea: e.target.value }))}
+                  className="h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
+                >
+                  <option value="">Linea (tutti)</option>
+                  {(linee ?? []).map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
               </div>
               <input
                 type="text"
-                value={filters.nomLinea ?? ''}
-                onChange={e => setFilters(f => ({ ...f, nomLinea: e.target.value }))}
-                placeholder="Linea..."
+                value={filters.gruppoMerceologico ?? ''}
+                onChange={e => setFilters(f => ({ ...f, gruppoMerceologico: e.target.value }))}
+                placeholder="Gruppo merceologico..."
                 className="w-full h-8 border border-border rounded px-3 text-xs text-primary focus:outline-none focus:ring-1 focus:ring-accent"
               />
+              {Object.values(filters).some(Boolean) && (
+                <button
+                  onClick={() => setFilters({})}
+                  className="text-2xs text-gray-400 hover:text-primary transition-colors"
+                >
+                  × Azzera filtri
+                </button>
+              )}
             </div>
 
             {/* Product list */}
