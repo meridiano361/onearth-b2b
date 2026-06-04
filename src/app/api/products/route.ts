@@ -81,6 +81,22 @@ export async function GET(req: NextRequest) {
       ];
     }
 
+    const gruppoMerceologico = searchParams.get('gruppoMerceologico');
+    const colore = searchParams.get('colore');
+    const stagione = searchParams.get('stagione');
+    const temaColore = searchParams.get('temaColore');
+    const collezione = searchParams.get('collezione');
+    const tranche = searchParams.get('tranche');
+    const nomLinea = searchParams.get('nomLinea');
+
+    if (gruppoMerceologico) where.gruppoMerceologico = gruppoMerceologico;
+    if (colore) where.colore = colore;
+    if (stagione) where.stagione = stagione;
+    if (temaColore) where.temaColore = temaColore;
+    if (collezione) where.collezione = collezione;
+    if (tranche) where.tranche = tranche;
+    if (nomLinea) where.nomLinea = nomLinea;
+
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,

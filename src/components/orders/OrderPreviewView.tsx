@@ -179,10 +179,60 @@ function AddProductsModal({
   noProductsLabel: string;
   addLabel: string;
 }) {
+  const [tab, setTab] = useState<'ricerca' | 'catalogo'>('ricerca');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [addingId, setAddingId] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+
+  // ── Catalog tab state ──────────────────────────────────────
+  const [filters, setFilters] = useState<Record<string, string>>({});
+
+  const { data: stagioni } = useQuery<string[]>({
+    queryKey: ['lookup-stagione'],
+    queryFn: () => fetch('/api/lookup/stagione').then(r => r.json()).then(d => d.data as string[]),
+    staleTime: 60_000,
+    enabled: tab === 'catalogo',
+  });
+  const { data: colori } = useQuery<string[]>({
+    queryKey: ['lookup-colore'],
+    queryFn: () => fetch('/api/lookup/colore').then(r => r.json()).then(d => d.data as string[]),
+    staleTime: 60_000,
+    enabled: tab === 'catalogo',
+  });
+  const { data: temiColore } = useQuery<string[]>({
+    queryKey: ['lookup-temaColore'],
+    queryFn: () => fetch('/api/lookup/temaColore').then(r => r.json()).then(d => d.data as string[]),
+    staleTime: 60_000,
+    enabled: tab === 'catalogo',
+  });
+  const { data: collezioni } = useQuery<string[]>({
+    queryKey: ['lookup-collezione'],
+    queryFn: () => fetch('/api/lookup/collezione').then(r => r.json()).then(d => d.data as string[]),
+    staleTime: 60_000,
+    enabled: tab === 'catalogo',
+  });
+
+  const catalogParams = useMemo(() => {
+    const p = new URLSearchParams({ active: 'true', limit: '100' });
+    if (filters.stagione) p.set('stagione', filters.stagione);
+    if (filters.colore) p.set('colore', filters.colore);
+    if (filters.temaColore) p.set('temaColore', filters.temaColore);
+    if (filters.collezione) p.set('collezione', filters.collezione);
+    if (filters.nomLinea) p.set('nomLinea', filters.nomLinea);
+    return p.toString();
+  }, [filters]);
+
+  const { data: catalogProducts, isLoading: catalogLoading } = useQuery<Product[]>({
+    queryKey: ['products-catalog-browse', catalogParams],
+    queryFn: async () => {
+      const res = await fetch(`/api/products?${catalogParams}`);
+      if (!res.ok) throw new Error();
+      return (await res.json()).data as Product[];
+    },
+    staleTime: 30_000,
+    enabled: tab === 'catalogo',
+  });
 
   // Debounce search input
   const debounceRef = useRef<NodeJS.Timeout>();
@@ -202,6 +252,7 @@ function AddProductsModal({
       return (await res.json()).data as Product[];
     },
     staleTime: 30_000,
+    enabled: tab === 'ricerca',
   });
 
   async function handleAdd(product: Product) {
@@ -223,6 +274,58 @@ function AddProductsModal({
     }
   }
 
+  function renderProductRow(product: Product) {
+    const qty = quantities[product.id] ?? product.lotSize ?? 1;
+    const isAdding = addingId === product.id;
+    return (
+      <div
+        key={product.id}
+        className="flex items-center gap-3 px-4 py-3 border-b border-border/50 hover:bg-cream/50 transition-colors"
+      >
+        {/* Thumbnail */}
+        <div className="w-10 h-10 flex-shrink-0 bg-[#C8C0B5] overflow-hidden rounded">
+          <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <p className="text-2xs font-mono text-gray-400 truncate">{product.code}</p>
+            {product.collezione === 'CA27' && (
+              <span className="bg-black text-white text-[8px] font-bold px-1 py-px rounded-sm leading-none flex-shrink-0">NUOVO</span>
+            )}
+          </div>
+          <p className="text-xs text-primary h-10 overflow-hidden font-medium">{product.name}</p>
+          <p className="text-2xs text-gray-400">{formatCurrency(product.costPrice)}</p>
+        </div>
+
+        {/* Qty + Add */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <input
+            type="number"
+            min={product.lotSize ?? 1}
+            step={product.lotSize ?? 1}
+            value={qty}
+            onChange={(e) =>
+              setQuantities((prev) => ({
+                ...prev,
+                [product.id]: Math.max(1, parseInt(e.target.value) || 1),
+              }))
+            }
+            className="w-14 text-xs text-center border border-border rounded px-1.5 py-1 text-primary"
+          />
+          <button
+            onClick={() => handleAdd(product)}
+            disabled={isAdding}
+            className="text-xs bg-primary text-white px-2.5 py-1.5 rounded hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            {isAdding ? '...' : 'Aggiungi'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
@@ -235,82 +338,104 @@ function AddProductsModal({
           </button>
         </div>
 
-        {/* Search */}
-        <div className="px-4 py-3 border-b border-border flex-shrink-0">
-          <div className="flex items-center gap-2 border border-border rounded px-3 py-2">
-            <Search size={13} className="text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder={searchPlaceholder}
-              className="flex-1 text-xs outline-none bg-transparent text-primary placeholder-gray-400"
-            />
-          </div>
+        {/* Tabs */}
+        <div className="flex border-b border-border flex-shrink-0">
+          <button onClick={() => setTab('ricerca')} className={`px-4 py-2.5 text-xs font-medium transition-colors ${tab === 'ricerca' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-primary'}`}>Ricerca</button>
+          <button onClick={() => setTab('catalogo')} className={`px-4 py-2.5 text-xs font-medium transition-colors ${tab === 'catalogo' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-primary'}`}>Sfoglia catalogo</button>
         </div>
 
-        {/* Product list */}
-        <div className="flex-1 overflow-y-auto">
-          {isLoading && (
-            <div className="flex items-center justify-center py-10">
-              <LoadingSpinner text={loadingLabel} />
-            </div>
-          )}
-          {!isLoading && (products ?? []).length === 0 && (
-            <p className="text-center text-sm text-gray-400 py-10">{noProductsLabel}</p>
-          )}
-          {(products ?? []).map((product) => {
-            const qty = quantities[product.id] ?? product.lotSize ?? 1;
-            const isAdding = addingId === product.id;
-            return (
-              <div
-                key={product.id}
-                className="flex items-center gap-3 px-4 py-3 border-b border-border/50 hover:bg-cream/50 transition-colors"
-              >
-                {/* Thumbnail */}
-                <div className="w-10 h-10 flex-shrink-0 bg-[#C8C0B5] overflow-hidden rounded">
-                  <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-2xs font-mono text-gray-400 truncate">{product.code}</p>
-                    {product.collezione === 'CA27' && (
-                      <span className="bg-black text-white text-[8px] font-bold px-1 py-px rounded-sm leading-none flex-shrink-0">NUOVO</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-primary h-10 overflow-hidden font-medium">{product.name}</p>
-                  <p className="text-2xs text-gray-400">{formatCurrency(product.costPrice)}</p>
-                </div>
-
-                {/* Qty + Add */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <input
-                    type="number"
-                    min={product.lotSize ?? 1}
-                    step={product.lotSize ?? 1}
-                    value={qty}
-                    onChange={(e) =>
-                      setQuantities((prev) => ({
-                        ...prev,
-                        [product.id]: Math.max(1, parseInt(e.target.value) || 1),
-                      }))
-                    }
-                    className="w-14 text-xs text-center border border-border rounded px-1.5 py-1 text-primary"
-                  />
-                  <button
-                    onClick={() => handleAdd(product)}
-                    disabled={isAdding}
-                    className="text-xs bg-primary text-white px-2.5 py-1.5 rounded hover:bg-primary/90 transition-colors disabled:opacity-50"
-                  >
-                    {isAdding ? '...' : addLabel}
-                  </button>
-                </div>
+        {tab === 'ricerca' && (
+          <>
+            {/* Search */}
+            <div className="px-4 py-3 border-b border-border flex-shrink-0">
+              <div className="flex items-center gap-2 border border-border rounded px-3 py-2">
+                <Search size={13} className="text-gray-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="flex-1 text-xs outline-none bg-transparent text-primary placeholder-gray-400"
+                />
               </div>
-            );
-          })}
-        </div>
+            </div>
+
+            {/* Product list */}
+            <div className="flex-1 overflow-y-auto">
+              {isLoading && (
+                <div className="flex items-center justify-center py-10">
+                  <LoadingSpinner text={loadingLabel} />
+                </div>
+              )}
+              {!isLoading && (products ?? []).length === 0 && (
+                <p className="text-center text-sm text-gray-400 py-10">{noProductsLabel}</p>
+              )}
+              {(products ?? []).map(renderProductRow)}
+            </div>
+          </>
+        )}
+
+        {tab === 'catalogo' && (
+          <>
+            {/* Filters */}
+            <div className="px-4 py-3 border-b border-border flex-shrink-0 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={filters.stagione ?? ''}
+                  onChange={e => setFilters(f => ({ ...f, stagione: e.target.value }))}
+                  className="h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
+                >
+                  <option value="">Stagione (tutti)</option>
+                  {(stagioni ?? []).map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+                <select
+                  value={filters.colore ?? ''}
+                  onChange={e => setFilters(f => ({ ...f, colore: e.target.value }))}
+                  className="h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
+                >
+                  <option value="">Colore (tutti)</option>
+                  {(colori ?? []).map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+                <select
+                  value={filters.temaColore ?? ''}
+                  onChange={e => setFilters(f => ({ ...f, temaColore: e.target.value }))}
+                  className="h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
+                >
+                  <option value="">Tema colore (tutti)</option>
+                  {(temiColore ?? []).map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+                <select
+                  value={filters.collezione ?? ''}
+                  onChange={e => setFilters(f => ({ ...f, collezione: e.target.value }))}
+                  className="h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
+                >
+                  <option value="">Collezione (tutti)</option>
+                  {(collezioni ?? []).map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
+              <input
+                type="text"
+                value={filters.nomLinea ?? ''}
+                onChange={e => setFilters(f => ({ ...f, nomLinea: e.target.value }))}
+                placeholder="Linea..."
+                className="w-full h-8 border border-border rounded px-3 text-xs text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+            </div>
+
+            {/* Product list */}
+            <div className="flex-1 overflow-y-auto">
+              {catalogLoading && (
+                <div className="flex items-center justify-center py-10">
+                  <LoadingSpinner text={loadingLabel} />
+                </div>
+              )}
+              {!catalogLoading && (catalogProducts ?? []).length === 0 && (
+                <p className="text-center text-sm text-gray-400 py-10">{noProductsLabel}</p>
+              )}
+              {(catalogProducts ?? []).map(renderProductRow)}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

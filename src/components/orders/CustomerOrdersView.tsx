@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CalendarDays, Copy, Layers, Loader2, Pencil, ScanEye, Send, ShoppingCart, Trash2, TrendingUp } from 'lucide-react';
+import { CalendarDays, Copy, Layers, Loader2, Pencil, ScanEye, Send, ShoppingCart, Trash2, TrendingUp, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
@@ -45,6 +45,169 @@ const SORT_OPTIONS = [
   { value: 'continuativi', label: 'Continuativi' },
 ];
 
+// ── PreOrder Modal ─────────────────────────────────────────────
+function PreOrderModal({
+  destinazioni,
+  onClose,
+  onConfirm,
+  creating,
+}: {
+  destinazioni: Destinazione[];
+  onClose: () => void;
+  onConfirm: (canaleId: string, budget: number) => void;
+  creating: boolean;
+}) {
+  const [localDestinazioni, setLocalDestinazioni] = useState<Destinazione[]>(destinazioni);
+  const [selectedCanaleId, setSelectedCanaleId] = useState(destinazioni[0]?.id ?? '');
+  const [budget, setBudget] = useState('');
+  const [showNewDest, setShowNewDest] = useState(false);
+  const [newTipo, setNewTipo] = useState('BOTTEGA');
+  const [newCitta, setNewCitta] = useState('');
+  const [creatingDest, setCreatingDest] = useState(false);
+
+  async function handleCreateDest() {
+    if (!newTipo) return;
+    setCreatingDest(true);
+    try {
+      const res = await fetch('/api/catalog/destinazioni', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: newTipo, citta: newCitta || null }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Errore');
+      const newDest: Destinazione = body.data;
+      setLocalDestinazioni(prev => [...prev, newDest]);
+      setSelectedCanaleId(newDest.id);
+      setShowNewDest(false);
+      setNewTipo('BOTTEGA');
+      setNewCitta('');
+    } catch (e: any) {
+      toast.error(e.message || 'Errore creazione destinazione');
+    } finally {
+      setCreatingDest(false);
+    }
+  }
+
+  const canConfirm = !!selectedCanaleId && !!budget && Number(budget) >= 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 bg-white w-full sm:max-w-md sm:rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <p className="text-sm font-semibold text-primary">Crea ordine</p>
+          <button onClick={onClose} className="text-gray-400 hover:text-primary transition-colors p-1">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="px-5 py-5 space-y-4">
+          {/* Destinazione */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Destinazione *</label>
+            <select
+              value={selectedCanaleId}
+              onChange={e => setSelectedCanaleId(e.target.value)}
+              className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent bg-white"
+            >
+              {localDestinazioni.length === 0 && <option value="">— Nessuna destinazione —</option>}
+              {localDestinazioni.map(d => (
+                <option key={d.id} value={d.id}>
+                  {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* New destination inline form */}
+          {!showNewDest ? (
+            <button
+              type="button"
+              onClick={() => setShowNewDest(true)}
+              className="text-xs text-accent hover:text-accent/80 transition-colors flex items-center gap-1"
+            >
+              <span>+</span> Nuova destinazione
+            </button>
+          ) : (
+            <div className="bg-cream/50 border border-border rounded p-3 space-y-2">
+              <p className="text-xs font-medium text-gray-600">Nuova destinazione</p>
+              <select
+                value={newTipo}
+                onChange={e => setNewTipo(e.target.value)}
+                className="w-full h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
+              >
+                {['BOTTEGA', 'EMPORIO', 'STORE', 'OUTLET', 'FIERA', 'ONLINE', 'ALTRO'].map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={newCitta}
+                onChange={e => setNewCitta(e.target.value)}
+                placeholder="Città (opzionale)"
+                className="w-full h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowNewDest(false); setNewTipo('BOTTEGA'); setNewCitta(''); }}
+                  className="flex-1 h-8 text-xs border border-border rounded text-gray-500 hover:bg-cream transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateDest}
+                  disabled={creatingDest}
+                  className="flex-1 h-8 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {creatingDest ? 'Creazione...' : 'Crea'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Budget */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Budget indicativo * (€)</label>
+            <input
+              type="number"
+              min={0}
+              value={budget}
+              onChange={e => setBudget(e.target.value)}
+              placeholder="es. 2500"
+              className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 pb-5 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 text-xs border border-border rounded text-gray-500 hover:bg-cream transition-colors"
+          >
+            Annulla
+          </button>
+          <button
+            type="button"
+            onClick={() => { if (canConfirm) onConfirm(selectedCanaleId, Number(budget)); }}
+            disabled={!canConfirm || creating}
+            className="flex-1 py-2.5 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+          >
+            {creating
+              ? <><Loader2 size={11} className="animate-spin" /> Creazione…</>
+              : <><Send size={11} /> Crea Ordine</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CustomerOrdersView() {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -59,6 +222,7 @@ export default function CustomerOrdersView() {
   const [draftSubmitting, setDraftSubmitting] = useState(false);
   const [draftDestinazioneId, setDraftDestinazioneId] = useState('');
   const [draftDestinazioni, setDraftDestinazioni] = useState<Destinazione[]>([]);
+  const [showPreOrderModal, setShowPreOrderModal] = useState(false);
 
   useEffect(() => {
     if (!isOperator || cartItems.length === 0) return;
@@ -75,7 +239,7 @@ export default function CustomerOrdersView() {
   const cartTotal = cartItems.reduce((sum, i) => sum + Number(i.product.costPrice) * i.quantity, 0);
   const cartTotalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
 
-  async function handleCreateFromDraft() {
+  async function handleCreateFromDraft(canaleId: string, budget: number) {
     setDraftSubmitting(true);
     try {
       const res = await fetch('/api/orders', {
@@ -84,7 +248,8 @@ export default function CustomerOrdersView() {
         body: JSON.stringify({
           collectionId: cartCollectionId || null,
           notes: cartNotes || null,
-          canaleId: draftDestinazioneId || null,
+          canaleId: canaleId || null,
+          budgetPersonalizzato: budget || null,
           items: cartItems.map(i => ({
             productId: i.productId,
             quantity: i.quantity,
@@ -172,6 +337,17 @@ export default function CustomerOrdersView() {
 
   return (
     <div className="min-h-screen bg-cream">
+      {showPreOrderModal && (
+        <PreOrderModal
+          destinazioni={draftDestinazioni}
+          onClose={() => setShowPreOrderModal(false)}
+          onConfirm={(canaleId, budget) => {
+            setShowPreOrderModal(false);
+            handleCreateFromDraft(canaleId, budget);
+          }}
+          creating={draftSubmitting}
+        />
+      )}
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
         <div className="mb-6 flex items-start justify-between gap-3">
@@ -236,20 +412,6 @@ export default function CustomerOrdersView() {
                 ))}
               </div>
 
-              {isOperator && draftDestinazioni.length > 1 && (
-                <select
-                  value={draftDestinazioneId}
-                  onChange={e => setDraftDestinazioneId(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-white border border-border rounded text-xs text-primary focus:outline-none focus:border-amber-400"
-                >
-                  {draftDestinazioni.map(d => (
-                    <option key={d.id} value={d.id}>
-                      {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
-
               <Link
                 href="/catalog"
                 className="w-full py-2 text-xs font-medium rounded border border-amber-400 text-amber-700 hover:bg-amber-50 transition-colors flex items-center justify-center gap-1.5"
@@ -258,7 +420,7 @@ export default function CustomerOrdersView() {
               </Link>
 
               <button
-                onClick={handleCreateFromDraft}
+                onClick={() => setShowPreOrderModal(true)}
                 disabled={draftSubmitting}
                 className="w-full py-2 text-xs font-medium rounded bg-amber-600 text-white hover:bg-amber-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
               >

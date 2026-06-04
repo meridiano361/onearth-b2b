@@ -18,6 +18,7 @@ const createOrderSchema = z.object({
   canaleId: z.string().optional().nullable(),
   collectionId: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  budgetPersonalizzato: z.coerce.number().nonnegative().optional().nullable(),
   items: z.array(orderItemSchema).min(1),
 });
 
@@ -186,6 +187,7 @@ export async function POST(req: NextRequest) {
       totalItems,
       notes: data.notes || null,
       confirmedAt: new Date(),
+      budgetPersonalizzato: data.budgetPersonalizzato != null ? data.budgetPersonalizzato : null,
       items: { create: orderItems },
     };
 

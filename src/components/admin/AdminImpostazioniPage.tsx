@@ -210,6 +210,92 @@ function UserModal({ user, onClose, onSaved }: ModalProps) {
   );
 }
 
+// ─── Email Config Section ─────────────────────────────────────────────────────
+
+function EmailConfigSection() {
+  const [oggetto, setOggetto] = useState('');
+  const [corpo, setCorpo] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const DEFAULT_OGGETTO = "Benvenuto su ON EARTH B2B — Le tue credenziali di accesso";
+  const DEFAULT_CORPO = "Il tuo accesso alla piattaforma ON EARTH B2B è stato attivato. Puoi accedere da qualsiasi dispositivo, anche installando l'app sulla schermata home del telefono.";
+
+  useEffect(() => {
+    fetch('/api/admin/email-config')
+      .then(r => r.json())
+      .then(d => {
+        setOggetto(d.data?.email_credenziali_oggetto || DEFAULT_OGGETTO);
+        setCorpo(d.data?.email_credenziali_corpo || DEFAULT_CORPO);
+      })
+      .catch(() => {
+        setOggetto(DEFAULT_OGGETTO);
+        setCorpo(DEFAULT_CORPO);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/email-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email_credenziali_oggetto: oggetto, email_credenziali_corpo: corpo }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Configurazione email salvata');
+    } catch {
+      toast.error('Errore nel salvataggio');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="mb-4">
+        <h2 className="text-sm font-semibold text-primary">Email di benvenuto</h2>
+        <p className="text-2xs text-gray-400 mt-0.5">Personalizza il testo inviato ai nuovi operatori</p>
+      </div>
+      {loading ? (
+        <p className="text-sm text-gray-400">Caricamento...</p>
+      ) : (
+        <div className="bg-white border border-border rounded p-4 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Oggetto email *</label>
+            <input type="text" value={oggetto} onChange={e => setOggetto(e.target.value)}
+              className="w-full h-9 border border-border rounded px-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Testo principale *</label>
+            <p className="text-2xs text-gray-400 mb-1">Il testo personalizzato che appare nell&apos;email sopra il blocco credenziali</p>
+            <textarea value={corpo} onChange={e => setCorpo(e.target.value)} rows={4}
+              className="w-full border border-border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent resize-y" />
+          </div>
+          <div className="bg-cream/50 border border-border/60 rounded p-3">
+            <p className="text-2xs font-medium text-gray-500 mb-1">Anteprima email</p>
+            <p className="text-xs text-gray-500 italic">Oggetto: {oggetto}</p>
+            <div className="mt-2 text-xs text-gray-600 bg-white border border-border rounded p-3">
+              <p className="font-medium mb-1">Gentile [Nome],</p>
+              <p dangerouslySetInnerHTML={{ __html: corpo }} />
+              <div className="mt-3 bg-gray-50 border border-border rounded p-2 text-2xs text-gray-400">
+                [blocco credenziali — generato automaticamente]
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button onClick={handleSave} disabled={saving || !oggetto.trim() || !corpo.trim()}
+              className="px-4 py-2 text-xs bg-primary text-white rounded hover:bg-warm-darker disabled:opacity-50 transition-colors">
+              {saving ? 'Salvataggio...' : 'Salva configurazione'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminImpostazioniPage({ currentUserId }: { currentUserId: string }) {
@@ -456,6 +542,11 @@ export default function AdminImpostazioniPage({ currentUserId }: { currentUserId
             />
           </button>
         </div>
+      </section>
+
+      {/* Section: Email benvenuto */}
+      <section className="mt-10">
+        <EmailConfigSection />
       </section>
 
       {/* Modal */}
