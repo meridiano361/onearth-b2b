@@ -190,25 +190,25 @@ function AddProductsModal({
 
   const { data: stagioni } = useQuery<string[]>({
     queryKey: ['lookup-stagione'],
-    queryFn: () => fetch('/api/lookup/stagione').then(r => r.json()).then(d => d.data as string[]),
+    queryFn: () => fetch('/api/lookup/stagione').then(r => r.json()).then(d => (d.data as Array<{ nome: string }>).map(x => x.nome)),
     staleTime: 60_000,
     enabled: tab === 'catalogo',
   });
   const { data: colori } = useQuery<string[]>({
     queryKey: ['lookup-colore'],
-    queryFn: () => fetch('/api/lookup/colore').then(r => r.json()).then(d => d.data as string[]),
+    queryFn: () => fetch('/api/lookup/colore').then(r => r.json()).then(d => (d.data as Array<{ nome: string }>).map(x => x.nome)),
     staleTime: 60_000,
     enabled: tab === 'catalogo',
   });
   const { data: temiColore } = useQuery<string[]>({
     queryKey: ['lookup-temaColore'],
-    queryFn: () => fetch('/api/lookup/temaColore').then(r => r.json()).then(d => d.data as string[]),
+    queryFn: () => fetch('/api/lookup/temaColore').then(r => r.json()).then(d => (d.data as Array<{ nome: string }>).map(x => x.nome)),
     staleTime: 60_000,
     enabled: tab === 'catalogo',
   });
   const { data: collezioni } = useQuery<string[]>({
     queryKey: ['lookup-collezione'],
-    queryFn: () => fetch('/api/lookup/collezione').then(r => r.json()).then(d => d.data as string[]),
+    queryFn: () => fetch('/api/lookup/collezione').then(r => r.json()).then(d => (d.data as Array<{ nome: string }>).map(x => x.nome)),
     staleTime: 60_000,
     enabled: tab === 'catalogo',
   });
