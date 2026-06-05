@@ -161,6 +161,36 @@
   display: none;
 }
 
+/* ── AddProductsModal — sizing forzata, immune da qualsiasi ancestor ── */
+.apm-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.apm-panel {
+  position: relative !important;
+  z-index: 10 !important;
+  background-color: #ffffff !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  width: min(1100px, 96vw) !important;
+  height: min(92vh, 980px) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35) !important;
+}
+@media (max-width: 639px) {
+  .apm-panel {
+    width: 100vw !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
 /* Print styles */
 @media print {
   .no-print {

@@ -273,20 +273,20 @@ function AddProductsModal({
         className="flex items-center gap-3 px-4 py-3 border-b border-border/50 hover:bg-cream/50 transition-colors"
       >
         {/* Thumbnail */}
-        <div className="w-10 h-10 flex-shrink-0 bg-[#C8C0B5] overflow-hidden rounded">
+        <div className="w-14 h-14 flex-shrink-0 bg-[#C8C0B5] overflow-hidden rounded">
           <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
         </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <p className="text-2xs font-mono text-gray-400 truncate">{product.code}</p>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <p className="text-xs font-mono text-gray-400">{product.code}</p>
             {product.collezione === 'CA27' && (
               <span className="bg-black text-white text-[8px] font-bold px-1 py-px rounded-sm leading-none flex-shrink-0">NUOVO</span>
             )}
           </div>
-          <p className="text-xs text-primary h-10 overflow-hidden font-medium">{product.name}</p>
-          <p className="text-2xs text-gray-400">{formatCurrency(product.costPrice)}</p>
+          <p className="text-sm text-primary font-medium leading-snug line-clamp-2">{product.name}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{formatCurrency(product.costPrice)}</p>
         </div>
 
         {/* Qty + Add */}
@@ -302,126 +302,144 @@ function AddProductsModal({
                 [product.id]: Math.max(1, parseInt(e.target.value) || 1),
               }))
             }
-            className="w-14 text-xs text-center border border-border rounded px-1.5 py-1 text-primary"
+            className="w-16 text-sm text-center border border-border rounded px-2 py-1.5 text-primary"
           />
           <button
             onClick={() => handleAdd(product)}
             disabled={isAdding}
-            className="text-xs bg-primary text-white px-2.5 py-1.5 rounded hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="text-sm bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors disabled:opacity-50 min-w-[80px]"
           >
-            {isAdding ? '...' : 'Aggiungi'}
+            {isAdding ? '…' : 'Aggiungi'}
           </button>
         </div>
       </div>
     );
   }
 
+  const filterSelects = (
+    <div className="space-y-2">
+      {([
+        ['stagione',          'Stagione'],
+        ['colore',            'Colore'],
+        ['temaColore',        'Tema colore'],
+        ['collezione',        'Collezione'],
+        ['tranche',           'Tranche'],
+        ['nomLinea',          'Linea'],
+        ['famiglia',          'Famiglia'],
+        ['sottofamiglia',     'Sottofamiglia'],
+        ['gruppoOmogeneo',    'Gruppo omogeneo'],
+        ['classe',            'Classe'],
+        ['sottoclasse',       'Sottoclasse'],
+        ['gruppoMerceologico','Gruppo merceologico'],
+        ['produttore',        'Produttore'],
+      ] as [string, string][]).map(([key, label]) =>
+        (fo[key]?.length ?? 0) > 0 ? (
+          <select
+            key={key}
+            value={filters[key] ?? ''}
+            onChange={e => setFilters(f => ({ ...f, [key]: e.target.value }))}
+            className="w-full h-9 border border-border rounded px-2 text-sm text-primary focus:outline-none bg-white"
+          >
+            <option value="">{label}</option>
+            {fo[key].map(v => <option key={v} value={v}>{v}</option>)}
+          </select>
+        ) : null
+      )}
+      {Object.values(filters).some(Boolean) && (
+        <button
+          onClick={() => setFilters({})}
+          className="text-xs text-gray-400 hover:text-primary transition-colors"
+        >
+          × Azzera filtri
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="apm-overlay">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-white w-full sm:max-w-lg sm:rounded-lg shadow-xl max-h-[85vh] flex flex-col">
+      <div className="apm-panel">
+
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-          <p className="text-sm font-semibold text-primary">{addProductsLabel}</p>
-          <button onClick={onClose} className="text-gray-400 hover:text-primary p-1 transition-colors">
-            <X size={16} />
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
+          <p className="text-base font-semibold text-primary">{addProductsLabel}</p>
+          <button onClick={onClose} className="text-gray-400 hover:text-primary p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={20} />
           </button>
         </div>
 
         {/* Tabs */}
         <div className="flex border-b border-border flex-shrink-0">
-          <button onClick={() => setTab('ricerca')} className={`px-4 py-2.5 text-xs font-medium transition-colors ${tab === 'ricerca' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-primary'}`}>Ricerca</button>
-          <button onClick={() => setTab('catalogo')} className={`px-4 py-2.5 text-xs font-medium transition-colors ${tab === 'catalogo' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-primary'}`}>Sfoglia catalogo</button>
+          <button
+            onClick={() => setTab('ricerca')}
+            className={`px-5 py-3 text-sm font-medium transition-colors ${tab === 'ricerca' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-primary'}`}
+          >
+            Ricerca
+          </button>
+          <button
+            onClick={() => setTab('catalogo')}
+            className={`px-5 py-3 text-sm font-medium transition-colors ${tab === 'catalogo' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-primary'}`}
+          >
+            Sfoglia catalogo
+          </button>
         </div>
 
-        {tab === 'ricerca' && (
-          <>
-            {/* Search */}
-            <div className="px-4 py-3 border-b border-border flex-shrink-0">
-              <div className="flex items-center gap-2 border border-border rounded px-3 py-2">
-                <Search size={13} className="text-gray-400" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder={searchPlaceholder}
-                  className="flex-1 text-xs outline-none bg-transparent text-primary placeholder-gray-400"
-                />
-              </div>
-            </div>
+        {/* Body: sidebar + product list */}
+        <div className="flex flex-col md:flex-row flex-1 min-h-0">
 
-            {/* Product list */}
-            <div className="flex-1 overflow-y-auto">
-              {isLoading && (
-                <div className="flex items-center justify-center py-10">
-                  <LoadingSpinner text={loadingLabel} />
+          {/* Left panel: search input (ricerca) or filters (catalogo) */}
+          <div className="md:w-72 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-border">
+            {tab === 'ricerca' ? (
+              <div className="px-4 py-3">
+                <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2.5">
+                  <Search size={15} className="text-gray-400 flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    placeholder={searchPlaceholder}
+                    className="flex-1 text-sm outline-none bg-transparent text-primary placeholder-gray-400"
+                    autoFocus
+                  />
                 </div>
-              )}
-              {!isLoading && (products ?? []).length === 0 && (
-                <p className="text-center text-sm text-gray-400 py-10">{noProductsLabel}</p>
-              )}
-              {(products ?? []).map(renderProductRow)}
-            </div>
-          </>
-        )}
+              </div>
+            ) : (
+              <div className="overflow-y-auto px-4 py-3 max-h-48 md:max-h-none md:flex-1">
+                {filterSelects}
+              </div>
+            )}
+          </div>
 
-        {tab === 'catalogo' && (
-          <>
-            {/* Filters */}
-            <div className="px-4 pt-3 pb-2 border-b border-border flex-shrink-0">
-              <div className="max-h-[200px] overflow-y-auto pr-0.5 space-y-1.5">
-                {([
-                  ['stagione',          'Stagione'],
-                  ['colore',            'Colore'],
-                  ['temaColore',        'Tema colore'],
-                  ['collezione',        'Collezione'],
-                  ['tranche',           'Tranche'],
-                  ['nomLinea',          'Linea'],
-                  ['famiglia',          'Famiglia'],
-                  ['sottofamiglia',     'Sottofamiglia'],
-                  ['gruppoOmogeneo',    'Gruppo omogeneo'],
-                  ['classe',            'Classe'],
-                  ['sottoclasse',       'Sottoclasse'],
-                  ['gruppoMerceologico','Gruppo merceologico'],
-                  ['produttore',        'Produttore'],
-                ] as [string, string][]).map(([key, label]) =>
-                  (fo[key]?.length ?? 0) > 0 ? (
-                    <select
-                      key={key}
-                      value={filters[key] ?? ''}
-                      onChange={e => setFilters(f => ({ ...f, [key]: e.target.value }))}
-                      className="w-full h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
-                    >
-                      <option value="">{label} (tutti)</option>
-                      {fo[key].map(v => <option key={v} value={v}>{v}</option>)}
-                    </select>
-                  ) : null
+          {/* Right: product list */}
+          <div className="flex-1 overflow-y-auto">
+            {tab === 'ricerca' ? (
+              <>
+                {isLoading && (
+                  <div className="flex items-center justify-center py-12">
+                    <LoadingSpinner text={loadingLabel} />
+                  </div>
                 )}
-              </div>
-              {Object.values(filters).some(Boolean) && (
-                <button
-                  onClick={() => setFilters({})}
-                  className="mt-1.5 text-2xs text-gray-400 hover:text-primary transition-colors"
-                >
-                  × Azzera filtri
-                </button>
-              )}
-            </div>
-
-            {/* Product list */}
-            <div className="flex-1 overflow-y-auto">
-              {catalogLoading && (
-                <div className="flex items-center justify-center py-10">
-                  <LoadingSpinner text={loadingLabel} />
-                </div>
-              )}
-              {!catalogLoading && (catalogProducts ?? []).length === 0 && (
-                <p className="text-center text-sm text-gray-400 py-10">{noProductsLabel}</p>
-              )}
-              {(catalogProducts ?? []).map(renderProductRow)}
-            </div>
-          </>
-        )}
+                {!isLoading && (products ?? []).length === 0 && (
+                  <p className="text-center text-sm text-gray-400 py-12">{noProductsLabel}</p>
+                )}
+                {(products ?? []).map(renderProductRow)}
+              </>
+            ) : (
+              <>
+                {catalogLoading && (
+                  <div className="flex items-center justify-center py-12">
+                    <LoadingSpinner text={loadingLabel} />
+                  </div>
+                )}
+                {!catalogLoading && (catalogProducts ?? []).length === 0 && (
+                  <p className="text-center text-sm text-gray-400 py-12">{noProductsLabel}</p>
+                )}
+                {(catalogProducts ?? []).map(renderProductRow)}
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
