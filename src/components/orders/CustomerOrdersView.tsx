@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CalendarDays, Copy, Layers, Loader2, Pencil, ScanEye, Send, ShoppingCart, Trash2, TrendingUp, X } from 'lucide-react';
+import { CalendarDays, Check, Copy, Layers, Loader2, Pencil, ScanEye, Send, ShoppingCart, Trash2, TrendingUp, Wallet, X } from 'lucide-react';
+import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
@@ -45,168 +46,6 @@ const SORT_OPTIONS = [
   { value: 'continuativi', label: 'Continuativi' },
 ];
 
-// ── PreOrder Modal ─────────────────────────────────────────────
-function PreOrderModal({
-  destinazioni,
-  onClose,
-  onConfirm,
-  creating,
-}: {
-  destinazioni: Destinazione[];
-  onClose: () => void;
-  onConfirm: (canaleId: string, budget: number) => void;
-  creating: boolean;
-}) {
-  const [localDestinazioni, setLocalDestinazioni] = useState<Destinazione[]>(destinazioni);
-  const [selectedCanaleId, setSelectedCanaleId] = useState(destinazioni[0]?.id ?? '');
-  const [budget, setBudget] = useState('');
-  const [showNewDest, setShowNewDest] = useState(false);
-  const [newTipo, setNewTipo] = useState('BOTTEGA');
-  const [newCitta, setNewCitta] = useState('');
-  const [creatingDest, setCreatingDest] = useState(false);
-
-  async function handleCreateDest() {
-    if (!newTipo) return;
-    setCreatingDest(true);
-    try {
-      const res = await fetch('/api/catalog/destinazioni', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: newTipo, citta: newCitta || null }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || 'Errore');
-      const newDest: Destinazione = body.data;
-      setLocalDestinazioni(prev => [...prev, newDest]);
-      setSelectedCanaleId(newDest.id);
-      setShowNewDest(false);
-      setNewTipo('BOTTEGA');
-      setNewCitta('');
-    } catch (e: any) {
-      toast.error(e.message || 'Errore creazione destinazione');
-    } finally {
-      setCreatingDest(false);
-    }
-  }
-
-  const canConfirm = !!selectedCanaleId && !!budget && Number(budget) >= 0;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-white w-full sm:max-w-md sm:rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <p className="text-sm font-semibold text-primary">Crea ordine</p>
-          <button onClick={onClose} className="text-gray-400 hover:text-primary transition-colors p-1">
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="px-5 py-5 space-y-4">
-          {/* Destinazione */}
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Destinazione *</label>
-            <select
-              value={selectedCanaleId}
-              onChange={e => setSelectedCanaleId(e.target.value)}
-              className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent bg-white"
-            >
-              {localDestinazioni.length === 0 && <option value="">— Nessuna destinazione —</option>}
-              {localDestinazioni.map(d => (
-                <option key={d.id} value={d.id}>
-                  {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* New destination inline form */}
-          {!showNewDest ? (
-            <button
-              type="button"
-              onClick={() => setShowNewDest(true)}
-              className="text-xs text-accent hover:text-accent/80 transition-colors flex items-center gap-1"
-            >
-              <span>+</span> Nuova destinazione
-            </button>
-          ) : (
-            <div className="bg-cream/50 border border-border rounded p-3 space-y-2">
-              <p className="text-xs font-medium text-gray-600">Nuova destinazione</p>
-              <select
-                value={newTipo}
-                onChange={e => setNewTipo(e.target.value)}
-                className="w-full h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none bg-white"
-              >
-                {['BOTTEGA', 'EMPORIO', 'STORE', 'OUTLET', 'FIERA', 'ONLINE', 'ALTRO'].map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-              <input
-                type="text"
-                value={newCitta}
-                onChange={e => setNewCitta(e.target.value)}
-                placeholder="Città (opzionale)"
-                className="w-full h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setShowNewDest(false); setNewTipo('BOTTEGA'); setNewCitta(''); }}
-                  className="flex-1 h-8 text-xs border border-border rounded text-gray-500 hover:bg-cream transition-colors"
-                >
-                  Annulla
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCreateDest}
-                  disabled={creatingDest}
-                  className="flex-1 h-8 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors disabled:opacity-50"
-                >
-                  {creatingDest ? 'Creazione...' : 'Crea'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Budget */}
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Budget indicativo * (€)</label>
-            <input
-              type="number"
-              min={0}
-              value={budget}
-              onChange={e => setBudget(e.target.value)}
-              placeholder="es. 2500"
-              className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent"
-            />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 pb-5 flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-2.5 text-xs border border-border rounded text-gray-500 hover:bg-cream transition-colors"
-          >
-            Annulla
-          </button>
-          <button
-            type="button"
-            onClick={() => { if (canConfirm) onConfirm(selectedCanaleId, Number(budget)); }}
-            disabled={!canConfirm || creating}
-            className="flex-1 py-2.5 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-          >
-            {creating
-              ? <><Loader2 size={11} className="animate-spin" /> Creazione…</>
-              : <><Send size={11} /> Crea Ordine</>}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function CustomerOrdersView() {
   const queryClient = useQueryClient();
@@ -220,9 +59,8 @@ export default function CustomerOrdersView() {
   // Cart (bozza corrente)
   const { items: cartItems, collectionId: cartCollectionId, notes: cartNotes, clearCart } = useCartStore();
   const [draftSubmitting, setDraftSubmitting] = useState(false);
-  const [draftDestinazioneId, setDraftDestinazioneId] = useState('');
   const [draftDestinazioni, setDraftDestinazioni] = useState<Destinazione[]>([]);
-  const [showPreOrderModal, setShowPreOrderModal] = useState(false);
+  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
 
   useEffect(() => {
     if (!isOperator || cartItems.length === 0) return;
@@ -231,7 +69,6 @@ export default function CustomerOrdersView() {
       .then(d => {
         const list: Destinazione[] = d.data || [];
         setDraftDestinazioni(list);
-        if (list.length >= 1) setDraftDestinazioneId(prev => prev || list[0].id);
       })
       .catch(() => {});
   }, [isOperator, cartItems.length]);
@@ -266,6 +103,34 @@ export default function CustomerOrdersView() {
       toast.error(e.message || 'Errore');
     } finally {
       setDraftSubmitting(false);
+    }
+  }
+
+  const [budgetEditingOrderId, setBudgetEditingOrderId] = useState<string | null>(null);
+  const [budgetEditInput, setBudgetEditInput] = useState('');
+  const [savingBudget, setSavingBudget] = useState(false);
+
+  async function handleSaveBudget(orderId: string) {
+    const val = parseFloat(budgetEditInput);
+    if (isNaN(val) || val <= 0) { toast.error('Inserisci un budget valido'); return; }
+    setSavingBudget(true);
+    try {
+      const res = await fetch(`/api/catalog/orders/${orderId}/budget`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ budgetPersonalizzato: val }),
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || 'Errore');
+      }
+      toast.success('Budget aggiornato');
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      setBudgetEditingOrderId(null);
+    } catch (e: any) {
+      toast.error(e.message || 'Errore');
+    } finally {
+      setSavingBudget(false);
     }
   }
 
@@ -337,15 +202,15 @@ export default function CustomerOrdersView() {
 
   return (
     <div className="min-h-screen bg-cream">
-      {showPreOrderModal && (
-        <PreOrderModal
+      {showCreateOrderModal && (
+        <CreateOrderModal
           destinazioni={draftDestinazioni}
-          onClose={() => setShowPreOrderModal(false)}
-          onConfirm={(canaleId, budget) => {
-            setShowPreOrderModal(false);
+          onClose={() => setShowCreateOrderModal(false)}
+          onSubmit={(canaleId, budget) => {
+            setShowCreateOrderModal(false);
             handleCreateFromDraft(canaleId, budget);
           }}
-          creating={draftSubmitting}
+          submitting={draftSubmitting}
         />
       )}
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
@@ -420,9 +285,9 @@ export default function CustomerOrdersView() {
               </Link>
 
               <button
-                onClick={() => setShowPreOrderModal(true)}
+                onClick={() => setShowCreateOrderModal(true)}
                 disabled={draftSubmitting}
-                className="w-full py-2 text-xs font-medium rounded bg-amber-600 text-white hover:bg-amber-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
+                className="w-full py-2 text-xs font-medium rounded bg-primary text-background hover:bg-warm-darker transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
               >
                 {draftSubmitting
                   ? <><Loader2 size={11} className="animate-spin" /> Creazione in corso…</>
@@ -472,7 +337,7 @@ export default function CustomerOrdersView() {
                 {/* Projections */}
                 {(() => {
                   const { venditeII, guadagno, margine } = orderProjections(order);
-                  const budget = order.destinazione?.budget;
+                  const budget = order.budgetPersonalizzato ?? null;
                   const cost = Number(order.totalValue);
                   const budgetPct = budget && budget > 0 ? (cost / budget) * 100 : 0;
                   const budgetRemaining = budget != null ? budget - cost : null;
@@ -535,6 +400,53 @@ export default function CustomerOrdersView() {
                     >
                       <Pencil size={11} />
                       <span className="hidden sm:inline">{t('edit')}</span>
+                    </button>
+                  )}
+
+                  {/* Budget */}
+                  {budgetEditingOrderId === order.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">€</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={budgetEditInput}
+                          onChange={e => setBudgetEditInput(e.target.value)}
+                          autoFocus
+                          className="w-24 pl-5 pr-2 py-1.5 text-xs border border-border rounded focus:outline-none focus:border-accent text-primary"
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') handleSaveBudget(order.id);
+                            if (e.key === 'Escape') setBudgetEditingOrderId(null);
+                          }}
+                        />
+                      </div>
+                      <button
+                        onClick={() => handleSaveBudget(order.id)}
+                        disabled={savingBudget}
+                        className="text-xs bg-primary text-background rounded px-2 py-1.5 hover:bg-warm-darker transition-colors disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {savingBudget ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
+                      </button>
+                      <button
+                        onClick={() => setBudgetEditingOrderId(null)}
+                        disabled={savingBudget}
+                        className="text-xs border border-border rounded px-2 py-1.5 text-gray-400 hover:text-primary hover:bg-cream transition-colors"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setBudgetEditingOrderId(order.id);
+                        setBudgetEditInput(String(order.budgetPersonalizzato ?? ''));
+                      }}
+                      className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
+                    >
+                      <Wallet size={11} />
+                      <span>Budget</span>
                     </button>
                   )}
 
