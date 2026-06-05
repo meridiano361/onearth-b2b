@@ -319,19 +319,17 @@ function AddProductsModal({
   const filterSelects = (
     <div className="space-y-2">
       {([
-        ['stagione',          'Stagione'],
-        ['colore',            'Colore'],
-        ['temaColore',        'Tema colore'],
-        ['collezione',        'Collezione'],
-        ['tranche',           'Tranche'],
-        ['nomLinea',          'Linea'],
-        ['famiglia',          'Famiglia'],
-        ['sottofamiglia',     'Sottofamiglia'],
-        ['gruppoOmogeneo',    'Gruppo omogeneo'],
-        ['classe',            'Classe'],
-        ['sottoclasse',       'Sottoclasse'],
-        ['gruppoMerceologico','Gruppo merceologico'],
-        ['produttore',        'Produttore'],
+        ['gruppoMerceologico', 'Gruppo merceologico'],
+        ['famiglia',           'Famiglia'],
+        ['classe',             'Classe'],
+        ['sottoclasse',        'Sottoclasse'],
+        ['gruppoOmogeneo',     'Gruppo omogeneo'],
+        ['nomLinea',           'Linea'],
+        ['temaColore',         'Tema colore'],
+        ['stagione',           'Stagione'],
+        ['collezione',         'Collezione'],
+        ['produttore',         'Produttore'],
+        ['tranche',            'Tranche'],
       ] as [string, string][]).map(([key, label]) =>
         (fo[key]?.length ?? 0) > 0 ? (
           <select
