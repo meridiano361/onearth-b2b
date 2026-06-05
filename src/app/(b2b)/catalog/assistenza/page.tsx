@@ -1,8 +1,8 @@
-// AGGIORNATO: 2026-05-28 — aggiornare ad ogni nuova funzionalità
+// AGGIORNATO: 2026-06-05 — aggiornare ad ogni nuova funzionalità
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
-  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe,
+  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet,
 } from 'lucide-react';
 
 export const metadata = { title: 'Guida all\'app — ON EARTH' };
@@ -13,6 +13,7 @@ const SECTIONS = [
   { id: 'catalogo',           label: 'Il Catalogo',                       icon: BookOpen },
   { id: 'preferiti',          label: 'Preferiti',                         icon: Heart },
   { id: 'creare-ordine',      label: 'Creare un Ordine',                  icon: ShoppingBag },
+  { id: 'budget-ordine',      label: 'Budget Ordine',                     icon: Wallet },
   { id: 'destinazioni',       label: 'Le Destinazioni',                   icon: MapPin },
   { id: 'miei-ordini',        label: 'I miei Ordini',                     icon: Package },
   { id: 'anteprima',          label: 'Anteprima e Raggruppamento',        icon: Eye },
@@ -177,28 +178,40 @@ export default function AssistenzaPage() {
           <ul className="space-y-2">
             <Bullet>Aggiungi prodotti dal catalogo usando i pulsanti <span className="font-medium">+</span> e <span className="font-medium">−</span>.</Bullet>
             <Bullet>Nella barra a destra vedi l&apos;ordine corrente con: costo totale, vendite potenziali, margine medio.</Bullet>
+            <Bullet>Imposta un <span className="font-medium">Budget ordine €</span> nel campo apposito sotto il pulsante Crea Ordine (opzionale). Il budget viene salvato sull&apos;ordine e puoi modificarlo in seguito direttamente dall&apos;ordine.</Bullet>
             <Bullet>Clicca <span className="font-medium">Crea Ordine</span> per salvare.</Bullet>
             <Bullet>Se hai più destinazioni ti verrà chiesto di selezionarne una.</Bullet>
-            <Bullet>Se non hai destinazioni, creane una prima (vedi sezione <a href="#destinazioni" className="text-accent hover:underline">Le Destinazioni</a>).</Bullet>
             <Bullet>Dopo la creazione vieni portato automaticamente alla pagina Ordini.</Bullet>
           </ul>
         </section>
 
-        {/* 6. Le Destinazioni */}
+        {/* 6. Budget Ordine */}
+        <section id="budget-ordine" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={6} icon={Wallet} label="Budget Ordine" />
+          <ul className="space-y-2">
+            <Bullet>Il budget appartiene al singolo ordine, non alla destinazione.</Bullet>
+            <Bullet>Prima di creare un ordine trovi il campo <span className="font-medium">Budget ordine €</span> nella barra del carrello, sotto il pulsante Crea Ordine: compilalo se vuoi definire una spesa massima per quell&apos;ordine (opzionale).</Bullet>
+            <Bullet>Una volta creato l&apos;ordine, puoi modificare il budget in qualsiasi momento direttamente dalla pagina dell&apos;ordine usando l&apos;icona matita accanto al budget.</Bullet>
+            <Bullet>Cambiare la destinazione dell&apos;ordine non modifica il budget impostato.</Bullet>
+            <Bullet>Non devi entrare nella sezione Destinazioni per gestire il budget di un ordine.</Bullet>
+          </ul>
+        </section>
+
+        {/* 7. Le Destinazioni */}
         <section id="destinazioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={6} icon={MapPin} label="Le Destinazioni" />
+          <SectionHeader n={7} icon={MapPin} label="Le Destinazioni" />
           <ul className="space-y-2">
             <Bullet>Le destinazioni sono i tuoi punti vendita (bottega, emporio, online, ecc.).</Bullet>
             <Bullet>Gestiscile dalla voce <span className="font-medium">Destinazioni</span> nel menu.</Bullet>
-            <Bullet>Per ogni destinazione puoi impostare un <span className="font-medium">budget</span>: l&apos;app ti avvisa quando ti avvicini al limite.</Bullet>
             <Bullet>Ogni ordine è associato a una destinazione.</Bullet>
+            <Bullet>Puoi impostare un budget di riferimento per ogni destinazione: serve a tracciare quanto hai ordinato complessivamente per quel punto vendita. È diverso dal budget del singolo ordine (vedi <a href="#budget-ordine" className="text-accent hover:underline">Budget Ordine</a>).</Bullet>
             <Bullet>Tipi disponibili: Bottega, Emporio, Distretto, Store, Outlet, Tendone, Fiera, Online, Altro.</Bullet>
           </ul>
         </section>
 
-        {/* 7. I miei Ordini */}
+        {/* 8. I miei Ordini */}
         <section id="miei-ordini" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={7} icon={Package} label="I miei Ordini" />
+          <SectionHeader n={8} icon={Package} label="I miei Ordini" />
           <ul className="space-y-2">
             <Bullet>Visualizza tutti i tuoi ordini dalla voce <span className="font-medium">Ordini</span> nel menu.</Bullet>
             <Bullet>Gli stati possibili sono: <span className="font-medium">Da esportare</span> | <span className="font-medium">Esportato</span>.</Bullet>
@@ -215,9 +228,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 8. Anteprima e Raggruppamento */}
+        {/* 9. Anteprima e Raggruppamento */}
         <section id="anteprima" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={8} icon={Eye} label="Anteprima e Raggruppamento" />
+          <SectionHeader n={9} icon={Eye} label="Anteprima e Raggruppamento" />
           <ul className="space-y-2">
             <Bullet>Clicca <span className="font-medium">Anteprima</span> su un ordine per vedere i prodotti raggruppati visivamente.</Bullet>
             <Bullet>Scegli il criterio di raggruppamento: Linea, Collezione, Colore, Tema colore, Classe, Sottoclasse, Famiglia, Gruppo omogeneo, Stagione, Tranche.</Bullet>
@@ -228,19 +241,22 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 9. Esportare in Demetra */}
+        {/* 10. Esportare in Demetra */}
         <section id="demetra" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={9} icon={Download} label="Esportare in Demetra" />
+          <SectionHeader n={10} icon={Download} label="Esportare in Demetra" />
           <ul className="space-y-2">
-            <Bullet>Clicca <span className="font-medium">Esporta in Demetra</span> per scaricare il file CSV da importare nel gestionale.</Bullet>
+            <Bullet>Clicca <span className="font-medium">Esporta in Demetra</span> per scaricare il file CSV da importare nel gestionale. Puoi esportare tutto l&apos;ordine o solo la tranche di interesse.</Bullet>
             <Bullet>Dopo l&apos;export l&apos;ordine diventa <span className="font-medium">Esportato</span> e non è più modificabile.</Bullet>
             <Bullet>Puoi duplicarlo per creare un nuovo ordine basato su quello esportato.</Bullet>
+            <Bullet>Su Demetra vai in <span className="font-medium">Proposte di prenotazione</span>, compila i campi e poi clicca su <span className="font-medium">Crea prenotazione</span>.</Bullet>
+            <Bullet>Nella finestra successiva inserisci la destinazione e compila gli altri campi necessari, poi clicca sul pulsante blu <span className="font-medium">Carica da file</span>.</Bullet>
+            <Bullet>Si apre una nuova finestra. Clicca sul pulsante grigio <span className="font-medium">Scegli file</span> e poi di nuovo sul pulsante verde <span className="font-medium">Carica da file</span> per confermare il caricamento.</Bullet>
           </ul>
         </section>
 
-        {/* 10. Esposizioni */}
+        {/* 11. Esposizioni */}
         <section id="esposizioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={10} icon={Layers} label="Esposizioni" />
+          <SectionHeader n={11} icon={Layers} label="Esposizioni" />
           <ul className="space-y-2">
             <Bullet>Dall&apos;anteprima di un ordine tocca il tab <span className="font-medium">Esposizione</span> per organizzare i prodotti in gruppi espositivi (es. Vetrina, Isola, Parete).</Bullet>
             <Bullet>Crea un nuovo gruppo con il pulsante <span className="font-medium">+ Gruppo</span>: assegna nome, colore e template.</Bullet>
@@ -251,9 +267,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 11. Risorse e Media */}
+        {/* 12. Risorse e Media */}
         <section id="risorse" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={11} icon={Film} label="Risorse e Media" />
+          <SectionHeader n={12} icon={Film} label="Risorse e Media" />
           <ul className="space-y-2">
             <Bullet>Accedi alle Risorse dal menu in basso (icona cartella) o dalla homepage.</Bullet>
             <Bullet>Trovi documenti PDF, video e audio condivisi da ON EARTH.</Bullet>
@@ -263,19 +279,20 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 12. Le mie Destinazioni */}
+        {/* 13. Le mie Destinazioni */}
         <section id="mie-destinazioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={12} icon={MapPin} label="Le mie Destinazioni" />
+          <SectionHeader n={13} icon={MapPin} label="Le mie Destinazioni" />
           <ul className="space-y-2">
             <Bullet>Gestisci i tuoi punti vendita dalla voce <span className="font-medium">Destinazioni</span>.</Bullet>
-            <Bullet>Aggiungi nuove destinazioni con: tipo, città, indirizzo e budget.</Bullet>
-            <Bullet>Il budget è indicativo e ti aiuta a gestire gli acquisti: l&apos;app mostra quanto budget è stato utilizzato con gli ordini associati.</Bullet>
+            <Bullet>Aggiungi nuove destinazioni con: tipo, città, indirizzo.</Bullet>
+            <Bullet>Puoi impostare un budget di riferimento per ogni destinazione: è indicativo e mostra quanti acquisti hai fatto complessivamente per quel punto vendita.</Bullet>
+            <Bullet>Per impostare il budget di un singolo ordine usa il campo <span className="font-medium">Budget ordine €</span> nel carrello, oppure modificalo direttamente dalla pagina dell&apos;ordine già creato.</Bullet>
           </ul>
         </section>
 
-        {/* 13. Multilingua */}
+        {/* 14. Multilingua */}
         <section id="multilingua" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={13} icon={Globe} label="Multilingua" />
+          <SectionHeader n={14} icon={Globe} label="Multilingua" />
           <ul className="space-y-2">
             <Bullet>L&apos;app è disponibile in: <span className="font-medium">Italiano, Inglese, Tedesco, Francese, Spagnolo</span>.</Bullet>
             <Bullet>Cambia lingua dal selettore in alto a destra (IT / EN / DE / FR / ES).</Bullet>
@@ -283,9 +300,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 14. Assistenza tecnica */}
+        {/* 15. Assistenza tecnica */}
         <section id="assistenza-tecnica" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={14} icon={HelpCircle} label="Assistenza tecnica" />
+          <SectionHeader n={15} icon={HelpCircle} label="Assistenza tecnica" />
           <p className="text-sm text-gray-600">
             Per problemi tecnici{' '}
             <a
