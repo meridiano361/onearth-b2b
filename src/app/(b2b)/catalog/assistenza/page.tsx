@@ -248,9 +248,10 @@ export default function AssistenzaPage() {
             <Bullet>Clicca <span className="font-medium">Esporta in Demetra</span> per scaricare il file CSV da importare nel gestionale. Puoi esportare tutto l&apos;ordine o solo la tranche di interesse.</Bullet>
             <Bullet>Dopo l&apos;export l&apos;ordine diventa <span className="font-medium">Esportato</span> e non è più modificabile.</Bullet>
             <Bullet>Puoi duplicarlo per creare un nuovo ordine basato su quello esportato.</Bullet>
-            <Bullet>Su Demetra vai in <span className="font-medium">Proposte di prenotazione</span>, compila i campi e poi clicca su <span className="font-medium">Crea prenotazione</span>.</Bullet>
+            <Bullet>Su Demetra vai in <span className="font-medium">Proposte di prenotazione</span> › <span className="font-medium">Proposte attive</span> › <span className="font-medium">Nuova prenotazione</span>, compila i campi e poi clicca su <span className="font-medium">Crea prenotazione</span> (in Cliente seleziona <span className="font-medium">Prenotazioni dirette</span>).</Bullet>
             <Bullet>Nella finestra successiva inserisci la destinazione e compila gli altri campi necessari, poi clicca sul pulsante blu <span className="font-medium">Carica da file</span>.</Bullet>
             <Bullet>Si apre una nuova finestra. Clicca sul pulsante grigio <span className="font-medium">Scegli file</span> e poi di nuovo sul pulsante verde <span className="font-medium">Carica da file</span> per confermare il caricamento.</Bullet>
+            <Bullet>Prosegui e conferma la prenotazione.</Bullet>
           </ul>
         </section>
 
