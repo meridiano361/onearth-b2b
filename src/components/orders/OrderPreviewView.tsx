@@ -1043,14 +1043,14 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
             {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
           <div className="flex-1" />
-          <div className="flex items-center gap-1 border border-border rounded px-2 py-0.5 bg-white min-w-0 max-w-[200px]">
+          <div className="flex items-center gap-1 border border-border rounded px-2 py-0.5 bg-white w-48">
             <Search size={11} className="text-gray-400 flex-shrink-0" />
             <input
               type="text"
               value={productSearch}
               onChange={e => setProductSearch(e.target.value)}
-              placeholder="Cerca prodotto per nome o codice"
-              className="flex-1 text-2xs outline-none bg-transparent text-primary placeholder-gray-300 min-w-0 w-0"
+              placeholder="Cerca per nome o codice"
+              className="flex-1 text-2xs outline-none bg-transparent text-primary placeholder-gray-300"
             />
             {productSearch && (
               <button onClick={() => setProductSearch('')} className="text-gray-300 hover:text-gray-500 flex-shrink-0">
