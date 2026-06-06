@@ -308,15 +308,16 @@
         "tryModifyFilters": "Intenta modificar los filtros"
     },
     "groupings": {
-        "nomLinea": "Línea",
-        "collezione": "Colección",
-        "colore": "Color",
-        "temaColore": "Tema color",
+        "gruppoMerceologico": "Grupo mercancía",
+        "famiglia": "Familia",
         "classe": "Clase",
         "sottoclasse": "Subclase",
-        "famiglia": "Familia",
         "gruppoOmogeneo": "Grupo homogéneo",
+        "nomLinea": "Línea",
+        "temaColore": "Tema color",
         "stagione": "Temporada",
+        "collezione": "Colección",
+        "produttore": "Productor",
         "tranche": "Tramo"
     }
 }

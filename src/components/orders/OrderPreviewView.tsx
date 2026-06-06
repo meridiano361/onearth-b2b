@@ -57,10 +57,20 @@ function sortGroupItems<T extends { product?: any }>(grpItems: T[], sortBy: stri
 }
 
 // ── Grouping options ───────────────────────────────────────────
+// Ordine: gruppo merceologico → famiglia → classe → sottoclasse → gruppo omogeneo
+//         → linea → tema colore → stagione → collezione → produttore → tranche
 const GROUPING_KEYS = [
-  'nomLinea', 'collezione', 'colore', 'temaColore',
-  'classe', 'sottoclasse', 'famiglia', 'gruppoOmogeneo',
-  'stagione', 'tranche',
+  'gruppoMerceologico',
+  'famiglia',
+  'classe',
+  'sottoclasse',
+  'gruppoOmogeneo',
+  'nomLinea',
+  'temaColore',
+  'stagione',
+  'collezione',
+  'produttore',
+  'tranche',
 ] as const;
 
 type QtyMap = Record<string, number>;
@@ -458,7 +468,8 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     if (initialTab === 'calendario') return 'calendario';
     return 'ordine';
   });
-  const [groupBy, setGroupBy] = useState('collezione');
+  const [groupBy, setGroupBy] = useState('gruppoMerceologico');
+  const [productSearch, setProductSearch] = useState('');
   const [budgetEditing, setBudgetEditing] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');
   const [budgetNota, setBudgetNota] = useState('');
@@ -546,11 +557,21 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     [items]
   );
 
+  // Search filter (works on top of groupBy grouping)
+  const filteredItems = useMemo(() => {
+    const q = productSearch.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(it =>
+      (it.product?.name ?? '').toLowerCase().includes(q) ||
+      (it.product?.code ?? '').toLowerCase().includes(q)
+    );
+  }, [items, productSearch]);
+
   // Groups computed client-side from current groupBy
   const unclassifiedLabel = t('unclassified');
   const groups = useMemo(() => {
-    const map = new Map<string, typeof items>();
-    for (const item of items) {
+    const map = new Map<string, typeof filteredItems>();
+    for (const item of filteredItems) {
       const key = (item.product as any)?.[groupBy] || unclassifiedLabel;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(item);
@@ -566,7 +587,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
           totalQty: grpItems.reduce((s, it) => s + it.effectiveQty, 0),
         };
       });
-  }, [items, groupBy, sortBy]);
+  }, [filteredItems, groupBy, sortBy]);
 
   const grandTotal = useMemo(() => items.reduce((s, it) => s + it.effectiveSubtotal, 0), [items]);
   const grandQty   = useMemo(() => items.reduce((s, it) => s + it.effectiveQty, 0),   [items]);
@@ -1017,10 +1038,26 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
           <select
             value={sortBy}
             onChange={(e) => handleSortChange(e.target.value)}
-            className="text-2xs border border-border rounded px-1.5 py-0.5 bg-white text-primary focus:outline-none cursor-pointer"
+            className="text-2xs border border-border rounded px-1.5 py-0.5 bg-white text-primary focus:outline-none cursor-pointer flex-shrink-0"
           >
             {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
+          <div className="flex-1" />
+          <div className="flex items-center gap-1 border border-border rounded px-2 py-0.5 bg-white min-w-0 max-w-[200px]">
+            <Search size={11} className="text-gray-400 flex-shrink-0" />
+            <input
+              type="text"
+              value={productSearch}
+              onChange={e => setProductSearch(e.target.value)}
+              placeholder="Cerca prodotto per nome o codice"
+              className="flex-1 text-2xs outline-none bg-transparent text-primary placeholder-gray-300 min-w-0 w-0"
+            />
+            {productSearch && (
+              <button onClick={() => setProductSearch('')} className="text-gray-300 hover:text-gray-500 flex-shrink-0">
+                <X size={9} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1045,7 +1082,9 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
       {/* ── Content ───────────────────────────────────────── */}
       <div className="flex-1 px-4 sm:px-6 py-6 pb-32 lg:pb-24">
         {groups.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-16">{t('noItems')}</p>
+          <p className="text-sm text-gray-400 text-center py-16">
+            {productSearch ? `Nessun prodotto per "${productSearch}"` : t('noItems')}
+          </p>
         )}
 
         {groups.map((group) => (

@@ -308,15 +308,16 @@
         "tryModifyFilters": "Versuchen Sie, die Filter anzupassen"
     },
     "groupings": {
-        "nomLinea": "Linie",
-        "collezione": "Kollektion",
-        "colore": "Farbe",
-        "temaColore": "Farbthema",
+        "gruppoMerceologico": "Warengruppe",
+        "famiglia": "Familie",
         "classe": "Klasse",
         "sottoclasse": "Unterklasse",
-        "famiglia": "Familie",
         "gruppoOmogeneo": "Homogene Gruppe",
+        "nomLinea": "Linie",
+        "temaColore": "Farbthema",
         "stagione": "Saison",
+        "collezione": "Kollektion",
+        "produttore": "Hersteller",
         "tranche": "Tranche"
     }
 }
