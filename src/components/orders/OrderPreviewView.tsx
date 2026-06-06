@@ -482,6 +482,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   const qtyDebounceRef = useRef<Record<string, NodeJS.Timeout>>({});
   const [exporting, setExporting] = useState(false);
   const [exportingDemetra, setExportingDemetra] = useState<string | null>(null);
+  const [showDemetraInstructions, setShowDemetraInstructions] = useState(false);
   const [addProductsOpen, setAddProductsOpen] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
 
@@ -696,6 +697,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
         queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
       }
       toast.success(tranche ? `CSV tranche ${tranche} pronto` : t('exportSuccess'));
+      setShowDemetraInstructions(true);
     } catch {
       toast.error(t('exportError'));
     } finally {
@@ -766,6 +768,44 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   // ── Main render ────────────────────────────────────────────
   return (
     <div className="flex flex-col min-h-full">
+
+      {showDemetraInstructions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDemetraInstructions(false)} />
+          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-md z-10 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <div>
+                <p className="text-sm font-semibold text-primary">Importa in Demetra</p>
+                <p className="text-2xs text-gray-400 mt-0.5">Il file CSV è stato scaricato. Segui questi passi.</p>
+              </div>
+              <button onClick={() => setShowDemetraInstructions(false)} className="text-gray-400 hover:text-primary p-1 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+            <ol className="px-5 py-4 space-y-3">
+              {[
+                <>Vai in <span className="font-medium">Proposte di prenotazione</span> › <span className="font-medium">Proposte attive</span> › <span className="font-medium">Nuova prenotazione</span>, compila i campi e clicca <span className="font-medium">Crea prenotazione</span> (in Cliente seleziona <span className="font-medium">Prenotazioni dirette</span>).</>,
+                <>Nella finestra successiva inserisci la destinazione e gli altri campi, poi clicca il pulsante blu <span className="font-medium">Carica da file</span>.</>,
+                <>Si apre una nuova finestra: clicca il pulsante grigio <span className="font-medium">Scegli file</span>, seleziona il CSV appena scaricato, poi clicca il pulsante verde <span className="font-medium">Carica da file</span>.</>,
+                <>Prosegui e conferma la prenotazione.</>,
+              ].map((step, i) => (
+                <li key={i} className="flex gap-3 text-sm text-gray-600">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-white text-2xs font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                  <span className="leading-snug">{step}</span>
+                </li>
+              ))}
+            </ol>
+            <div className="px-5 pb-5">
+              <button
+                onClick={() => setShowDemetraInstructions(false)}
+                className="w-full py-2.5 text-xs font-medium bg-primary text-background rounded hover:bg-warm-darker transition-colors"
+              >
+                Ho capito
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {addProductsOpen && (
         <AddProductsModal
