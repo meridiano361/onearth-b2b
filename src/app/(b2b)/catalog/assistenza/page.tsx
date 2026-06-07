@@ -1,8 +1,8 @@
-// AGGIORNATO: 2026-06-05 — aggiornare ad ogni nuova funzionalità
+// AGGIORNATO: 2026-06-07 — aggiornare ad ogni nuova funzionalità
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
-  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet,
+  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge,
 } from 'lucide-react';
 
 export const metadata = { title: 'Guida all\'app — ON EARTH' };
@@ -16,6 +16,7 @@ const SECTIONS = [
   { id: 'budget-ordine',      label: 'Budget Ordine',                     icon: Wallet },
   { id: 'destinazioni',       label: 'Le Destinazioni',                   icon: MapPin },
   { id: 'miei-ordini',        label: 'I miei Ordini',                     icon: Package },
+  { id: 'unire-ordini',       label: 'Unire due Ordini',                  icon: GitMerge },
   { id: 'anteprima',          label: 'Anteprima e Raggruppamento',        icon: Eye },
   { id: 'demetra',            label: 'Esportare in Demetra',              icon: Download },
   { id: 'esposizioni',        label: 'Esposizioni',                       icon: Layers },
@@ -222,28 +223,44 @@ export default function AssistenzaPage() {
                 <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Esportare in PDF con raggruppamento personalizzato</span></li>
                 <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Esportare in Demetra (CSV per il gestionale)</span></li>
                 <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Duplicare un ordine esportato come base per uno nuovo</span></li>
+                <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Unire due ordini non esportati in uno solo (vedi sezione seguente)</span></li>
                 <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Eliminare un ordine non ancora esportato</span></li>
               </ul>
             </Bullet>
+            <Bullet>Usa il pulsante <span className="font-medium">Budget</span> su ogni ordine per impostare o modificare il budget di spesa massimo.</Bullet>
           </ul>
         </section>
 
-        {/* 9. Anteprima e Raggruppamento */}
+        {/* 9. Unire due Ordini */}
+        <section id="unire-ordini" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={9} icon={GitMerge} label="Unire due Ordini" />
+          <ul className="space-y-2">
+            <Bullet>Puoi unire due ordini non ancora esportati in un unico ordine.</Bullet>
+            <Bullet>Nella pagina <span className="font-medium">Ordini</span>, spunta la <span className="font-medium">checkbox</span> accanto al numero di due ordini diversi.</Bullet>
+            <Bullet>Appare una barra in basso: clicca <span className="font-medium">Unisci</span>.</Bullet>
+            <Bullet>Nel modal scegli quale ordine <span className="font-medium">conservare</span>: il contenuto dell&apos;altro viene aggiunto a quello scelto (stessi prodotti: quantità sommate; prodotti nuovi: aggiunti). L&apos;ordine non conservato viene eliminato.</Bullet>
+            <Bullet>Non è possibile unire ordini già esportati.</Bullet>
+          </ul>
+        </section>
+
+        {/* 10. Anteprima e Raggruppamento */}
         <section id="anteprima" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={9} icon={Eye} label="Anteprima e Raggruppamento" />
+          <SectionHeader n={10} icon={Eye} label="Anteprima e Raggruppamento" />
           <ul className="space-y-2">
             <Bullet>Clicca <span className="font-medium">Anteprima</span> su un ordine per vedere i prodotti raggruppati visivamente.</Bullet>
-            <Bullet>Scegli il criterio di raggruppamento: Linea, Collezione, Colore, Tema colore, Classe, Sottoclasse, Famiglia, Gruppo omogeneo, Stagione, Tranche.</Bullet>
+            <Bullet>Scegli il criterio di raggruppamento: Gruppo merceologico, Famiglia, Classe, Sottoclasse, Gruppo omogeneo, Linea, Tema colore, Stagione, Collezione, Produttore, Tranche.</Bullet>
+            <Bullet>Usa la <span className="font-medium">barra di ricerca</span> in alto per filtrare i prodotti dell&apos;ordine per nome o codice.</Bullet>
             <Bullet>Modifica quantità direttamente dall&apos;anteprima con i pulsanti <span className="font-medium">+</span> e <span className="font-medium">−</span>.</Bullet>
+            <Bullet>Clicca <span className="font-medium">+ Aggiungi prodotti</span> per aggiungere nuovi prodotti all&apos;ordine: cerca per nome/codice oppure sfoglia il catalogo con i filtri. Nel pannello filtri trovi in cima il selettore <span className="font-medium">Tutti / Non ancora nell&apos;ordine / Già nell&apos;ordine</span> per vedere subito i prodotti mancanti o già presenti.</Bullet>
             <Bullet>In fondo alla pagina vedi il riepilogo con subtotali per gruppo e totale generale.</Bullet>
             <Bullet>Esporta il <span className="font-medium">PDF</span> con le foto dei prodotti raggruppati.</Bullet>
             <Bullet>Esporta in <span className="font-medium">Excel multi-foglio</span>: un foglio per ogni criterio di classificazione (linea, collezione, colore, ecc.).</Bullet>
           </ul>
         </section>
 
-        {/* 10. Esportare in Demetra */}
+        {/* 11. Esportare in Demetra */}
         <section id="demetra" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={10} icon={Download} label="Esportare in Demetra" />
+          <SectionHeader n={11} icon={Download} label="Esportare in Demetra" />
           <ul className="space-y-2">
             <Bullet>Clicca <span className="font-medium">Esporta in Demetra</span> per scaricare il file CSV da importare nel gestionale. Puoi esportare tutto l&apos;ordine o solo la tranche di interesse.</Bullet>
             <Bullet>Dopo l&apos;export l&apos;ordine diventa <span className="font-medium">Esportato</span> e non è più modificabile.</Bullet>
@@ -255,9 +272,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 11. Esposizioni */}
+        {/* 12. Esposizioni */}
         <section id="esposizioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={11} icon={Layers} label="Esposizioni" />
+          <SectionHeader n={12} icon={Layers} label="Esposizioni" />
           <ul className="space-y-2">
             <Bullet>Dall&apos;anteprima di un ordine tocca il tab <span className="font-medium">Esposizione</span> per organizzare i prodotti in gruppi espositivi (es. Vetrina, Isola, Parete).</Bullet>
             <Bullet>Crea un nuovo gruppo con il pulsante <span className="font-medium">+ Gruppo</span>: assegna nome, colore e template.</Bullet>
@@ -268,9 +285,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 12. Risorse e Media */}
+        {/* 13. Risorse e Media */}
         <section id="risorse" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={12} icon={Film} label="Risorse e Media" />
+          <SectionHeader n={13} icon={Film} label="Risorse e Media" />
           <ul className="space-y-2">
             <Bullet>Accedi alle Risorse dal menu in basso (icona cartella) o dalla homepage.</Bullet>
             <Bullet>Trovi documenti PDF, video e audio condivisi da ON EARTH.</Bullet>
@@ -280,9 +297,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 13. Le mie Destinazioni */}
+        {/* 14. Le mie Destinazioni */}
         <section id="mie-destinazioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={13} icon={MapPin} label="Le mie Destinazioni" />
+          <SectionHeader n={14} icon={MapPin} label="Le mie Destinazioni" />
           <ul className="space-y-2">
             <Bullet>Gestisci i tuoi punti vendita dalla voce <span className="font-medium">Destinazioni</span>.</Bullet>
             <Bullet>Aggiungi nuove destinazioni con: tipo, città, indirizzo.</Bullet>
@@ -291,9 +308,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 14. Multilingua */}
+        {/* 15. Multilingua */}
         <section id="multilingua" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={14} icon={Globe} label="Multilingua" />
+          <SectionHeader n={15} icon={Globe} label="Multilingua" />
           <ul className="space-y-2">
             <Bullet>L&apos;app è disponibile in: <span className="font-medium">Italiano, Inglese, Tedesco, Francese, Spagnolo</span>.</Bullet>
             <Bullet>Cambia lingua dal selettore in alto a destra (IT / EN / DE / FR / ES).</Bullet>
@@ -301,9 +318,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 15. Assistenza tecnica */}
+        {/* 16. Assistenza tecnica */}
         <section id="assistenza-tecnica" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={15} icon={HelpCircle} label="Assistenza tecnica" />
+          <SectionHeader n={16} icon={HelpCircle} label="Assistenza tecnica" />
           <p className="text-sm text-gray-600">
             Per problemi tecnici{' '}
             <a
