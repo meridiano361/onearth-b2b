@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CalendarDays, Check, Copy, Layers, Loader2, Pencil, ScanEye, Send, ShoppingCart, Trash2, TrendingUp, Wallet, X } from 'lucide-react';
+import { CalendarDays, Check, Copy, GitMerge, Layers, Loader2, Pencil, ScanEye, Send, ShoppingCart, Trash2, TrendingUp, Wallet, X } from 'lucide-react';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
@@ -134,6 +134,49 @@ export default function CustomerOrdersView() {
     }
   }
 
+  // ── Merge orders ──────────────────────────────────────────────
+  const [mergeSelection, setMergeSelection] = useState<Set<string>>(new Set());
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [mergeTargetId, setMergeTargetId] = useState<string>('');
+  const [merging, setMerging] = useState(false);
+
+  function toggleMergeSelect(orderId: string) {
+    setMergeSelection(prev => {
+      const next = new Set(prev);
+      if (next.has(orderId)) { next.delete(orderId); } else { next.add(orderId); }
+      return next;
+    });
+  }
+
+  function openMergeModal() {
+    const [first] = Array.from(mergeSelection);
+    setMergeTargetId(first);
+    setShowMergeModal(true);
+  }
+
+  async function handleMerge() {
+    const ids = Array.from(mergeSelection);
+    const sourceId = ids.find(id => id !== mergeTargetId)!;
+    setMerging(true);
+    try {
+      const res = await fetch('/api/orders/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceOrderId: sourceId, targetOrderId: mergeTargetId }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Errore');
+      toast.success('Ordini uniti con successo');
+      setShowMergeModal(false);
+      setMergeSelection(new Set());
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+    } catch (e: any) {
+      toast.error(e.message || 'Errore');
+    } finally {
+      setMerging(false);
+    }
+  }
+
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [productSort, setProductSort] = useState<string>(() =>
     typeof window !== 'undefined' ? (localStorage.getItem(PREVIEW_SORT_KEY) ?? 'name-asc') : 'name-asc'
@@ -213,6 +256,75 @@ export default function CustomerOrdersView() {
           submitting={draftSubmitting}
         />
       )}
+
+      {/* Merge modal */}
+      {showMergeModal && (() => {
+        const ids = Array.from(mergeSelection);
+        const orderA = list.find(o => o.id === ids[0]);
+        const orderB = list.find(o => o.id === ids[1]);
+        if (!orderA || !orderB) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="bg-white rounded-lg max-w-sm w-full p-5 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold text-primary flex items-center gap-2">
+                  <GitMerge size={14} />
+                  Unisci ordini
+                </h2>
+                <button onClick={() => setShowMergeModal(false)} className="text-gray-400 hover:text-primary">
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Scegli quale ordine <strong>conservare</strong>. Il contenuto dell&apos;altro verrà aggiunto a questo, poi quell&apos;ordine sarà eliminato.
+              </p>
+              <div className="space-y-2">
+                {[orderA, orderB].map(ord => (
+                  <label
+                    key={ord.id}
+                    className={`flex items-start gap-3 border rounded p-3 cursor-pointer transition-colors ${mergeTargetId === ord.id ? 'border-primary bg-cream' : 'border-border hover:bg-cream/50'}`}
+                  >
+                    <input
+                      type="radio"
+                      name="mergeTarget"
+                      value={ord.id}
+                      checked={mergeTargetId === ord.id}
+                      onChange={() => setMergeTargetId(ord.id)}
+                      className="mt-0.5 accent-primary"
+                    />
+                    <div>
+                      <p className="text-xs font-mono font-semibold text-primary">
+                        {ord.orderNumber ?? `#${ord.id.slice(0, 8).toUpperCase()}`}
+                      </p>
+                      <p className="text-2xs text-gray-400">
+                        {formatDate(ord.createdAt)} · {t('articles', { count: ord.items?.length ?? 0 })} · {ord.totalItems} {t('pieces')}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setShowMergeModal(false)}
+                  disabled={merging}
+                  className="flex-1 text-xs border border-border rounded px-3 py-2 text-gray-500 hover:bg-cream transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleMerge}
+                  disabled={merging || !mergeTargetId}
+                  className="flex-1 text-xs bg-primary text-background rounded px-3 py-2 hover:bg-warm-darker transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {merging
+                    ? <><Loader2 size={10} className="animate-spin" /> Unendo…</>
+                    : <><GitMerge size={10} /> Unisci</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
         <div className="mb-6 flex items-start justify-between gap-3">
@@ -305,15 +417,26 @@ export default function CustomerOrdersView() {
                 key={order.id}
                 className="bg-white border border-border rounded p-4 space-y-3"
               >
-                {/* Top row: ID + date + status */}
+                {/* Top row: checkbox + ID + date + status */}
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-mono font-semibold text-primary tracking-widest">
-                      {order.orderNumber ?? `#${order.id.slice(0, 8).toUpperCase()}`}
-                    </p>
-                    <p className="text-2xs text-gray-400 mt-0.5">
-                      {formatDate(order.createdAt)}
-                    </p>
+                  <div className="flex items-start gap-2">
+                    {!isExported && (
+                      <input
+                        type="checkbox"
+                        checked={mergeSelection.has(order.id)}
+                        onChange={() => toggleMergeSelect(order.id)}
+                        className="mt-0.5 flex-shrink-0 cursor-pointer accent-primary"
+                        title="Seleziona per unire"
+                      />
+                    )}
+                    <div>
+                      <p className="text-xs font-mono font-semibold text-primary tracking-widest">
+                        {order.orderNumber ?? `#${order.id.slice(0, 8).toUpperCase()}`}
+                      </p>
+                      <p className="text-2xs text-gray-400 mt-0.5">
+                        {formatDate(order.createdAt)}
+                      </p>
+                    </div>
                   </div>
                   <span
                     className={`text-2xs font-medium px-2 py-1 rounded flex-shrink-0 ${getOrderStatusColor(order.status)}`}
@@ -542,6 +665,28 @@ export default function CustomerOrdersView() {
           })}
         </div>
       </div>
+
+      {/* Floating merge bar */}
+      {mergeSelection.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-primary text-background rounded-full px-5 py-3 shadow-xl flex items-center gap-3">
+          <GitMerge size={14} />
+          <span className="text-sm font-medium">{mergeSelection.size} ordini selezionati</span>
+          {mergeSelection.size === 2 && (
+            <button
+              onClick={openMergeModal}
+              className="bg-background text-primary text-xs font-semibold rounded-full px-3 py-1.5 hover:bg-cream transition-colors"
+            >
+              Unisci
+            </button>
+          )}
+          <button
+            onClick={() => setMergeSelection(new Set())}
+            className="text-background/70 hover:text-background transition-colors ml-1"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
