@@ -179,6 +179,7 @@ function AddProductsModal({
   loadingLabel,
   noProductsLabel,
   addLabel,
+  orderProductIds,
 }: {
   orderId: string;
   onClose: () => void;
@@ -188,12 +189,20 @@ function AddProductsModal({
   loadingLabel: string;
   noProductsLabel: string;
   addLabel: string;
+  orderProductIds: Set<string>;
 }) {
   const [tab, setTab] = useState<'ricerca' | 'catalogo'>('ricerca');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [addingId, setAddingId] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [presenzaFilter, setPresenzaFilter] = useState<'tutti' | 'non-ancora' | 'gia'>('tutti');
+
+  function applyPresenzaFilter(list: Product[]): Product[] {
+    if (presenzaFilter === 'non-ancora') return list.filter(p => !orderProductIds.has(p.id));
+    if (presenzaFilter === 'gia') return list.filter(p => orderProductIds.has(p.id));
+    return list;
+  }
 
   // ── Catalog tab state ──────────────────────────────────────
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -326,6 +335,20 @@ function AddProductsModal({
     );
   }
 
+  const presenzaSelector = (
+    <div className="pb-3 mb-1 border-b border-border/50">
+      <select
+        value={presenzaFilter}
+        onChange={e => setPresenzaFilter(e.target.value as 'tutti' | 'non-ancora' | 'gia')}
+        className="w-full h-9 border border-primary/30 bg-cream rounded px-2 text-sm text-primary font-medium focus:outline-none"
+      >
+        <option value="tutti">Tutti i prodotti</option>
+        <option value="non-ancora">Non ancora nell&apos;ordine</option>
+        <option value="gia">Già nell&apos;ordine</option>
+      </select>
+    </div>
+  );
+
   const filterSelects = (
     <div className="space-y-2">
       {([
@@ -399,7 +422,8 @@ function AddProductsModal({
           {/* Left panel: search input (ricerca) or filters (catalogo) */}
           <div className="md:w-72 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-border">
             {tab === 'ricerca' ? (
-              <div className="px-4 py-3">
+              <div className="px-4 py-3 space-y-3">
+                {presenzaSelector}
                 <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2.5">
                   <Search size={15} className="text-gray-400 flex-shrink-0" />
                   <input
@@ -414,6 +438,7 @@ function AddProductsModal({
               </div>
             ) : (
               <div className="overflow-y-auto px-4 py-3 max-h-48 md:max-h-none md:flex-1">
+                {presenzaSelector}
                 {filterSelects}
               </div>
             )}
@@ -428,10 +453,10 @@ function AddProductsModal({
                     <LoadingSpinner text={loadingLabel} />
                   </div>
                 )}
-                {!isLoading && (products ?? []).length === 0 && (
+                {!isLoading && applyPresenzaFilter(products ?? []).length === 0 && (
                   <p className="text-center text-sm text-gray-400 py-12">{noProductsLabel}</p>
                 )}
-                {(products ?? []).map(renderProductRow)}
+                {applyPresenzaFilter(products ?? []).map(renderProductRow)}
               </>
             ) : (
               <>
@@ -440,10 +465,10 @@ function AddProductsModal({
                     <LoadingSpinner text={loadingLabel} />
                   </div>
                 )}
-                {!catalogLoading && (catalogProducts ?? []).length === 0 && (
+                {!catalogLoading && applyPresenzaFilter(catalogProducts ?? []).length === 0 && (
                   <p className="text-center text-sm text-gray-400 py-12">{noProductsLabel}</p>
                 )}
-                {(catalogProducts ?? []).map(renderProductRow)}
+                {applyPresenzaFilter(catalogProducts ?? []).map(renderProductRow)}
               </>
             )}
           </div>
@@ -816,6 +841,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
           loadingLabel={t('loading')}
           noProductsLabel={t('noProducts')}
           addLabel={t('add')}
+          orderProductIds={new Set((order?.items ?? []).map(i => i.productId))}
           onAdded={() => {
             queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
             queryClient.invalidateQueries({ queryKey: ['my-orders'] });
