@@ -54,7 +54,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Clickable area: image + code + name → product detail */}
       <Link href={`/catalog/${product.id}`} className="block">
         {/* Image */}
-        <div className="h-40 relative bg-cream overflow-hidden rounded-t">
+        <div className="h-36 sm:h-40 relative bg-cream overflow-hidden rounded-t">
           <ProductImage
             src={product.imageUrl}
             alt={product.name}

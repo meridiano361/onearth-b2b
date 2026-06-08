@@ -33,7 +33,7 @@ export default function CartItem({ item }: CartItemProps) {
               <span className="bg-black text-white text-[8px] font-bold px-1 py-px rounded-sm leading-none flex-shrink-0">NUOVO</span>
             )}
           </div>
-          <p className="text-xs font-medium text-primary leading-snug h-10 overflow-hidden mb-1.5">
+          <p className="text-xs font-medium text-primary leading-snug line-clamp-2 mb-1.5">
             {item.product.name}
           </p>
           <div className="flex items-center gap-2">
@@ -61,7 +61,7 @@ export default function CartItem({ item }: CartItemProps) {
 
         <button
           onClick={() => removeItem(item.productId)}
-          className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-gray-600 transition-all flex-shrink-0 mt-0.5"
+          className="text-gray-300 hover:text-gray-600 md:opacity-0 md:group-hover:opacity-100 transition-all flex-shrink-0 mt-0.5"
           title="Remove"
         >
           <X size={13} />

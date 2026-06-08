@@ -76,9 +76,9 @@ function SpotlightCard({ product }: { product: Product }) {
   }
 
   return (
-    <div className="flex-none w-36 flex flex-col bg-white rounded-lg border border-border overflow-hidden">
+    <div className="flex-none w-32 sm:w-36 flex flex-col bg-white rounded-lg border border-border overflow-hidden">
       <Link href={`/catalog/${product.id}`} className="block relative group">
-        <div className="h-36 w-36 relative bg-cream overflow-hidden">
+        <div className="h-32 w-32 sm:h-36 sm:w-36 relative bg-cream overflow-hidden">
           <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(product.id); }}
@@ -454,8 +454,8 @@ export default function CustomerHome() {
                 className="w-full h-52 sm:h-72 object-cover"
               />
               {hs.editorialCaption && (
-                <div className="absolute bottom-0 left-0 right-0 px-5 py-4 bg-gradient-to-t from-black/60 to-transparent">
-                  <p className="text-white text-sm font-light tracking-wide">{hs.editorialCaption}</p>
+                <div className="absolute bottom-0 left-0 right-0 px-3 py-3 sm:px-5 sm:py-4 bg-gradient-to-t from-black/60 to-transparent">
+                  <p className="text-white text-xs sm:text-sm font-light tracking-wide">{hs.editorialCaption}</p>
                 </div>
               )}
             </div>

@@ -45,11 +45,11 @@ function ProductGallery({ product }: { product: Product }) {
         <ProductImage src={photos[active]} alt={product.name} className="w-full h-full object-cover" />
         {photos.length > 1 && (
           <>
-            <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors">
-              <ChevronLeft size={16} />
+            <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/80 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors">
+              <ChevronLeft size={18} />
             </button>
-            <button onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors">
-              <ChevronRight size={16} />
+            <button onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/80 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors">
+              <ChevronRight size={18} />
             </button>
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
               {photos.map((_, i) => (
@@ -66,7 +66,7 @@ function ProductGallery({ product }: { product: Product }) {
             <button
               key={i}
               onClick={() => setActive(i)}
-              className={`w-16 h-16 flex-shrink-0 rounded overflow-hidden border-2 transition-colors ${i === active ? 'border-gray-900' : 'border-border hover:border-gray-400'}`}
+              className={`w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 rounded overflow-hidden border-2 transition-colors ${i === active ? 'border-gray-900' : 'border-border hover:border-gray-400'}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={url} alt={`foto ${i + 1}`} className="w-full h-full object-cover" />
@@ -203,7 +203,7 @@ export default function ProductDetailView({ id }: Props) {
         <div className="flex flex-col">
           {ss.codice && <p className="label-luxury text-accent mb-1">{product.code}</p>}
 
-          <h1 className="font-display text-2xl sm:text-3xl text-primary font-light leading-snug mb-3">
+          <h1 className="font-display text-xl sm:text-2xl md:text-3xl text-primary font-light leading-snug mb-3">
             {product.name}
           </h1>
 
@@ -283,7 +283,7 @@ export default function ProductDetailView({ id }: Props) {
             <div className="space-y-2">
               {activeClassFields.map(({ key, label }) => (
                 <div key={key} className="flex items-baseline gap-2">
-                  <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
+                  <span className="text-xs text-gray-400 w-24 sm:w-32 flex-shrink-0">{label}</span>
                   <span className="text-sm text-primary">{String(product[key])}</span>
                 </div>
               ))}
@@ -298,7 +298,7 @@ export default function ProductDetailView({ id }: Props) {
               <div className="space-y-2">
                 {activeDetailFields.map(({ key, label }) => (
                   <div key={key} className="flex items-baseline gap-2">
-                    <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
+                    <span className="text-xs text-gray-400 w-24 sm:w-32 flex-shrink-0">{label}</span>
                     <span className="text-sm text-primary">
                       {key === 'lotSize'
                         ? `${product[key]} ${tp('lotUnit')}`
