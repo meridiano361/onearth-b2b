@@ -110,7 +110,7 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
       <button
         ref={btnRef}
         onClick={toggleMenu}
-        className="text-xs text-gray-400 hover:text-primary border border-border rounded px-2 py-1.5 hover:bg-cream transition-all flex items-center gap-1"
+        className="text-xs bg-black text-white border border-black rounded px-2 py-1.5 hover:bg-gray-800 transition-all flex items-center gap-1"
       >
         <Database size={11} />
         <span className="hidden sm:inline">Esporta in Demetra</span>
