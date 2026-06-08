@@ -157,6 +157,10 @@ export default function CustomerOrdersView() {
   async function handleMerge() {
     const ids = Array.from(mergeSelection);
     const sourceId = ids.find(id => id !== mergeTargetId)!;
+    if (!sourceId || !mergeTargetId) {
+      toast.error('Seleziona i due ordini da unire');
+      return;
+    }
     setMerging(true);
     try {
       const res = await fetch('/api/orders/merge', {
@@ -164,14 +168,27 @@ export default function CustomerOrdersView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sourceOrderId: sourceId, targetOrderId: mergeTargetId }),
       });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || 'Errore');
+
+      // Parse response defensively — never call .json() on an empty or non-JSON body
+      let body: { ok?: boolean; error?: string } | null = null;
+      const ct = res.headers.get('content-type') ?? '';
+      if (ct.includes('application/json')) {
+        try { body = await res.json(); } catch { /* parsing failed, body stays null */ }
+      } else {
+        const raw = await res.text().catch(() => '');
+        console.error('[merge] Risposta non-JSON dal server', res.status, raw.slice(0, 300));
+      }
+
+      if (!res.ok) {
+        throw new Error(body?.error || `Errore del server (${res.status})`);
+      }
+
       toast.success('Ordini uniti con successo');
       setShowMergeModal(false);
       setMergeSelection(new Set());
       queryClient.invalidateQueries({ queryKey: ['my-orders'] });
     } catch (e: any) {
-      toast.error(e.message || 'Errore');
+      toast.error(e.message || 'Errore durante l\'unione degli ordini');
     } finally {
       setMerging(false);
     }
