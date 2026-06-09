@@ -432,11 +432,14 @@ export default function CustomerOrdersView() {
             return (
               <div
                 key={order.id}
-                className="bg-white border border-border rounded p-4 space-y-3"
+                className="bg-white border border-border rounded overflow-hidden"
               >
+                {/* Card body */}
+                <div className="p-3 sm:p-4 space-y-3">
+
                 {/* Top row: checkbox + ID + date + status */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-2">
+                <div className="flex items-start justify-between gap-2 min-w-0">
+                  <div className="flex items-start gap-2 min-w-0">
                     {!isExported && (
                       <input
                         type="checkbox"
@@ -446,8 +449,8 @@ export default function CustomerOrdersView() {
                         title="Seleziona per unire"
                       />
                     )}
-                    <div>
-                      <p className="text-xs font-mono font-semibold text-primary tracking-widest">
+                    <div className="min-w-0">
+                      <p className="text-xs font-mono font-semibold text-primary tracking-widest truncate">
                         {order.orderNumber ?? `#${order.id.slice(0, 8).toUpperCase()}`}
                       </p>
                       <p className="text-2xs text-gray-400 mt-0.5">
@@ -456,7 +459,7 @@ export default function CustomerOrdersView() {
                     </div>
                   </div>
                   <span
-                    className={`text-2xs font-medium px-2 py-1 rounded flex-shrink-0 ${getOrderStatusColor(order.status)}`}
+                    className={`text-2xs font-medium px-2 py-1 rounded flex-shrink-0 whitespace-nowrap ${getOrderStatusColor(order.status)}`}
                   >
                     {getOrderStatusLabel(order.status)}
                   </span>
@@ -469,7 +472,7 @@ export default function CustomerOrdersView() {
                   {order.totalItems} {t('pieces')}
                 </p>
                 {order.destinazione && (
-                  <p className="text-2xs text-gray-400 -mt-1">
+                  <p className="text-2xs text-gray-400 -mt-1 truncate">
                     {order.destinazione.tipo}{order.destinazione.citta ? ` · ${order.destinazione.citta}` : ''}
                   </p>
                 )}
@@ -484,39 +487,51 @@ export default function CustomerOrdersView() {
                   const hasAnyField = ordine.mostraCosto || ordine.mostraVendite || ordine.mostraGuadagno || ordine.mostraMargine || (ordine.mostraBudget && budget != null);
                   if (!hasAnyField) return null;
                   return (
-                    <div className="bg-cream/60 rounded p-2.5 space-y-1">
-                      <div className="flex items-center gap-1 mb-1">
+                    <div className="bg-cream/60 rounded p-2.5 space-y-1.5">
+                      <div className="flex items-center gap-1 mb-0.5">
                         <TrendingUp size={10} className="text-gray-400" />
                         <span className="text-2xs text-gray-400 uppercase tracking-wide">Proiezioni</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-2xs">
-                        {ordine.mostraCosto && <>
-                          <span className="text-gray-400">Costo (i.e.)</span>
-                          <span className="font-medium text-primary text-right">{formatCurrency(cost)}</span>
-                        </>}
-                        {ordine.mostraVendite && <>
-                          <span className="text-gray-400">Vendite pot. (i.i.)</span>
-                          <span className="font-medium text-primary text-right">{formatCurrency(venditeII)}</span>
-                        </>}
-                        {ordine.mostraGuadagno && <>
-                          <span className="text-gray-400">Guadagno</span>
-                          <span className={`font-medium text-right ${guadagno >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatCurrency(guadagno)}</span>
-                        </>}
-                        {ordine.mostraMargine && <>
-                          <span className="text-gray-400">Margine medio</span>
-                          <span className="font-medium text-primary text-right">{margine.toFixed(1)}%</span>
-                        </>}
+                      {/* Each metric on its own flex row — values never overflow */}
+                      <div className="space-y-0.5">
+                        {ordine.mostraCosto && (
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-2xs text-gray-400 flex-shrink-0">Costo (i.e.)</span>
+                            <span className="text-2xs font-medium text-primary tabular-nums">{formatCurrency(cost)}</span>
+                          </div>
+                        )}
+                        {ordine.mostraVendite && (
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-2xs text-gray-400 flex-shrink-0">Vendite pot.</span>
+                            <span className="text-2xs font-medium text-primary tabular-nums">{formatCurrency(venditeII)}</span>
+                          </div>
+                        )}
+                        {ordine.mostraGuadagno && (
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-2xs text-gray-400 flex-shrink-0">Guadagno</span>
+                            <span className={`text-2xs font-medium tabular-nums ${guadagno >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatCurrency(guadagno)}</span>
+                          </div>
+                        )}
+                        {ordine.mostraMargine && (
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-2xs text-gray-400 flex-shrink-0">Margine</span>
+                            <span className="text-2xs font-medium text-primary tabular-nums">{margine.toFixed(1)}%</span>
+                          </div>
+                        )}
                       </div>
                       {ordine.mostraBudget && budget != null && (
                         <>
                           <div className="h-px bg-border/40 my-1" />
-                          <div className="flex justify-between text-2xs text-gray-400">
-                            <span>Budget: <span className="text-primary">{formatCurrency(budget)}</span></span>
-                            {ordine.mostraRimanente && budgetRemaining != null && (
-                              <span className={budgetRemaining < 0 ? 'text-red-500 font-medium' : ''}>
-                                Rim. {formatCurrency(budgetRemaining)}
-                              </span>
-                            )}
+                          <div className="flex items-baseline justify-between gap-2 text-2xs text-gray-400">
+                            <span className="flex-shrink-0">Budget</span>
+                            <div className="flex items-baseline gap-2 min-w-0">
+                              <span className="text-primary font-medium tabular-nums">{formatCurrency(budget)}</span>
+                              {ordine.mostraRimanente && budgetRemaining != null && (
+                                <span className={`tabular-nums flex-shrink-0 ${budgetRemaining < 0 ? 'text-red-500 font-medium' : ''}`}>
+                                  ({budgetRemaining >= 0 ? '+' : ''}{formatCurrency(budgetRemaining)})
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
                             <div
@@ -531,7 +546,7 @@ export default function CustomerOrdersView() {
                 })()}
 
                 {/* Bottom: action buttons */}
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                   {/* Modifica */}
                   {!isExported && (
                     <button
@@ -676,6 +691,7 @@ export default function CustomerOrdersView() {
                       </button>
                     )
                   )}
+                </div>
                 </div>
               </div>
             );
