@@ -1,0 +1,24 @@
+{
+  "name": "ON EARTH B2B",
+  "short_name": "ON EARTH",
+  "description": "Piattaforma ordini B2B On Earth",
+  "start_url": "/catalog",
+  "display": "standalone",
+  "background_color": "#FAF9F6",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo-on-earth/onearth_pittogramma.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo-on-earth/onearth_pittogramma.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

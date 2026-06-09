@@ -29,6 +29,7 @@ export const metadata: Metadata = {
   },
   description: 'Piattaforma ordini B2B On Earth Collezione CASA 2027',
   robots: 'noindex, nofollow',
+  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

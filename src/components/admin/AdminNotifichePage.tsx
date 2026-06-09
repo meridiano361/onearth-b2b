@@ -149,7 +149,7 @@ function Modal({
                 onChange={(e) => set('destinatari', e.target.value)}
                 className="w-full border border-border rounded px-2 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
               >
-                <option value="tutti">Tutti i clienti</option>
+                <option value="tutti">Tutti (operator + clienti) — push/email</option>
                 <option value="admin">Solo amministratori</option>
               </select>
             </div>

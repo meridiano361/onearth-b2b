@@ -13,6 +13,7 @@ import PreviewBanner from '@/components/layout/PreviewBanner';
 import { PreviewProvider } from '@/contexts/PreviewContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import { parseSettingsFromDb, DEFAULT_APP_SETTINGS } from '@/lib/settingsHelpers';
+import PushNotificationSetup from '@/components/push/PushNotificationSetup';
 
 const CATALOG_FONT_MAP: Record<string, string> = {
   inter: "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif",
@@ -104,6 +105,7 @@ export default async function B2BLayout({
           </div>
 
           <MobileNav />
+          <PushNotificationSetup />
         </div>
       </SettingsProvider>
     </PreviewProvider>

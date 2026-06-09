@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { sendNotificationToCustomers } from '@/lib/push';
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
@@ -26,6 +27,9 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
 
+  const isActive = body.attiva === true;
+  const destinatari = body.destinatari ?? 'tutti';
+
   const notification = await prisma.notification.create({
     data: {
       titolo: body.titolo ?? '',
@@ -34,14 +38,21 @@ export async function POST(req: NextRequest) {
       tipo: body.tipo ?? 'Informazione',
       coloreSfondo: body.coloreSfondo ?? '#000000',
       coloreTesto: body.coloreTesto ?? '#FFFFFF',
-      destinatari: body.destinatari ?? 'tutti',
+      destinatari,
       dataInizio: body.dataInizio ? new Date(body.dataInizio) : new Date(),
       dataScadenza: body.dataScadenza ? new Date(body.dataScadenza) : null,
       linkUrl: body.linkUrl || null,
       linkTesto: body.linkTesto || null,
-      attiva: body.attiva === true,
+      attiva: isActive,
+      ...(isActive && destinatari === 'tutti' ? { sentToCustomersAt: new Date() } : {}),
     },
   });
+
+  if (isActive && destinatari === 'tutti') {
+    sendNotificationToCustomers(notification).catch((e) =>
+      console.error('[notifications] Delivery error for new notif', notification.id, e)
+    );
+  }
 
   return NextResponse.json(notification, { status: 201 });
 }

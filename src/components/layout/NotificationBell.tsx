@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, X } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { Bell, BellOff, Mail, MailX, Settings, X } from 'lucide-react';
 
 type NotificationItem = {
   id: string;
@@ -16,11 +17,77 @@ type NotificationItem = {
   letta: boolean;
 };
 
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+}
+
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
+  const { data: session } = useSession();
+  const isCustomer = session?.user?.role === 'CUSTOMER';
+
+  // Customer notification preferences
+  const [emailEnabled, setEmailEnabled] = useState(true);
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [settingsBusy, setSettingsBusy] = useState(false);
+
+  useEffect(() => {
+    if (!isCustomer || !open || !showSettings) return;
+    fetch('/api/customer/notification-preferences').then(r => r.json()).then(d => setEmailEnabled(d.notificationsEnabled ?? true)).catch(() => {});
+    fetch('/api/push/subscribe').then(r => r.json()).then(d => setPushSubscribed(d.subscribed ?? false)).catch(() => {});
+  }, [isCustomer, open, showSettings]);
+
+  async function toggleEmail() {
+    setSettingsBusy(true);
+    try {
+      await fetch('/api/customer/notification-preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationsEnabled: !emailEnabled }),
+      });
+      setEmailEnabled((v) => !v);
+    } finally {
+      setSettingsBusy(false);
+    }
+  }
+
+  async function togglePush() {
+    setSettingsBusy(true);
+    try {
+      if (pushSubscribed) {
+        await fetch('/api/push/subscribe', { method: 'DELETE' });
+        setPushSubscribed(false);
+      } else {
+        if (!('serviceWorker' in navigator)) return;
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
+        const vapidRes = await fetch('/api/push/vapid-key');
+        const { key } = await vapidRes.json();
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(key) as unknown as ArrayBuffer,
+        });
+        const json = sub.toJSON();
+        await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: json.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth }),
+        });
+        setPushSubscribed(true);
+      }
+    } catch (e) {
+      console.error('[push] Toggle error:', e);
+    } finally {
+      setSettingsBusy(false);
+    }
+  }
 
   const { data: notifications = [] } = useQuery<NotificationItem[]>({
     queryKey: ['notifications'],
@@ -138,65 +205,123 @@ export default function NotificationBell() {
 
             {/* Notification list */}
             <div className="overflow-y-auto flex-1">
-              {notifications.length === 0 ? (
-                <div className="px-4 py-10 text-center text-sm text-gray-400">
-                  Nessuna notifica
-                </div>
-              ) : (
-                notifications.map((n) => (
-                  <div
-                    key={n.id}
-                    className="border-b last:border-0"
-                    style={{ borderColor: 'rgba(0,0,0,0.08)' }}
-                  >
+              {!showSettings ? (
+                notifications.length === 0 ? (
+                  <div className="px-4 py-10 text-center text-sm text-gray-400">
+                    Nessuna notifica
+                  </div>
+                ) : (
+                  notifications.map((n) => (
                     <div
-                      className="p-4"
-                      style={{ backgroundColor: n.coloreSfondo, color: n.coloreTesto }}
+                      key={n.id}
+                      className="border-b last:border-0"
+                      style={{ borderColor: 'rgba(0,0,0,0.08)' }}
                     >
-                      <div className="flex items-start gap-3">
-                        {n.icona && (
-                          <span className="text-2xl flex-shrink-0 leading-none">{n.icona}</span>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="font-semibold text-sm leading-snug">{n.titolo}</p>
-                            {!n.letta && (
-                              <span className="flex-shrink-0 w-2 h-2 rounded-full bg-white mt-1 opacity-80" />
+                      <div
+                        className="p-4"
+                        style={{ backgroundColor: n.coloreSfondo, color: n.coloreTesto }}
+                      >
+                        <div className="flex items-start gap-3">
+                          {n.icona && (
+                            <span className="text-2xl flex-shrink-0 leading-none">{n.icona}</span>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="font-semibold text-sm leading-snug">{n.titolo}</p>
+                              {!n.letta && (
+                                <span className="flex-shrink-0 w-2 h-2 rounded-full bg-white mt-1 opacity-80" />
+                              )}
+                            </div>
+                            {n.testo && (
+                              <p
+                                className="text-sm mt-1 leading-relaxed break-words whitespace-normal"
+                                style={{ opacity: 0.9 }}
+                              >
+                                {n.testo}
+                              </p>
+                            )}
+                            {n.linkUrl && (
+                              <a
+                                href={n.linkUrl}
+                                className="inline-block mt-2 text-sm font-medium underline underline-offset-2"
+                                style={{ color: n.coloreTesto }}
+                              >
+                                {n.linkTesto || 'Scopri di più'}
+                              </a>
                             )}
                           </div>
-                          {n.testo && (
-                            <p
-                              className="text-sm mt-1 leading-relaxed break-words whitespace-normal"
-                              style={{ opacity: 0.9 }}
-                            >
-                              {n.testo}
-                            </p>
-                          )}
-                          {n.linkUrl && (
-                            <a
-                              href={n.linkUrl}
-                              className="inline-block mt-2 text-sm font-medium underline underline-offset-2"
-                              style={{ color: n.coloreTesto }}
-                            >
-                              {n.linkTesto || 'Scopri di più'}
-                            </a>
-                          )}
+                          <button
+                            onClick={() => markRead(n.id)}
+                            className="flex-shrink-0 p-1 opacity-50 hover:opacity-100 transition-opacity"
+                            style={{ color: n.coloreTesto }}
+                            aria-label="Segna come letta"
+                            title="Segna come letta"
+                          >
+                            <X size={14} />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => markRead(n.id)}
-                          className="flex-shrink-0 p-1 opacity-50 hover:opacity-100 transition-opacity"
-                          style={{ color: n.coloreTesto }}
-                          aria-label="Segna come letta"
-                          title="Segna come letta"
-                        >
-                          <X size={14} />
-                        </button>
                       </div>
                     </div>
+                  ))
+                )
+              ) : (
+                /* Settings panel */
+                <div className="p-4 space-y-4">
+                  <p className="text-xs text-gray-400">Scegli come ricevere le notifiche da ON EARTH.</p>
+
+                  {/* Push toggle */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      {pushSubscribed ? <Bell size={14} className="text-primary flex-shrink-0" /> : <BellOff size={14} className="text-gray-400 flex-shrink-0" />}
+                      <div>
+                        <p className="text-xs font-medium text-primary">Notifiche push</p>
+                        <p className="text-2xs text-gray-400">{pushSubscribed ? 'Attive su questo dispositivo' : 'Non attive su questo dispositivo'}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={togglePush}
+                      disabled={settingsBusy}
+                      className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 ${pushSubscribed ? 'bg-black' : 'bg-gray-200'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 mt-0.5 ml-0.5 ${pushSubscribed ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </button>
                   </div>
-                ))
+
+                  <div className="h-px bg-border/50" />
+
+                  {/* Email toggle */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      {emailEnabled ? <Mail size={14} className="text-primary flex-shrink-0" /> : <MailX size={14} className="text-gray-400 flex-shrink-0" />}
+                      <div>
+                        <p className="text-xs font-medium text-primary">Notifiche email</p>
+                        <p className="text-2xs text-gray-400">{emailEnabled ? 'Invio email attivo' : 'Non riceverai email'}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={toggleEmail}
+                      disabled={settingsBusy}
+                      className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 ${emailEnabled ? 'bg-black' : 'bg-gray-200'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 mt-0.5 ml-0.5 ${emailEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
+
+            {/* Settings toggle footer — customers only */}
+            {isCustomer && (
+              <div className="border-t border-border/50 flex-shrink-0">
+                <button
+                  onClick={() => setShowSettings((v) => !v)}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-gray-400 hover:text-primary hover:bg-cream transition-colors"
+                >
+                  <Settings size={12} />
+                  {showSettings ? 'Torna alle notifiche' : 'Impostazioni notifiche'}
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}

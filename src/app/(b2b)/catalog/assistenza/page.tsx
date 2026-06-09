@@ -1,8 +1,8 @@
-// AGGIORNATO: 2026-06-07 — aggiornare ad ogni nuova funzionalità
+// AGGIORNATO: 2026-06-09 — aggiornare ad ogni nuova funzionalità
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
-  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge,
+  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge, Bell,
 } from 'lucide-react';
 
 export const metadata = { title: 'Guida all\'app — ON EARTH' };
@@ -17,6 +17,7 @@ const SECTIONS = [
   { id: 'destinazioni',       label: 'Le Destinazioni',                   icon: MapPin },
   { id: 'miei-ordini',        label: 'I miei Ordini',                     icon: Package },
   { id: 'unire-ordini',       label: 'Unire due Ordini',                  icon: GitMerge },
+  { id: 'notifiche',          label: 'Notifiche',                         icon: Bell },
   { id: 'anteprima',          label: 'Anteprima e Raggruppamento',        icon: Eye },
   { id: 'demetra',            label: 'Esportare in Demetra',              icon: Download },
   { id: 'esposizioni',        label: 'Esposizioni',                       icon: Layers },
@@ -243,9 +244,21 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 10. Anteprima e Raggruppamento */}
+        {/* 10. Notifiche */}
+        <section id="notifiche" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={10} icon={Bell} label="Notifiche" />
+          <ul className="space-y-2">
+            <Bullet>Quando ON EARTH pubblica un aggiornamento o una promozione, ricevi una notifica <span className="font-medium">push</span> se hai installato l&apos;app sul telefono, altrimenti via <span className="font-medium">email</span>.</Bullet>
+            <Bullet>Al primo accesso appare un banner: clicca <span className="font-medium">Abilita</span> per attivare le notifiche push; il browser chiede conferma. Una volta abilitate, arrivano anche quando l&apos;app è chiusa.</Bullet>
+            <Bullet>Per gestire le preferenze clicca sull&apos;icona <span className="font-medium">campanella 🔔</span> in alto a destra, poi <span className="font-medium">Impostazioni notifiche</span> in fondo al pannello.</Bullet>
+            <Bullet>Puoi abilitare o disabilitare le <span className="font-medium">notifiche push</span> e le <span className="font-medium">notifiche email</span> separatamente in qualsiasi momento.</Bullet>
+            <Bullet>Se disabiliti entrambe non riceverai più nessuna comunicazione da ON EARTH B2B.</Bullet>
+          </ul>
+        </section>
+
+        {/* 11. Anteprima e Raggruppamento */}
         <section id="anteprima" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={10} icon={Eye} label="Anteprima e Raggruppamento" />
+          <SectionHeader n={11} icon={Eye} label="Anteprima e Raggruppamento" />
           <ul className="space-y-2">
             <Bullet>Clicca <span className="font-medium">Anteprima</span> su un ordine per vedere i prodotti raggruppati visivamente.</Bullet>
             <Bullet>Scegli il criterio di raggruppamento: Gruppo merceologico, Famiglia, Classe, Sottoclasse, Gruppo omogeneo, Linea, Tema colore, Stagione, Collezione, Produttore, Tranche.</Bullet>
@@ -258,9 +271,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 11. Esportare in Demetra */}
+        {/* 12. Esportare in Demetra */}
         <section id="demetra" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={11} icon={Download} label="Esportare in Demetra" />
+          <SectionHeader n={12} icon={Download} label="Esportare in Demetra" />
           <ul className="space-y-2">
             <Bullet>Clicca <span className="font-medium">Esporta in Demetra</span> per scaricare il file CSV da importare nel gestionale. Puoi esportare tutto l&apos;ordine o solo la tranche di interesse.</Bullet>
             <Bullet>Dopo l&apos;export l&apos;ordine diventa <span className="font-medium">Esportato</span> e non è più modificabile.</Bullet>
@@ -272,9 +285,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 12. Esposizioni */}
+        {/* 13. Esposizioni */}
         <section id="esposizioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={12} icon={Layers} label="Esposizioni" />
+          <SectionHeader n={13} icon={Layers} label="Esposizioni" />
           <ul className="space-y-2">
             <Bullet>Dall&apos;anteprima di un ordine tocca il tab <span className="font-medium">Esposizione</span> per organizzare i prodotti in gruppi espositivi (es. Vetrina, Isola, Parete).</Bullet>
             <Bullet>Crea un nuovo gruppo con il pulsante <span className="font-medium">+ Gruppo</span>: assegna nome, colore e template.</Bullet>
@@ -285,9 +298,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 13. Risorse e Media */}
+        {/* 14. Risorse e Media */}
         <section id="risorse" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={13} icon={Film} label="Risorse e Media" />
+          <SectionHeader n={14} icon={Film} label="Risorse e Media" />
           <ul className="space-y-2">
             <Bullet>Accedi alle Risorse dal menu in basso (icona cartella) o dalla homepage.</Bullet>
             <Bullet>Trovi documenti PDF, video e audio condivisi da ON EARTH.</Bullet>
@@ -297,9 +310,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 14. Le mie Destinazioni */}
+        {/* 15. Le mie Destinazioni */}
         <section id="mie-destinazioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={14} icon={MapPin} label="Le mie Destinazioni" />
+          <SectionHeader n={15} icon={MapPin} label="Le mie Destinazioni" />
           <ul className="space-y-2">
             <Bullet>Gestisci i tuoi punti vendita dalla voce <span className="font-medium">Destinazioni</span>.</Bullet>
             <Bullet>Aggiungi nuove destinazioni con: tipo, città, indirizzo.</Bullet>
@@ -308,9 +321,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 15. Multilingua */}
+        {/* 16. Multilingua */}
         <section id="multilingua" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={15} icon={Globe} label="Multilingua" />
+          <SectionHeader n={16} icon={Globe} label="Multilingua" />
           <ul className="space-y-2">
             <Bullet>L&apos;app è disponibile in: <span className="font-medium">Italiano, Inglese, Tedesco, Francese, Spagnolo</span>.</Bullet>
             <Bullet>Cambia lingua dal selettore in alto a destra (IT / EN / DE / FR / ES).</Bullet>
@@ -318,9 +331,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 16. Assistenza tecnica */}
+        {/* 17. Assistenza tecnica */}
         <section id="assistenza-tecnica" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={16} icon={HelpCircle} label="Assistenza tecnica" />
+          <SectionHeader n={17} icon={HelpCircle} label="Assistenza tecnica" />
           <p className="text-sm text-gray-600">
             Per problemi tecnici{' '}
             <a

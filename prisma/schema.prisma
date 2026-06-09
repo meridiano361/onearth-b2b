@@ -244,22 +244,25 @@ enum Role {
 }
 
 model Customer {
-  id            String   @id @default(cuid())
-  companyName   String
-  customerCode  String   @unique
-  email         String   @unique
-  passwordHash  String
-  isActive      Boolean  @default(true)
-  role          Role     @default(CUSTOMER)
-  phone         String?
-  address       String?
-  city          String?
-  country       String?
-  vatNumber     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  companyName          String
+  customerCode         String   @unique
+  email                String   @unique
+  passwordHash         String
+  isActive             Boolean  @default(true)
+  role                 Role     @default(CUSTOMER)
+  phone                String?
+  address              String?
+  city                 String?
+  country              String?
+  vatNumber            String?
+  notificationsEnabled Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  orders Order[]
+  orders                 Order[]
+  pushSubscriptions      PushSubscription[]
+  customerNotifReads     CustomerNotificationRead[]
 
   @@map("customers")
 }
@@ -523,23 +526,49 @@ model CatalogSettings {
 }
 
 model Notification {
-  id           String             @id @default(cuid())
-  titolo       String
-  testo        String
-  icona        String             @default("📢")
-  tipo         String             @default("Informazione")
-  coloreSfondo String             @default("#000000")
-  coloreTesto  String             @default("#FFFFFF")
-  destinatari  String             @default("tutti")
-  dataInizio   DateTime           @default(now())
-  dataScadenza DateTime?
-  linkUrl      String?
-  linkTesto    String?
-  attiva       Boolean            @default(false)
-  createdAt    DateTime           @default(now())
-  reads        NotificationRead[]
+  id                String             @id @default(cuid())
+  titolo            String
+  testo             String
+  icona             String             @default("📢")
+  tipo              String             @default("Informazione")
+  coloreSfondo      String             @default("#000000")
+  coloreTesto       String             @default("#FFFFFF")
+  destinatari       String             @default("tutti")
+  dataInizio        DateTime           @default(now())
+  dataScadenza      DateTime?
+  linkUrl           String?
+  linkTesto         String?
+  attiva            Boolean            @default(false)
+  sentToCustomersAt DateTime?
+  createdAt         DateTime           @default(now())
+  reads             NotificationRead[]
+  customerReads     CustomerNotificationRead[]
 
   @@map("notifications")
+}
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  customerId String
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
+}
+
+model CustomerNotificationRead {
+  id             String       @id @default(cuid())
+  notificationId String
+  customerId     String
+  readAt         DateTime     @default(now())
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  customer       Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, customerId])
+  @@map("customer_notification_reads")
 }
 
 model NotificationRead {
