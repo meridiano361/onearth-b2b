@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-09 — aggiornare ad ogni nuova funzionalità
+// AGGIORNATO: 2026-06-10 — aggiornare ad ogni nuova funzionalità
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
@@ -305,7 +305,7 @@ export default function AssistenzaPage() {
             <Bullet>Accedi alle Risorse dal menu in basso (icona cartella) o dalla homepage.</Bullet>
             <Bullet>Trovi documenti PDF, video e audio condivisi da ON EARTH.</Bullet>
             <Bullet><span className="font-medium">PDF:</span> scaricabili direttamente.</Bullet>
-            <Bullet><span className="font-medium">Video:</span> visualizzabili inline.</Bullet>
+            <Bullet><span className="font-medium">Video:</span> il pulsante <span className="font-medium">Guarda</span> apre il video in una nuova scheda del browser.</Bullet>
             <Bullet><span className="font-medium">Audio:</span> ascoltabili con player integrato.</Bullet>
           </ul>
         </section>

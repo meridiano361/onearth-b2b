@@ -22,7 +22,7 @@ const TIPO_CONFIG: Record<string, TipoConfig> = {
 const TIPI = Object.keys(TIPO_CONFIG);
 function getTipoConfig(tipo: string): TipoConfig { return TIPO_CONFIG[tipo] ?? TIPO_CONFIG['Altro']; }
 
-interface Doc { id: string; nome: string; tipo: string; url: string; size: number; mimeType?: string | null; visibile: boolean; createdAt: string; }
+interface Doc { id: string; nome: string; tipo: string; descrizione?: string | null; url: string; size: number; mimeType?: string | null; visibile: boolean; createdAt: string; }
 interface Album { id: string; nome: string; descrizione: string | null; copertina: string | null; visibile: boolean; nFoto: number; ordine: number; createdAt: string; }
 interface UploadProgress { percent: number; loaded: number; total: number }
 
@@ -80,6 +80,7 @@ function ProgressBar({ progress, label }: { progress: UploadProgress | null; lab
 function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState(TIPI[0]);
+  const [descrizione, setDescrizione] = useState('');
   const [visibile, setVisibile] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<UploadProgress | null>(null);
@@ -98,7 +99,7 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
       setStatusMsg('Preparazione upload…');
       const { url, storageKey } = await uploadToSupabase(file, tipo, (p) => { setStatusMsg('Caricamento…'); setProgress(p); });
       setProgress(null); setStatusMsg('Salvataggio metadati…');
-      const res = await fetch('/api/admin/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome.trim(), tipo, url, storageKey, size: file.size, mimeType: file.type || null, visibile }) });
+      const res = await fetch('/api/admin/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome.trim(), tipo, descrizione: descrizione.trim() || null, url, storageKey, size: file.size, mimeType: file.type || null, visibile }) });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Errore salvataggio');
       toast.success('Documento caricato'); onDone();
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Errore upload'); }
@@ -113,6 +114,7 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
         <form onSubmit={handleSubmit} className="space-y-4">
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Nome *</label><input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="es. Condizioni Commerciali 2027" className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" /></div>
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Tipo *</label><select value={tipo} onChange={(e) => { setTipo(e.target.value); setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent bg-white">{TIPI.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+          <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sottotitolo <span className="normal-case font-normal text-gray-400">(etichetta visibile ai clienti — opzionale)</span></label><input value={descrizione} onChange={(e) => setDescrizione(e.target.value)} placeholder={`es. ${tipo}`} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" /></div>
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">{cfg.fileLabel}</label><input ref={fileInputRef} type="file" accept={cfg.accept || undefined} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary file:text-white hover:file:bg-warm-darker cursor-pointer" />{file && <p className="text-2xs text-gray-400 mt-1">{file.name} · {fmtSize(file.size)}</p>}</div>
           <div className="flex items-center gap-3"><label className="text-sm text-gray-600">Visibile ai clienti</label><button type="button" onClick={() => setVisibile((v) => !v)} className={`relative w-10 h-5 rounded-full transition-colors ${visibile ? 'bg-accent' : 'bg-gray-300'}`}><span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${visibile ? 'translate-x-5' : 'translate-x-0.5'}`} /></button></div>
           <p className="text-2xs text-gray-400 bg-amber-50 border border-amber-200 rounded px-3 py-2">Piano attuale: max {PLAN_MAX_MB} MB per file.</p>
@@ -130,6 +132,7 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
 function ReplaceModal({ doc, onClose, onDone }: { doc: Doc; onClose: () => void; onDone: () => void }) {
   const [nome, setNome] = useState(doc.nome);
   const [tipo, setTipo] = useState(doc.tipo);
+  const [descrizione, setDescrizione] = useState(doc.descrizione ?? '');
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
@@ -150,7 +153,7 @@ function ReplaceModal({ doc, onClose, onDone }: { doc: Doc; onClose: () => void;
         fileFields = { url, storageKey, size: file.size, mimeType: file.type || null };
       }
       setStatusMsg('Salvataggio…');
-      const res = await fetch(`/api/admin/documents/${doc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome.trim(), tipo, ...fileFields }) });
+      const res = await fetch(`/api/admin/documents/${doc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome.trim(), tipo, descrizione: descrizione.trim() || null, ...fileFields }) });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Errore');
       toast.success('Documento aggiornato'); onDone();
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Errore'); }
@@ -165,6 +168,7 @@ function ReplaceModal({ doc, onClose, onDone }: { doc: Doc; onClose: () => void;
         <form onSubmit={handleSubmit} className="space-y-4">
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Nome</label><input value={nome} onChange={(e) => setNome(e.target.value)} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" /></div>
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Tipo</label><select value={tipo} onChange={(e) => { setTipo(e.target.value); setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent bg-white">{TIPI.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+          <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sottotitolo <span className="normal-case font-normal text-gray-400">(etichetta visibile ai clienti — opzionale)</span></label><input value={descrizione} onChange={(e) => setDescrizione(e.target.value)} placeholder={`es. ${tipo}`} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" /></div>
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sostituisci file — {cfg.fileLabel}</label><input ref={fileInputRef} type="file" accept={cfg.accept || undefined} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary file:text-white hover:file:bg-warm-darker cursor-pointer" />{file && <p className="text-2xs text-gray-400 mt-1">{file.name} · {fmtSize(file.size)}</p>}</div>
           <ProgressBar progress={progress} label={statusMsg} />
           <div className="flex justify-end gap-3 pt-2">

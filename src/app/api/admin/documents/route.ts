@@ -6,13 +6,14 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
 const createSchema = z.object({
-  nome:       z.string().min(1),
-  tipo:       z.string().min(1),
-  url:        z.string().url(),
-  storageKey: z.string().min(1),
-  size:       z.number().positive(),
-  mimeType:   z.string().optional(),
-  visibile:   z.boolean().default(true),
+  nome:        z.string().min(1),
+  tipo:        z.string().min(1),
+  descrizione: z.string().optional(),
+  url:         z.string().url(),
+  storageKey:  z.string().min(1),
+  size:        z.number().positive(),
+  mimeType:    z.string().optional(),
+  visibile:    z.boolean().default(true),
 });
 
 export async function GET() {

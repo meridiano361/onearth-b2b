@@ -388,15 +388,16 @@ model Favorite {
 }
 
 model Document {
-  id         String   @id @default(cuid())
-  nome       String
-  tipo       String
-  url        String
-  storageKey String
-  size       Int
-  mimeType   String?
-  visibile   Boolean  @default(true)
-  createdAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  nome        String
+  tipo        String
+  descrizione String?
+  url         String
+  storageKey  String
+  size        Int
+  mimeType    String?
+  visibile    Boolean  @default(true)
+  createdAt   DateTime @default(now())
 
   @@map("documents")
 }

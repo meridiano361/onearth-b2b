@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 
 // ─── Document types ───────────────────────────────────────────────────────────
 
-interface Doc { id: string; nome: string; tipo: string; url: string; size: number; mimeType?: string | null; createdAt: string; }
+interface Doc { id: string; nome: string; tipo: string; descrizione?: string | null; url: string; size: number; mimeType?: string | null; createdAt: string; }
 type MediaKind = 'pdf' | 'video' | 'audio' | 'other';
 const VIDEO_TIPI = ['Video presentazione', 'Video tutorial'];
 const AUDIO_TIPI = ['Audio / Podcast'];
@@ -180,16 +180,20 @@ function AudioModal({ url, nome, onClose }: { url: string; nome: string; onClose
 function DocCard({ doc, onPreview }: { doc: Doc; onPreview: (doc: Doc) => void }) {
   const kind = getKind(doc.tipo);
   const canPlay = kind === 'video' || kind === 'audio';
+  const subtitle = doc.descrizione || doc.tipo;
   return (
     <div className="bg-white border border-border rounded-lg p-4 flex items-start gap-3">
       <div className="mt-0.5 flex-shrink-0"><KindIcon kind={kind} size={18} /></div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-primary truncate">{doc.nome}</p>
-        <p className="text-2xs text-gray-400 mt-0.5">{doc.tipo} · {fmtSize(doc.size)}</p>
+        <p className="text-2xs text-gray-400 mt-0.5">{subtitle} · {fmtSize(doc.size)}</p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         {canPlay && (
-          <button onClick={() => onPreview(doc)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent border border-accent/30 rounded hover:bg-accent/5 transition-colors">
+          <button
+            onClick={() => kind === 'video' ? window.open(doc.url, '_blank') : onPreview(doc)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent border border-accent/30 rounded hover:bg-accent/5 transition-colors"
+          >
             <Play size={11} />{kind === 'video' ? 'Guarda' : 'Ascolta'}
           </button>
         )}

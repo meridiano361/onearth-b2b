@@ -20,14 +20,15 @@ function bucketFromMime(mimeType: string | null | undefined): string {
 }
 
 const patchSchema = z.object({
-  nome:       z.string().min(1).optional(),
-  tipo:       z.string().min(1).optional(),
-  visibile:   z.boolean().optional(),
+  nome:        z.string().min(1).optional(),
+  tipo:        z.string().min(1).optional(),
+  descrizione: z.string().nullable().optional(),
+  visibile:    z.boolean().optional(),
   // Presenti solo se il file è stato sostituito
-  url:        z.string().url().optional(),
-  storageKey: z.string().min(1).optional(),
-  size:       z.number().positive().optional(),
-  mimeType:   z.string().optional(),
+  url:         z.string().url().optional(),
+  storageKey:  z.string().min(1).optional(),
+  size:        z.number().positive().optional(),
+  mimeType:    z.string().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -52,13 +53,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const doc = await prisma.document.update({
     where: { id: params.id },
     data: {
-      ...(data.nome       !== undefined ? { nome:       data.nome }       : {}),
-      ...(data.tipo       !== undefined ? { tipo:       data.tipo }       : {}),
-      ...(data.visibile   !== undefined ? { visibile:   data.visibile }   : {}),
-      ...(data.url        !== undefined ? { url:        data.url }        : {}),
-      ...(data.storageKey !== undefined ? { storageKey: data.storageKey } : {}),
-      ...(data.size       !== undefined ? { size:       data.size }       : {}),
-      ...(data.mimeType   !== undefined ? { mimeType:   data.mimeType }   : {}),
+      ...(data.nome        !== undefined ? { nome:        data.nome }        : {}),
+      ...(data.tipo        !== undefined ? { tipo:        data.tipo }        : {}),
+      ...(data.descrizione !== undefined ? { descrizione: data.descrizione } : {}),
+      ...(data.visibile    !== undefined ? { visibile:    data.visibile }    : {}),
+      ...(data.url         !== undefined ? { url:         data.url }         : {}),
+      ...(data.storageKey  !== undefined ? { storageKey:  data.storageKey }  : {}),
+      ...(data.size        !== undefined ? { size:        data.size }        : {}),
+      ...(data.mimeType    !== undefined ? { mimeType:    data.mimeType }    : {}),
     },
   });
 
