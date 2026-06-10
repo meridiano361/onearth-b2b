@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Bell, BellOff, Mail, MailX, Smartphone, SmartphoneNfc, Eye, EyeOff, Lock, User } from 'lucide-react';
+import { Bell, BellOff, Mail, MailX, Smartphone, SmartphoneNfc, Lock, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -43,81 +43,6 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
   );
 }
 
-function CambiaPasswordForm({ onDone }: { onDone: () => void }) {
-  const [current, setCurrent] = useState('');
-  const [next, setNext] = useState('');
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNext, setShowNext] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!current || !next) { toast.error('Compila entrambi i campi'); return; }
-    if (next.length < 6) { toast.error('La nuova password deve avere almeno 6 caratteri'); return; }
-    setBusy(true);
-    try {
-      const res = await fetch('/api/customer/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword: current, newPassword: next }),
-      });
-      const body = await res.json();
-      if (!res.ok) { toast.error(body.error || 'Errore'); return; }
-      toast.success('Password aggiornata');
-      onDone();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="mt-4 space-y-3 border-t border-border pt-4">
-      <div>
-        <label className="block text-2xs text-gray-400 uppercase tracking-wide mb-1">Password attuale</label>
-        <div className="relative">
-          <input
-            type={showCurrent ? 'text' : 'password'}
-            value={current}
-            onChange={(e) => setCurrent(e.target.value)}
-            className="w-full text-sm border border-border rounded-lg px-3 py-2 pr-9 focus:outline-none focus:border-accent"
-            autoComplete="current-password"
-          />
-          <button type="button" onClick={() => setShowCurrent((v) => !v)} className="absolute right-2 top-2 text-gray-400">
-            {showCurrent ? <EyeOff size={15} /> : <Eye size={15} />}
-          </button>
-        </div>
-      </div>
-      <div>
-        <label className="block text-2xs text-gray-400 uppercase tracking-wide mb-1">Nuova password</label>
-        <div className="relative">
-          <input
-            type={showNext ? 'text' : 'password'}
-            value={next}
-            onChange={(e) => setNext(e.target.value)}
-            className="w-full text-sm border border-border rounded-lg px-3 py-2 pr-9 focus:outline-none focus:border-accent"
-            autoComplete="new-password"
-          />
-          <button type="button" onClick={() => setShowNext((v) => !v)} className="absolute right-2 top-2 text-gray-400">
-            {showNext ? <EyeOff size={15} /> : <Eye size={15} />}
-          </button>
-        </div>
-        <p className="text-2xs text-gray-400 mt-1">Minimo 6 caratteri</p>
-      </div>
-      <div className="flex gap-2 pt-1">
-        <button
-          type="submit"
-          disabled={busy}
-          className="flex-1 text-sm font-medium bg-black text-white rounded-lg py-2 hover:bg-gray-800 transition-colors disabled:opacity-50"
-        >
-          {busy ? 'Salvataggio…' : 'Salva nuova password'}
-        </button>
-        <button type="button" onClick={onDone} className="px-4 text-sm text-gray-400 hover:text-primary transition-colors">
-          Annulla
-        </button>
-      </div>
-    </form>
-  );
-}
 
 export default function ImpostazioniPage() {
   const { data: session } = useSession();
@@ -125,7 +50,8 @@ export default function ImpostazioniPage() {
   const [pushBusy, setPushBusy] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState<boolean | null>(null);
   const [emailBusy, setEmailBusy] = useState(false);
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
+
+  const password = `onearth_${(session?.user?.companyName ?? '').slice(0, 5).toLowerCase()}`;
 
   useEffect(() => {
     // Push state
@@ -233,31 +159,7 @@ export default function ImpostazioniPage() {
         <InfoRow icon={<User size={16} />} label="Organizzazione" value={session?.user?.companyName ?? '—'} />
         <InfoRow icon={<Mail size={16} />} label="Email di accesso" value={session?.user?.email ?? '—'} />
 
-        {/* Password */}
-        <div className="py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Lock size={16} className="text-gray-400 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-primary">Password</p>
-                {!showPasswordForm && (
-                  <p className="text-sm text-gray-300 mt-0.5 tracking-widest">••••••••</p>
-                )}
-              </div>
-            </div>
-            {!showPasswordForm && (
-              <button
-                onClick={() => setShowPasswordForm(true)}
-                className="text-xs text-accent hover:underline flex-shrink-0"
-              >
-                Cambia
-              </button>
-            )}
-          </div>
-          {showPasswordForm && (
-            <CambiaPasswordForm onDone={() => setShowPasswordForm(false)} />
-          )}
-        </div>
+        <InfoRow icon={<Lock size={16} />} label="Password" value={password} />
       </div>
 
       {/* ── Notifiche ── */}
