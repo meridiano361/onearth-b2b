@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell, BellOff, Mail, MailX, Smartphone, SmartphoneNfc } from 'lucide-react';
+import { Bell, BellOff, Mail, MailX, Smartphone, SmartphoneNfc, Eye, EyeOff, Lock, User, Hash } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -13,23 +13,110 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 type PushState = 'loading' | 'unsupported' | 'blocked' | 'active' | 'inactive';
 
+interface Profile { companyName: string; customerCode: string; email: string; }
+
 function SettingRow({ icon, title, description, children }: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  children: React.ReactNode;
+  icon: React.ReactNode; title: string; description?: string; children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-5 border-b border-border last:border-0">
+    <div className="flex items-start justify-between gap-4 py-4 border-b border-border last:border-0">
       <div className="flex items-start gap-3 flex-1 min-w-0">
         <div className="mt-0.5 text-gray-400 flex-shrink-0">{icon}</div>
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-primary">{title}</p>
-          <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{description}</p>
+          {description && <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{description}</p>}
         </div>
       </div>
       <div className="flex-shrink-0">{children}</div>
     </div>
+  );
+}
+
+function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-3 py-3.5 border-b border-border last:border-0">
+      <div className="text-gray-400 flex-shrink-0">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-2xs text-gray-400 uppercase tracking-wide">{label}</p>
+        <p className="text-sm font-medium text-primary mt-0.5 break-all">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function CambiaPasswordForm({ onDone }: { onDone: () => void }) {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNext, setShowNext] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!current || !next) { toast.error('Compila entrambi i campi'); return; }
+    if (next.length < 6) { toast.error('La nuova password deve avere almeno 6 caratteri'); return; }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/customer/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: current, newPassword: next }),
+      });
+      const body = await res.json();
+      if (!res.ok) { toast.error(body.error || 'Errore'); return; }
+      toast.success('Password aggiornata');
+      onDone();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-4 space-y-3 border-t border-border pt-4">
+      <div>
+        <label className="block text-2xs text-gray-400 uppercase tracking-wide mb-1">Password attuale</label>
+        <div className="relative">
+          <input
+            type={showCurrent ? 'text' : 'password'}
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            className="w-full text-sm border border-border rounded-lg px-3 py-2 pr-9 focus:outline-none focus:border-accent"
+            autoComplete="current-password"
+          />
+          <button type="button" onClick={() => setShowCurrent((v) => !v)} className="absolute right-2 top-2 text-gray-400">
+            {showCurrent ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        </div>
+      </div>
+      <div>
+        <label className="block text-2xs text-gray-400 uppercase tracking-wide mb-1">Nuova password</label>
+        <div className="relative">
+          <input
+            type={showNext ? 'text' : 'password'}
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+            className="w-full text-sm border border-border rounded-lg px-3 py-2 pr-9 focus:outline-none focus:border-accent"
+            autoComplete="new-password"
+          />
+          <button type="button" onClick={() => setShowNext((v) => !v)} className="absolute right-2 top-2 text-gray-400">
+            {showNext ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        </div>
+        <p className="text-2xs text-gray-400 mt-1">Minimo 6 caratteri</p>
+      </div>
+      <div className="flex gap-2 pt-1">
+        <button
+          type="submit"
+          disabled={busy}
+          className="flex-1 text-sm font-medium bg-black text-white rounded-lg py-2 hover:bg-gray-800 transition-colors disabled:opacity-50"
+        >
+          {busy ? 'Salvataggio…' : 'Salva nuova password'}
+        </button>
+        <button type="button" onClick={onDone} className="px-4 text-sm text-gray-400 hover:text-primary transition-colors">
+          Annulla
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -38,8 +125,9 @@ export default function ImpostazioniPage() {
   const [pushBusy, setPushBusy] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState<boolean | null>(null);
   const [emailBusy, setEmailBusy] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
 
-  // Load initial states
   useEffect(() => {
     // Push state
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -52,36 +140,35 @@ export default function ImpostazioniPage() {
         .then((d) => setPushState(d.subscribed ? 'active' : 'inactive'))
         .catch(() => setPushState('inactive'));
     }
-
     // Email preference
     fetch('/api/customer/notification-preferences')
       .then((r) => r.json())
       .then((d) => setEmailEnabled(d.notificationsEnabled ?? true))
       .catch(() => setEmailEnabled(true));
+    // Profile
+    fetch('/api/customer/profile')
+      .then((r) => r.json())
+      .then((d) => setProfile(d))
+      .catch(() => {});
   }, []);
 
   async function handleEnablePush() {
     setPushBusy(true);
     try {
-      // Permesso prima di tutto — deve restare nel contesto del gesto utente
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
         setPushState('blocked');
         toast.error('Permesso negato. Vai in Impostazioni browser → Notifiche per abilitarlo.');
         return;
       }
-
-      // Registra/recupera il service worker
       const reg = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
 
-      // Chiave VAPID dal server
       const vapidRes = await fetch('/api/push/vapid-key');
       if (!vapidRes.ok) { toast.error('Servizio non disponibile'); return; }
       const { key } = await vapidRes.json();
       if (!key) { toast.error('Servizio non configurato — contatta l\'assistenza'); return; }
 
-      // Crea subscription push
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(key) as unknown as ArrayBuffer,
@@ -106,13 +193,11 @@ export default function ImpostazioniPage() {
   async function handleDisablePush() {
     setPushBusy(true);
     try {
-      // Unsubscribe from browser push manager
       const reg = await navigator.serviceWorker.getRegistration('/sw.js');
       if (reg) {
         const sub = await reg.pushManager.getSubscription();
         if (sub) await sub.unsubscribe();
       }
-      // Remove from backend
       await fetch('/api/push/subscribe', { method: 'DELETE' });
       setPushState('inactive');
       toast.success('Notifiche push disattivate');
@@ -141,61 +226,84 @@ export default function ImpostazioniPage() {
   }
 
   return (
-    <div className="max-w-xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-      <div className="mb-8">
+    <div className="max-w-xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6">
+      <div>
         <p className="label-luxury text-accent mb-1">Account</p>
         <h1 className="font-display text-2xl sm:text-3xl text-primary font-light tracking-wide">Impostazioni</h1>
       </div>
 
+      {/* ── Dati account ── */}
+      <div className="bg-white border border-border rounded-xl px-5">
+        <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider pt-5 pb-1">Il tuo account</p>
+
+        {profile ? (
+          <>
+            <InfoRow icon={<User size={16} />} label="Azienda" value={profile.companyName} />
+            <InfoRow icon={<Hash size={16} />} label="Codice cliente" value={profile.customerCode} />
+            <InfoRow icon={<Mail size={16} />} label="Email di accesso" value={profile.email} />
+          </>
+        ) : (
+          <div className="py-6 text-center text-sm text-gray-300">Caricamento…</div>
+        )}
+
+        {/* Password */}
+        <div className="py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Lock size={16} className="text-gray-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-primary">Password</p>
+                {!showPasswordForm && (
+                  <p className="text-sm text-gray-300 mt-0.5 tracking-widest">••••••••</p>
+                )}
+              </div>
+            </div>
+            {!showPasswordForm && (
+              <button
+                onClick={() => setShowPasswordForm(true)}
+                className="text-xs text-accent hover:underline flex-shrink-0"
+              >
+                Cambia
+              </button>
+            )}
+          </div>
+          {showPasswordForm && (
+            <CambiaPasswordForm onDone={() => setShowPasswordForm(false)} />
+          )}
+        </div>
+      </div>
+
+      {/* ── Notifiche ── */}
       <div className="bg-white border border-border rounded-xl px-5">
         <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider pt-5 pb-1">Notifiche</p>
 
-        {/* Push notifications */}
         <SettingRow
           icon={<Smartphone size={18} />}
           title="Notifiche sul telefono"
           description={
-            pushState === 'unsupported'
-              ? 'Il tuo browser non supporta le notifiche push.'
-              : pushState === 'blocked'
-              ? 'Le notifiche sono bloccate. Vai in Impostazioni browser → Impostazioni sito → Notifiche e abilita app.b2b.on-earth.it.'
-              : pushState === 'active'
-              ? 'Ricevi una notifica sul telefono anche con l\'app chiusa.'
-              : 'Attiva per ricevere notifiche sul telefono anche con l\'app chiusa.'
+            pushState === 'unsupported' ? 'Il tuo browser non supporta le notifiche push.' :
+            pushState === 'blocked' ? 'Le notifiche sono bloccate. Vai in Impostazioni browser → Impostazioni sito → Notifiche e abilita app.b2b.on-earth.it.' :
+            pushState === 'active' ? 'Attive — ricevi un avviso anche con l\'app chiusa.' :
+            'Attiva per ricevere notifiche sul telefono anche con l\'app chiusa.'
           }
         >
-          {pushState === 'loading' && (
-            <span className="text-2xs text-gray-300">…</span>
-          )}
-          {pushState === 'unsupported' && (
-            <span className="text-2xs text-gray-400">Non disponibile</span>
-          )}
-          {pushState === 'blocked' && (
-            <span className="text-2xs text-red-500 font-medium">Bloccate</span>
-          )}
+          {pushState === 'loading' && <span className="text-2xs text-gray-300">…</span>}
+          {pushState === 'unsupported' && <span className="text-2xs text-gray-400">Non disponibile</span>}
+          {pushState === 'blocked' && <span className="text-2xs text-red-500 font-medium">Bloccate</span>}
           {pushState === 'active' && (
-            <button
-              onClick={handleDisablePush}
-              disabled={pushBusy}
-              className="flex items-center gap-1.5 text-xs text-red-500 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 transition-colors disabled:opacity-40"
-            >
-              <BellOff size={13} />
-              Disattiva
+            <button onClick={handleDisablePush} disabled={pushBusy}
+              className="flex items-center gap-1.5 text-xs text-red-500 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 transition-colors disabled:opacity-40">
+              <BellOff size={13} />Disattiva
             </button>
           )}
           {pushState === 'inactive' && (
-            <button
-              onClick={handleEnablePush}
-              disabled={pushBusy}
-              className="flex items-center gap-1.5 text-xs bg-black text-white rounded-lg px-3 py-1.5 hover:bg-gray-800 transition-colors disabled:opacity-40"
-            >
-              <SmartphoneNfc size={13} />
-              {pushBusy ? 'Attivazione…' : 'Attiva'}
+            <button onClick={handleEnablePush} disabled={pushBusy}
+              className="flex items-center gap-1.5 text-xs bg-black text-white rounded-lg px-3 py-1.5 hover:bg-gray-800 transition-colors disabled:opacity-40">
+              <SmartphoneNfc size={13} />{pushBusy ? 'Attivazione…' : 'Attiva'}
             </button>
           )}
         </SettingRow>
 
-        {/* Email notifications */}
         <SettingRow
           icon={emailEnabled === false ? <MailX size={18} /> : <Mail size={18} />}
           title="Notifiche via email"
@@ -204,26 +312,13 @@ export default function ImpostazioniPage() {
           {emailEnabled === null ? (
             <span className="text-2xs text-gray-300">…</span>
           ) : (
-            <button
-              onClick={() => handleToggleEmail(!emailEnabled)}
-              disabled={emailBusy}
-              className={`relative w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${emailEnabled ? 'bg-black' : 'bg-gray-200'}`}
-            >
+            <button onClick={() => handleToggleEmail(!emailEnabled)} disabled={emailBusy}
+              className={`relative w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${emailEnabled ? 'bg-black' : 'bg-gray-200'}`}>
               <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${emailEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           )}
         </SettingRow>
       </div>
-
-      {/* Push status explainer */}
-      {pushState === 'active' && (
-        <div className="mt-4 flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-100 rounded-xl">
-          <Bell size={14} className="text-green-600 flex-shrink-0" />
-          <p className="text-xs text-green-700">
-            Notifiche push attive su questo dispositivo. Per disattivarle puoi usare il pulsante qui sopra o le impostazioni del browser.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
