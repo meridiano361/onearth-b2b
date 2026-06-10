@@ -134,7 +134,7 @@ export default function AdminCustomersPage() {
               <th>Ordini</th>
               <th>Stato</th>
               <th>Registrato</th>
-              <th className="w-24"></th>
+              <th className="w-36"></th>
             </tr>
           </thead>
           <tbody>
