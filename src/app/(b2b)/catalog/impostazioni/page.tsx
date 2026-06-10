@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { Bell, BellOff, Mail, MailX, Smartphone, SmartphoneNfc, Eye, EyeOff, Lock, User, Hash } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -12,8 +13,6 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 type PushState = 'loading' | 'unsupported' | 'blocked' | 'active' | 'inactive';
-
-interface Profile { companyName: string; customerCode: string; email: string; }
 
 function SettingRow({ icon, title, description, children }: {
   icon: React.ReactNode; title: string; description?: string; children: React.ReactNode;
@@ -121,11 +120,11 @@ function CambiaPasswordForm({ onDone }: { onDone: () => void }) {
 }
 
 export default function ImpostazioniPage() {
+  const { data: session } = useSession();
   const [pushState, setPushState] = useState<PushState>('loading');
   const [pushBusy, setPushBusy] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState<boolean | null>(null);
   const [emailBusy, setEmailBusy] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
 
   useEffect(() => {
@@ -145,11 +144,6 @@ export default function ImpostazioniPage() {
       .then((r) => r.json())
       .then((d) => setEmailEnabled(d.notificationsEnabled ?? true))
       .catch(() => setEmailEnabled(true));
-    // Profile
-    fetch('/api/customer/profile')
-      .then((r) => r.json())
-      .then((d) => setProfile(d))
-      .catch(() => {});
   }, []);
 
   async function handleEnablePush() {
@@ -236,15 +230,9 @@ export default function ImpostazioniPage() {
       <div className="bg-white border border-border rounded-xl px-5">
         <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider pt-5 pb-1">Il tuo account</p>
 
-        {profile ? (
-          <>
-            <InfoRow icon={<User size={16} />} label="Azienda" value={profile.companyName} />
-            <InfoRow icon={<Hash size={16} />} label="Codice cliente" value={profile.customerCode} />
-            <InfoRow icon={<Mail size={16} />} label="Email di accesso" value={profile.email} />
-          </>
-        ) : (
-          <div className="py-6 text-center text-sm text-gray-300">Caricamento…</div>
-        )}
+        <InfoRow icon={<User size={16} />} label="Azienda" value={session?.user?.companyName ?? '—'} />
+        <InfoRow icon={<Hash size={16} />} label="Codice cliente" value={session?.user?.customerCode ?? '—'} />
+        <InfoRow icon={<Mail size={16} />} label="Email di accesso" value={session?.user?.email ?? '—'} />
 
         {/* Password */}
         <div className="py-4">
