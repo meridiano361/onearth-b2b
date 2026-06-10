@@ -22,14 +22,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await prisma.pushSubscription.upsert({
-      where: { endpoint },
-      update: { p256dh, auth, customerId },
-      create: { customerId, endpoint, p256dh, auth },
-    });
+    await prisma.pushSubscription.deleteMany({ where: { endpoint } });
+    await prisma.pushSubscription.create({ data: { customerId, endpoint, p256dh, auth } });
   } catch (err) {
     console.error('[push/subscribe POST]', err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
