@@ -6,7 +6,7 @@ import {
   Plus, ChevronDown, ChevronRight, Edit2, Trash2,
   ToggleLeft, ToggleRight, KeyRound, Store, Globe, Radio, Package,
   Users, MapPin, Copy, CheckSquare, Square, Loader2, Send,
-  ShoppingBag, Building, ShoppingCart, Tag, Landmark, X, Layers, Search,
+  ShoppingBag, Building, ShoppingCart, Tag, Landmark, X, Search,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -417,24 +417,6 @@ function OrgOperatorsBulkBar({ count, operatorIds, onDeselect, onDone }: BulkBar
     }
   }
 
-  async function runBulkFeature(enable: boolean) {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/admin/operators/bulk-features', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: operatorIds, featureMondiEspositivi: enable }),
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Errore'); }
-      const json = await res.json();
-      toast.success(`Esposizione ${enable ? 'abilitata' : 'disabilitata'} per ${json.updated} operatori`);
-      onDone();
-    } catch (e: any) {
-      toast.error(e.message || 'Errore durante l\'operazione');
-      setLoading(false);
-    }
-  }
-
   async function handleDelete() {
     if (!confirm(`Eliminare definitivamente ${count} operatore${count !== 1 ? 'i' : ''}? Questa azione non può essere annullata.`)) return;
     setLoading(true);
@@ -482,20 +464,6 @@ function OrgOperatorsBulkBar({ count, operatorIds, onDeselect, onDone }: BulkBar
           Reset password
         </button>
         <button
-          onClick={() => runBulkFeature(true)}
-          disabled={loading}
-          className="text-2xs px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded transition-colors disabled:opacity-50 flex items-center gap-1"
-        >
-          <Layers size={10} />Abilita Esposizione
-        </button>
-        <button
-          onClick={() => runBulkFeature(false)}
-          disabled={loading}
-          className="text-2xs px-2.5 py-1 bg-[#C17A5A]/70 hover:bg-[#C17A5A] rounded transition-colors disabled:opacity-50 flex items-center gap-1"
-        >
-          <Layers size={10} />Disabilita Esposizione
-        </button>
-        <button
           onClick={handleDelete}
           disabled={loading}
           className="text-2xs px-2.5 py-1 bg-red-500/70 hover:bg-red-500 rounded transition-colors disabled:opacity-50"
@@ -539,9 +507,6 @@ export default function AdminOrganizzazioniPage() {
   const [orgBulkLoading, setOrgBulkLoading] = useState(false);
   const [orgBulkResetResults, setOrgBulkResetResults] = useState<{ name: string; password: string }[] | null>(null);
 
-  // Global Mondi Espositivi bulk
-  const [mondiConfirm, setMondiConfirm] = useState<'enable' | 'disable' | null>(null);
-  const [mondiLoading, setMondiLoading] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-organizations'],
@@ -615,18 +580,6 @@ export default function AdminOrganizzazioniPage() {
     } catch { toast.error('Errore'); }
   }
 
-  async function handleToggleMondiEspositivi(op: Operator) {
-    try {
-      const res = await fetch(`/api/admin/operators/${op.id}/features`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ featureMondiEspositivi: !op.featureMondiEspositivi }),
-      });
-      if (!res.ok) throw new Error('Failed');
-      refresh();
-      toast.success(op.featureMondiEspositivi ? 'Esposizione disabilitata' : 'Esposizione abilitata');
-    } catch { toast.error('Errore'); }
-  }
-
   async function handleDeleteOperator(op: Operator) {
     if (!confirm(`Eliminare ${op.nome} ${op.cognome}?`)) return;
     try {
@@ -684,28 +637,6 @@ export default function AdminOrganizzazioniPage() {
       refresh();
       toast.success('Destinazione eliminata');
     } catch (e: any) { toast.error(e.message || 'Errore'); }
-  }
-
-  // ── Global Mondi Espositivi bulk ─────────────────────────────────────────
-
-  async function handleGlobalMondi(enable: boolean) {
-    setMondiLoading(true);
-    try {
-      const res = await fetch('/api/admin/operators/bulk-features', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: 'ALL', featureMondiEspositivi: enable }),
-      });
-      if (!res.ok) throw new Error('Errore');
-      const json = await res.json();
-      toast.success(`Esposizione ${enable ? 'abilitata' : 'disabilitata'} per ${json.updated} operatori`);
-      setMondiConfirm(null);
-      refresh();
-    } catch {
-      toast.error('Errore durante l\'operazione');
-    } finally {
-      setMondiLoading(false);
-    }
   }
 
   // ── Org bulk actions ──────────────────────────────────────────────────────
@@ -782,51 +713,9 @@ export default function AdminOrganizzazioniPage() {
             {totalOrgs} organizzazioni · {totalOps} operatori
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Mondi Espositivi bulk */}
-          {mondiConfirm ? (
-            <div className="flex items-center gap-2 bg-cream border border-border rounded px-3 py-2">
-              <span className="text-xs text-gray-600">
-                {mondiConfirm === 'enable'
-                  ? `Abilitare Esposizione per tutti i ${totalOps} operatori?`
-                  : `Disabilitare Esposizione per tutti i ${totalOps} operatori?`}
-              </span>
-              <button
-                onClick={() => handleGlobalMondi(mondiConfirm === 'enable')}
-                disabled={mondiLoading}
-                className="text-xs px-2.5 py-1 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50 transition-colors"
-              >
-                {mondiLoading ? '...' : 'Conferma'}
-              </button>
-              <button
-                onClick={() => setMondiConfirm(null)}
-                className="text-xs px-2.5 py-1 border border-border rounded hover:bg-cream transition-colors"
-              >
-                Annulla
-              </button>
-            </div>
-          ) : (
-            <>
-              <button
-                onClick={() => setMondiConfirm('enable')}
-                className="flex items-center gap-1.5 text-xs border border-border rounded px-3 py-1.5 hover:bg-cream transition-colors text-gray-600"
-              >
-                <Layers size={12} />
-                Abilita Esposizione per tutti
-              </button>
-              <button
-                onClick={() => setMondiConfirm('disable')}
-                className="flex items-center gap-1.5 text-xs border border-[#C17A5A] rounded px-3 py-1.5 hover:bg-orange-50 transition-colors text-[#C17A5A]"
-              >
-                <Layers size={12} />
-                Disabilita Esposizione per tutti
-              </button>
-            </>
-          )}
-          <Button icon={<Plus size={13} />} onClick={() => setShowNewOrg(true)}>
-            Nuova organizzazione
-          </Button>
-        </div>
+        <Button icon={<Plus size={13} />} onClick={() => setShowNewOrg(true)}>
+          Nuova organizzazione
+        </Button>
       </div>
 
       {/* ── Org bulk action bar ─────────────────────────────────────────────── */}
@@ -1044,7 +933,6 @@ export default function AdminOrganizzazioniPage() {
                                   <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Nome</th>
                                   <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Email</th>
                                   <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Stato</th>
-                                  <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs hidden xl:table-cell">Esposizione</th>
                                   <th className="w-24"></th>
                                 </tr>
                               </thead>
@@ -1072,20 +960,6 @@ export default function AdminOrganizzazioniPage() {
                                           {op.attivo ? 'Attivo' : 'Inattivo'}
                                         </Badge>
                                       </td>
-                                      <td className="px-3 py-2 hidden xl:table-cell">
-                                        <button
-                                          onClick={() => handleToggleMondiEspositivi(op)}
-                                          className={`flex items-center gap-1 text-2xs px-2 py-0.5 rounded transition-colors ${
-                                            op.featureMondiEspositivi
-                                              ? 'bg-violet-100 text-violet-700 hover:bg-violet-200'
-                                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                          }`}
-                                          title={op.featureMondiEspositivi ? 'Disabilita Esposizione' : 'Abilita Esposizione'}
-                                        >
-                                          <Layers size={10} />
-                                          {op.featureMondiEspositivi ? 'ON' : 'OFF'}
-                                        </button>
-                                      </td>
                                       <td className="px-3 py-2">
                                         <div className="flex items-center gap-1 justify-end">
                                           <button onClick={() => setOpModal({ orgId: org.id, orgNome: org.nome, operator: op })}
@@ -1110,11 +984,6 @@ export default function AdminOrganizzazioniPage() {
                                             {op.attivo
                                               ? <ToggleRight size={14} className="text-green-500" />
                                               : <ToggleLeft size={14} />}
-                                          </button>
-                                          <button onClick={() => handleToggleMondiEspositivi(op)}
-                                            className="p-1 xl:hidden text-gray-400 hover:text-violet-600 rounded hover:bg-violet-50 transition-colors"
-                                            title={op.featureMondiEspositivi ? 'Disabilita Esposizione' : 'Abilita Esposizione'}>
-                                            <Layers size={12} className={op.featureMondiEspositivi ? 'text-violet-500' : ''} />
                                           </button>
                                           <button onClick={() => handleDeleteOperator(op)}
                                             className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina">
@@ -1195,11 +1064,6 @@ export default function AdminOrganizzazioniPage() {
                                       {op.attivo
                                         ? <ToggleRight size={16} className="text-green-500" />
                                         : <ToggleLeft size={16} />}
-                                    </button>
-                                    <button onClick={() => handleToggleMondiEspositivi(op)}
-                                      className="p-1.5 text-gray-400 hover:text-violet-600 rounded hover:bg-violet-50 transition-colors"
-                                      title={op.featureMondiEspositivi ? 'Disabilita Esposizione' : 'Abilita Esposizione'}>
-                                      <Layers size={14} className={op.featureMondiEspositivi ? 'text-violet-500' : ''} />
                                     </button>
                                     <button onClick={() => handleDeleteOperator(op)}
                                       className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina">
