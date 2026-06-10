@@ -6,6 +6,7 @@ self.addEventListener('push', (event) => {
       icon: '/logo-on-earth/onearth_pittogramma.png',
       badge: '/logo-on-earth/onearth_pittogramma.png',
       data: { url: data.url ?? '/catalog' },
+      tag: 'onearth-notification',
       requireInteraction: false,
     })
   );
@@ -13,11 +14,14 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url ?? '/catalog';
+  const url = new URL(event.notification.data?.url ?? '/catalog', self.location.origin).href;
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if ('focus' in client) return client.focus();
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          client.navigate(url);
+          return client.focus();
+        }
       }
       return clients.openWindow(url);
     })
