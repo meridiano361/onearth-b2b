@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, ChevronDown, ChevronRight, Edit2, Trash2,
   ToggleLeft, ToggleRight, KeyRound, Store, Globe, Radio, Package,
-  Users, MapPin, Copy, CheckSquare, Square, Loader2,
+  Users, MapPin, Copy, CheckSquare, Square, Loader2, Send,
   ShoppingBag, Building, ShoppingCart, Tag, Landmark, X, Layers, Search,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
@@ -529,6 +529,7 @@ export default function AdminOrganizzazioniPage() {
   const [editOrgModal, setEditOrgModal] = useState<Organization | null>(null);
   const [resetResult, setResetResult] = useState<{ name: string; password: string } | null>(null);
   const [bulkResetResults, setBulkResetResults] = useState<{ name: string; email: string; password: string }[] | null>(null);
+  const [sendingCreds, setSendingCreds] = useState<string | null>(null);
 
   // Global operator selection (across all orgs)
   const [selectedOpIds, setSelectedOpIds] = useState<Set<string>>(new Set());
@@ -645,6 +646,25 @@ export default function AdminOrganizzazioniPage() {
     })
       .then(() => { setResetResult({ name: `${op.nome} ${op.cognome}`, password }); refresh(); })
       .catch(() => toast.error('Errore nel reset password'));
+  }
+
+  async function handleSendCredentials(op: Operator) {
+    if (!confirm(`Resettare la password di ${op.nome} ${op.cognome} e inviare le credenziali via email a ${op.email}?`)) return;
+    setSendingCreds(op.id);
+    try {
+      const res = await fetch(`/api/admin/operators/${op.id}/send-credentials`, { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Errore');
+      if (body.sent) {
+        toast.success(`Credenziali inviate a ${body.email}`);
+      } else {
+        toast(`Credenziali NON inviate (email): ${body.error || 'errore sconosciuto'}`, { icon: '⚠️', duration: 8000 });
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Errore nell'invio");
+    } finally {
+      setSendingCreds(null);
+    }
   }
 
   async function handleDeleteDestinazione(destinazione: Destinazione) {
@@ -1064,8 +1084,16 @@ export default function AdminOrganizzazioniPage() {
                                             <Edit2 size={12} />
                                           </button>
                                           <button onClick={() => handleResetPassword(op, org.nome)}
-                                            className="p-1 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Reset password">
+                                            className="p-1 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Reset password (mostra)">
                                             <KeyRound size={12} />
+                                          </button>
+                                          <button
+                                            onClick={() => handleSendCredentials(op)}
+                                            disabled={sendingCreds === op.id}
+                                            className="p-1 text-blue-500 hover:bg-blue-50 rounded transition-colors disabled:opacity-40"
+                                            title="Invia credenziali via email (reset + invio)"
+                                          >
+                                            <Send size={12} />
                                           </button>
                                           <button onClick={() => handleToggleOperator(op)}
                                             className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
@@ -1141,8 +1169,16 @@ export default function AdminOrganizzazioniPage() {
                                       <Edit2 size={14} />
                                     </button>
                                     <button onClick={() => handleResetPassword(op, org.nome)}
-                                      className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Reset password">
+                                      className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Reset password (mostra)">
                                       <KeyRound size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleSendCredentials(op)}
+                                      disabled={sendingCreds === op.id}
+                                      className="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors disabled:opacity-40"
+                                      title="Invia credenziali via email (reset + invio)"
+                                    >
+                                      <Send size={14} />
                                     </button>
                                     <button onClick={() => handleToggleOperator(op)}
                                       className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
