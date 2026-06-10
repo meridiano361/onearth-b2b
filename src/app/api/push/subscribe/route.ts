@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 
-async function requireCustomer() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== 'CUSTOMER') return null;
-  return session.user.id;
+async function requireCustomer(req: NextRequest) {
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  if (!token?.id || token.role !== 'CUSTOMER') return null;
+  return token.id as string;
 }
 
-export async function GET() {
-  const customerId = await requireCustomer();
+export async function GET(req: NextRequest) {
+  const customerId = await requireCustomer(req);
   if (!customerId) return NextResponse.json({ subscribed: false });
 
   const count = await prisma.pushSubscription.count({ where: { customerId } });
@@ -18,7 +17,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const customerId = await requireCustomer();
+  const customerId = await requireCustomer(req);
   if (!customerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
@@ -41,8 +40,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE() {
-  const customerId = await requireCustomer();
+export async function DELETE(req: NextRequest) {
+  const customerId = await requireCustomer(req);
   if (!customerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   await prisma.pushSubscription.deleteMany({ where: { customerId } });
