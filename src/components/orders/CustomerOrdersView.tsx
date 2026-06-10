@@ -106,6 +106,8 @@ export default function CustomerOrdersView() {
     }
   }
 
+  const [confirmDiscardDraft, setConfirmDiscardDraft] = useState(false);
+
   const [budgetEditingOrderId, setBudgetEditingOrderId] = useState<string | null>(null);
   const [budgetEditInput, setBudgetEditInput] = useState('');
   const [savingBudget, setSavingBudget] = useState(false);
@@ -412,6 +414,31 @@ export default function CustomerOrdersView() {
               >
                 <Pencil size={11} /> Modifica bozza
               </Link>
+
+              {confirmDiscardDraft ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 flex-1">Eliminare la bozza?</span>
+                  <button
+                    onClick={() => { clearCart(); setConfirmDiscardDraft(false); }}
+                    className="text-xs bg-red-500 text-white px-3 py-1.5 rounded hover:bg-red-600 transition-colors"
+                  >
+                    Sì, elimina
+                  </button>
+                  <button
+                    onClick={() => setConfirmDiscardDraft(false)}
+                    className="text-xs border border-border rounded px-3 py-1.5 text-gray-500 hover:bg-cream transition-colors"
+                  >
+                    Annulla
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDiscardDraft(true)}
+                  className="w-full py-2 text-xs font-medium rounded border border-red-200 text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 size={11} /> Elimina bozza
+                </button>
+              )}
 
               <button
                 onClick={() => setShowCreateOrderModal(true)}

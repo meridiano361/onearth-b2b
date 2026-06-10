@@ -30,7 +30,8 @@ export default function Header({ session }: HeaderProps) {
   const { menu } = useSettings();
 
   return (
-    <header className="h-14 bg-white border-b border-border flex items-center px-3 sm:px-6 gap-2 sm:gap-4 md:gap-6 flex-shrink-0 z-10">
+    <header className="bg-white border-b border-border flex-shrink-0 z-10 pt-safe">
+      <div className="h-14 flex items-center px-3 sm:px-6 gap-2 sm:gap-4 md:gap-6">
       {/* Logo */}
       <Link href="/catalog" className="flex items-center flex-shrink-0">
         <Image
@@ -117,6 +118,7 @@ export default function Header({ session }: HeaderProps) {
           <LogOut size={14} />
           <span className="hidden sm:inline">{t('logout')}</span>
         </button>
+      </div>
       </div>
     </header>
   );
