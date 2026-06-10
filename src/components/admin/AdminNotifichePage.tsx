@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Plus, Pencil, Trash2, Copy, Eye, EyeOff, Bell } from 'lucide-react';
+import { Plus, Pencil, Trash2, Copy, Eye, EyeOff, Bell, Smartphone, Mail } from 'lucide-react';
 
 type Notification = {
   id: string;
@@ -242,6 +242,50 @@ function Modal({
   );
 }
 
+function PushStats() {
+  const { data } = useQuery<{ totaleAttivi: number; conPush: number; senzaPush: number }>({
+    queryKey: ['admin-push-stats'],
+    queryFn: () => fetch('/api/admin/push-stats').then((r) => r.json()),
+    refetchInterval: 30_000,
+  });
+
+  if (!data) return null;
+
+  const pct = data.totaleAttivi > 0 ? Math.round((data.conPush / data.totaleAttivi) * 100) : 0;
+
+  return (
+    <div className="mb-6 bg-white border border-border rounded-xl p-4 flex flex-wrap gap-4 items-center">
+      <div className="flex items-center gap-2 flex-1 min-w-[140px]">
+        <div className="bg-black rounded-lg p-2">
+          <Smartphone size={14} className="text-white" />
+        </div>
+        <div>
+          <p className="text-xs text-gray-400">Push attivo</p>
+          <p className="text-lg font-semibold text-primary leading-none">{data.conPush} <span className="text-xs font-normal text-gray-400">/ {data.totaleAttivi} clienti</span></p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-1 min-w-[140px]">
+        <div className="bg-blue-50 rounded-lg p-2">
+          <Mail size={14} className="text-blue-500" />
+        </div>
+        <div>
+          <p className="text-xs text-gray-400">Solo email</p>
+          <p className="text-lg font-semibold text-primary leading-none">{data.senzaPush} <span className="text-xs font-normal text-gray-400">clienti</span></p>
+        </div>
+      </div>
+      <div className="flex-1 min-w-[160px]">
+        <div className="flex items-center justify-between text-2xs text-gray-400 mb-1">
+          <span>Copertura push</span>
+          <span>{pct}%</span>
+        </div>
+        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+          <div className="bg-black h-1.5 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminNotifichePage() {
   const qc = useQueryClient();
   const [modalData, setModalData] = useState<Partial<Notification> | null>(null);
@@ -307,6 +351,7 @@ export default function AdminNotifichePage() {
         <div className="flex items-center gap-3">
           <Bell size={18} className="text-primary" />
           <h1 className="text-lg font-semibold text-primary">Notifiche</h1>
+
         </div>
         <button
           onClick={() => setModalData({})}
@@ -316,6 +361,8 @@ export default function AdminNotifichePage() {
           Nuova notifica
         </button>
       </div>
+
+      <PushStats />
 
       {isLoading ? (
         <div className="text-sm text-gray-400 py-8">Caricamento…</div>
