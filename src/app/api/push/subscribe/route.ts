@@ -2,22 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 
-async function resolveCustomerId(req: NextRequest, bodyCustomerId?: string): Promise<string | null> {
-  // Try session token first
-  try {
-    const token = await getToken({ req });
-    if (token?.id && token.role === 'CUSTOMER') return token.id as string;
-  } catch {}
-
-  // Fallback: customerId sent from client (verified against DB)
-  if (bodyCustomerId) {
-    const exists = await prisma.customer.findUnique({ where: { id: bodyCustomerId }, select: { id: true } });
-    if (exists) return exists.id;
-  }
-
-  return null;
-}
-
 export async function GET(req: NextRequest) {
   try {
     const token = await getToken({ req });
@@ -31,14 +15,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { endpoint, p256dh, auth, customerId: bodyCustomerId } = body ?? {};
+  const { endpoint, p256dh, auth, customerId } = body ?? {};
 
-  if (!endpoint || !p256dh || !auth) {
-    return NextResponse.json({ error: 'Dati sottoscrizione non validi' }, { status: 400 });
+  if (!endpoint || !p256dh || !auth || !customerId) {
+    return NextResponse.json({ error: 'Dati mancanti' }, { status: 400 });
   }
-
-  const customerId = await resolveCustomerId(req, bodyCustomerId);
-  if (!customerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
     await prisma.pushSubscription.upsert({
