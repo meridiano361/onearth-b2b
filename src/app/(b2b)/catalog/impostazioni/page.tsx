@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Bell, BellOff, Mail, MailX, Smartphone, SmartphoneNfc, Eye, EyeOff, Lock, User, Hash } from 'lucide-react';
+import { Bell, BellOff, Mail, MailX, Smartphone, SmartphoneNfc, Eye, EyeOff, Lock, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -230,8 +230,7 @@ export default function ImpostazioniPage() {
       <div className="bg-white border border-border rounded-xl px-5">
         <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider pt-5 pb-1">Il tuo account</p>
 
-        <InfoRow icon={<User size={16} />} label="Azienda" value={session?.user?.companyName ?? '—'} />
-        <InfoRow icon={<Hash size={16} />} label="Codice cliente" value={session?.user?.customerCode ?? '—'} />
+        <InfoRow icon={<User size={16} />} label="Organizzazione" value={session?.user?.companyName ?? '—'} />
         <InfoRow icon={<Mail size={16} />} label="Email di accesso" value={session?.user?.email ?? '—'} />
 
         {/* Password */}
