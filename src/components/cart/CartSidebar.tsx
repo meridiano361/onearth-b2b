@@ -2,10 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag, MapPin, Plus } from 'lucide-react';
+import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag } from 'lucide-react';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
@@ -16,6 +15,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { computeProjections } from './CartSummary';
 import CartItem from './CartItem';
 import CartSummary from './CartSummary';
+import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import type { Destinazione, Product } from '@/types';
 
 type SuggestionProduct = Pick<Product, 'id' | 'code' | 'name' | 'imageUrl' | 'costPrice' | 'retailPrice' | 'lotSize' | 'iva'>;
@@ -28,11 +28,8 @@ export default function CartSidebar() {
   const { items, collectionId, notes, clearCart, removeItem, getTotalItems, hasLotWarnings, addItem } = useCartStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [destinazioni, setDestinazioni] = useState<Destinazione[]>([]);
-  const [showDestinazioneModal, setShowDestinazioneModal] = useState(false);
   const [selectedDestinazioneId, setSelectedDestinazioneId] = useState('');
-  const [showCreateDestModal, setShowCreateDestModal] = useState(false);
-  const [createDestForm, setCreateDestForm] = useState<{ tipo: string; citta: string; indirizzo: string; budget: string }>({ tipo: 'BOTTEGA', citta: '', indirizzo: '', budget: '' });
-  const [creatingDest, setCreatingDest] = useState(false);
+  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const t = useTranslations('cart');
   const ts = useTranslations('cartSummary');
 
@@ -42,26 +39,15 @@ export default function CartSidebar() {
   const isOperator = session?.user.role === 'OPERATOR';
 
   useEffect(() => {
-    if (preview) {
-      // In preview mode, fetch destinazioni for the simulated org via the catalog API
-      fetch('/api/catalog/destinazioni')
-        .then((r) => r.json())
-        .then((d) => {
-          const list: Destinazione[] = d.data || [];
-          setDestinazioni(list);
-          if (list.length >= 1) setSelectedDestinazioneId(list[0].id);
-        })
-        .catch(() => {});
-    } else if (isOperator) {
-      fetch('/api/catalog/destinazioni')
-        .then((r) => r.json())
-        .then((d) => {
-          const list: Destinazione[] = d.data || [];
-          setDestinazioni(list);
-          if (list.length >= 1) setSelectedDestinazioneId(list[0].id);
-        })
-        .catch(() => {});
-    }
+    if (!preview && !isOperator) return;
+    fetch('/api/catalog/destinazioni')
+      .then((r) => r.json())
+      .then((d) => {
+        const list: Destinazione[] = d.data || [];
+        setDestinazioni(list);
+        if (list.length >= 1) setSelectedDestinazioneId(list[0].id);
+      })
+      .catch(() => {});
   }, [isOperator, preview]);
 
   // Suggestions
@@ -75,7 +61,7 @@ export default function CartSidebar() {
   });
   const suggestions = suggestionsData?.data ?? [];
 
-  // Budget calculations
+  // Barra di riferimento budget destinazione (non budget ordine)
   const selectedCanale = useMemo(
     () => destinazioni.find((c) => c.id === selectedDestinazioneId),
     [destinazioni, selectedDestinazioneId]
@@ -85,8 +71,7 @@ export default function CartSidebar() {
   const budgetPct = budget && budget > 0 ? (costTotal / budget) * 100 : 0;
   const budgetRemaining = budget != null ? budget - costTotal : null;
 
-  async function submitOrder(canaleId?: string) {
-    console.log('[CartSidebar] submitOrder called', { canaleId, items: items.length });
+  async function submitOrder(canaleId?: string, budgetPersonalizzato?: number | null) {
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/orders', {
@@ -96,6 +81,7 @@ export default function CartSidebar() {
           collectionId: collectionId || null,
           notes: notes || null,
           canaleId: canaleId || null,
+          budgetPersonalizzato: budgetPersonalizzato ?? null,
           items: items.map((i) => ({
             productId: i.productId,
             quantity: i.quantity,
@@ -105,7 +91,6 @@ export default function CartSidebar() {
       });
       const body = await res.json();
       if (!res.ok) {
-        // Se ci sono prodotti mancanti, rimuovili dal carrello
         if (body.missing?.length) {
           body.missing.forEach((id: string) => removeItem(id));
         }
@@ -121,46 +106,12 @@ export default function CartSidebar() {
     }
   }
 
-  async function handleCreateDestinazioneAndOrder() {
-    setCreatingDest(true);
-    try {
-      const res = await fetch('/api/catalog/destinazioni', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: createDestForm.tipo,
-          citta: createDestForm.citta.trim() || null,
-          indirizzo: createDestForm.indirizzo.trim() || null,
-          budget: createDestForm.budget.trim() ? parseFloat(createDestForm.budget) : null,
-        }),
-      });
-      if (!res.ok) throw new Error((await res.json()).error || 'Errore');
-      const { data: newDest } = await res.json();
-      setShowCreateDestModal(false);
-      setDestinazioni([newDest]);
-      await submitOrder(newDest.id);
-    } catch (e: any) {
-      toast.error(e.message || 'Errore nella creazione della destinazione');
-    } finally {
-      setCreatingDest(false);
-    }
-  }
-
   async function handleCreateOrder() {
-    console.log('[CartSidebar] handleCreateOrder', { isOperator, destCount: destinazioni.length, isEmpty, isSubmitting });
     if (isSubmitting || isEmpty) return;
     if (isOperator) {
-      if (destinazioni.length === 0) {
-        // Nessuna destinazione configurata: crea ordine senza
-        await submitOrder(undefined);
-      } else if (destinazioni.length === 1) {
-        await submitOrder(destinazioni[0].id);
-      } else {
-        // Più destinazioni: mostra modal di selezione
-        setShowDestinazioneModal(true);
-      }
+      setShowCreateOrderModal(true);
     } else {
-      await submitOrder(undefined);
+      await submitOrder();
     }
   }
 
@@ -195,7 +146,7 @@ export default function CartSidebar() {
           )}
         </div>
 
-        {/* Crea Ordine — subito sotto l'header */}
+        {/* Crea Ordine */}
         {!isEmpty && (
           <div className="px-4 pt-3 pb-3 border-b border-border flex-shrink-0">
             {preview ? (
@@ -245,10 +196,9 @@ export default function CartSidebar() {
           )}
         </div>
 
-        {/* Summary, budget, suggestions and actions */}
+        {/* Summary, barra budget destinazione, suggerimenti */}
         {!isEmpty && (
           <>
-            {/* Budget section */}
             {ordine.mostraBudget && budget != null && (
               <div className="px-4 pt-3 pb-0 border-t border-border bg-cream/20">
                 <div className="flex justify-between text-2xs text-gray-400 mb-1">
@@ -263,7 +213,6 @@ export default function CartSidebar() {
                     <span>{ts('budgetRemaining')}: <span className={`font-medium ${budgetRemaining! < 0 ? 'text-red-500' : 'text-primary'}`}>{formatCurrency(budgetRemaining ?? 0)}</span></span>
                   )}
                 </div>
-                {/* Progress bar */}
                 <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
                   <div
                     className={`h-full rounded-full transition-all ${barColor}`}
@@ -285,7 +234,6 @@ export default function CartSidebar() {
 
             <CartSummary />
 
-            {/* Product suggestions */}
             {suggestions.length > 0 && (
               <div className="px-4 pb-3 border-t border-border/60">
                 <p className="text-2xs text-gray-400 uppercase tracking-wider mt-3 mb-2">{ts('suggestions')}</p>
@@ -311,116 +259,21 @@ export default function CartSidebar() {
                 </div>
               </div>
             )}
-
           </>
-
         )}
       </div>
 
-      {/* Create first destinazione modal — non-dismissible */}
-      {showCreateDestModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 z-10">
-            <div className="flex items-center gap-2 mb-1">
-              <MapPin size={14} className="text-accent flex-shrink-0" />
-              <h3 className="text-sm font-semibold text-primary tracking-wide">Attiva una destinazione</h3>
-            </div>
-            <p className="text-xs text-gray-400 mb-4">Per creare un ordine devi prima attivare una destinazione (punto vendita).</p>
-            <div className="space-y-3 mb-4">
-              <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block uppercase tracking-wide">Tipo *</label>
-                <select
-                  value={createDestForm.tipo}
-                  onChange={(e) => setCreateDestForm((f) => ({ ...f, tipo: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent"
-                >
-                  <option value="BOTTEGA">Bottega</option>
-                  <option value="EMPORIO">Emporio</option>
-                  <option value="DISTRETTO">Distretto</option>
-                  <option value="STORE">Store</option>
-                  <option value="OUTLET">Outlet</option>
-                  <option value="TENDONE">Tendone</option>
-                  <option value="FIERA">Fiera</option>
-                  <option value="ONLINE">Online</option>
-                  <option value="ALTRO">Altro</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Città <span className="text-gray-300">(opzionale)</span></label>
-                <input
-                  type="text"
-                  value={createDestForm.citta}
-                  onChange={(e) => setCreateDestForm((f) => ({ ...f, citta: e.target.value }))}
-                  placeholder="es. Milano"
-                  className="w-full px-3 py-2 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Indirizzo <span className="text-gray-300">(opzionale)</span></label>
-                <input
-                  type="text"
-                  value={createDestForm.indirizzo}
-                  onChange={(e) => setCreateDestForm((f) => ({ ...f, indirizzo: e.target.value }))}
-                  placeholder="es. Via Roma 10"
-                  className="w-full px-3 py-2 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Budget acquisto € <span className="text-gray-300">(opzionale)</span></label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="100"
-                    value={createDestForm.budget}
-                    onChange={(e) => setCreateDestForm((f) => ({ ...f, budget: e.target.value }))}
-                    placeholder="es. 5000"
-                    className="w-full pl-7 pr-3 py-2 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent"
-                  />
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={handleCreateDestinazioneAndOrder}
-              disabled={creatingDest}
-              className="w-full py-2.5 text-xs font-medium rounded bg-primary text-background hover:bg-warm-darker transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
-            >
-              {creatingDest ? <><Loader2 size={11} className="animate-spin" /> Creazione in corso…</> : <><Plus size={11} /> Crea destinazione e continua</>}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Destinazione selection modal — non-dismissible */}
-      {showDestinazioneModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 z-10">
-            <h3 className="text-sm font-semibold text-primary mb-1 tracking-wide">{t('selectCanaleTitle')}</h3>
-            <p className="text-xs text-gray-400 mb-4">{t('selectCanalePlaceholder')}</p>
-            <select
-              value={selectedDestinazioneId}
-              onChange={(e) => setSelectedDestinazioneId(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white border border-border rounded text-sm text-primary focus:outline-none focus:border-accent mb-4"
-            >
-              {destinazioni.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => { setShowDestinazioneModal(false); submitOrder(selectedDestinazioneId || undefined); }}
-              disabled={isSubmitting || !selectedDestinazioneId}
-              className="w-full py-2.5 text-xs font-medium rounded bg-primary text-background hover:bg-warm-darker transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
-            >
-              <Send size={11} />
-              {t('selectCanaleConfirm')}
-            </button>
-          </div>
-        </div>
+      {/* Modal unificato — stesso flusso di CustomerOrdersView */}
+      {showCreateOrderModal && (
+        <CreateOrderModal
+          destinazioni={destinazioni}
+          onClose={() => setShowCreateOrderModal(false)}
+          onSubmit={async (canaleId, budget) => {
+            setShowCreateOrderModal(false);
+            await submitOrder(canaleId, budget);
+          }}
+          submitting={isSubmitting}
+        />
       )}
     </>
   );

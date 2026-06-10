@@ -12,13 +12,8 @@ export async function GET() {
 
   const [totaleAttivi, conPush] = await Promise.all([
     prisma.customer.count({ where: { isActive: true } }),
-    prisma.customer.count({
-      where: {
-        isActive: true,
-        pushSubscriptions: { some: {} },
-      },
-    }),
+    prisma.pushSubscription.count(),
   ]);
 
-  return NextResponse.json({ totaleAttivi, conPush, senzaPush: totaleAttivi - conPush });
+  return NextResponse.json({ totaleAttivi, conPush, senzaPush: Math.max(0, totaleAttivi - conPush) });
 }

@@ -26,11 +26,10 @@ async function saveSubscription(sub: PushSubscription, email: string): Promise<b
 export default function PushNotificationSetup() {
   const { data: session } = useSession();
   const [phase, setPhase] = useState<Phase>('loading');
-  const isCustomer = session?.user?.role === 'CUSTOMER';
   const email = session?.user?.email ?? '';
 
   useEffect(() => {
-    if (!isCustomer || !email) return;
+    if (!email) return;
     if (typeof window === 'undefined') return;
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setPhase('unsupported');
@@ -47,7 +46,7 @@ export default function PushNotificationSetup() {
     }
     // 'default' — not yet asked
     setPhase('ask');
-  }, [isCustomer, email]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [email]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function ensureSubscribed() {
     try {
@@ -103,7 +102,6 @@ export default function PushNotificationSetup() {
     }
   }
 
-  if (!isCustomer) return null;
   if (phase === 'loading' || phase === 'unsupported' || phase === 'subscribed') return null;
 
   if (phase === 'denied-perm') {
