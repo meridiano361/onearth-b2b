@@ -14,20 +14,38 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Body non valido' }, { status: 400 });
+  }
+
   const { endpoint, p256dh, auth, customerId } = body ?? {};
 
   if (!endpoint || !p256dh || !auth || !customerId) {
-    return NextResponse.json({ error: 'Dati mancanti' }, { status: 400 });
+    return NextResponse.json({
+      error: `Dati mancanti: endpoint=${!!endpoint} p256dh=${!!p256dh} auth=${!!auth} cid=${!!customerId}`,
+    }, { status: 400 });
   }
 
   try {
-    await prisma.pushSubscription.deleteMany({ where: { endpoint } });
-    await prisma.pushSubscription.create({ data: { customerId, endpoint, p256dh, auth } });
-  } catch (err) {
-    console.error('[push/subscribe POST]', err);
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    await prisma.pushSubscription.deleteMany({ where: { endpoint: String(endpoint) } });
+    await prisma.pushSubscription.create({
+      data: {
+        customerId: String(customerId),
+        endpoint: String(endpoint),
+        p256dh: String(p256dh),
+        auth: String(auth),
+      },
+    });
+  } catch (err: unknown) {
+    const details =
+      err instanceof Error
+        ? { message: err.message, name: err.name, code: (err as Record<string, unknown>).code, meta: (err as Record<string, unknown>).meta }
+        : { raw: String(err) };
+    console.error('[push/subscribe POST]', details);
+    return NextResponse.json({ error: JSON.stringify(details) }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
