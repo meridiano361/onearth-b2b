@@ -236,7 +236,7 @@ export default function ImpostazioniPage() {
         <SettingRow
           icon={emailEnabled === false ? <MailX size={18} /> : <Mail size={18} />}
           title="Notifiche via email"
-          description="Ricevi aggiornamenti, novità e promozioni all'indirizzo email del tuo account."
+          description="Ricevi notifiche all'indirizzo email del tuo account."
         >
           {emailEnabled === null ? (
             <span className="text-2xs text-gray-300">…</span>
