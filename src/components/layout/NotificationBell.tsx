@@ -168,7 +168,7 @@ export default function NotificationBell() {
           <div
             ref={panelRef}
             className="
-              fixed left-4 right-4 top-16 z-50
+              fixed left-4 right-4 top-below-header z-50
               md:absolute md:left-auto md:right-0 md:top-8 md:w-[380px]
               bg-white rounded-xl shadow-2xl border border-border
               max-h-[70vh] md:max-h-[80vh] overflow-hidden flex flex-col

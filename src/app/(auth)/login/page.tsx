@@ -35,7 +35,7 @@ export default async function LoginPage() {
   const hasImage = !!ls.sfondoUrl;
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex pt-safe lg:pt-0">
       {/* Left Panel — Brand */}
       <div
         className="hidden lg:flex lg:w-1/2 bg-primary flex-col justify-between p-16 relative overflow-hidden"

@@ -109,7 +109,7 @@ export default function PushNotificationSetup() {
 
   if (phase === 'ios-browser') {
     return (
-      <div className="fixed bottom-[72px] md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[340px] z-40 bg-white border border-border rounded-xl shadow-luxury p-4 flex items-start gap-3 animate-in slide-in-from-bottom-4 duration-300">
+      <div className="fixed bottom-above-nav md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[340px] z-40 bg-white border border-border rounded-xl shadow-luxury p-4 flex items-start gap-3 animate-in slide-in-from-bottom-4 duration-300">
         <div className="bg-black rounded-full p-2 flex-shrink-0">
           <Bell size={14} className="text-white" />
         </div>
@@ -124,7 +124,7 @@ export default function PushNotificationSetup() {
   }
 
   return (
-    <div className="fixed bottom-[72px] md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[340px] z-40 bg-white border border-border rounded-xl shadow-luxury p-4 flex items-start gap-3 animate-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed bottom-above-nav md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[340px] z-40 bg-white border border-border rounded-xl shadow-luxury p-4 flex items-start gap-3 animate-in slide-in-from-bottom-4 duration-300">
       <div className="bg-black rounded-full p-2 flex-shrink-0">
         <Bell size={14} className="text-white" />
       </div>
