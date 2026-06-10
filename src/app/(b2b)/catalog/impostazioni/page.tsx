@@ -115,15 +115,15 @@ export default function ImpostazioniPage() {
       }
 
       const json = sub.toJSON();
-      const cid = session?.user?.id;
-      if (!cid) {
+      const email = session?.user?.email;
+      if (!email) {
         toast.error('Sessione non trovata — rieffettua il login', { duration: 10000 });
         return;
       }
       const saveRes = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint: json.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth, customerId: cid }),
+        body: JSON.stringify({ endpoint: json.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth, email }),
       });
       if (!saveRes.ok) {
         const errBody = await saveRes.json().catch(() => ({}));
