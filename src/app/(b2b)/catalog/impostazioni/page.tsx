@@ -12,7 +12,14 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }
 
-type PushState = 'loading' | 'unsupported' | 'blocked' | 'active' | 'inactive';
+type PushState = 'loading' | 'unsupported' | 'ios-browser' | 'blocked' | 'active' | 'inactive';
+
+function isIOSBrowser(): boolean {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+    ('standalone' in window.navigator && (window.navigator as Record<string, unknown>).standalone === true);
+  return isIOS && !isPWA;
+}
 
 function SettingRow({ icon, title, description, children }: {
   icon: React.ReactNode; title: string; description?: string; children: React.ReactNode;
@@ -55,7 +62,9 @@ export default function ImpostazioniPage() {
 
   useEffect(() => {
     // Push state
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (isIOSBrowser()) {
+      setPushState('ios-browser');
+    } else if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setPushState('unsupported');
     } else if (Notification.permission === 'denied') {
       setPushState('blocked');
@@ -199,6 +208,7 @@ export default function ImpostazioniPage() {
           icon={<Smartphone size={18} />}
           title="Notifiche sul telefono"
           description={
+            pushState === 'ios-browser' ? 'Su iPhone le notifiche funzionano solo con l\'app installata. Tocca ⎙ condividi in Safari → "Aggiungi a schermata Home", poi apri l\'app installata.' :
             pushState === 'unsupported' ? 'Il tuo browser non supporta le notifiche push.' :
             pushState === 'blocked' ? 'Le notifiche sono bloccate. Vai in Impostazioni browser → Impostazioni sito → Notifiche e abilita app.b2b.on-earth.it.' :
             pushState === 'active' ? 'Attive — ricevi un avviso anche con l\'app chiusa.' :
@@ -206,6 +216,7 @@ export default function ImpostazioniPage() {
           }
         >
           {pushState === 'loading' && <span className="text-2xs text-gray-300">…</span>}
+          {pushState === 'ios-browser' && <span className="text-2xs text-gray-400 font-medium">Installa l&apos;app</span>}
           {pushState === 'unsupported' && <span className="text-2xs text-gray-400">Non disponibile</span>}
           {pushState === 'blocked' && <span className="text-2xs text-red-500 font-medium">Bloccate</span>}
           {pushState === 'active' && (
