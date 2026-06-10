@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Home, LayoutGrid, Package, MapPin, FolderOpen, HelpCircle, Settings,
+  Home, LayoutGrid, Package, MapPin, FolderOpen, HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
@@ -56,12 +56,6 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Aiuto',
     href: '/catalog/assistenza',
     isActive: (p) => p.startsWith('/catalog/assistenza'),
-  },
-  {
-    icon: Settings,
-    label: 'Impostaz.',
-    href: '/catalog/impostazioni',
-    isActive: (p) => p.startsWith('/catalog/impostazioni'),
   },
 ];
 
