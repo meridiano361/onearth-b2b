@@ -63,35 +63,41 @@ export default function ImpostazioniPage() {
   async function handleEnablePush() {
     setPushBusy(true);
     try {
-      const reg = await navigator.serviceWorker.register('/sw.js');
-      await navigator.serviceWorker.ready;
-
-      const vapidRes = await fetch('/api/push/vapid-key');
-      if (!vapidRes.ok) { toast.error('Servizio non disponibile'); return; }
-      const { key } = await vapidRes.json();
-      if (!key) { toast.error('Servizio non configurato'); return; }
-
+      // Permesso prima di tutto — deve restare nel contesto del gesto utente
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
         setPushState('blocked');
-        toast.error('Permesso negato. Abilitalo dalle impostazioni del browser.');
+        toast.error('Permesso negato. Vai in Impostazioni browser → Notifiche per abilitarlo.');
         return;
       }
 
+      // Registra/recupera il service worker
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+
+      // Chiave VAPID dal server
+      const vapidRes = await fetch('/api/push/vapid-key');
+      if (!vapidRes.ok) { toast.error('Servizio non disponibile'); return; }
+      const { key } = await vapidRes.json();
+      if (!key) { toast.error('Servizio non configurato — contatta l\'assistenza'); return; }
+
+      // Crea subscription push
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(key) as unknown as ArrayBuffer,
       });
       const json = sub.toJSON();
-      await fetch('/api/push/subscribe', {
+      const saveRes = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ endpoint: json.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth }),
       });
+      if (!saveRes.ok) { toast.error('Errore nel salvataggio della subscription'); return; }
       setPushState('active');
       toast.success('Notifiche push attivate');
-    } catch {
-      toast.error('Errore durante l\'attivazione');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Errore: ${msg}`, { duration: 8000 });
     } finally {
       setPushBusy(false);
     }
