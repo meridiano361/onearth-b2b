@@ -192,7 +192,7 @@ function DocCard({ doc, onPreview }: { doc: Doc; onPreview: (doc: Doc) => void }
         {canPlay && (
           <button
             onClick={() => kind === 'video' ? window.open(doc.url, '_blank') : onPreview(doc)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent border border-accent/30 rounded hover:bg-accent/5 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-white rounded hover:bg-warm-darker transition-colors"
           >
             <Play size={11} />{kind === 'video' ? 'Guarda' : 'Ascolta'}
           </button>
