@@ -2,29 +2,43 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 
-async function requireCustomer(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token?.id || token.role !== 'CUSTOMER') return null;
-  return token.id as string;
+async function resolveCustomerId(req: NextRequest, bodyCustomerId?: string): Promise<string | null> {
+  // Try session token first
+  try {
+    const token = await getToken({ req });
+    if (token?.id && token.role === 'CUSTOMER') return token.id as string;
+  } catch {}
+
+  // Fallback: customerId sent from client (verified against DB)
+  if (bodyCustomerId) {
+    const exists = await prisma.customer.findUnique({ where: { id: bodyCustomerId }, select: { id: true } });
+    if (exists) return exists.id;
+  }
+
+  return null;
 }
 
 export async function GET(req: NextRequest) {
-  const customerId = await requireCustomer(req);
-  if (!customerId) return NextResponse.json({ subscribed: false });
-
-  const count = await prisma.pushSubscription.count({ where: { customerId } });
-  return NextResponse.json({ subscribed: count > 0 });
+  try {
+    const token = await getToken({ req });
+    if (!token?.id || token.role !== 'CUSTOMER') return NextResponse.json({ subscribed: false });
+    const count = await prisma.pushSubscription.count({ where: { customerId: token.id as string } });
+    return NextResponse.json({ subscribed: count > 0 });
+  } catch {
+    return NextResponse.json({ subscribed: false });
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const customerId = await requireCustomer(req);
-  if (!customerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   const body = await req.json();
-  const { endpoint, p256dh, auth } = body ?? {};
+  const { endpoint, p256dh, auth, customerId: bodyCustomerId } = body ?? {};
+
   if (!endpoint || !p256dh || !auth) {
     return NextResponse.json({ error: 'Dati sottoscrizione non validi' }, { status: 400 });
   }
+
+  const customerId = await resolveCustomerId(req, bodyCustomerId);
+  if (!customerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
     await prisma.pushSubscription.upsert({
@@ -41,9 +55,12 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const customerId = await requireCustomer(req);
-  if (!customerId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  await prisma.pushSubscription.deleteMany({ where: { customerId } });
-  return NextResponse.json({ ok: true });
+  try {
+    const token = await getToken({ req });
+    if (!token?.id || token.role !== 'CUSTOMER') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    await prisma.pushSubscription.deleteMany({ where: { customerId: token.id as string } });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 }
