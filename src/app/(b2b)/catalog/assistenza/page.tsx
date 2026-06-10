@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-10 — aggiornare ad ogni nuova funzionalità
+// AGGIORNATO: 2026-06-10
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
@@ -337,6 +337,7 @@ export default function AssistenzaPage() {
           <SectionHeader n={17} icon={Settings} label="Impostazioni" />
           <ul className="space-y-2">
             <Bullet>Accedi alle Impostazioni dall&apos;icona <span className="font-medium">⚙</span> in alto a destra o dalla barra in basso (<span className="font-medium">Impostaz.</span>).</Bullet>
+            <Bullet><span className="font-medium">Il tuo account:</span> visualizza organizzazione, email di accesso e password.</Bullet>
             <Bullet><span className="font-medium">Notifiche sul telefono:</span> attiva o disattiva le notifiche push. Se attive, ricevi un avviso sul telefono anche con l&apos;app chiusa.</Bullet>
             <Bullet><span className="font-medium">Notifiche via email:</span> attiva o disattiva le comunicazioni email relative a novità e promozioni.</Bullet>
             <Bullet>Se il browser ha già bloccato le notifiche, vai in Impostazioni Chrome → Impostazioni sito → Notifiche e abilita <em>app.b2b.on-earth.it</em>.</Bullet>

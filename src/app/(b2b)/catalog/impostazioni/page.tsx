@@ -86,20 +86,20 @@ export default function ImpostazioniPage() {
       try {
         reg = await navigator.serviceWorker.register('/sw.js');
         await navigator.serviceWorker.ready;
-      } catch (err) {
-        toast.error(`Errore service worker: ${err instanceof Error ? err.message : String(err)}`, { duration: 10000 });
+      } catch {
+        toast.error('Notifiche non supportate su questo browser');
         return;
       }
 
       let key: string;
       try {
         const vapidRes = await fetch('/api/push/vapid-key');
-        if (!vapidRes.ok) { toast.error('Servizio VAPID non disponibile'); return; }
+        if (!vapidRes.ok) { toast.error('Servizio non disponibile — riprova più tardi'); return; }
         const data = await vapidRes.json();
         key = data.key;
-        if (!key) { toast.error('Chiave VAPID non configurata — contatta l\'assistenza'); return; }
-      } catch (err) {
-        toast.error(`Errore fetch VAPID: ${err instanceof Error ? err.message : String(err)}`, { duration: 10000 });
+        if (!key) { toast.error('Servizio non configurato — contatta l\'assistenza'); return; }
+      } catch {
+        toast.error('Errore di rete — verifica la connessione');
         return;
       }
 
@@ -109,8 +109,8 @@ export default function ImpostazioniPage() {
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(key) as unknown as ArrayBuffer,
         });
-      } catch (err) {
-        toast.error(`Errore subscription FCM: ${err instanceof Error ? err.message : String(err)}`, { duration: 10000 });
+      } catch {
+        toast.error('Attivazione non riuscita — riprova o controlla le impostazioni del browser');
         return;
       }
 
@@ -132,9 +132,8 @@ export default function ImpostazioniPage() {
       }
       setPushState('active');
       toast.success('Notifiche push attivate');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error(`Errore generico: ${msg}`, { duration: 10000 });
+    } catch {
+      toast.error('Errore imprevisto — riprova');
     } finally {
       setPushBusy(false);
     }
