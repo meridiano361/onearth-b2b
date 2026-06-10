@@ -710,17 +710,14 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      if (!tranche) {
-        // Mark as ESPORTATO only for full export
-        const res = await fetch(`/api/orders/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'ESPORTATO' }),
-        });
-        if (!res.ok) throw new Error();
-        queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-        queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
-      }
+      const res = await fetch(`/api/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ESPORTATO' }),
+      });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
       toast.success(tranche ? `CSV tranche ${tranche} pronto` : t('exportSuccess'));
       setShowDemetraInstructions(true);
     } catch {

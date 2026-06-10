@@ -70,11 +70,9 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
     // UTF-8 BOM so Italian Excel opens it correctly
     download('﻿' + lines.join('\r\n'), filename, 'text/csv;charset=utf-8;');
     toast.success(`CSV ${tranche ?? 'completo'} pronto`);
-    if (!tranche) {
-      await markExported(order.id);
-      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-      onExported?.();
-    }
+    await markExported(order.id);
+    queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+    onExported?.();
   }
 
   async function handleXLSX(e: React.MouseEvent) {
