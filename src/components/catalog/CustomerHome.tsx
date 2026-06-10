@@ -263,7 +263,7 @@ function NotificationPopup({ notification, onClose }: { notification: Notificati
     <div
       className="fixed left-4 right-4 md:left-auto md:right-6 md:w-80 z-50 rounded-xl shadow-xl overflow-hidden"
       style={{
-        top: 80,
+        top: 'calc(env(safe-area-inset-top, 0px) + 4.5rem)',
         backgroundColor: notification.coloreSfondo,
         color: notification.coloreTesto,
       }}
@@ -387,12 +387,12 @@ export default function CustomerHome() {
 
       {/* ── Comunicazione: banner fisso in alto ─────────────── */}
       {isBannerTop && (
-        <div className="fixed top-0 left-0 right-0 z-50 px-4 py-2 flex justify-center">
+        <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-safe pb-2 flex justify-center">
           {commBox}
         </div>
       )}
       {isBannerTop2 && (
-        <div className="fixed top-0 left-0 right-0 z-49 px-4 py-2 flex justify-center" style={{ top: isBannerTop ? 48 : 0 }}>
+        <div className="fixed top-0 left-0 right-0 z-49 px-4 pt-safe pb-2 flex justify-center" style={{ top: isBannerTop ? 48 : 0 }}>
           {commBox2}
         </div>
       )}
@@ -532,12 +532,12 @@ export default function CustomerHome() {
 
       {/* ── Comunicazione: banner fisso in basso ────────────── */}
       {isBannerBottom && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 py-2 flex justify-center">
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-safe pt-2 flex justify-center">
           {commBox}
         </div>
       )}
       {isBannerBottom2 && (
-        <div className="fixed left-0 right-0 z-49 px-4 py-2 flex justify-center" style={{ bottom: isBannerBottom ? 48 : 0 }}>
+        <div className="fixed left-0 right-0 z-49 px-4 pb-safe pt-2 flex justify-center" style={{ bottom: isBannerBottom ? 48 : 0 }}>
           {commBox2}
         </div>
       )}

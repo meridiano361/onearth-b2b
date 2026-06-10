@@ -728,7 +728,7 @@ export default function CustomerOrdersView() {
 
       {/* Floating merge bar */}
       {mergeSelection.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-primary text-background rounded-full px-5 py-3 shadow-xl flex items-center gap-3">
+        <div className="fixed above-mobile-nav md:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-primary text-background rounded-full px-5 py-3 shadow-xl flex items-center gap-3">
           <GitMerge size={14} />
           <span className="text-sm font-medium">{mergeSelection.size} ordini selezionati</span>
           {mergeSelection.size === 2 && (

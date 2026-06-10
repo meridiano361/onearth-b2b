@@ -146,8 +146,12 @@
   .mb-safe { margin-bottom: env(safe-area-inset-bottom, 0px); }
   /* Positioned just below the header (safe-area-top + h-14 = 3.5rem) */
   .top-below-header { top: calc(env(safe-area-inset-top, 0px) + 3.5rem); }
-  /* Positioned above the mobile nav (safe-area-bottom + 72px) */
+  /* Positioned above the mobile nav (safe-area-bottom + 72px) — all breakpoints */
   .bottom-above-nav { bottom: calc(env(safe-area-inset-bottom, 0px) + 72px); }
+  /* Mobile-only: above the nav, overridden by md:bottom-* Tailwind classes at ≥768px */
+  @media (max-width: 767px) {
+    .above-mobile-nav { bottom: calc(env(safe-area-inset-bottom, 0px) + 72px); }
+  }
 
   /* Minimum tap target (44px per Apple HIG) */
   .tap-target {

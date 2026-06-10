@@ -1223,7 +1223,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
 
       {/* ── Fixed footer ──────────────────────────────────── */}
       <div className="
-        fixed bottom-16 left-0 right-0 z-20
+        fixed above-mobile-nav left-0 right-0 z-20
         lg:bottom-0 lg:right-80 xl:right-[340px]
         bg-white border-t border-border shadow-[0_-2px_8px_rgba(0,0,0,0.06)]
       ">

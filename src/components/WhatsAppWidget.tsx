@@ -30,7 +30,7 @@ export default function WhatsAppWidget() {
   if (!initialized || disabled || dismissed) return null;
 
   return (
-    <div className="fixed bottom-20 right-4 md:bottom-6 md:right-5 z-[9999] flex flex-col items-end gap-1">
+    <div className="fixed above-mobile-nav right-4 md:bottom-6 md:right-5 z-[9999] flex flex-col items-end gap-1">
       <button
         onClick={handleClose}
         className="w-4 h-4 rounded-full bg-gray-400 hover:bg-gray-500 text-white flex items-center justify-center text-[9px] leading-none transition-colors"

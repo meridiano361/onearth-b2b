@@ -548,7 +548,7 @@ export default function CatalogView() {
       {/* Mobile floating filter button */}
       <button
         onClick={openMobileFilters}
-        className="md:hidden fixed bottom-20 right-4 z-30 bg-primary text-background rounded-full shadow-lg px-4 py-2.5 flex items-center gap-2 text-xs font-semibold"
+        className="md:hidden fixed bottom-above-nav right-4 z-30 bg-primary text-background rounded-full shadow-lg px-4 py-2.5 flex items-center gap-2 text-xs font-semibold"
       >
         <SlidersHorizontal size={14} />
         Filtra
