@@ -81,18 +81,39 @@ export default function ImpostazioniPage() {
         toast.error('Permesso negato. Vai in Impostazioni browser → Notifiche per abilitarlo.');
         return;
       }
-      const reg = await navigator.serviceWorker.register('/sw.js');
-      await navigator.serviceWorker.ready;
 
-      const vapidRes = await fetch('/api/push/vapid-key');
-      if (!vapidRes.ok) { toast.error('Servizio non disponibile'); return; }
-      const { key } = await vapidRes.json();
-      if (!key) { toast.error('Servizio non configurato — contatta l\'assistenza'); return; }
+      let reg: ServiceWorkerRegistration;
+      try {
+        reg = await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
+      } catch (err) {
+        toast.error(`Errore service worker: ${err instanceof Error ? err.message : String(err)}`, { duration: 10000 });
+        return;
+      }
 
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(key) as unknown as ArrayBuffer,
-      });
+      let key: string;
+      try {
+        const vapidRes = await fetch('/api/push/vapid-key');
+        if (!vapidRes.ok) { toast.error('Servizio VAPID non disponibile'); return; }
+        const data = await vapidRes.json();
+        key = data.key;
+        if (!key) { toast.error('Chiave VAPID non configurata — contatta l\'assistenza'); return; }
+      } catch (err) {
+        toast.error(`Errore fetch VAPID: ${err instanceof Error ? err.message : String(err)}`, { duration: 10000 });
+        return;
+      }
+
+      let sub: PushSubscription;
+      try {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(key) as unknown as ArrayBuffer,
+        });
+      } catch (err) {
+        toast.error(`Errore subscription FCM: ${err instanceof Error ? err.message : String(err)}`, { duration: 10000 });
+        return;
+      }
+
       const json = sub.toJSON();
       const saveRes = await fetch('/api/push/subscribe', {
         method: 'POST',
@@ -108,7 +129,7 @@ export default function ImpostazioniPage() {
       toast.success('Notifiche push attivate');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error(`Errore: ${msg}`, { duration: 8000 });
+      toast.error(`Errore generico: ${msg}`, { duration: 10000 });
     } finally {
       setPushBusy(false);
     }
