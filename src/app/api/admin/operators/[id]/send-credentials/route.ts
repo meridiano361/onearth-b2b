@@ -3,23 +3,21 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
 import { sendCredenziali } from '@/lib/email';
 
-function generateDefaultPassword(orgNome: string): string {
-  const slug = orgNome.toLowerCase().normalize('NFD')
-    .replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '');
-  return 'onearth_' + slug.substring(0, 5);
-}
-
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !isAdminRole(session.user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { password } = await req.json();
+    if (!password || typeof password !== 'string' || password.trim().length < 1) {
+      return NextResponse.json({ error: 'Password mancante' }, { status: 400 });
     }
 
     const operator = await prisma.operator.findUnique({
@@ -31,18 +29,11 @@ export async function POST(
     });
     if (!operator) return NextResponse.json({ error: 'Non trovato' }, { status: 404 });
 
-    const password = generateDefaultPassword(operator.organization.nome);
-    const passwordHash = await bcrypt.hash(password, 12);
-
-    await prisma.operator.update({
-      where: { id: params.id },
-      data: { passwordHash },
-    });
-
+    // Invia la password fornita dall'admin — nessuna modifica al DB
     const result = await sendCredenziali({
       nome: operator.nome,
       email: operator.email,
-      password,
+      password: password.trim(),
       orgNome: operator.organization.nome,
     });
 

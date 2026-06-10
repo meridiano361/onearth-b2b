@@ -649,16 +649,23 @@ export default function AdminOrganizzazioniPage() {
   }
 
   async function handleSendCredentials(op: Operator) {
-    if (!confirm(`Resettare la password di ${op.nome} ${op.cognome} e inviare le credenziali via email a ${op.email}?`)) return;
+    const password = window.prompt(
+      `Password da inviare a ${op.nome} ${op.cognome} (${op.email}):\n\nScrivi la password attuale — il DB non verrà modificato.`
+    );
+    if (password === null || password.trim() === '') return;
     setSendingCreds(op.id);
     try {
-      const res = await fetch(`/api/admin/operators/${op.id}/send-credentials`, { method: 'POST' });
+      const res = await fetch(`/api/admin/operators/${op.id}/send-credentials`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: password.trim() }),
+      });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || 'Errore');
       if (body.sent) {
         toast.success(`Credenziali inviate a ${body.email}`);
       } else {
-        toast(`Credenziali NON inviate (email): ${body.error || 'errore sconosciuto'}`, { icon: '⚠️', duration: 8000 });
+        toast(`Email non inviata: ${body.error || 'errore sconosciuto'}`, { icon: '⚠️', duration: 8000 });
       }
     } catch (e: any) {
       toast.error(e.message || "Errore nell'invio");
