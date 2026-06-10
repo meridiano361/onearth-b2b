@@ -648,9 +648,11 @@ export default function AdminOrganizzazioniPage() {
       .catch(() => toast.error('Errore nel reset password'));
   }
 
-  async function handleSendCredentials(op: Operator) {
+  async function handleSendCredentials(op: Operator, orgNome: string) {
+    const defaultPassword = generateDefaultPassword(orgNome);
     const password = window.prompt(
-      `Password da inviare a ${op.nome} ${op.cognome} (${op.email}):\n\nScrivi la password attuale — il DB non verrà modificato.`
+      `Password da inviare a ${op.nome} ${op.cognome} (${op.email}):`,
+      defaultPassword
     );
     if (password === null || password.trim() === '') return;
     setSendingCreds(op.id);
@@ -1095,10 +1097,10 @@ export default function AdminOrganizzazioniPage() {
                                             <KeyRound size={12} />
                                           </button>
                                           <button
-                                            onClick={() => handleSendCredentials(op)}
+                                            onClick={() => handleSendCredentials(op, org.nome)}
                                             disabled={sendingCreds === op.id}
                                             className="p-1 text-blue-500 hover:bg-blue-50 rounded transition-colors disabled:opacity-40"
-                                            title="Invia credenziali via email (reset + invio)"
+                                            title="Invia credenziali via email"
                                           >
                                             <Send size={12} />
                                           </button>
@@ -1180,10 +1182,10 @@ export default function AdminOrganizzazioniPage() {
                                       <KeyRound size={14} />
                                     </button>
                                     <button
-                                      onClick={() => handleSendCredentials(op)}
+                                      onClick={() => handleSendCredentials(op, org.nome)}
                                       disabled={sendingCreds === op.id}
                                       className="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors disabled:opacity-40"
-                                      title="Invia credenziali via email (reset + invio)"
+                                      title="Invia credenziali via email"
                                     >
                                       <Send size={14} />
                                     </button>
