@@ -229,10 +229,15 @@ export default function ImpostazioniPage() {
         >
           {emailEnabled === null ? (
             <span className="text-2xs text-gray-300">…</span>
+          ) : emailEnabled ? (
+            <button onClick={() => handleToggleEmail(false)} disabled={emailBusy}
+              className="flex items-center gap-1.5 text-xs text-red-500 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 transition-colors disabled:opacity-40">
+              <MailX size={13} />Disattiva
+            </button>
           ) : (
-            <button onClick={() => handleToggleEmail(!emailEnabled)} disabled={emailBusy}
-              className={`relative w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${emailEnabled ? 'bg-black' : 'bg-gray-200'}`}>
-              <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${emailEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            <button onClick={() => handleToggleEmail(true)} disabled={emailBusy}
+              className="flex items-center gap-1.5 text-xs bg-black text-white rounded-lg px-3 py-1.5 hover:bg-gray-800 transition-colors disabled:opacity-40">
+              <Mail size={13} />{emailBusy ? 'Attivazione…' : 'Attiva'}
             </button>
           )}
         </SettingRow>
