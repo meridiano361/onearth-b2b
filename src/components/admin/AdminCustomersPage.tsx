@@ -225,10 +225,10 @@ export default function AdminCustomersPage() {
                       <button
                         onClick={() => handleSendCredentials(customer)}
                         disabled={sendingCreds === customer.id}
-                        className="p-1.5 text-gray-400 hover:text-blue-500 rounded hover:bg-blue-50 transition-colors disabled:opacity-40 flex-shrink-0"
+                        className="p-1.5 text-blue-500 rounded hover:bg-blue-50 transition-colors disabled:opacity-40 flex-shrink-0"
                         title="Invia credenziali per email (reset + invio)"
                       >
-                        <Send size={13} />
+                        <Send size={14} />
                       </button>
                       <button
                         onClick={(e) => handleMoreClick(e, customer)}
