@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Bell } from 'lucide-react';
 
-const DENIED_KEY = 'push-denied';
-
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -15,13 +13,24 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 type Phase = 'loading' | 'unsupported' | 'denied-perm' | 'ask' | 'subscribed' | 'busy';
 
+async function saveSubscription(sub: PushSubscription, email: string): Promise<boolean> {
+  const json = sub.toJSON();
+  const res = await fetch('/api/push/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ endpoint: json.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth, email }),
+  });
+  return res.ok;
+}
+
 export default function PushNotificationSetup() {
   const { data: session } = useSession();
   const [phase, setPhase] = useState<Phase>('loading');
   const isCustomer = session?.user?.role === 'CUSTOMER';
+  const email = session?.user?.email ?? '';
 
   useEffect(() => {
-    if (!isCustomer) return;
+    if (!isCustomer || !email) return;
     if (typeof window === 'undefined') return;
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setPhase('unsupported');
@@ -31,29 +40,24 @@ export default function PushNotificationSetup() {
       setPhase('denied-perm');
       return;
     }
-    // Already previously denied by browser dialog (they chose "Blocca")
-    if (localStorage.getItem(DENIED_KEY)) {
-      setPhase('denied-perm');
-      return;
-    }
     if (Notification.permission === 'granted') {
-      // Permission granted — ensure subscription exists in backend
-      ensureSubscribed().then((ok) => setPhase(ok ? 'subscribed' : 'ask'));
+      // Permission already granted — silently ensure subscription exists
+      ensureSubscribed();
       return;
     }
     // 'default' — not yet asked
     setPhase('ask');
-  }, [isCustomer]);
+  }, [isCustomer, email]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function ensureSubscribed(): Promise<boolean> {
+  async function ensureSubscribed() {
     try {
       const reg = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
 
       const vapidRes = await fetch('/api/push/vapid-key');
-      if (!vapidRes.ok) return false;
+      if (!vapidRes.ok) { setPhase('ask'); return; }
       const { key } = await vapidRes.json();
-      if (!key) return false;
+      if (!key) { setPhase('ask'); return; }
 
       let sub = await reg.pushManager.getSubscription();
       if (!sub) {
@@ -63,15 +67,10 @@ export default function PushNotificationSetup() {
         });
       }
 
-      const json = sub.toJSON();
-      await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint: json.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth }),
-      });
-      return true;
+      const ok = await saveSubscription(sub, email);
+      setPhase(ok ? 'subscribed' : 'ask');
     } catch {
-      return false;
+      setPhase('ask');
     }
   }
 
@@ -88,7 +87,6 @@ export default function PushNotificationSetup() {
 
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        localStorage.setItem(DENIED_KEY, '1');
         setPhase('denied-perm');
         return;
       }
@@ -98,13 +96,8 @@ export default function PushNotificationSetup() {
         applicationServerKey: urlBase64ToUint8Array(key) as unknown as ArrayBuffer,
       });
 
-      const json = sub.toJSON();
-      await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint: json.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth }),
-      });
-      setPhase('subscribed');
+      const ok = await saveSubscription(sub, email);
+      setPhase(ok ? 'subscribed' : 'ask');
     } catch {
       setPhase('ask');
     }
