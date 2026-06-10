@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, KeyRound, Copy, Send } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, KeyRound, Copy, Send, MoreHorizontal } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -27,6 +27,32 @@ export default function AdminCustomersPage() {
   const [resetResult, setResetResult] = useState<ResetResult | null>(null);
   const [sendingCreds, setSendingCreds] = useState<string | null>(null);
 
+  // Dropdown "altre azioni" — usa position:fixed per evitare il clipping dell'overflow:hidden del wrapper tabella
+  const [dropdownCustomerId, setDropdownCustomerId] = useState<string | null>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
+
+  function handleMoreClick(e: React.MouseEvent<HTMLButtonElement>, customer: Customer) {
+    e.stopPropagation();
+    if (dropdownCustomerId === customer.id) {
+      setDropdownCustomerId(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    setDropdownCustomerId(customer.id);
+  }
+
+  useEffect(() => {
+    if (!dropdownCustomerId) return;
+    const close = () => setDropdownCustomerId(null);
+    document.addEventListener('click', close);
+    document.addEventListener('scroll', close, { passive: true, capture: true });
+    return () => {
+      document.removeEventListener('click', close);
+      document.removeEventListener('scroll', close, { capture: true });
+    };
+  }, [dropdownCustomerId]);
+
   const { data, isLoading } = useQuery({
     queryKey: ['admin-customers', search],
     queryFn: async () => {
@@ -39,6 +65,7 @@ export default function AdminCustomersPage() {
   });
 
   const customers: (Customer & { orderCount?: number })[] = data?.data || [];
+  const dropdownCustomer = customers.find((c) => c.id === dropdownCustomerId);
 
   async function handleToggleActive(customer: Customer) {
     try {
@@ -123,7 +150,7 @@ export default function AdminCustomersPage() {
       </div>
 
       <div className="bg-white border border-border rounded overflow-hidden overflow-x-auto">
-        <table className="table-luxury w-full min-w-[800px]">
+        <table className="table-luxury w-full min-w-[700px]">
           <thead>
             <tr>
               <th>Azienda</th>
@@ -134,7 +161,7 @@ export default function AdminCustomersPage() {
               <th>Ordini</th>
               <th>Stato</th>
               <th>Registrato</th>
-              <th className="w-0"></th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -185,7 +212,8 @@ export default function AdminCustomersPage() {
                   <td className="text-xs text-gray-400">
                     {formatDate(customer.createdAt)}
                   </td>
-                  <td className="px-2 whitespace-nowrap">
+                  {/* Colonna azioni: 3 elementi max → Edit + Send (sempre visibili) + ⋯ dropdown */}
+                  <td className="pr-3 pl-1 whitespace-nowrap">
                     <div className="flex items-center gap-0.5 flex-nowrap">
                       <button
                         onClick={() => setEditingCustomer(customer)}
@@ -193,14 +221,6 @@ export default function AdminCustomersPage() {
                         title="Modifica"
                       >
                         <Edit2 size={13} />
-                      </button>
-                      <button
-                        onClick={() => handleResetPassword(customer)}
-                        disabled={resetting === customer.id}
-                        className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors disabled:opacity-40 flex-shrink-0"
-                        title="Reset password (mostra in schermo)"
-                      >
-                        <KeyRound size={13} />
                       </button>
                       <button
                         onClick={() => handleSendCredentials(customer)}
@@ -211,21 +231,11 @@ export default function AdminCustomersPage() {
                         <Send size={13} />
                       </button>
                       <button
-                        onClick={() => handleToggleActive(customer)}
+                        onClick={(e) => handleMoreClick(e, customer)}
                         className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors flex-shrink-0"
-                        title={customer.isActive ? 'Disattiva' : 'Attiva'}
+                        title="Altre azioni"
                       >
-                        {customer.isActive
-                          ? <ToggleRight size={14} className="text-green-500" />
-                          : <ToggleLeft size={14} />
-                        }
-                      </button>
-                      <button
-                        onClick={() => handleDelete(customer)}
-                        className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors flex-shrink-0"
-                        title="Elimina"
-                      >
-                        <Trash2 size={13} />
+                        <MoreHorizontal size={13} />
                       </button>
                     </div>
                   </td>
@@ -235,6 +245,42 @@ export default function AdminCustomersPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Dropdown "altre azioni" — position:fixed bypassa overflow:hidden del wrapper tabella */}
+      {dropdownCustomer && (
+        <div
+          style={{ position: 'fixed', top: dropdownPos.top, right: dropdownPos.right, zIndex: 9999 }}
+          className="w-48 bg-white border border-border rounded shadow-lg py-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => { setDropdownCustomerId(null); handleResetPassword(dropdownCustomer); }}
+            disabled={resetting === dropdownCustomer.id}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-gray-600 hover:bg-cream transition-colors disabled:opacity-40"
+          >
+            <KeyRound size={12} />
+            Reset password (mostra)
+          </button>
+          <button
+            onClick={() => { setDropdownCustomerId(null); handleToggleActive(dropdownCustomer); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-gray-600 hover:bg-cream transition-colors"
+          >
+            {dropdownCustomer.isActive
+              ? <ToggleRight size={12} className="text-green-500" />
+              : <ToggleLeft size={12} />
+            }
+            {dropdownCustomer.isActive ? 'Disattiva' : 'Attiva'}
+          </button>
+          <div className="border-t border-border/60 my-1" />
+          <button
+            onClick={() => { setDropdownCustomerId(null); handleDelete(dropdownCustomer); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-red-500 hover:bg-red-50 transition-colors"
+          >
+            <Trash2 size={12} />
+            Elimina
+          </button>
+        </div>
+      )}
 
       <Modal
         isOpen={showCreate}
