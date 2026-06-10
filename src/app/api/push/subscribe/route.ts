@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const details =
       err instanceof Error
-        ? { message: err.message, name: err.name, code: (err as Record<string, unknown>).code, meta: (err as Record<string, unknown>).meta }
+        ? { message: err.message, name: err.name, code: (err as unknown as Record<string, unknown>).code, meta: (err as unknown as Record<string, unknown>).meta }
         : { raw: String(err) };
     console.error('[push/subscribe POST]', details);
     return NextResponse.json({ error: JSON.stringify(details) }, { status: 500 });
