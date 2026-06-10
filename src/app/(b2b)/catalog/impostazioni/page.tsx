@@ -99,7 +99,11 @@ export default function ImpostazioniPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ endpoint: json.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth }),
       });
-      if (!saveRes.ok) { toast.error('Errore nel salvataggio della subscription'); return; }
+      if (!saveRes.ok) {
+        const errBody = await saveRes.json().catch(() => ({}));
+        toast.error(`Errore salvataggio (${saveRes.status}): ${errBody.error ?? 'sconosciuto'}`, { duration: 10000 });
+        return;
+      }
       setPushState('active');
       toast.success('Notifiche push attivate');
     } catch (err: unknown) {

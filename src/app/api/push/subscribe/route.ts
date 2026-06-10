@@ -27,11 +27,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Dati sottoscrizione non validi' }, { status: 400 });
   }
 
-  await prisma.pushSubscription.upsert({
-    where: { endpoint },
-    update: { p256dh, auth, customerId },
-    create: { customerId, endpoint, p256dh, auth },
-  });
+  try {
+    await prisma.pushSubscription.upsert({
+      where: { endpoint },
+      update: { p256dh, auth, customerId },
+      create: { customerId, endpoint, p256dh, auth },
+    });
+  } catch (err) {
+    console.error('[push/subscribe POST]', err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }
