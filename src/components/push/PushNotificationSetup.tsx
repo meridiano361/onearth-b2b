@@ -111,7 +111,23 @@ export default function PushNotificationSetup() {
   }
 
   if (!isCustomer) return null;
-  if (phase === 'loading' || phase === 'unsupported' || phase === 'denied-perm' || phase === 'subscribed') return null;
+  if (phase === 'loading' || phase === 'unsupported' || phase === 'subscribed') return null;
+
+  if (phase === 'denied-perm') {
+    return (
+      <div className="fixed bottom-[72px] md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[340px] z-40 bg-amber-50 border border-amber-200 rounded-xl shadow-luxury p-4 flex items-start gap-3">
+        <div className="bg-amber-400 rounded-full p-2 flex-shrink-0">
+          <Bell size={14} className="text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-amber-900">Notifiche bloccate</p>
+          <p className="text-2xs text-amber-700 mt-1 leading-relaxed">
+            Vai nelle <strong>Impostazioni del browser</strong> → Impostazioni sito → Notifiche, cerca <em>app.b2b.on-earth.it</em> e cambia in <strong>Consenti</strong>.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed bottom-[72px] md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[340px] z-40 bg-white border border-border rounded-xl shadow-luxury p-4 flex items-start gap-3 animate-in slide-in-from-bottom-4 duration-300">
