@@ -2,7 +2,7 @@
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
-  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge, Bell,
+  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge, Bell, Settings,
 } from 'lucide-react';
 
 export const metadata = { title: 'Guida all\'app — ON EARTH' };
@@ -24,6 +24,7 @@ const SECTIONS = [
   { id: 'risorse',            label: 'Risorse e Media',                   icon: Film },
   { id: 'mie-destinazioni',   label: 'Le mie Destinazioni',               icon: MapPin },
   { id: 'multilingua',        label: 'Multilingua',                       icon: Globe },
+  { id: 'impostazioni',        label: 'Impostazioni',                      icon: Settings },
   { id: 'assistenza-tecnica', label: 'Assistenza tecnica',                icon: HelpCircle },
 ];
 
@@ -331,9 +332,20 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 17. Assistenza tecnica */}
+        {/* 17. Impostazioni */}
+        <section id="impostazioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={17} icon={Settings} label="Impostazioni" />
+          <ul className="space-y-2">
+            <Bullet>Accedi alle Impostazioni dall&apos;icona <span className="font-medium">⚙</span> in alto a destra o dalla barra in basso (<span className="font-medium">Impostaz.</span>).</Bullet>
+            <Bullet><span className="font-medium">Notifiche sul telefono:</span> attiva o disattiva le notifiche push. Se attive, ricevi un avviso sul telefono anche con l&apos;app chiusa.</Bullet>
+            <Bullet><span className="font-medium">Notifiche via email:</span> attiva o disattiva le comunicazioni email relative a novità e promozioni.</Bullet>
+            <Bullet>Se il browser ha già bloccato le notifiche, vai in Impostazioni Chrome → Impostazioni sito → Notifiche e abilita <em>app.b2b.on-earth.it</em>.</Bullet>
+          </ul>
+        </section>
+
+        {/* 18. Assistenza tecnica */}
         <section id="assistenza-tecnica" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={17} icon={HelpCircle} label="Assistenza tecnica" />
+          <SectionHeader n={18} icon={HelpCircle} label="Assistenza tecnica" />
           <p className="text-sm text-gray-600">
             Per problemi tecnici{' '}
             <a

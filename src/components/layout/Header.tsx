@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
-import { LogOut, Heart } from 'lucide-react';
+import { LogOut, Heart, Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -84,6 +84,16 @@ export default function Header({ session }: HeaderProps) {
 
       {/* Notification bell */}
       <NotificationBell />
+
+      {/* Impostazioni */}
+      <Link
+        href="/catalog/impostazioni"
+        className="p-1.5 text-gray-400 hover:text-primary transition-colors"
+        aria-label="Impostazioni"
+        title="Impostazioni"
+      >
+        <Settings size={17} className={pathname.startsWith('/catalog/impostazioni') ? 'text-primary' : ''} />
+      </Link>
 
       {/* Language selector */}
       <LanguageSelector />
