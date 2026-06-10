@@ -123,7 +123,7 @@ export default function AdminCustomersPage() {
       </div>
 
       <div className="bg-white border border-border rounded overflow-hidden overflow-x-auto">
-        <table className="table-luxury w-full min-w-[700px]">
+        <table className="table-luxury w-full min-w-[800px]">
           <thead>
             <tr>
               <th>Azienda</th>
@@ -134,7 +134,7 @@ export default function AdminCustomersPage() {
               <th>Ordini</th>
               <th>Stato</th>
               <th>Registrato</th>
-              <th className="w-36"></th>
+              <th className="w-0"></th>
             </tr>
           </thead>
           <tbody>
@@ -185,11 +185,11 @@ export default function AdminCustomersPage() {
                   <td className="text-xs text-gray-400">
                     {formatDate(customer.createdAt)}
                   </td>
-                  <td>
-                    <div className="flex items-center gap-1">
+                  <td className="px-2 whitespace-nowrap">
+                    <div className="flex items-center gap-0.5 flex-nowrap">
                       <button
                         onClick={() => setEditingCustomer(customer)}
-                        className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors flex-shrink-0"
                         title="Modifica"
                       >
                         <Edit2 size={13} />
@@ -197,7 +197,7 @@ export default function AdminCustomersPage() {
                       <button
                         onClick={() => handleResetPassword(customer)}
                         disabled={resetting === customer.id}
-                        className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors disabled:opacity-40"
+                        className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors disabled:opacity-40 flex-shrink-0"
                         title="Reset password (mostra in schermo)"
                       >
                         <KeyRound size={13} />
@@ -205,14 +205,14 @@ export default function AdminCustomersPage() {
                       <button
                         onClick={() => handleSendCredentials(customer)}
                         disabled={sendingCreds === customer.id}
-                        className="p-1.5 text-gray-400 hover:text-blue-500 rounded hover:bg-blue-50 transition-colors disabled:opacity-40"
+                        className="p-1.5 text-gray-400 hover:text-blue-500 rounded hover:bg-blue-50 transition-colors disabled:opacity-40 flex-shrink-0"
                         title="Invia credenziali per email (reset + invio)"
                       >
                         <Send size={13} />
                       </button>
                       <button
                         onClick={() => handleToggleActive(customer)}
-                        className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors flex-shrink-0"
                         title={customer.isActive ? 'Disattiva' : 'Attiva'}
                       >
                         {customer.isActive
@@ -222,7 +222,7 @@ export default function AdminCustomersPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(customer)}
-                        className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors flex-shrink-0"
                         title="Elimina"
                       >
                         <Trash2 size={13} />
