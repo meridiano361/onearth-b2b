@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, KeyRound, Copy } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, KeyRound, Copy, Send } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -25,6 +25,7 @@ export default function AdminCustomersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [resetting, setResetting] = useState<string | null>(null);
   const [resetResult, setResetResult] = useState<ResetResult | null>(null);
+  const [sendingCreds, setSendingCreds] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-customers', search],
@@ -65,6 +66,21 @@ export default function AdminCustomersPage() {
       toast.error(err.message || 'Impossibile resettare la password');
     } finally {
       setResetting(null);
+    }
+  }
+
+  async function handleSendCredentials(customer: Customer) {
+    if (!confirm(`Resettare la password di ${customer.companyName} e inviare le credenziali via email a ${customer.email}?`)) return;
+    setSendingCreds(customer.id);
+    try {
+      const res = await fetch(`/api/customers/${customer.id}/send-credentials`, { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Errore');
+      toast.success(`Credenziali inviate a ${body.email}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Errore nell\'invio');
+    } finally {
+      setSendingCreds(null);
     }
   }
 
@@ -182,9 +198,17 @@ export default function AdminCustomersPage() {
                         onClick={() => handleResetPassword(customer)}
                         disabled={resetting === customer.id}
                         className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors disabled:opacity-40"
-                        title="Reset password"
+                        title="Reset password (mostra in schermo)"
                       >
                         <KeyRound size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleSendCredentials(customer)}
+                        disabled={sendingCreds === customer.id}
+                        className="p-1.5 text-gray-400 hover:text-blue-500 rounded hover:bg-blue-50 transition-colors disabled:opacity-40"
+                        title="Invia credenziali per email (reset + invio)"
+                      >
+                        <Send size={13} />
                       </button>
                       <button
                         onClick={() => handleToggleActive(customer)}
