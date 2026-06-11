@@ -687,36 +687,34 @@ export default function CustomerOrdersView() {
                   )}
 
                   {/* Elimina */}
-                  {!isExported && (
-                    isConfirming ? (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-gray-500">
-                          {t('deleteConfirm')}
-                        </span>
-                        <button
-                          onClick={() => handleDelete(order.id)}
-                          disabled={isDeleting}
-                          className="text-xs bg-red-500 text-white px-2 py-1.5 rounded hover:bg-red-600 transition-colors disabled:opacity-50"
-                        >
-                          {isDeleting ? t('deleting') : t('deleteYes')}
-                        </button>
-                        <button
-                          onClick={() => setConfirmingId(null)}
-                          disabled={isDeleting}
-                          className="text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:bg-cream transition-colors"
-                        >
-                          {t('cancel')}
-                        </button>
-                      </div>
-                    ) : (
+                  {isConfirming ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-gray-500">
+                        {t('deleteConfirm')}
+                      </span>
                       <button
-                        onClick={() => setConfirmingId(order.id)}
-                        className="flex items-center gap-1 text-xs border border-red-200 rounded px-2 py-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        onClick={() => handleDelete(order.id)}
+                        disabled={isDeleting}
+                        className="text-xs bg-red-500 text-white px-2 py-1.5 rounded hover:bg-red-600 transition-colors disabled:opacity-50"
                       >
-                        <Trash2 size={11} />
-                        <span className="hidden sm:inline">{t('delete')}</span>
+                        {isDeleting ? t('deleting') : t('deleteYes')}
                       </button>
-                    )
+                      <button
+                        onClick={() => setConfirmingId(null)}
+                        disabled={isDeleting}
+                        className="text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:bg-cream transition-colors"
+                      >
+                        {t('cancel')}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmingId(order.id)}
+                      className="flex items-center gap-1 text-xs border border-red-200 rounded px-2 py-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={11} />
+                      <span className="hidden sm:inline">{t('delete')}</span>
+                    </button>
                   )}
                 </div>
                 </div>

@@ -216,9 +216,6 @@ export async function DELETE(
       if (session.user.role === 'CUSTOMER' && order.customerId !== session.user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
-      if (order.status === 'ESPORTATO') {
-        return NextResponse.json({ error: 'Non puoi eliminare un ordine esportato' }, { status: 403 });
-      }
     }
 
     await prisma.order.delete({ where: { id: params.id } });

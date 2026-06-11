@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-11b
+// AGGIORNATO: 2026-06-11c
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
@@ -227,7 +227,7 @@ export default function AssistenzaPage() {
                 <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Esportare in Demetra (CSV per il gestionale)</span></li>
                 <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Duplicare un ordine esportato come base per uno nuovo</span></li>
                 <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Unire due ordini non esportati in uno solo (vedi sezione seguente)</span></li>
-                <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Eliminare un ordine non ancora esportato</span></li>
+                <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Eliminare un ordine (anche se già esportato)</span></li>
               </ul>
             </Bullet>
             <Bullet>Usa il pulsante <span className="font-medium">Budget</span> su ogni ordine per impostare o modificare il budget di spesa massimo.</Bullet>
