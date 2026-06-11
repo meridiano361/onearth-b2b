@@ -4,8 +4,9 @@ import { useState, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, CheckCircle, Minus, Plus, X, Database, Search, Loader2, MapPin, Copy, Layers, Pencil, Check, CalendarDays } from 'lucide-react';
+import { ArrowLeft, FileText, Minus, Plus, X, Search, Loader2, MapPin, Copy, Layers, Pencil, Check, CalendarDays } from 'lucide-react';
 import OrderExcelExport from '@/components/orders/OrderExcelExport';
+import OrderDemetraExport from '@/components/orders/OrderDemetraExport';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
@@ -506,7 +507,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   const [qtyOverrides, setQtyOverrides] = useState<QtyMap>({});
   const qtyDebounceRef = useRef<Record<string, NodeJS.Timeout>>({});
   const [exporting, setExporting] = useState(false);
-  const [exportingDemetra, setExportingDemetra] = useState<string | null>(null);
+
   const [showDemetraInstructions, setShowDemetraInstructions] = useState(false);
   const [addProductsOpen, setAddProductsOpen] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -576,11 +577,6 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
           return { ...it, effectiveQty: qty, effectiveSubtotal: qty * Number(it.unitPrice) };
         }),
     [order?.items, qtyOverrides]
-  );
-
-  const tranchePresenti = useMemo(
-    () => [...new Set(items.map(it => (it.product as any)?.tranche as string | undefined).filter((t): t is string => Boolean(t)))],
-    [items]
   );
 
   // Search filter (works on top of groupBy grouping)
@@ -685,47 +681,6 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     }
   }
 
-  async function handleExportDemetra(tranche?: string) {
-    if (exportingDemetra) return;
-    setExportingDemetra(tranche ?? 'ALL');
-    try {
-      const filtered = tranche
-        ? items.filter(it => (it.product as any)?.tranche === tranche)
-        : items;
-      const csv =
-        'Codice;Quantità\r\n' +
-        filtered
-          .map((it) => `${it.product?.code};${it.effectiveQty}`)
-          .join('\r\n');
-      const label = order?.orderNumber ?? id.slice(0, 8).toUpperCase();
-      const filename = tranche
-        ? `Demetra-${label}-${tranche}.csv`
-        : `Demetra-${label}-completo.csv`;
-      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      const res = await fetch(`/api/orders/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'ESPORTATO' }),
-      });
-      if (!res.ok) throw new Error();
-      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
-      toast.success(tranche ? `CSV tranche ${tranche} pronto` : t('exportSuccess'));
-      setShowDemetraInstructions(true);
-    } catch {
-      toast.error(t('exportError'));
-    } finally {
-      setExportingDemetra(null);
-    }
-  }
 
   async function handleChangeDest() {
     setChangingDest(true);
@@ -1273,43 +1228,11 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
               <span className="hidden sm:inline">Duplica</span>
             </button>
 
-            {/* Esporta in Demetra — bottone principale + per tranche */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              {order.status === 'ESPORTATO' ? (
-                <div className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs bg-green-100 text-green-700 rounded cursor-default">
-                  <CheckCircle size={12} />
-                  <span className="hidden sm:inline">{t('alreadyExported')}</span>
-                </div>
-              ) : (
-                <button
-                  onClick={() => handleExportDemetra()}
-                  disabled={!!exportingDemetra || items.length === 0}
-                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {exportingDemetra === 'ALL' ? (
-                    <Loader2 size={12} className="animate-spin" />
-                  ) : (
-                    <Database size={12} />
-                  )}
-                  <span className="hidden sm:inline">
-                    {exportingDemetra === 'ALL' ? t('exportingDemetra') : t('exportDemetra')}
-                  </span>
-                  <span className="sm:hidden">CSV</span>
-                </button>
-              )}
-              {tranchePresenti.map((tr) => (
-                <button
-                  key={tr}
-                  onClick={() => handleExportDemetra(tr)}
-                  disabled={!!exportingDemetra}
-                  title={`Esporta CSV tranche ${tr}`}
-                  className="flex items-center gap-1 px-2 py-2 text-xs border border-border rounded hover:bg-cream transition-colors text-gray-600 disabled:opacity-50"
-                >
-                  {exportingDemetra === tr ? <Loader2 size={10} className="animate-spin" /> : <Database size={10} />}
-                  {tr}
-                </button>
-              ))}
-            </div>
+            {/* Esporta in Demetra — dropdown con completo/tranche/Excel */}
+            <OrderDemetraExport
+              order={order}
+              onExported={() => setShowDemetraInstructions(true)}
+            />
           </div>
 
           {/* Total */}

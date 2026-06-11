@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-11
+// AGGIORNATO: 2026-06-11b
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
@@ -277,7 +277,7 @@ export default function AssistenzaPage() {
         <section id="demetra" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
           <SectionHeader n={12} icon={Download} label="Esportare in Demetra" />
           <ul className="space-y-2">
-            <Bullet>Clicca <span className="font-medium">Esporta in Demetra</span> per scaricare il file CSV da importare nel gestionale. Puoi esportare tutto l&apos;ordine o solo la tranche di interesse.</Bullet>
+            <Bullet>Il pulsante <span className="font-medium">Esporta in Demetra</span> apre un menu con le opzioni: <span className="font-medium">CSV completo</span>, <span className="font-medium">CSV tranche</span> (una per ogni tranche presente nell&apos;ordine) e <span className="font-medium">Excel (.xlsx)</span>. Il menu è disponibile sia nella lista ordini sia nella pagina di modifica/anteprima.</Bullet>
             <Bullet>Dopo l&apos;export l&apos;ordine diventa <span className="font-medium">Esportato</span> e non è più modificabile.</Bullet>
             <Bullet>Puoi duplicarlo per creare un nuovo ordine basato su quello esportato.</Bullet>
             <Bullet>Su Demetra vai in <span className="font-medium">Proposte di prenotazione</span> › <span className="font-medium">Proposte attive</span> › <span className="font-medium">Nuova prenotazione</span>, compila i campi e poi clicca su <span className="font-medium">Crea prenotazione</span> (in Cliente seleziona <span className="font-medium">Prenotazioni dirette</span>).</Bullet>
