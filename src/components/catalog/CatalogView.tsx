@@ -141,6 +141,7 @@ export default function CatalogView() {
   const [search, setSearch]               = useState(() => searchParams.get('q') || '');
   const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get('q') || '');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [novitaFilter, setNovitaFilter] = useState<'all' | 'novita' | 'continuativi'>('all');
 
   // ── Mobile drawer state ──────────────────────────────────────
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -286,6 +287,8 @@ export default function CatalogView() {
     if (produttore)         result = result.filter((p) => p.produttore         === produttore);
     if (tranche)            result = result.filter((p) => p.tranche            === tranche);
     if (onlyFavorites)      result = result.filter((p) => favoriteIds.has(p.id));
+    if (novitaFilter === 'novita')       result = result.filter((p) => p.collezione === 'CA27');
+    if (novitaFilter === 'continuativi') result = result.filter((p) => p.collezione !== 'CA27');
 
     if (sortBy === 'az')         result = [...result].sort((a, b) => a.name.localeCompare(b.name, 'it'));
     else if (sortBy === 'za')    result = [...result].sort((a, b) => b.name.localeCompare(a.name, 'it'));
@@ -306,11 +309,11 @@ export default function CatalogView() {
     });
 
     return result;
-  }, [products, debouncedSearch, filters, onlyFavorites, favoriteIds, sortBy]);
+  }, [products, debouncedSearch, filters, onlyFavorites, favoriteIds, sortBy, novitaFilter]);
 
   const PAGE_SIZE = 60;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [debouncedSearch, filters, onlyFavorites, sortBy]);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [debouncedSearch, filters, onlyFavorites, sortBy, novitaFilter]);
   const visibleProducts = filteredProducts.slice(0, visibleCount);
   const hasMore = visibleCount < filteredProducts.length;
 
@@ -511,6 +514,23 @@ export default function CatalogView() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Novità / Continuativi filter chips */}
+        <div className="flex items-center gap-1.5 px-4 sm:px-6 py-2 border-b border-border/50">
+          {(['all', 'novita', 'continuativi'] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setNovitaFilter(v)}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex-shrink-0 ${
+                novitaFilter === v
+                  ? 'bg-primary text-background border-primary'
+                  : 'bg-white text-gray-500 border-border hover:bg-cream'
+              }`}
+            >
+              {v === 'all' ? 'Tutti' : v === 'novita' ? 'Novità' : 'Continuativi'}
+            </button>
+          ))}
         </div>
 
         {/* Active filter chips — desktop */}

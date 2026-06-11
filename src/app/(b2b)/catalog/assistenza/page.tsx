@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-11e
+// AGGIORNATO: 2026-06-11f
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
@@ -156,6 +156,7 @@ export default function AssistenzaPage() {
             <Bullet>Sfoglia i prodotti della collezione CASA 2027.</Bullet>
             <Bullet>Usa i filtri a sinistra per filtrare per: Gruppo merceologico, Famiglia, Classe, Sottoclasse, Gruppo omogeneo, Linea, Colore, Tema colore, Collezione, Stagione, Produttore, Tranche.</Bullet>
             <Bullet><span className="font-medium">I filtri sono intelligenti:</span> selezionando un valore, tutti gli altri filtri aggiornano automaticamente le proprie opzioni mostrando solo i valori compatibili con la selezione corrente. Accanto a ogni opzione è indicato il numero di prodotti disponibili.</Bullet>
+            <Bullet>Usa i chip <span className="font-medium">Tutti / Novità / Continuativi</span> sopra la griglia per filtrare rapidamente tra le novità della stagione (CA27) e i prodotti continuativi.</Bullet>
             <Bullet>Ordina i prodotti con <span className="font-medium">Ordina per…</span>: A→Z, Z→A, Prezzo crescente, Prezzo decrescente, Novità (CA27), Continuativi.</Bullet>
             <Bullet>Cerca per codice, nome o linea nella barra di ricerca.</Bullet>
             <Bullet>Scegli la modalità di visualizzazione: griglia, lista orizzontale o lookbook.</Bullet>
