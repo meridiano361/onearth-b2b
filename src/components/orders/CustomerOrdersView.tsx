@@ -261,8 +261,6 @@ export default function CustomerOrdersView() {
   const [orderSearch, setOrderSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'exported'>('all');
 
-  if (isLoading) return <LoadingSpinner fullPage text={t('loading')} />;
-
   const list = orders ?? [];
 
   const filteredList = useMemo(() => {
@@ -279,6 +277,8 @@ export default function CustomerOrdersView() {
     }
     return result;
   }, [list, statusFilter, orderSearch]);
+
+  if (isLoading) return <LoadingSpinner fullPage text={t('loading')} />;
 
   return (
     <div className="min-h-screen bg-cream">
