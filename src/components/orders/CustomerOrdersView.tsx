@@ -67,8 +67,8 @@ export default function CustomerOrdersView() {
     fetch('/api/catalog/destinazioni')
       .then(r => r.json())
       .then(d => {
-        const list: Destinazione[] = d.data || [];
-        setDraftDestinazioni(list);
+        const dest: Destinazione[] = d.data || [];
+        setDraftDestinazioni(dest);
       })
       .catch(() => {});
   }, [isOperator, cartItems.length]);

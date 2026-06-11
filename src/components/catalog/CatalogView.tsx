@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
@@ -310,12 +310,7 @@ export default function CatalogView() {
 
   const PAGE_SIZE = 60;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const prevFilterKey = useRef('');
-  const filterKey = `${debouncedSearch}|${JSON.stringify(filters)}|${onlyFavorites}|${sortBy}`;
-  if (filterKey !== prevFilterKey.current) {
-    prevFilterKey.current = filterKey;
-    if (visibleCount !== PAGE_SIZE) setVisibleCount(PAGE_SIZE);
-  }
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [debouncedSearch, filters, onlyFavorites, sortBy]);
   const visibleProducts = filteredProducts.slice(0, visibleCount);
   const hasMore = visibleCount < filteredProducts.length;
 
