@@ -34,7 +34,7 @@ async function markExported(orderId: string) {
 
 export default function OrderDemetraExport({ order, onExported }: Props) {
   const queryClient = useQueryClient();
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const shortId = order.orderNumber ?? order.id.slice(0, 8).toUpperCase();
   const items = order.items ?? [];
@@ -53,7 +53,13 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
     e.stopPropagation();
     if (pos) { setPos(null); return; }
     const rect = btnRef.current!.getBoundingClientRect();
-    setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    const right = window.innerWidth - rect.right;
+    // Open upward when closer to bottom half of screen
+    if (rect.bottom > window.innerHeight / 2) {
+      setPos({ bottom: window.innerHeight - rect.top + 4, right });
+    } else {
+      setPos({ top: rect.bottom + 4, right });
+    }
   }
 
   async function handleCSV(e: React.MouseEvent, tranche?: string) {
@@ -114,7 +120,7 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
         <span className="hidden sm:inline">Esporta in Demetra</span>
         <ChevronDown
           size={9}
-          className={`transition-transform duration-150 ${pos ? 'rotate-180' : ''}`}
+          className={`transition-transform duration-150 ${pos ? (pos.bottom != null ? '' : 'rotate-180') : ''}`}
         />
       </button>
 
@@ -122,7 +128,7 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
       {pos &&
         createPortal(
           <div
-            style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 9999 }}
+            style={{ position: 'fixed', top: pos.top, bottom: pos.bottom, right: pos.right, zIndex: 9999 }}
             className="bg-white border border-border rounded shadow-luxury overflow-hidden min-w-[160px]"
             onMouseDown={(e) => e.stopPropagation()}
           >
