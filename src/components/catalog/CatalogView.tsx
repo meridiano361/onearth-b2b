@@ -514,23 +514,23 @@ export default function CatalogView() {
               )}
             </div>
           </div>
-        </div>
 
-        {/* Novità / Continuativi filter chips */}
-        <div className="flex items-center gap-1.5 px-4 sm:px-6 py-2 border-b border-border/50">
-          {(['all', 'novita', 'continuativi'] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => setNovitaFilter(v)}
-              className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex-shrink-0 ${
-                novitaFilter === v
-                  ? 'bg-primary text-background border-primary'
-                  : 'bg-white text-gray-500 border-border hover:bg-cream'
-              }`}
-            >
-              {v === 'all' ? 'Tutti' : v === 'novita' ? 'Novità' : 'Continuativi'}
-            </button>
-          ))}
+          {/* Novità / Continuativi chips — always visible inside sticky bar */}
+          <div className="flex items-center gap-1.5 px-4 sm:px-6 pb-2.5">
+            {(['all', 'novita', 'continuativi'] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setNovitaFilter(v)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex-shrink-0 ${
+                  novitaFilter === v
+                    ? 'bg-primary text-background border-primary'
+                    : 'bg-white text-gray-500 border-border hover:bg-cream'
+                }`}
+              >
+                {v === 'all' ? 'Tutti' : v === 'novita' ? 'Novità' : 'Continuativi'}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Active filter chips — desktop */}
