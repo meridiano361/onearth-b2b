@@ -582,19 +582,6 @@ export default function CatalogView() {
         </div>
       </div>
 
-      {/* Mobile floating filter button */}
-      <button
-        onClick={openMobileFilters}
-        className="md:hidden fixed bottom-above-nav right-4 z-30 bg-primary text-background rounded-full shadow-lg px-4 py-2.5 flex items-center gap-2 text-xs font-semibold"
-      >
-        <SlidersHorizontal size={14} />
-        Filtra
-        {activeFilterCount > 0 && (
-          <span className="bg-accent text-white text-2xs font-bold px-1.5 py-0.5 rounded-full leading-none">
-            {activeFilterCount}
-          </span>
-        )}
-      </button>
     </div>
   );
 }
