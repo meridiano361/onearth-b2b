@@ -393,7 +393,7 @@ export default function CatalogView() {
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* ── Catalog PDF download ─────────────────────────────────── */}
-        <div className="border-b border-border bg-cream/30 px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
+        <div className="hidden sm:flex border-b border-border bg-cream/30 px-4 sm:px-6 py-2.5 items-center justify-between gap-3">
           <span className="text-2xs uppercase tracking-widest text-gray-400 font-medium hidden sm:block">CASA 2027</span>
           <div className="flex items-center gap-4 ml-auto">
             {catalogoDoc && (
