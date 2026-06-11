@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
@@ -308,6 +308,17 @@ export default function CatalogView() {
     return result;
   }, [products, debouncedSearch, filters, onlyFavorites, favoriteIds, sortBy]);
 
+  const PAGE_SIZE = 60;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const prevFilterKey = useRef('');
+  const filterKey = `${debouncedSearch}|${JSON.stringify(filters)}|${onlyFavorites}|${sortBy}`;
+  if (filterKey !== prevFilterKey.current) {
+    prevFilterKey.current = filterKey;
+    if (visibleCount !== PAGE_SIZE) setVisibleCount(PAGE_SIZE);
+  }
+  const visibleProducts = filteredProducts.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredProducts.length;
+
   function makeFilterProps(currentFilters: Filters, onFilterChange: (key: keyof Filters, value: string | null) => void) {
     return {
       products,
@@ -534,13 +545,24 @@ export default function CatalogView() {
         {/* Product display */}
         <div className="px-3 sm:px-6 py-4 sm:py-6">
           {viewMode === 'grid' && (
-            <ProductGrid products={filteredProducts} isLoading={productsLoading} />
+            <ProductGrid products={visibleProducts} isLoading={productsLoading} />
           )}
           {viewMode === 'list' && (
-            <ProductList products={filteredProducts} isLoading={productsLoading} />
+            <ProductList products={visibleProducts} isLoading={productsLoading} />
           )}
           {viewMode === 'lookbook' && (
-            <ProductLookbook products={filteredProducts} isLoading={productsLoading} />
+            <ProductLookbook products={visibleProducts} isLoading={productsLoading} />
+          )}
+          {hasMore && (
+            <div className="flex flex-col items-center gap-1 mt-6 mb-4">
+              <button
+                onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+                className="px-6 py-2.5 text-sm font-medium border border-border rounded-lg text-gray-600 hover:bg-cream transition-colors"
+              >
+                Carica altri {Math.min(PAGE_SIZE, filteredProducts.length - visibleCount)} prodotti
+              </button>
+              <span className="text-2xs text-gray-400">{visibleCount} di {filteredProducts.length} visualizzati</span>
+            </div>
           )}
         </div>
       </div>

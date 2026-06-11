@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-11d
+// AGGIORNATO: 2026-06-11e
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
@@ -217,6 +217,7 @@ export default function AssistenzaPage() {
           <SectionHeader n={8} icon={Package} label="I miei Ordini" />
           <ul className="space-y-2">
             <Bullet>Visualizza tutti i tuoi ordini dalla voce <span className="font-medium">Ordini</span> nel menu.</Bullet>
+            <Bullet>Usa la barra di ricerca per cercare per numero ordine o destinazione, e i chip <span className="font-medium">Tutti / In lavorazione / Esportati</span> per filtrare per stato.</Bullet>
             <Bullet>Gli stati possibili sono: <span className="font-medium">Da esportare</span> | <span className="font-medium">Esportato</span>.</Bullet>
             <Bullet>Se hai prodotti nel carrello, vedi in cima la <span className="font-medium">Bozza corrente</span> con le opzioni <span className="font-medium">Modifica bozza</span>, <span className="font-medium">Elimina bozza</span> (con conferma) e <span className="font-medium">Crea Ordine</span>.</Bullet>
             <Bullet>Per ogni ordine puoi:

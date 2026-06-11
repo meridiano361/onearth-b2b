@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CalendarDays, Check, Copy, GitMerge, Layers, Loader2, Pencil, ScanEye, Send, ShoppingCart, Trash2, TrendingUp, Wallet, X } from 'lucide-react';
+import { CalendarDays, Check, Copy, GitMerge, Layers, Loader2, Pencil, ScanEye, Search, Send, ShoppingCart, Trash2, TrendingUp, Wallet, X } from 'lucide-react';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
@@ -258,9 +258,27 @@ export default function CustomerOrdersView() {
     }
   }
 
+  const [orderSearch, setOrderSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'exported'>('all');
+
   if (isLoading) return <LoadingSpinner fullPage text={t('loading')} />;
 
   const list = orders ?? [];
+
+  const filteredList = useMemo(() => {
+    let result = list;
+    if (statusFilter === 'active') result = result.filter(o => o.status !== 'ESPORTATO');
+    if (statusFilter === 'exported') result = result.filter(o => o.status === 'ESPORTATO');
+    if (orderSearch.trim()) {
+      const q = orderSearch.toLowerCase();
+      result = result.filter(o =>
+        (o.orderNumber ?? o.id).toLowerCase().includes(q) ||
+        (o.destinazione?.tipo ?? '').toLowerCase().includes(q) ||
+        (o.destinazione?.citta ?? '').toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [list, statusFilter, orderSearch]);
 
   return (
     <div className="min-h-screen bg-cream">
@@ -346,13 +364,15 @@ export default function CustomerOrdersView() {
       })()}
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
-        <div className="mb-6 flex items-start justify-between gap-3">
+        <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold text-primary tracking-tight">{t('title')}</h1>
             <p className="text-xs text-gray-400 mt-0.5">
               {list.length === 0
                 ? t('noOrdersFound')
-                : `${list.length} ${list.length === 1 ? t('orderSingular') : t('orderPlural')}`}
+                : filteredList.length < list.length
+                  ? `${filteredList.length} di ${list.length} ${list.length === 1 ? t('orderSingular') : t('orderPlural')}`
+                  : `${list.length} ${list.length === 1 ? t('orderSingular') : t('orderPlural')}`}
             </p>
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -366,6 +386,45 @@ export default function CustomerOrdersView() {
             </select>
           </div>
         </div>
+
+        {/* Search + status filter */}
+        {list.length > 0 && (
+          <div className="mb-4 space-y-2">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={orderSearch}
+                onChange={e => setOrderSearch(e.target.value)}
+                placeholder="Cerca per numero ordine o destinazione…"
+                className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-border rounded-lg focus:outline-none focus:border-accent transition-colors"
+              />
+              {orderSearch && (
+                <button
+                  onClick={() => setOrderSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+            <div className="flex gap-1.5">
+              {(['all', 'active', 'exported'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setStatusFilter(f)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                    statusFilter === f
+                      ? 'bg-primary text-background border-primary'
+                      : 'bg-white text-gray-500 border-border hover:bg-cream'
+                  }`}
+                >
+                  {f === 'all' ? 'Tutti' : f === 'active' ? 'In lavorazione' : 'Esportati'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {list.length === 0 && cartItems.length === 0 && (
           <div className="text-center py-20">
@@ -451,7 +510,10 @@ export default function CustomerOrdersView() {
               </button>
             </div>
           )}
-          {list.map((order) => {
+          {filteredList.length === 0 && list.length > 0 && (
+            <p className="text-center text-sm text-gray-400 py-8">Nessun ordine corrisponde alla ricerca.</p>
+          )}
+          {filteredList.map((order) => {
             const isExported = order.status === 'ESPORTATO';
             const isConfirming = confirmingId === order.id;
             const isDeleting = deletingId === order.id;
