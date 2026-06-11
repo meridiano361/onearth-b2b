@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-11c
+// AGGIORNATO: 2026-06-11d
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
@@ -282,8 +282,8 @@ export default function AssistenzaPage() {
             <Bullet>Puoi duplicarlo per creare un nuovo ordine basato su quello esportato.</Bullet>
             <Bullet>Su Demetra vai in <span className="font-medium">Proposte di prenotazione</span> › <span className="font-medium">Proposte attive</span> › <span className="font-medium">Nuova prenotazione</span>, compila i campi e poi clicca su <span className="font-medium">Crea prenotazione</span> (in Cliente seleziona <span className="font-medium">Prenotazioni dirette</span>).</Bullet>
             <Bullet>Nella finestra successiva inserisci la destinazione e compila gli altri campi necessari, poi clicca sul pulsante blu <span className="font-medium">Carica da file</span>.</Bullet>
-            <Bullet>Si apre una nuova finestra. Clicca sul pulsante grigio <span className="font-medium">Scegli file</span> e poi di nuovo sul pulsante verde <span className="font-medium">Carica da file</span> per confermare il caricamento.</Bullet>
-            <Bullet>Prosegui e conferma la prenotazione.</Bullet>
+            <Bullet>Si apre una nuova finestra. Clicca sul pulsante grigio <span className="font-medium">Scegli file</span> e poi di nuovo sul pulsante verde <span className="font-medium">Carica da file</span> per confermare il caricamento. In fondo alla pagina premi <span className="font-medium">Inserisci</span> per aggiungere gli articoli alla prenotazione, oppure <span className="font-medium">Annulla</span> per annullare l&apos;inserimento.</Bullet>
+            <Bullet>Prosegui e clicca <span className="font-medium">Conferma e invia</span> per confermare in via definitiva la prenotazione.</Bullet>
           </ul>
         </section>
 
