@@ -15,6 +15,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 const NAV_CONFIG: Record<string, { href: string; isActive: (p: string) => boolean }> = {
   catalogo:     { href: '/catalog/products',    isActive: (p) => p.startsWith('/catalog/products') },
   preferiti:    { href: '/catalog/preferiti',   isActive: (p) => p.startsWith('/catalog/preferiti') },
+  carrelli:     { href: '/catalog/carts',       isActive: (p) => p.startsWith('/catalog/carts') },
   ordini:       { href: '/catalog/orders',      isActive: (p) => p.startsWith('/catalog/orders') },
   destinazioni: { href: '/catalog/destinazioni',isActive: (p) => p.startsWith('/catalog/destinazioni') },
   assistenza:   { href: '/catalog/assistenza',  isActive: (p) => p.startsWith('/catalog/assistenza') },

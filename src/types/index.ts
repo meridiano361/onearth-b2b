@@ -248,6 +248,21 @@ export interface CartItem {
   quantity: number;
 }
 
+export type CartStatus = 'DRAFT' | 'CONVERTED';
+
+export interface Cart {
+  id: string;
+  name: string;
+  status: CartStatus;
+  customerId: string | null;
+  operatorId: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: CartItem[];
+  _count?: { items: number };
+}
+
 export interface CartState {
   items: CartItem[];
   customerId: string | null;

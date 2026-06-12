@@ -5,7 +5,7 @@ import { formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import { useSettings } from '@/contexts/SettingsContext';
 
-export function computeProjections(items: ReturnType<typeof useCartStore.getState>['items']) {
+export function computeProjections(items: { product: { costPrice: number | string; retailPrice: number | string; iva?: number | null }; quantity: number }[]) {
   let costTotal = 0;
   let venditeII = 0;
   let venditeIE = 0;

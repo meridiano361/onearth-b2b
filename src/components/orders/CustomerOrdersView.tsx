@@ -4,14 +4,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CalendarDays, Check, Copy, GitMerge, Layers, Loader2, Pencil, ScanEye, Search, Send, ShoppingCart, Trash2, TrendingUp, Wallet, X } from 'lucide-react';
-import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
+import { CalendarDays, Check, Copy, GitMerge, Layers, Loader2, Pencil, ScanEye, Search, Trash2, TrendingUp, Wallet, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
 import { formatCurrency, formatDate, getOrderStatusLabel, getOrderStatusColor } from '@/lib/utils';
-import { useCartStore } from '@/store/cartStore';
-
 function orderProjections(order: Order) {
   let venditeII = 0;
   let venditeIE = 0;
@@ -30,7 +27,7 @@ function orderProjections(order: Order) {
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import OrderDemetraExport from '@/components/orders/OrderDemetraExport';
 import OrderExcelExport from '@/components/orders/OrderExcelExport';
-import type { Destinazione, Order } from '@/types';
+import type { Order } from '@/types';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
@@ -55,58 +52,6 @@ export default function CustomerOrdersView() {
   const { data: session } = useSession();
   const isOperator = session?.user.role === 'OPERATOR';
   const { mondiEspositivi } = useFeatureFlags();
-
-  // Cart (bozza corrente)
-  const { items: cartItems, collectionId: cartCollectionId, notes: cartNotes, clearCart } = useCartStore();
-  const [draftSubmitting, setDraftSubmitting] = useState(false);
-  const [draftDestinazioni, setDraftDestinazioni] = useState<Destinazione[]>([]);
-  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
-
-  useEffect(() => {
-    if (!isOperator || cartItems.length === 0) return;
-    fetch('/api/catalog/destinazioni')
-      .then(r => r.json())
-      .then(d => {
-        const dest: Destinazione[] = d.data || [];
-        setDraftDestinazioni(dest);
-      })
-      .catch(() => {});
-  }, [isOperator, cartItems.length]);
-
-  const cartTotal = cartItems.reduce((sum, i) => sum + Number(i.product.costPrice) * i.quantity, 0);
-  const cartTotalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
-
-  async function handleCreateFromDraft(canaleId: string, budget: number) {
-    setDraftSubmitting(true);
-    try {
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          collectionId: cartCollectionId || null,
-          notes: cartNotes || null,
-          canaleId: canaleId || null,
-          budgetPersonalizzato: budget || null,
-          items: cartItems.map(i => ({
-            productId: i.productId,
-            quantity: i.quantity,
-            unitPrice: Number(i.product.costPrice),
-          })),
-        }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || 'Errore');
-      clearCart();
-      toast.success('Ordine creato con successo');
-      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-    } catch (e: any) {
-      toast.error(e.message || 'Errore');
-    } finally {
-      setDraftSubmitting(false);
-    }
-  }
-
-  const [confirmDiscardDraft, setConfirmDiscardDraft] = useState(false);
 
   const [budgetEditingOrderId, setBudgetEditingOrderId] = useState<string | null>(null);
   const [budgetEditInput, setBudgetEditInput] = useState('');
@@ -287,18 +232,6 @@ export default function CustomerOrdersView() {
 
   return (
     <div className="min-h-screen bg-cream">
-      {showCreateOrderModal && (
-        <CreateOrderModal
-          destinazioni={draftDestinazioni}
-          onClose={() => setShowCreateOrderModal(false)}
-          onSubmit={(canaleId, budget) => {
-            setShowCreateOrderModal(false);
-            handleCreateFromDraft(canaleId, budget);
-          }}
-          submitting={draftSubmitting}
-        />
-      )}
-
       {/* Merge modal */}
       {showMergeModal && (() => {
         const ids = Array.from(mergeSelection);
@@ -468,7 +401,7 @@ export default function CustomerOrdersView() {
           </div>
         )}
 
-        {list.length === 0 && cartItems.length === 0 && (
+        {list.length === 0 && (
           <div className="text-center py-20">
             <p className="text-sm text-gray-400">{t('noOrders')}</p>
             <Link href="/catalog" className="mt-3 inline-block text-sm text-accent hover:underline">
@@ -478,80 +411,6 @@ export default function CustomerOrdersView() {
         )}
 
         <div className="space-y-4">
-          {/* Bozza corrente — visibile subito dal carrello */}
-          {cartItems.length > 0 && (
-            <div className="bg-white border-2 border-amber-200 rounded p-4 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  <ShoppingCart size={13} className="text-amber-500" />
-                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Bozza corrente</p>
-                </div>
-                <span className="text-2xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium flex-shrink-0">
-                  Carrello
-                </span>
-              </div>
-
-              <p className="text-xs text-gray-500">
-                {cartItems.length} {cartItems.length === 1 ? 'articolo' : 'articoli'}
-                {' · '}
-                {cartTotalItems} pz
-                {' · '}
-                <span className="font-medium text-primary">{formatCurrency(cartTotal)}</span>
-              </p>
-
-              <div className="space-y-0.5 max-h-28 overflow-y-auto">
-                {cartItems.map(item => (
-                  <div key={item.productId} className="flex items-center justify-between text-2xs text-gray-500">
-                    <span className="truncate flex-1 mr-2 font-mono">{item.product.code}</span>
-                    <span className="truncate flex-1 mr-2">{item.product.name}</span>
-                    <span className="flex-shrink-0 font-medium">×{item.quantity}</span>
-                  </div>
-                ))}
-              </div>
-
-              <Link
-                href="/catalog"
-                className="w-full py-2 text-xs font-medium rounded border border-amber-400 text-amber-700 hover:bg-amber-50 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Pencil size={11} /> Modifica bozza
-              </Link>
-
-              {confirmDiscardDraft ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 flex-1">Eliminare la bozza?</span>
-                  <button
-                    onClick={() => { clearCart(); setConfirmDiscardDraft(false); }}
-                    className="text-xs bg-red-500 text-white px-3 py-1.5 rounded hover:bg-red-600 transition-colors"
-                  >
-                    Sì, elimina
-                  </button>
-                  <button
-                    onClick={() => setConfirmDiscardDraft(false)}
-                    className="text-xs border border-border rounded px-3 py-1.5 text-gray-500 hover:bg-cream transition-colors"
-                  >
-                    Annulla
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmDiscardDraft(true)}
-                  className="w-full py-2 text-xs font-medium rounded border border-red-200 text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Trash2 size={11} /> Elimina bozza
-                </button>
-              )}
-
-              <button
-                onClick={() => setShowCreateOrderModal(true)}
-                disabled={draftSubmitting}
-                className="w-full py-2 text-xs font-medium rounded bg-primary text-background hover:bg-warm-darker transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
-              >
-                {draftSubmitting
-                  ? <><Loader2 size={11} className="animate-spin" /> Creazione in corso…</>
-                  : <><Send size={11} /> Crea Ordine</>}
-              </button>
-            </div>
-          )}
           {filteredList.length === 0 && list.length > 0 && (
             <p className="text-center text-sm text-gray-400 py-8">Nessun ordine corrisponde alla ricerca.</p>
           )}

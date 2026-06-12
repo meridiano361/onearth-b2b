@@ -1,97 +1,118 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Product, CartItem } from '@/types';
+import type { Cart, CartItem, Product } from '@/types';
 import { roundToLot } from '@/lib/utils';
 
 interface CartStore {
+  // Active cart metadata (not persisted — loaded from server on mount)
+  cartId: string | null;
+  cartName: string | null;
   items: CartItem[];
-  customerId: string | null;
-  collectionId: string | null;
   notes: string;
 
+  // Triggered when user tries to add a product without an active cart
+  pendingProduct: { product: Product; quantity: number } | null;
+
   // Actions
+  setCart: (cart: Cart) => void;
+  clearCart: () => void;
+  setPendingProduct: (p: { product: Product; quantity: number } | null) => void;
+  setNotes: (notes: string) => void;
+
+  // Item mutations — optimistic update + fire-and-forget API call
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
-  clearCart: () => void;
-  setCustomerId: (id: string | null) => void;
-  setCollectionId: (id: string | null) => void;
-  setNotes: (notes: string) => void;
-  bulkSet: (items: CartItem[], notes?: string) => void;
 
   // Computed
+  getItemQuantity: (productId: string) => number;
   getTotalItems: () => number;
   getTotalValue: () => number;
   getTotalLines: () => number;
-  getItemQuantity: (productId: string) => number;
   hasLotWarnings: () => boolean;
+}
+
+function patchCartItem(cartId: string, productId: string, quantity: number) {
+  fetch(`/api/catalog/carts/${cartId}/items`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productId, quantity }),
+  }).catch(() => {});
 }
 
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
+      cartId: null,
+      cartName: null,
       items: [],
-      customerId: null,
-      collectionId: null,
       notes: '',
+      pendingProduct: null,
+
+      setCart: (cart) =>
+        set({
+          cartId: cart.id,
+          cartName: cart.name,
+          notes: cart.notes ?? '',
+          items: cart.items ?? [],
+        }),
+
+      clearCart: () =>
+        set({ cartId: null, cartName: null, items: [], notes: '', pendingProduct: null }),
+
+      setPendingProduct: (p) => set({ pendingProduct: p }),
+
+      setNotes: (notes) => {
+        const { cartId } = get();
+        set({ notes });
+        if (cartId) {
+          fetch(`/api/catalog/carts/${cartId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes }),
+          }).catch(() => {});
+        }
+      },
 
       addItem: (product, quantity = 1) => {
-        const { items } = get();
-        const existing = items.find((i) => i.productId === product.id);
-
-        // Snap to nearest lot size multiple
-        const effectiveQty = roundToLot(quantity, product.lotSize || 1);
-
-        if (existing) {
-          set({
-            items: items.map((i) =>
-              i.productId === product.id
-                ? { ...i, quantity: i.quantity + effectiveQty }
-                : i
-            ),
-          });
-        } else {
-          set({
-            items: [...items, { productId: product.id, product, quantity: effectiveQty }],
-          });
+        const { cartId, items } = get();
+        if (!cartId) {
+          set({ pendingProduct: { product, quantity } });
+          return;
         }
+        const effectiveQty = roundToLot(quantity, product.lotSize || 1);
+        const existing = items.find((i) => i.productId === product.id);
+        const newQty = existing ? existing.quantity + effectiveQty : effectiveQty;
+        if (existing) {
+          set({ items: items.map((i) => i.productId === product.id ? { ...i, quantity: newQty } : i) });
+        } else {
+          set({ items: [...items, { productId: product.id, product, quantity: newQty }] });
+        }
+        patchCartItem(cartId, product.id, newQty);
       },
 
       removeItem: (productId) => {
-        set({ items: get().items.filter((i) => i.productId !== productId) });
+        const { cartId, items } = get();
+        set({ items: items.filter((i) => i.productId !== productId) });
+        if (cartId) patchCartItem(cartId, productId, 0);
       },
 
       updateQuantity: (productId, quantity) => {
-        if (quantity <= 0) {
-          get().removeItem(productId);
-          return;
-        }
-        set({
-          items: get().items.map((i) =>
-            i.productId === productId ? { ...i, quantity } : i
-          ),
-        });
+        if (quantity <= 0) { get().removeItem(productId); return; }
+        const { cartId, items } = get();
+        set({ items: items.map((i) => i.productId === productId ? { ...i, quantity } : i) });
+        if (cartId) patchCartItem(cartId, productId, quantity);
       },
 
-      clearCart: () => set({ items: [], notes: '' }),
-
-      setCustomerId: (id) => set({ customerId: id }),
-
-      setCollectionId: (id) => set({ collectionId: id }),
-
-      setNotes: (notes) => set({ notes }),
-
-      bulkSet: (items, notes) => set({ items, ...(notes !== undefined ? { notes } : {}) }),
+      getItemQuantity: (productId) =>
+        get().items.find((i) => i.productId === productId)?.quantity || 0,
 
       getTotalItems: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
 
       getTotalValue: () =>
-        get().items.reduce((sum, i) => sum + i.product.costPrice * i.quantity, 0),
+        get().items.reduce((sum, i) => sum + Number(i.product.costPrice) * i.quantity, 0),
 
       getTotalLines: () => get().items.length,
-
-      getItemQuantity: (productId) =>
-        get().items.find((i) => i.productId === productId)?.quantity || 0,
 
       hasLotWarnings: () =>
         get().items.some((i) => {
@@ -100,13 +121,9 @@ export const useCartStore = create<CartStore>()(
         }),
     }),
     {
-      name: 'onearth-cart',
-      partialize: (state) => ({
-        items: state.items,
-        customerId: state.customerId,
-        collectionId: state.collectionId,
-        notes: state.notes,
-      }),
+      name: 'onearth-cart-v2',
+      // Only persist cartId — items are loaded from server on mount
+      partialize: (state) => ({ cartId: state.cartId }),
     }
   )
 );

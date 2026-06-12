@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Home, LayoutGrid, Package, MapPin, FolderOpen, HelpCircle,
+  Home, LayoutGrid, Package, ShoppingCart, FolderOpen, HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
@@ -33,17 +33,17 @@ const NAV_ITEMS: NavItem[] = [
     isActive: (p) => p.startsWith('/catalog/products'),
   },
   {
+    icon: ShoppingCart,
+    label: 'Carrelli',
+    href: '/catalog/carts',
+    isActive: (p) => p.startsWith('/catalog/carts'),
+    badge: true,
+  },
+  {
     icon: Package,
     label: 'Ordini',
     href: '/catalog/orders',
     isActive: (p) => p.startsWith('/catalog/orders'),
-    badge: true,
-  },
-  {
-    icon: MapPin,
-    label: 'Destinazioni',
-    href: '/catalog/destinazioni',
-    isActive: (p) => p.startsWith('/catalog/destinazioni'),
   },
   {
     icon: FolderOpen,

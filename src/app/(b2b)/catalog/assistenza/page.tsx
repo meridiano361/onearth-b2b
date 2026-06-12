@@ -1,7 +1,7 @@
-// AGGIORNATO: 2026-06-12c
+// AGGIORNATO: 2026-06-12d
 
 import {
-  LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
+  LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
   Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge, Bell, Settings,
 } from 'lucide-react';
 
@@ -12,6 +12,7 @@ const SECTIONS = [
   { id: 'come-accedere',      label: 'Come accedere',                     icon: LogIn },
   { id: 'catalogo',           label: 'Il Catalogo',                       icon: BookOpen },
   { id: 'preferiti',          label: 'Preferiti',                         icon: Heart },
+  { id: 'carrelli',           label: 'I Carrelli',                        icon: ShoppingCart },
   { id: 'creare-ordine',      label: 'Creare un Ordine',                  icon: ShoppingBag },
   { id: 'budget-ordine',      label: 'Budget Ordine',                     icon: Wallet },
   { id: 'destinazioni',       label: 'Le Destinazioni',                   icon: MapPin },
@@ -24,7 +25,7 @@ const SECTIONS = [
   { id: 'risorse',            label: 'Risorse e Media',                   icon: Film },
   { id: 'mie-destinazioni',   label: 'Le mie Destinazioni',               icon: MapPin },
   { id: 'multilingua',        label: 'Multilingua',                       icon: Globe },
-  { id: 'impostazioni',        label: 'Impostazioni',                      icon: Settings },
+  { id: 'impostazioni',       label: 'Impostazioni',                      icon: Settings },
   { id: 'assistenza-tecnica', label: 'Assistenza tecnica',                icon: HelpCircle },
 ];
 
@@ -177,22 +178,36 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 5. Creare un Ordine */}
-        <section id="creare-ordine" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={5} icon={ShoppingBag} label="Creare un Ordine" />
+        {/* 5. I Carrelli */}
+        <section id="carrelli" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={5} icon={ShoppingCart} label="I Carrelli" />
           <ul className="space-y-2">
-            <Bullet>Aggiungi prodotti dal catalogo usando i pulsanti <span className="font-medium">+</span> e <span className="font-medium">−</span>.</Bullet>
-            <Bullet>Nella barra a destra vedi l&apos;ordine corrente con: costo totale, vendite potenziali, margine medio.</Bullet>
-            <Bullet>Imposta un <span className="font-medium">Budget ordine €</span> nel campo apposito sotto il pulsante Crea Ordine (opzionale). Il budget viene salvato sull&apos;ordine e puoi modificarlo in seguito direttamente dall&apos;ordine.</Bullet>
-            <Bullet>Clicca <span className="font-medium">Crea Ordine</span> per salvare.</Bullet>
+            <Bullet>Prima di aggiungere prodotti devi avere un carrello attivo. Vai in <span className="font-medium">Carrelli</span> nel menu per crearne uno o selezionarne uno esistente.</Bullet>
+            <Bullet>Ogni utente può avere più carrelli aperti contemporaneamente (es. un carrello per ogni cliente o stagione).</Bullet>
+            <Bullet>Crea un nuovo carrello con il pulsante <span className="font-medium">Nuovo carrello</span> in alto a destra: assegna un nome (es. &ldquo;Natale 2026&rdquo;, &ldquo;Riassortimento Milano&rdquo;).</Bullet>
+            <Bullet>Clicca <span className="font-medium">Seleziona</span> su un carrello per renderlo attivo: il carrello attivo è evidenziato con il badge <span className="font-medium">attivo</span>.</Bullet>
+            <Bullet>Una volta attivo, clicca <span className="font-medium">+ Aggiungi prodotti</span> per andare al catalogo e iniziare ad aggiungere prodotti.</Bullet>
+            <Bullet>I carrelli sono sincronizzati tra tutti i tuoi dispositivi: se aggiungi prodotti da un telefono, li ritrovi esattamente uguali accedendo dallo stesso account su un altro dispositivo.</Bullet>
+            <Bullet>Rinomina un carrello con l&apos;icona matita. Eliminalo con l&apos;icona cestino (i prodotti vengono persi).</Bullet>
+            <Bullet>Un carrello diventa un Ordine quando clicchi <span className="font-medium">Crea Ordine</span> nella barra laterale. Dopo la conversione il carrello non è più modificabile.</Bullet>
+          </ul>
+        </section>
+
+        {/* 6. Creare un Ordine */}
+        <section id="creare-ordine" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={6} icon={ShoppingBag} label="Creare un Ordine" />
+          <ul className="space-y-2">
+            <Bullet>Seleziona un carrello attivo dalla sezione <a href="#carrelli" className="text-accent hover:underline">Carrelli</a>, poi vai al catalogo e aggiungi prodotti con i pulsanti <span className="font-medium">+</span> e <span className="font-medium">−</span>.</Bullet>
+            <Bullet>Nella barra a destra vedi il carrello corrente con: costo totale, vendite potenziali, margine medio.</Bullet>
+            <Bullet>Clicca <span className="font-medium">Crea Ordine</span> nella barra laterale per convertire il carrello in un ordine.</Bullet>
             <Bullet>Se hai più destinazioni ti verrà chiesto di selezionarne una.</Bullet>
             <Bullet>Dopo la creazione vieni portato automaticamente alla pagina Ordini.</Bullet>
           </ul>
         </section>
 
-        {/* 6. Budget Ordine */}
+        {/* 7. Budget Ordine */}
         <section id="budget-ordine" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={6} icon={Wallet} label="Budget Ordine" />
+          <SectionHeader n={7} icon={Wallet} label="Budget Ordine" />
           <ul className="space-y-2">
             <Bullet>Il budget appartiene al singolo ordine, non alla destinazione.</Bullet>
             <Bullet>Prima di creare un ordine trovi il campo <span className="font-medium">Budget ordine €</span> nella barra del carrello, sotto il pulsante Crea Ordine: compilalo se vuoi definire una spesa massima per quell&apos;ordine (opzionale).</Bullet>
@@ -202,9 +217,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 7. Le Destinazioni */}
+        {/* 8. Le Destinazioni */}
         <section id="destinazioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={7} icon={MapPin} label="Le Destinazioni" />
+          <SectionHeader n={8} icon={MapPin} label="Le Destinazioni" />
           <ul className="space-y-2">
             <Bullet>Le destinazioni sono i tuoi punti vendita (bottega, emporio, online, ecc.).</Bullet>
             <Bullet>Gestiscile dalla voce <span className="font-medium">Destinazioni</span> nel menu.</Bullet>
@@ -214,14 +229,13 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 8. I miei Ordini */}
+        {/* 9. I miei Ordini */}
         <section id="miei-ordini" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={8} icon={Package} label="I miei Ordini" />
+          <SectionHeader n={9} icon={Package} label="I miei Ordini" />
           <ul className="space-y-2">
             <Bullet>Visualizza tutti i tuoi ordini dalla voce <span className="font-medium">Ordini</span> nel menu.</Bullet>
             <Bullet>Usa la barra di ricerca per cercare per numero ordine o destinazione, e i chip <span className="font-medium">Tutti / In lavorazione / Esportati</span> per filtrare per stato.</Bullet>
             <Bullet>Gli stati possibili sono: <span className="font-medium">Da esportare</span> | <span className="font-medium">Esportato</span>.</Bullet>
-            <Bullet>Se hai prodotti nel carrello, vedi in cima la <span className="font-medium">Bozza corrente</span> con le opzioni <span className="font-medium">Modifica bozza</span>, <span className="font-medium">Elimina bozza</span> (con conferma) e <span className="font-medium">Crea Ordine</span>.</Bullet>
             <Bullet>Per ogni ordine puoi:
               <ul className="mt-1.5 ml-2 space-y-1">
                 <li className="flex gap-2 text-sm text-gray-600"><span className="text-accent flex-shrink-0">–</span><span>Modificare quantità e prodotti</span></li>
@@ -238,9 +252,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 9. Unire due Ordini */}
+        {/* 10. Unire due Ordini */}
         <section id="unire-ordini" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={9} icon={GitMerge} label="Unire due Ordini" />
+          <SectionHeader n={10} icon={GitMerge} label="Unire due Ordini" />
           <ul className="space-y-2">
             <Bullet>Puoi unire due ordini non ancora esportati in un unico ordine.</Bullet>
             <Bullet>Nella pagina <span className="font-medium">Ordini</span>, spunta la <span className="font-medium">checkbox</span> accanto al numero di due ordini diversi.</Bullet>
@@ -250,9 +264,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 10. Notifiche */}
+        {/* 11. Notifiche */}
         <section id="notifiche" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={10} icon={Bell} label="Notifiche" />
+          <SectionHeader n={11} icon={Bell} label="Notifiche" />
           <ul className="space-y-2">
             <Bullet>Quando ON EARTH pubblica un aggiornamento o una promozione, ricevi una notifica <span className="font-medium">push</span> se hai installato l&apos;app sul telefono, altrimenti via <span className="font-medium">email</span>.</Bullet>
             <Bullet>Al primo accesso appare un banner: clicca <span className="font-medium">Abilita</span> per attivare le notifiche push; il browser chiede conferma. Una volta abilitate, arrivano anche quando l&apos;app è chiusa.</Bullet>
@@ -262,9 +276,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 11. Anteprima e Raggruppamento */}
+        {/* 12. Anteprima e Raggruppamento */}
         <section id="anteprima" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={11} icon={Eye} label="Anteprima e Raggruppamento" />
+          <SectionHeader n={12} icon={Eye} label="Anteprima e Raggruppamento" />
           <ul className="space-y-2">
             <Bullet>Clicca <span className="font-medium">Anteprima</span> su un ordine per vedere i prodotti raggruppati visivamente.</Bullet>
             <Bullet>Scegli il criterio di raggruppamento: Gruppo merceologico, Famiglia, Classe, Sottoclasse, Gruppo omogeneo, Linea, Tema colore, Stagione, Collezione, Produttore, Tranche.</Bullet>
@@ -277,9 +291,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 12. Esportare in Demetra */}
+        {/* 13. Esportare in Demetra */}
         <section id="demetra" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={12} icon={Download} label="Esportare in Demetra" />
+          <SectionHeader n={13} icon={Download} label="Esportare in Demetra" />
           <ul className="space-y-2">
             <Bullet>Il pulsante <span className="font-medium">Esporta in Demetra</span> apre un menu con le opzioni: <span className="font-medium">CSV completo</span>, <span className="font-medium">CSV tranche</span> (una per ogni tranche presente nell&apos;ordine) e <span className="font-medium">Excel (.xlsx)</span>. Il menu è disponibile sia nella lista ordini sia nella pagina di modifica/anteprima.</Bullet>
             <Bullet>Dopo l&apos;export l&apos;ordine diventa <span className="font-medium">Esportato</span> e non è più modificabile.</Bullet>
@@ -291,9 +305,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 13. Esposizioni */}
+        {/* 14. Esposizioni */}
         <section id="esposizioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={13} icon={Layers} label="Esposizioni" />
+          <SectionHeader n={14} icon={Layers} label="Esposizioni" />
           <ul className="space-y-2">
             <Bullet>Dall&apos;anteprima di un ordine tocca il tab <span className="font-medium">Esposizione</span> per organizzare i prodotti in gruppi espositivi (es. Vetrina, Isola, Parete).</Bullet>
             <Bullet>Crea un nuovo gruppo con il pulsante <span className="font-medium">+ Gruppo</span>: assegna nome, colore e template.</Bullet>
@@ -304,9 +318,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 14. Risorse e Media */}
+        {/* 15. Risorse e Media */}
         <section id="risorse" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={14} icon={Film} label="Risorse e Media" />
+          <SectionHeader n={15} icon={Film} label="Risorse e Media" />
           <ul className="space-y-2">
             <Bullet>Accedi alle Risorse dal menu in basso (icona cartella) o dalla homepage.</Bullet>
             <Bullet>Trovi documenti PDF, video e audio condivisi da ON EARTH.</Bullet>
@@ -316,9 +330,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 15. Le mie Destinazioni */}
+        {/* 16. Le mie Destinazioni */}
         <section id="mie-destinazioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={15} icon={MapPin} label="Le mie Destinazioni" />
+          <SectionHeader n={16} icon={MapPin} label="Le mie Destinazioni" />
           <ul className="space-y-2">
             <Bullet>Gestisci i tuoi punti vendita dalla voce <span className="font-medium">Destinazioni</span>.</Bullet>
             <Bullet>Aggiungi nuove destinazioni con: tipo, città, indirizzo.</Bullet>
@@ -327,9 +341,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 16. Multilingua */}
+        {/* 17. Multilingua */}
         <section id="multilingua" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={16} icon={Globe} label="Multilingua" />
+          <SectionHeader n={17} icon={Globe} label="Multilingua" />
           <ul className="space-y-2">
             <Bullet>L&apos;app è disponibile in: <span className="font-medium">Italiano, Inglese, Tedesco, Francese, Spagnolo</span>.</Bullet>
             <Bullet>Cambia lingua dal selettore in alto a destra (IT / EN / DE / FR / ES).</Bullet>
@@ -337,9 +351,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 17. Impostazioni */}
+        {/* 18. Impostazioni */}
         <section id="impostazioni" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={17} icon={Settings} label="Impostazioni" />
+          <SectionHeader n={18} icon={Settings} label="Impostazioni" />
           <ul className="space-y-2">
             <Bullet>Accedi alle Impostazioni dall&apos;icona <span className="font-medium">⚙</span> in alto a destra o dalla barra in basso (<span className="font-medium">Impostaz.</span>).</Bullet>
             <Bullet><span className="font-medium">Il tuo account:</span> visualizza organizzazione, email di accesso e password.</Bullet>
@@ -349,9 +363,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 18. Assistenza tecnica */}
+        {/* 19. Assistenza tecnica */}
         <section id="assistenza-tecnica" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={18} icon={HelpCircle} label="Assistenza tecnica" />
+          <SectionHeader n={19} icon={HelpCircle} label="Assistenza tecnica" />
           <p className="text-sm text-gray-600">
             Per problemi tecnici{' '}
             <a

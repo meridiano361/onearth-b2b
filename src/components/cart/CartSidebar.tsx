@@ -10,6 +10,7 @@ import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
+import { useQueryClient } from '@tanstack/react-query';
 import { usePreview } from '@/contexts/PreviewContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { computeProjections } from './CartSummary';
@@ -25,7 +26,8 @@ export default function CartSidebar() {
   const { data: session } = useSession();
   const preview = usePreview();
   const { ordine } = useSettings();
-  const { items, collectionId, notes, clearCart, removeItem, getTotalItems, hasLotWarnings, addItem } = useCartStore();
+  const { items, cartId, cartName, notes, clearCart, removeItem, getTotalItems, hasLotWarnings, addItem } = useCartStore();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [destinazioni, setDestinazioni] = useState<Destinazione[]>([]);
   const [selectedDestinazioneId, setSelectedDestinazioneId] = useState('');
@@ -72,31 +74,21 @@ export default function CartSidebar() {
   const budgetRemaining = budget != null ? budget - costTotal : null;
 
   async function submitOrder(canaleId?: string, budgetPersonalizzato?: number | null) {
+    if (!cartId) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/orders', {
+      const res = await fetch(`/api/catalog/carts/${cartId}/convert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          collectionId: collectionId || null,
-          notes: notes || null,
           canaleId: canaleId || null,
           budgetPersonalizzato: budgetPersonalizzato ?? null,
-          items: items.map((i) => ({
-            productId: i.productId,
-            quantity: i.quantity,
-            unitPrice: Number(i.product.costPrice),
-          })),
         }),
       });
       const body = await res.json();
-      if (!res.ok) {
-        if (body.missing?.length) {
-          body.missing.forEach((id: string) => removeItem(id));
-        }
-        throw new Error(body.error ?? t('errorCreate'));
-      }
+      if (!res.ok) throw new Error(body.error ?? t('errorCreate'));
       clearCart();
+      queryClient.invalidateQueries({ queryKey: ['my-carts'] });
       toast.success('Ordine creato con successo');
       router.push('/catalog/orders');
     } catch (e: any) {
@@ -126,11 +118,18 @@ export default function CartSidebar() {
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="px-4 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <ShoppingCart size={15} className="text-gray-500" />
-            <span className="text-xs font-medium text-primary tracking-wide">{t('title')}</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <ShoppingCart size={15} className="text-gray-500 flex-shrink-0" />
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-primary tracking-wide block truncate">
+                {cartName ?? t('title')}
+              </span>
+              {cartName && (
+                <span className="text-2xs text-gray-400">{t('title')}</span>
+              )}
+            </div>
             {totalItems > 0 && (
-              <span className="bg-primary text-background text-2xs font-medium px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+              <span className="bg-primary text-background text-2xs font-medium px-1.5 py-0.5 rounded-full min-w-[18px] text-center flex-shrink-0">
                 {totalItems}
               </span>
             )}
@@ -138,7 +137,7 @@ export default function CartSidebar() {
           {!isEmpty && (
             <button
               onClick={() => { if (confirm(t('clearConfirm'))) clearCart(); }}
-              className="text-gray-300 hover:text-gray-600 transition-colors"
+              className="text-gray-300 hover:text-gray-600 transition-colors flex-shrink-0"
               title={t('clearTooltip')}
             >
               <Trash2 size={13} />
@@ -178,8 +177,10 @@ export default function CartSidebar() {
           {isEmpty ? (
             <div className="flex flex-col items-center justify-center h-full py-12 px-4 text-center">
               <ShoppingCart size={32} className="text-gray-200 mb-3" />
-              <p className="text-sm text-gray-400 font-light">{t('emptyTitle')}</p>
-              <p className="text-2xs text-gray-300 mt-1">{t('emptyHint')}</p>
+              <p className="text-sm text-gray-400 font-light">{cartId ? t('emptyTitle') : 'Nessun carrello attivo'}</p>
+              <p className="text-2xs text-gray-300 mt-1">
+                {cartId ? t('emptyHint') : 'Vai in Carrelli per crearne uno'}
+              </p>
             </div>
           ) : (
             <div>

@@ -97,6 +97,7 @@ model Product {
   collection Collection? @relation(fields: [collectionId], references: [id])
   orderItems OrderItem[]
   favorites  Favorite[]
+  cartItems  CartItem[]
 
   @@map("products")
 }
@@ -257,11 +258,11 @@ model Customer {
   country              String?
   vatNumber            String?
   notificationsEnabled Boolean  @default(true)
-  cartData             Json?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
   orders                 Order[]
+  carts                  Cart[]
   customerNotifReads     CustomerNotificationRead[]
 
   @@map("customers")
@@ -304,18 +305,59 @@ model Operator {
   organizationId         String
   attivo                 Boolean  @default(true)
   featureMondiEspositivi Boolean  @default(false)
-  cartData               Json?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
   organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   ordini          Order[]
+  carts           Cart[]
   favorites       Favorite[]
   displayPresets  DisplayGroupPreset[]
   spaziEspositivi SpazioEspositivo[]
 
   @@map("operators")
 }
+
+// ─── Cart ─────────────────────────────────────────────────────────────────────
+
+enum CartStatus {
+  DRAFT
+  CONVERTED
+}
+
+model Cart {
+  id         String     @id @default(cuid())
+  name       String
+  status     CartStatus @default(DRAFT)
+  customerId String?
+  operatorId String?
+  notes      String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  operator Operator? @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  items    CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  productId String
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
+  @@map("cart_items")
+}
+
+// ─── Canale ───────────────────────────────────────────────────────────────────
 
 model Canale {
   id             String     @id @default(cuid())
