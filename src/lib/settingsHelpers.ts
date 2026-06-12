@@ -325,7 +325,12 @@ export function parseSettingsFromDb(records: { chiave: string; valore: string }[
   let ordine = MENU_KEYS;
   try {
     const raw = m['menu.ordine'];
-    if (raw) ordine = JSON.parse(raw);
+    if (raw) {
+      const stored: string[] = JSON.parse(raw);
+      // Always append any MENU_KEYS not yet in the stored order (forward-compatibility)
+      const missing = MENU_KEYS.filter((k) => !stored.includes(k));
+      ordine = missing.length > 0 ? [...stored, ...missing] : stored;
+    }
   } catch { /* keep default */ }
 
   let socialOrdine = [...SOCIAL_KEYS] as string[];
