@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-12
+// AGGIORNATO: 2026-06-12b
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
@@ -234,6 +234,7 @@ export default function AssistenzaPage() {
               </ul>
             </Bullet>
             <Bullet>Usa il pulsante <span className="font-medium">Budget</span> su ogni ordine per impostare o modificare il budget di spesa massimo.</Bullet>
+            <Bullet>Se provi a modificare o eliminare un ordine creato da un altro utente della tua organizzazione, l&apos;app ti chiederà conferma: <span className="font-medium">&ldquo;Hai l&apos;autorizzazione per modificare/eliminare questo ordine?&rdquo;</span> — rispondi <span className="font-medium">Sì, procedi</span> per continuare o <span className="font-medium">No, annulla</span> per fermarti.</Bullet>
           </ul>
         </section>
 

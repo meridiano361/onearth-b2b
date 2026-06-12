@@ -203,6 +203,11 @@ export default function CustomerOrdersView() {
   function handleProductSortChange(v: string) { setProductSort(v); localStorage.setItem(PREVIEW_SORT_KEY, v); }
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [authCheckPending, setAuthCheckPending] = useState<{ orderId: string; action: 'edit' | 'delete' } | null>(null);
+
+  function requiresAuthCheck(order: Order) {
+    return isOperator && order.operatorId != null && order.operatorId !== session?.user?.id;
+  }
 
   const { data: orders, isLoading } = useQuery<Order[]>({
     queryKey: ['my-orders'],
@@ -362,6 +367,43 @@ export default function CustomerOrdersView() {
           </div>
         );
       })()}
+
+      {/* Auth check modal */}
+      {authCheckPending && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-lg max-w-sm w-full p-5 space-y-4 shadow-xl">
+            <h2 className="text-sm font-semibold text-primary">
+              Hai l&apos;autorizzazione per {authCheckPending.action === 'edit' ? 'modificare' : 'eliminare'} questo ordine?
+            </h2>
+            <p className="text-xs text-gray-500">
+              Questo ordine è stato creato da un altro utente della tua organizzazione.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-1">
+              <button
+                onClick={() => setAuthCheckPending(null)}
+                className="text-xs border border-border rounded px-3 py-2 text-gray-500 hover:bg-cream transition-colors"
+              >
+                No, annulla
+              </button>
+              <button
+                onClick={() => {
+                  const { orderId, action } = authCheckPending;
+                  setAuthCheckPending(null);
+                  if (action === 'edit') {
+                    router.push(`/catalog/orders/${orderId}/preview`);
+                  } else {
+                    setConfirmingId(orderId);
+                  }
+                }}
+                className="text-xs bg-primary text-background rounded px-3 py-2 hover:bg-warm-darker transition-colors"
+              >
+                Sì, procedi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
         <div className="mb-4 flex items-start justify-between gap-3">
@@ -639,7 +681,13 @@ export default function CustomerOrdersView() {
                   {/* Modifica */}
                   {!isExported && (
                     <button
-                      onClick={() => router.push(`/catalog/orders/${order.id}/preview`)}
+                      onClick={() => {
+                        if (requiresAuthCheck(order)) {
+                          setAuthCheckPending({ orderId: order.id, action: 'edit' });
+                        } else {
+                          router.push(`/catalog/orders/${order.id}/preview`);
+                        }
+                      }}
                       className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
                     >
                       <Pencil size={11} />
@@ -684,8 +732,12 @@ export default function CustomerOrdersView() {
                   ) : (
                     <button
                       onClick={() => {
-                        setBudgetEditingOrderId(order.id);
-                        setBudgetEditInput(String(order.budgetPersonalizzato ?? ''));
+                        if (requiresAuthCheck(order)) {
+                          setAuthCheckPending({ orderId: order.id, action: 'edit' });
+                        } else {
+                          setBudgetEditingOrderId(order.id);
+                          setBudgetEditInput(String(order.budgetPersonalizzato ?? ''));
+                        }
                       }}
                       className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
                     >
@@ -771,7 +823,13 @@ export default function CustomerOrdersView() {
                     </div>
                   ) : (
                     <button
-                      onClick={() => setConfirmingId(order.id)}
+                      onClick={() => {
+                        if (requiresAuthCheck(order)) {
+                          setAuthCheckPending({ orderId: order.id, action: 'delete' });
+                        } else {
+                          setConfirmingId(order.id);
+                        }
+                      }}
                       className="flex items-center gap-1 text-xs border border-red-200 rounded px-2 py-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                     >
                       <Trash2 size={11} />
