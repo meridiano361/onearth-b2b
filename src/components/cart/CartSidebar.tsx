@@ -158,33 +158,6 @@ export default function CartSidebar() {
           </div>
         )}
 
-        {/* Crea Ordine */}
-        {!isEmpty && (
-          <div className="px-4 pt-3 pb-3 border-b border-border flex-shrink-0">
-            {preview ? (
-              <div className="w-full py-2 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
-                Non puoi creare ordini in modalità anteprima
-              </div>
-            ) : hasWarnings ? (
-              <div className="w-full py-2 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
-                {t('fixLots')}
-              </div>
-            ) : (
-              <button
-                onClick={handleCreateOrder}
-                disabled={isSubmitting}
-                className="w-full py-2 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <><Loader2 size={12} className="animate-spin" /> {t('creating')}</>
-                ) : (
-                  <><Send size={12} /> {t('createOrder')}</>
-                )}
-              </button>
-            )}
-          </div>
-        )}
-
         {/* Items */}
         <div className="flex-1 overflow-y-auto">
           {isEmpty ? (
@@ -213,6 +186,31 @@ export default function CartSidebar() {
         {/* Summary, barra budget destinazione, suggerimenti */}
         {!isEmpty && (
           <>
+            {/* Crea Ordine */}
+            <div className="px-4 pt-3 pb-3 border-t border-border flex-shrink-0">
+              {preview ? (
+                <div className="w-full py-2 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
+                  Non puoi creare ordini in modalità anteprima
+                </div>
+              ) : hasWarnings ? (
+                <div className="w-full py-2 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
+                  {t('fixLots')}
+                </div>
+              ) : (
+                <button
+                  onClick={handleCreateOrder}
+                  disabled={isSubmitting}
+                  className="w-full py-2 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? (
+                    <><Loader2 size={12} className="animate-spin" /> {t('creating')}</>
+                  ) : (
+                    <><Send size={12} /> {t('createOrder')}</>
+                  )}
+                </button>
+              )}
+            </div>
+
             {ordine.mostraBudget && budget != null && (
               <div className="px-4 pt-3 pb-0 border-t border-border bg-cream/20">
                 <div className="flex justify-between text-2xs text-gray-400 mb-1">

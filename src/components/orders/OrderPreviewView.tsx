@@ -4,7 +4,7 @@ import { useState, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Minus, Plus, X, Search, Loader2, MapPin, Copy, Layers, Pencil, Check, CalendarDays } from 'lucide-react';
+import { ArrowLeft, FileText, Minus, Plus, X, Search, Loader2, MapPin, Copy, Layers, Pencil, Check, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import OrderExcelExport from '@/components/orders/OrderExcelExport';
 import OrderDemetraExport from '@/components/orders/OrderDemetraExport';
 import { ProductImage } from '@/components/ui/ProductImage';
@@ -198,6 +198,8 @@ function AddProductsModal({
   const [addingId, setAddingId] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [presenzaFilter, setPresenzaFilter] = useState<'tutti' | 'non-ancora' | 'gia'>('tutti');
+  const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
+  const [galleryIndex, setGalleryIndex] = useState(0);
 
   function applyPresenzaFilter(list: Product[]): Product[] {
     if (presenzaFilter === 'non-ancora') return list.filter(p => !orderProductIds.has(p.id));
@@ -292,10 +294,13 @@ function AddProductsModal({
         key={product.id}
         className="flex items-center gap-3 px-4 py-3 border-b border-border/50 hover:bg-cream/50 transition-colors"
       >
-        {/* Thumbnail */}
-        <div className="w-14 h-14 flex-shrink-0 bg-[#C8C0B5] overflow-hidden rounded">
+        {/* Thumbnail — clickable to open anagrafica */}
+        <button
+          onClick={() => { setPreviewProduct(product); setGalleryIndex(0); }}
+          className="w-14 h-14 flex-shrink-0 bg-[#C8C0B5] overflow-hidden rounded cursor-pointer hover:opacity-80 transition-opacity"
+        >
           <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-        </div>
+        </button>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
@@ -305,7 +310,12 @@ function AddProductsModal({
               <span className="bg-black text-white text-[8px] font-bold px-1 py-px rounded-sm leading-none flex-shrink-0">NUOVO</span>
             )}
           </div>
-          <p className="text-sm text-primary font-medium leading-snug line-clamp-2">{product.name}</p>
+          <button
+            onClick={() => { setPreviewProduct(product); setGalleryIndex(0); }}
+            className="text-sm text-primary font-medium leading-snug line-clamp-2 text-left hover:underline"
+          >
+            {product.name}
+          </button>
           <p className="text-xs text-gray-400 mt-0.5">{formatCurrency(product.costPrice)}</p>
         </div>
 
@@ -401,6 +411,84 @@ function AddProductsModal({
           </button>
         </div>
 
+        {previewProduct ? (
+          /* ── Anagrafica prodotto ─────────────────────────────── */
+          (() => {
+            const photos = [previewProduct.imageUrl, previewProduct.imageUrl2, previewProduct.imageUrl3, previewProduct.imageUrl4].filter(Boolean) as string[];
+            const safeIdx = Math.min(galleryIndex, Math.max(0, photos.length - 1));
+            const rows: [string, string | null][] = [
+              ['Linea', previewProduct.nomLinea],
+              ['Famiglia', previewProduct.famiglia],
+              ['Classe', previewProduct.classe],
+              ['Sottoclasse', previewProduct.sottoclasse],
+              ['Gruppo omogeneo', previewProduct.gruppoOmogeneo],
+              ['Colore', previewProduct.colore],
+              ['Tema colore', previewProduct.temaColore],
+              ['Misura', previewProduct.misura],
+              ['Produttore', previewProduct.produttore],
+              ['Collezione', previewProduct.collezione],
+              ['Stagione', previewProduct.stagione],
+              ['Tranche', previewProduct.tranche],
+            ];
+            return (
+              <>
+                <div className="flex items-center gap-3 px-5 py-3 border-b border-border flex-shrink-0">
+                  <button
+                    onClick={() => setPreviewProduct(null)}
+                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary transition-colors"
+                  >
+                    <ChevronLeft size={16} /> Indietro
+                  </button>
+                  <span className="text-xs font-mono text-gray-400">{previewProduct.code}</span>
+                </div>
+                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+                  {photos.length > 0 && (
+                    <div className="flex gap-3">
+                      <div className="relative w-40 h-40 flex-shrink-0 bg-cream rounded border border-border overflow-hidden">
+                        <ProductImage src={photos[safeIdx]} alt={previewProduct.name} className="w-full h-full object-cover" />
+                        {photos.length > 1 && (
+                          <>
+                            <button onClick={() => setGalleryIndex(i => (i === 0 ? photos.length - 1 : i - 1))} className="absolute left-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/80 rounded-full flex items-center justify-center shadow">
+                              <ChevronLeft size={14} />
+                            </button>
+                            <button onClick={() => setGalleryIndex(i => (i === photos.length - 1 ? 0 : i + 1))} className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/80 rounded-full flex items-center justify-center shadow">
+                              <ChevronRight size={14} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        {previewProduct.collezione === 'CA27' && (
+                          <span className="inline-flex self-start bg-black text-white text-[8px] font-bold px-1.5 py-0.5 rounded-sm leading-none">NUOVO</span>
+                        )}
+                        <p className="text-base font-semibold text-primary leading-snug">{previewProduct.name}</p>
+                        <div className="mt-1 space-y-0.5">
+                          <p className="text-xs text-gray-500">Costo: <span className="font-medium text-primary">{formatCurrency(previewProduct.costPrice)}</span></p>
+                          <p className="text-xs text-gray-500">Vendita (s.i.): <span className="font-medium text-primary">{formatCurrency(previewProduct.retailPrice)}</span></p>
+                          {previewProduct.lotSize > 1 && (
+                            <p className="text-xs text-gray-500">Lotto: <span className="font-medium text-primary">{previewProduct.lotSize} pz</span></p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {previewProduct.description && (
+                    <p className="text-sm text-gray-600 leading-relaxed">{previewProduct.description}</p>
+                  )}
+                  <div className="border border-border rounded divide-y divide-border/50">
+                    {rows.filter(([, v]) => v).map(([label, value]) => (
+                      <div key={label} className="flex px-3 py-2">
+                        <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
+                        <span className="text-xs text-primary font-medium">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            );
+          })()
+        ) : (
+          <>
         {/* Tabs */}
         <div className="flex border-b border-border flex-shrink-0">
           <button
@@ -474,6 +562,8 @@ function AddProductsModal({
             )}
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );
