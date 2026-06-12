@@ -1,23 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   AlertCircle, Check, ChevronDown, ChevronUp,
-  Loader2, Pencil, Plus, ShoppingCart, Trash2, X,
+  Loader2, Pencil, Plus, Send, ShoppingCart, Trash2, X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn, formatCurrency, isValidLotQuantity } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
+import { usePreview } from '@/contexts/PreviewContext';
 import { ProductImage } from '@/components/ui/ProductImage';
 import QuantitySelector from '@/components/catalog/QuantitySelector';
-import type { Cart } from '@/types';
+import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
+import type { Cart, Destinazione } from '@/types';
 
 export default function CartsView() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { cartId, setCart, clearCart, updateQuantity: storeUpdateQty, removeItem: storeRemoveItem } = useCartStore();
+  const { data: session } = useSession();
+  const preview = usePreview();
+  const isOperator = session?.user.role === 'OPERATOR';
+  const { cartId, setCart, clearCart, updateQuantity: storeUpdateQty } = useCartStore();
 
   const { data: carts = [], isLoading } = useQuery<Cart[]>({
     queryKey: ['my-carts'],
@@ -33,6 +39,49 @@ export default function CartsView() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameInput, setRenameInput] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Order conversion
+  const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [modalCartId, setModalCartId] = useState<string | null>(null);
+  const [destinazioni, setDestinazioni] = useState<Destinazione[]>([]);
+
+  useEffect(() => {
+    if (!isOperator && !preview) return;
+    fetch('/api/catalog/destinazioni')
+      .then((r) => r.json())
+      .then((d) => setDestinazioni(d.data ?? []))
+      .catch(() => {});
+  }, [isOperator, preview]);
+
+  async function handleConvert(cartId: string, canaleId?: string, budgetPersonalizzato?: number | null) {
+    setConvertingId(cartId);
+    try {
+      const res = await fetch(`/api/catalog/carts/${cartId}/convert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ canaleId: canaleId ?? null, budgetPersonalizzato: budgetPersonalizzato ?? null }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? 'Errore creazione ordine');
+      clearCart();
+      queryClient.invalidateQueries({ queryKey: ['my-carts'] });
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      toast.success('Ordine creato con successo');
+      router.push('/catalog/orders');
+    } catch (e: any) {
+      toast.error(e.message ?? 'Errore');
+    } finally {
+      setConvertingId(null);
+    }
+  }
+
+  function handleCreateOrderClick(cart: Cart) {
+    if (isOperator || preview) {
+      setModalCartId(cart.id);
+    } else {
+      handleConvert(cart.id);
+    }
+  }
 
   async function handleCreate() {
     if (!newName.trim()) return;
@@ -132,6 +181,18 @@ export default function CartsView() {
     (cart.items ?? []).reduce((s, i) => s + Number(i.product.costPrice) * i.quantity, 0);
 
   return (
+    <>
+    {modalCartId && (
+      <CreateOrderModal
+        destinazioni={destinazioni}
+        onClose={() => setModalCartId(null)}
+        onSubmit={(canaleId, budget) => {
+          setModalCartId(null);
+          handleConvert(modalCartId, canaleId, budget);
+        }}
+        submitting={convertingId === modalCartId}
+      />
+    )}
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between gap-3">
@@ -284,6 +345,20 @@ export default function CartsView() {
                   >
                     + Aggiungi prodotti
                   </button>
+
+                  {/* Crea Ordine */}
+                  {itemCount > 0 && !preview && (
+                    <button
+                      onClick={() => handleCreateOrderClick(cart)}
+                      disabled={convertingId === cart.id}
+                      className="flex items-center gap-1.5 text-xs bg-primary text-background rounded px-3 py-1.5 hover:bg-warm-darker transition-colors disabled:opacity-50"
+                    >
+                      {convertingId === cart.id
+                        ? <><Loader2 size={11} className="animate-spin" /> Creazione…</>
+                        : <><Send size={11} /> Crea Ordine</>}
+                    </button>
+                  )}
+
                   {itemCount > 0 && (
                     <button
                       onClick={() => setExpandedId(isExpanded ? null : cart.id)}
@@ -360,5 +435,6 @@ export default function CartsView() {
         })}
       </div>
     </div>
+    </>
   );
 }
