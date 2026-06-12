@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { Globe, Mic, ShoppingBag, Check, Heart, Film, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import ModaBranchSelector from '@/components/moda/ModaBranchSelector';
 import { useCartStore } from '@/store/cartStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { ProductImage } from '@/components/ui/ProductImage';
@@ -403,9 +402,6 @@ export default function CustomerHome() {
         {/* ── Comunicazione: in cima ───────────────────────────── */}
         {cs.posizione === 'top' && <section>{commBox}</section>}
         {cs2.posizione === 'top' && <section>{commBox2}</section>}
-
-        {/* ── Selettore ramo catalogo (solo per account con accesso multi-branch) ── */}
-        <ModaBranchSelector activeBranchId="casa27" />
 
         {/* ── Top CTA ─────────────────────────────────────────── */}
         <div className="flex justify-center">
