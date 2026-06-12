@@ -268,6 +268,7 @@ export default function CartsView() {
           const itemCount = items.length;
           const pzCount = items.reduce((s, i) => s + i.quantity, 0);
           const value = totalValue(cart);
+          const hasLotIssues = items.some((i) => !isValidLotQuantity(i.quantity, i.product.lotSize));
 
           return (
             <div
@@ -347,16 +348,26 @@ export default function CartsView() {
                   </button>
 
                   {/* Crea Ordine */}
-                  {itemCount > 0 && !preview && (
-                    <button
-                      onClick={() => handleCreateOrderClick(cart)}
-                      disabled={convertingId === cart.id}
-                      className="flex items-center gap-1.5 text-xs bg-primary text-background rounded px-3 py-1.5 hover:bg-warm-darker transition-colors disabled:opacity-50"
-                    >
-                      {convertingId === cart.id
-                        ? <><Loader2 size={11} className="animate-spin" /> Creazione…</>
-                        : <><Send size={11} /> Crea Ordine</>}
-                    </button>
+                  {itemCount > 0 && (
+                    preview ? (
+                      <span className="text-2xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                        Anteprima — ordine non disponibile
+                      </span>
+                    ) : hasLotIssues ? (
+                      <span className="text-2xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                        Correggi i lotti prima di creare l&apos;ordine
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleCreateOrderClick(cart)}
+                        disabled={convertingId === cart.id}
+                        className="flex items-center gap-1.5 text-xs bg-primary text-background rounded px-3 py-1.5 hover:bg-warm-darker transition-colors disabled:opacity-50"
+                      >
+                        {convertingId === cart.id
+                          ? <><Loader2 size={11} className="animate-spin" /> Creazione…</>
+                          : <><Send size={11} /> Crea Ordine</>}
+                      </button>
+                    )
                   )}
 
                   {itemCount > 0 && (
