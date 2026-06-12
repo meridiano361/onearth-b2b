@@ -191,13 +191,12 @@ export const DEFAULT_APP_SETTINGS: AppSettingsData = {
     ),
   },
   menu: {
-    ordine: ['catalogo', 'preferiti', 'carrelli', 'ordini', 'destinazioni', 'assistenza'],
+    ordine: ['catalogo', 'preferiti', 'carrelli', 'ordini', 'assistenza'],
     items: {
       catalogo: { label: 'Catalogo', visibile: true },
       preferiti: { label: 'Preferiti', visibile: true },
       carrelli: { label: 'Carrelli', visibile: true },
       ordini: { label: 'Ordini', visibile: true },
-      destinazioni: { label: 'Destinazioni', visibile: true },
       assistenza: { label: 'Assistenza', visibile: true },
     },
   },
@@ -317,10 +316,10 @@ export function parseSettingsFromDb(records: { chiave: string; valore: string }[
   const bool = (k: string, d: boolean) => (m[k] === undefined ? d : m[k] === 'true');
   const num = (k: string, d: number) => (m[k] ? Number(m[k]) : d);
 
-  const MENU_KEYS = ['catalogo', 'preferiti', 'carrelli', 'ordini', 'destinazioni', 'assistenza'];
+  const MENU_KEYS = ['catalogo', 'preferiti', 'carrelli', 'ordini', 'assistenza'];
   const MENU_LABELS: Record<string, string> = {
     catalogo: 'Catalogo', preferiti: 'Preferiti', carrelli: 'Carrelli',
-    ordini: 'Ordini', destinazioni: 'Destinazioni', assistenza: 'Assistenza',
+    ordini: 'Ordini', assistenza: 'Assistenza',
   };
   let ordine = MENU_KEYS;
   try {

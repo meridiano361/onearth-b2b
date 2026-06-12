@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Bell, BellOff, Mail, MailX, Smartphone, SmartphoneNfc, Lock, User } from 'lucide-react';
+import { Bell, BellOff, ChevronRight, Mail, MailX, MapPin, Smartphone, SmartphoneNfc, Lock, User } from 'lucide-react';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -198,6 +199,24 @@ export default function ImpostazioniPage() {
         <InfoRow icon={<Mail size={16} />} label="Email di accesso" value={session?.user?.email ?? '—'} />
 
         <InfoRow icon={<Lock size={16} />} label="Password" value={password} />
+      </div>
+
+      {/* ── Destinazioni ── */}
+      <div className="bg-white border border-border rounded-xl px-5">
+        <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider pt-5 pb-1">Punti vendita</p>
+        <Link
+          href="/catalog/destinazioni"
+          className="flex items-center justify-between py-4 group"
+        >
+          <div className="flex items-center gap-3">
+            <MapPin size={16} className="text-gray-400 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-primary">Le mie destinazioni</p>
+              <p className="text-xs text-gray-400 mt-0.5">Gestisci i tuoi punti vendita e i relativi budget</p>
+            </div>
+          </div>
+          <ChevronRight size={15} className="text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" />
+        </Link>
       </div>
 
       {/* ── Notifiche ── */}
