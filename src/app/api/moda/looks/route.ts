@@ -1,18 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireModaSession } from '@/lib/modaAccess';
 import { prisma } from '@/lib/prisma';
 
-const MODA_EMAIL = 'e.mazzolari@meridiano361.it';
-
-async function requireModaAuth() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.email !== MODA_EMAIL) return null;
-  return session;
-}
-
 export async function GET() {
-  const session = await requireModaAuth();
+  const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const looks = await prisma.look.findMany({
@@ -38,7 +29,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireModaAuth();
+  const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();

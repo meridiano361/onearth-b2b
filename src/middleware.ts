@@ -1,8 +1,7 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 import { isAdminRole, canVisit } from '@/lib/roles';
-
-const MODA_EMAIL = 'e.mazzolari@meridiano361.it';
+import { canAccessModa } from '@/lib/modaAccess';
 
 export default withAuth(
   function middleware(req) {
@@ -20,9 +19,9 @@ export default withAuth(
       }
     }
 
-    // Moda PE27 — exclusive to MODA_EMAIL
+    // Moda PE27 — exclusive access, see src/lib/modaAccess.ts
     if (pathname.startsWith('/moda')) {
-      if ((token?.email as string) !== MODA_EMAIL) {
+      if (!canAccessModa(token?.email as string)) {
         return NextResponse.redirect(new URL('/catalog', req.url));
       }
     }

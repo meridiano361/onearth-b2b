@@ -7,6 +7,12 @@ import { ArrowLeft, Plus, X, Search, ShoppingBag, Loader2, Edit2, Check } from '
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useCartStore } from '@/store/cartStore';
 import { formatCurrency } from '@/lib/utils';
+import {
+  LOOK_TIPO_LABELS,
+  LOOK_TIPO_OPTIONS,
+  type LookProductTipo,
+} from '@/lib/modaConfig';
+import { MODA_COLLEZIONE } from '@/lib/modaAccess';
 import toast from 'react-hot-toast';
 import type { Product } from '@/types';
 
@@ -14,6 +20,7 @@ type LookProdotto = {
   id: string;
   ordine: number;
   note: string | null;
+  tipo: LookProductTipo;
   product: {
     id: string; code: string; name: string; description: string | null;
     imageUrl: string | null; costPrice: number; retailPrice: number;
@@ -31,17 +38,20 @@ type Look = {
   prodotti: LookProdotto[];
 };
 
+const TIPO_ORDER: LookProductTipo[] = ['look_item', 'completa_look', 'accessorio', 'gioiello'];
+
 function AddProductsPanel({ lookId, existingIds, onClose }: {
   lookId: string;
   existingIds: Set<string>;
   onClose: () => void;
 }) {
   const [search, setSearch] = useState('');
+  const [selectedTipo, setSelectedTipo] = useState<LookProductTipo>('look_item');
   const qc = useQueryClient();
 
   const { data } = useQuery<{ data: Product[] }>({
     queryKey: ['moda-products-panel'],
-    queryFn: () => fetch('/api/products?active=true&collezione=PE27&limit=500').then((r) => r.json()),
+    queryFn: () => fetch(`/api/products?active=true&collezione=${MODA_COLLEZIONE}&limit=500`).then((r) => r.json()),
     staleTime: 60_000,
   });
 
@@ -50,9 +60,7 @@ function AddProductsPanel({ lookId, existingIds, onClose }: {
   const filtered = useMemo(() => {
     if (!search.trim()) return products;
     const q = search.toLowerCase();
-    return products.filter(
-      (p) => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q)
-    );
+    return products.filter((p) => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q));
   }, [products, search]);
 
   const addMutation = useMutation({
@@ -60,7 +68,7 @@ function AddProductsPanel({ lookId, existingIds, onClose }: {
       fetch(`/api/moda/looks/${lookId}/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId }),
+        body: JSON.stringify({ productId, tipo: selectedTipo }),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['moda-look', lookId] }),
     onError: () => toast.error('Errore aggiunta prodotto'),
@@ -77,12 +85,26 @@ function AddProductsPanel({ lookId, existingIds, onClose }: {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
       <div className="w-full max-w-lg bg-[#111] border border-white/10 rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[85vh]">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-white/10 flex-shrink-0">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-white">Aggiungi prodotti PE27</p>
+          <p className="flex-1 text-sm font-medium text-white">Aggiungi prodotti PE27</p>
+          <button onClick={onClose} className="text-white/40 hover:text-white/70"><X size={18} /></button>
+        </div>
+
+        {/* Tipo selector */}
+        <div className="px-4 py-3 border-b border-white/10 flex-shrink-0">
+          <p className="text-2xs text-white/30 uppercase tracking-widest mb-2">Tipo di prodotto nel look</p>
+          <div className="flex gap-2 flex-wrap">
+            {LOOK_TIPO_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setSelectedTipo(opt.value)}
+                className={`px-2.5 py-1 rounded-full text-xs transition-colors ${
+                  selectedTipo === opt.value ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white/70">
-            <X size={18} />
-          </button>
         </div>
 
         <div className="px-4 py-3 border-b border-white/10 flex-shrink-0">
@@ -139,6 +161,60 @@ function AddProductsPanel({ lookId, existingIds, onClose }: {
   );
 }
 
+function LookSection({
+  tipo,
+  items,
+  lookId,
+  onRemove,
+  onAddToCart,
+}: {
+  tipo: LookProductTipo;
+  items: LookProdotto[];
+  lookId: string;
+  onRemove: (productId: string) => void;
+  onAddToCart: (item: LookProdotto) => void;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <div>
+      <p className="text-2xs text-white/30 uppercase tracking-[0.2em] mb-3 px-0">{LOOK_TIPO_LABELS[tipo]}</p>
+      <div className="space-y-2">
+        {items.map((lp) => (
+          <div key={lp.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] group">
+            <Link href={`/catalog/${lp.product.id}`} className="w-14 h-14 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
+              <ProductImage src={lp.product.imageUrl} alt={lp.product.name} className="w-full h-full object-cover" />
+            </Link>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-mono text-white/30">{lp.product.code}</p>
+              <Link href={`/catalog/${lp.product.id}`} className="text-sm text-white hover:underline underline-offset-2 line-clamp-2 leading-snug">
+                {lp.product.name}
+              </Link>
+              {lp.product.colore && <p className="text-xs text-white/30 mt-0.5">{lp.product.colore}</p>}
+              <p className="text-xs text-white/50 mt-0.5">{formatCurrency(Number(lp.product.costPrice))}</p>
+              {lp.note && <p className="text-xs text-white/30 italic mt-0.5">{lp.note}</p>}
+            </div>
+            <div className="flex flex-col gap-1.5 flex-shrink-0">
+              <button
+                onClick={() => onAddToCart(lp)}
+                className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-white/60 hover:bg-white hover:text-black transition-all"
+              >
+                <ShoppingBag size={13} />
+              </button>
+              <button
+                onClick={() => onRemove(lp.product.id)}
+                className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center text-white/20 hover:bg-red-500/20 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ModaLookDetail({ lookId }: { lookId: string }) {
   const qc = useQueryClient();
   const { addItem } = useCartStore();
@@ -153,6 +229,17 @@ export default function ModaLookDetail({ lookId }: { lookId: string }) {
   });
 
   const look = data?.data;
+
+  const groupedProdotti = useMemo(() => {
+    if (!look) return {} as Record<LookProductTipo, LookProdotto[]>;
+    const groups: Record<string, LookProdotto[]> = {};
+    for (const tipo of TIPO_ORDER) groups[tipo] = [];
+    for (const lp of look.prodotti) {
+      const key = TIPO_ORDER.includes(lp.tipo) ? lp.tipo : 'look_item';
+      groups[key].push(lp);
+    }
+    return groups as Record<LookProductTipo, LookProdotto[]>;
+  }, [look]);
 
   const removeProdotto = useMutation({
     mutationFn: (productId: string) =>
@@ -183,7 +270,7 @@ export default function ModaLookDetail({ lookId }: { lookId: string }) {
   if (!look) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-white/40">
-        <p>Look non trovato</p>
+        <p className="text-sm">Look non trovato</p>
       </div>
     );
   }
@@ -212,19 +299,21 @@ export default function ModaLookDetail({ lookId }: { lookId: string }) {
                   onChange={(e) => setTitleValue(e.target.value)}
                   className="flex-1 bg-transparent text-sm font-medium text-white border-b border-white/30 focus:outline-none"
                   autoFocus
-                  onKeyDown={(e) => { if (e.key === 'Enter') updateTitle.mutate(titleValue); if (e.key === 'Escape') setEditingTitle(false); }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') updateTitle.mutate(titleValue);
+                    if (e.key === 'Escape') setEditingTitle(false);
+                  }}
                 />
-                <button onClick={() => updateTitle.mutate(titleValue)} className="text-white/60 hover:text-white">
-                  <Check size={14} />
-                </button>
-                <button onClick={() => setEditingTitle(false)} className="text-white/40 hover:text-white/60">
-                  <X size={14} />
-                </button>
+                <button onClick={() => updateTitle.mutate(titleValue)} className="text-white/60 hover:text-white"><Check size={14} /></button>
+                <button onClick={() => setEditingTitle(false)} className="text-white/40 hover:text-white/60"><X size={14} /></button>
               </div>
             ) : (
               <div className="flex items-center gap-2 mt-0.5">
                 <p className="text-sm font-medium truncate">{look.titolo}</p>
-                <button onClick={() => { setTitleValue(look.titolo); setEditingTitle(true); }} className="text-white/20 hover:text-white/50 transition-colors flex-shrink-0">
+                <button
+                  onClick={() => { setTitleValue(look.titolo); setEditingTitle(true); }}
+                  className="text-white/20 hover:text-white/50 transition-colors flex-shrink-0"
+                >
                   <Edit2 size={12} />
                 </button>
               </div>
@@ -239,7 +328,6 @@ export default function ModaLookDetail({ lookId }: { lookId: string }) {
         </div>
       </div>
 
-      {/* Cover image */}
       {look.imageUrl && (
         <div className="h-56 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -247,14 +335,12 @@ export default function ModaLookDetail({ lookId }: { lookId: string }) {
         </div>
       )}
 
-      {/* Description */}
       {look.descrizione && (
         <div className="px-5 py-4 border-b border-white/10">
           <p className="text-sm text-white/50 italic">{look.descrizione}</p>
         </div>
       )}
 
-      {/* Products */}
       <div className="px-4 py-5">
         {look.prodotti.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-white/20">
@@ -268,7 +354,7 @@ export default function ModaLookDetail({ lookId }: { lookId: string }) {
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-5">
               <p className="text-xs text-white/40">{look.prodotti.length} prodott{look.prodotti.length === 1 ? 'o' : 'i'}</p>
               <button
                 onClick={handleAddAll}
@@ -278,36 +364,17 @@ export default function ModaLookDetail({ lookId }: { lookId: string }) {
               </button>
             </div>
 
-            <div className="space-y-3">
-              {look.prodotti.map((lp) => (
-                <div key={lp.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/8 group">
-                  <Link href={`/catalog/${lp.product.id}`} className="w-16 h-16 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
-                    <ProductImage src={lp.product.imageUrl} alt={lp.product.name} className="w-full h-full object-cover" />
-                  </Link>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-mono text-white/30">{lp.product.code}</p>
-                    <Link href={`/catalog/${lp.product.id}`} className="text-sm text-white hover:underline underline-offset-2 line-clamp-2 leading-snug">
-                      {lp.product.name}
-                    </Link>
-                    {lp.product.colore && <p className="text-xs text-white/30 mt-0.5">{lp.product.colore}</p>}
-                    <p className="text-xs text-white/50 mt-0.5">{formatCurrency(Number(lp.product.costPrice))}</p>
-                    {lp.note && <p className="text-xs text-white/30 italic mt-0.5">{lp.note}</p>}
-                  </div>
-                  <div className="flex flex-col gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => addItem(lp.product as any, lp.product.lotSize || 1)}
-                      className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-white/60 hover:bg-white hover:text-black transition-all"
-                    >
-                      <ShoppingBag size={13} />
-                    </button>
-                    <button
-                      onClick={() => removeProdotto.mutate(lp.product.id)}
-                      className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center text-white/20 hover:bg-red-500/20 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
-                    >
-                      <X size={13} />
-                    </button>
-                  </div>
-                </div>
+            {/* Sections grouped by tipo */}
+            <div className="space-y-6">
+              {TIPO_ORDER.map((tipo) => (
+                <LookSection
+                  key={tipo}
+                  tipo={tipo}
+                  items={groupedProdotti[tipo]}
+                  lookId={lookId}
+                  onRemove={(productId) => removeProdotto.mutate(productId)}
+                  onAddToCart={(lp) => addItem(lp.product as any, lp.product.lotSize || 1)}
+                />
               ))}
             </div>
           </>

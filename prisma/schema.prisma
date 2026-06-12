@@ -403,6 +403,7 @@ model Order {
   notes                 String?
   budgetPersonalizzato  Decimal?    @db.Decimal(10, 2)
   budgetNota            String?
+  catalogBranch         String?     @default("casa27") // 'casa27' | 'modaPE27'
   createdAt             DateTime    @default(now())
   confirmedAt           DateTime?
   updatedAt             DateTime    @updatedAt
@@ -684,6 +685,7 @@ model LookProdotto {
   productId String
   ordine    Int     @default(0)
   note      String?
+  tipo      String  @default("look_item") // 'look_item' | 'completa_look' | 'accessorio' | 'gioiello'
 
   look    Look    @relation(fields: [lookId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)

@@ -7,6 +7,13 @@ import Link from 'next/link';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useCartStore } from '@/store/cartStore';
 import { formatCurrency } from '@/lib/utils';
+import {
+  MODA_CATEGORY_GROUPS,
+  MODA_SORT_OPTIONS,
+  MODA_CARD_FIELDS,
+  type ModaSortOption,
+} from '@/lib/modaConfig';
+import { MODA_COLLEZIONE } from '@/lib/modaAccess';
 import type { Product } from '@/types';
 
 function ModaProductCard({ product }: { product: Product }) {
@@ -34,35 +41,56 @@ function ModaProductCard({ product }: { product: Product }) {
         </button>
       </div>
       <div>
-        <p className="text-xs text-white/40 font-mono">{product.code}</p>
+        {MODA_CARD_FIELDS.showCode && (
+          <p className="text-xs text-white/40 font-mono">{product.code}</p>
+        )}
         <p className="text-sm text-white leading-snug mt-0.5 line-clamp-2">{product.name}</p>
-        {product.colore && <p className="text-xs text-white/30 mt-0.5">{product.colore}</p>}
-        <p className="text-xs text-white/60 mt-1">{formatCurrency(Number(product.costPrice))}</p>
+        {MODA_CARD_FIELDS.showColor && product.colore && (
+          <p className="text-xs text-white/30 mt-0.5">{product.colore}</p>
+        )}
+        {MODA_CARD_FIELDS.showCostPrice && (
+          <p className="text-xs text-white/60 mt-1">{formatCurrency(Number(product.costPrice))}</p>
+        )}
       </div>
     </Link>
   );
 }
 
+function sortProducts(products: Product[], sort: ModaSortOption): Product[] {
+  return [...products].sort((a, b) => {
+    if (sort === 'name_asc') return a.name.localeCompare(b.name);
+    if (sort === 'name_desc') return b.name.localeCompare(a.name);
+    if (sort === 'price_asc') return Number(a.costPrice) - Number(b.costPrice);
+    if (sort === 'price_desc') return Number(b.costPrice) - Number(a.costPrice);
+    return 0;
+  });
+}
+
 export default function ModaCatalogo() {
   const [search, setSearch] = useState('');
-  const [selectedFamily, setSelectedFamily] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [sort, setSort] = useState<ModaSortOption>('name_asc');
+  const [showFilters, setShowFilters] = useState(false);
 
   const { data, isLoading } = useQuery<{ data: Product[] }>({
     queryKey: ['moda-products'],
-    queryFn: () => fetch('/api/products?active=true&collezione=PE27&limit=500').then((r) => r.json()),
+    queryFn: () => fetch(`/api/products?active=true&collezione=${MODA_COLLEZIONE}&limit=500`).then((r) => r.json()),
     staleTime: 60_000,
   });
 
   const products = data?.data ?? [];
 
-  const families = useMemo(() => {
-    const set = new Set(products.map((p) => p.famiglia).filter(Boolean));
-    return Array.from(set).sort() as string[];
-  }, [products]);
-
   const filtered = useMemo(() => {
     let list = products;
-    if (selectedFamily) list = list.filter((p) => p.famiglia === selectedFamily);
+    if (selectedCategory) {
+      list = list.filter((p) => {
+        const haystack = [p.famiglia, p.sottofamiglia, p.classe, p.gruppoMerceologico]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(selectedCategory.toLowerCase());
+      });
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -72,8 +100,8 @@ export default function ModaCatalogo() {
           p.colore?.toLowerCase().includes(q)
       );
     }
-    return list;
-  }, [products, search, selectedFamily]);
+    return sortProducts(list, sort);
+  }, [products, search, selectedCategory, sort]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
@@ -87,7 +115,15 @@ export default function ModaCatalogo() {
             <p className="text-xs text-white/40 uppercase tracking-widest">Moda PE27</p>
             <p className="text-sm font-medium">Catalogo</p>
           </div>
-          <span className="text-xs text-white/30">{filtered.length} prodotti</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-white/30">{filtered.length}</span>
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              className={`p-1.5 rounded-lg transition-colors ${showFilters ? 'bg-white text-black' : 'text-white/40 hover:text-white/70'}`}
+            >
+              <SlidersHorizontal size={15} />
+            </button>
+          </div>
         </div>
 
         {/* Search */}
@@ -106,28 +142,55 @@ export default function ModaCatalogo() {
           )}
         </div>
 
-        {/* Family filter */}
-        {families.length > 0 && (
-          <div className="flex gap-2 mt-2.5 overflow-x-auto scrollbar-hide pb-0.5">
-            <button
-              onClick={() => setSelectedFamily('')}
-              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs transition-colors ${
-                !selectedFamily ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'
-              }`}
-            >
-              Tutti
-            </button>
-            {families.map((f) => (
-              <button
-                key={f}
-                onClick={() => setSelectedFamily(f === selectedFamily ? '' : f)}
-                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs transition-colors ${
-                  selectedFamily === f ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'
-                }`}
-              >
-                {f}
-              </button>
+        {/* Filters panel */}
+        {showFilters && (
+          <div className="mt-3 space-y-3 pb-1">
+            {/* Sort */}
+            <div>
+              <p className="text-2xs text-white/30 uppercase tracking-widest mb-1.5">Ordina</p>
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                {MODA_SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setSort(opt.value)}
+                    className={`flex-shrink-0 px-3 py-1 rounded-full text-xs transition-colors ${
+                      sort === opt.value ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Category groups */}
+            {MODA_CATEGORY_GROUPS.map((group) => (
+              <div key={group.id}>
+                <p className="text-2xs text-white/30 uppercase tracking-widest mb-1.5">{group.label}</p>
+                <div className="flex gap-2 flex-wrap">
+                  {group.categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.id === selectedCategory ? '' : cat.id)}
+                      className={`flex-shrink-0 px-3 py-1 rounded-full text-xs transition-colors ${
+                        selectedCategory === cat.id ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
+
+            {(search || selectedCategory) && (
+              <button
+                onClick={() => { setSearch(''); setSelectedCategory(''); }}
+                className="text-xs text-white/30 hover:text-white/60 transition-colors"
+              >
+                × Rimuovi filtri
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -148,9 +211,12 @@ export default function ModaCatalogo() {
           <div className="flex flex-col items-center justify-center py-20 text-white/30">
             <SlidersHorizontal size={32} className="mb-3" />
             <p className="text-sm">Nessun prodotto trovato</p>
-            {search && (
-              <button onClick={() => setSearch('')} className="mt-2 text-xs underline underline-offset-2 hover:text-white/50">
-                Rimuovi filtro
+            {(search || selectedCategory) && (
+              <button
+                onClick={() => { setSearch(''); setSelectedCategory(''); }}
+                className="mt-2 text-xs underline underline-offset-2 hover:text-white/50"
+              >
+                Rimuovi filtri
               </button>
             )}
           </div>

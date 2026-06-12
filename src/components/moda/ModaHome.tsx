@@ -3,6 +3,9 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Grid3x3, Layers, Package2, ArrowLeft, ChevronRight } from 'lucide-react';
+import { CATALOG_BRANCHES } from '@/lib/catalogBranches';
+
+const CASA_BRANCH = CATALOG_BRANCHES.find((b) => b.id === 'casa27')!;
 
 const NAV_ITEMS = [
   {
@@ -36,10 +39,10 @@ export default function ModaHome() {
       {/* Header */}
       <div className="px-6 pt-8 pb-6">
         <button
-          onClick={() => router.push('/catalog')}
+          onClick={() => router.push(CASA_BRANCH.rootRoute)}
           className="flex items-center gap-1.5 text-white/40 hover:text-white/70 transition-colors text-xs mb-8"
         >
-          <ArrowLeft size={13} /> Casa 27
+          <ArrowLeft size={13} /> {CASA_BRANCH.label}
         </button>
 
         <div>
@@ -51,7 +54,6 @@ export default function ModaHome() {
         </div>
       </div>
 
-      {/* Divisore */}
       <div className="mx-6 h-px bg-white/10" />
 
       {/* Navigation cards */}
@@ -77,7 +79,6 @@ export default function ModaHome() {
         ))}
       </div>
 
-      {/* Footer branding */}
       <div className="px-6 pb-10 pt-4">
         <div className="h-px bg-white/5 mb-6" />
         <p className="text-xs text-white/20 tracking-widest uppercase text-center">ON EARTH · B2B</p>

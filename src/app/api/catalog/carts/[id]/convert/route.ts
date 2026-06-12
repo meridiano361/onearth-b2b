@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { MODA_COLLEZIONE, MODA_BRANCH_ID, CASA_BRANCH_ID } from '@/lib/modaAccess';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -23,6 +24,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const body = await req.json().catch(() => ({}));
   const { canaleId, budgetPersonalizzato } = body as { canaleId?: string; budgetPersonalizzato?: number };
 
+  // Detect catalog branch from products' collezione field
+  const hasModaProducts = cart.items.some((i) => i.product.collezione === MODA_COLLEZIONE);
+  const catalogBranch = hasModaProducts ? MODA_BRANCH_ID : CASA_BRANCH_ID;
+
   const orderItems = cart.items.map((item) => ({
     productId: item.productId,
     quantity: item.quantity,
@@ -40,6 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     notes: cart.notes ?? null,
     canaleId: canaleId ?? null,
     budgetPersonalizzato: budgetPersonalizzato ?? null,
+    catalogBranch,
     items: { create: orderItems },
   };
 

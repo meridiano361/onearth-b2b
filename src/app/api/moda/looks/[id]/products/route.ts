@@ -1,31 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireModaSession } from '@/lib/modaAccess';
 import { prisma } from '@/lib/prisma';
+import type { LookProductTipo } from '@/lib/modaConfig';
 
-const MODA_EMAIL = 'e.mazzolari@meridiano361.it';
-
-async function requireModaAuth() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.email !== MODA_EMAIL) return null;
-  return session;
-}
-
-// Add a product to a look
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireModaAuth();
+  const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
-  const { productId, note } = body;
+  const { productId, note, tipo } = body as { productId?: string; note?: string; tipo?: LookProductTipo };
   if (!productId) return NextResponse.json({ error: 'productId obbligatorio' }, { status: 400 });
+
+  const validTipos: LookProductTipo[] = ['look_item', 'completa_look', 'accessorio', 'gioiello'];
+  const safeTipo: LookProductTipo = validTipos.includes(tipo as LookProductTipo) ? (tipo as LookProductTipo) : 'look_item';
 
   const max = await prisma.lookProdotto.aggregate({ _max: { ordine: true }, where: { lookId: params.id } });
 
   const entry = await prisma.lookProdotto.upsert({
     where: { lookId_productId: { lookId: params.id, productId } },
-    create: { lookId: params.id, productId, note: note || null, ordine: (max._max.ordine ?? 0) + 1 },
-    update: { note: note || null },
+    create: { lookId: params.id, productId, note: note || null, tipo: safeTipo, ordine: (max._max.ordine ?? 0) + 1 },
+    update: { note: note || null, tipo: safeTipo },
     include: {
       product: {
         select: {
@@ -39,9 +33,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json({ data: entry }, { status: 201 });
 }
 
-// Remove a product from a look
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireModaAuth();
+  const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { searchParams } = new URL(req.url);

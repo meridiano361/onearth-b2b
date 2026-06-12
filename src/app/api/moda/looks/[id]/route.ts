@@ -1,18 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireModaSession } from '@/lib/modaAccess';
 import { prisma } from '@/lib/prisma';
 
-const MODA_EMAIL = 'e.mazzolari@meridiano361.it';
-
-async function requireModaAuth() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.email !== MODA_EMAIL) return null;
-  return session;
-}
-
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireModaAuth();
+  const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const look = await prisma.look.findUnique({
@@ -42,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireModaAuth();
+  const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
@@ -58,7 +49,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireModaAuth();
+  const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   await prisma.look.delete({ where: { id: params.id } });
