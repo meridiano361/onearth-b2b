@@ -25,7 +25,6 @@ export default function CartSetup() {
           if (res.data) {
             setCart(res.data as Cart);
           } else {
-            // Cart not found (deleted or not owned) — try loading first available cart
             clearCart();
             loadFirstCart();
           }
@@ -34,6 +33,9 @@ export default function CartSetup() {
     } else {
       loadFirstCart();
     }
+
+    // One-time migration: import items from the old localStorage cart (key 'onearth-cart')
+    migrateOldCart();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
@@ -45,6 +47,44 @@ export default function CartSetup() {
         if (carts.length > 0) setCart(carts[0]);
       })
       .catch(() => {});
+  }
+
+  async function migrateOldCart() {
+    const MIGRATION_DONE_KEY = 'onearth-cart-migrated';
+    if (localStorage.getItem(MIGRATION_DONE_KEY)) return;
+    localStorage.setItem(MIGRATION_DONE_KEY, '1');
+
+    try {
+      const raw = localStorage.getItem('onearth-cart');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      const items: { productId: string; quantity: number }[] = parsed?.state?.items ?? [];
+      if (items.length === 0) return;
+
+      // Create a new cart named "Bozza recuperata"
+      const res = await fetch('/api/catalog/carts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Bozza recuperata' }),
+      });
+      if (!res.ok) return;
+      const { data: newCart } = await res.json();
+
+      // Add all items
+      await Promise.all(
+        items.map(({ productId, quantity }) =>
+          fetch(`/api/catalog/carts/${newCart.id}/items`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productId, quantity }),
+          }).catch(() => {})
+        )
+      );
+
+      queryClient.invalidateQueries({ queryKey: ['my-carts'] });
+      toast.success('Carrello precedente recuperato come "Bozza recuperata"');
+      localStorage.removeItem('onearth-cart');
+    } catch { /* silently ignore */ }
   }
 
   // ── Select-cart modal (shown when pendingProduct is set and no active cart) ──
