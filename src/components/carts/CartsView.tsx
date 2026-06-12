@@ -3,16 +3,21 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { Check, Loader2, Pencil, Plus, ShoppingCart, Trash2, X } from 'lucide-react';
+import {
+  AlertCircle, Check, ChevronDown, ChevronUp,
+  Loader2, Pencil, Plus, ShoppingCart, Trash2, X,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
-import { formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, isValidLotQuantity } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
+import { ProductImage } from '@/components/ui/ProductImage';
+import QuantitySelector from '@/components/catalog/QuantitySelector';
 import type { Cart } from '@/types';
 
 export default function CartsView() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { cartId, setCart, clearCart } = useCartStore();
+  const { cartId, setCart, clearCart, updateQuantity: storeUpdateQty, removeItem: storeRemoveItem } = useCartStore();
 
   const { data: carts = [], isLoading } = useQuery<Cart[]>({
     queryKey: ['my-carts'],
@@ -25,6 +30,7 @@ export default function CartsView() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameInput, setRenameInput] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function handleCreate() {
     if (!newName.trim()) return;
@@ -55,6 +61,7 @@ export default function CartsView() {
       const res = await fetch(`/api/catalog/carts/${cart.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Errore eliminazione');
       if (cartId === cart.id) clearCart();
+      if (expandedId === cart.id) setExpandedId(null);
       queryClient.invalidateQueries({ queryKey: ['my-carts'] });
       toast.success('Carrello eliminato');
     } catch {
@@ -92,8 +99,31 @@ export default function CartsView() {
     toast.success(`Carrello "${cart.name}" attivo`);
   }
 
-  function handleGoToCatalog() {
-    router.push('/catalog/products');
+  async function handleUpdateQty(cart: Cart, productId: string, quantity: number) {
+    if (cart.id === cartId) {
+      // Active cart — delegate to store (handles API + local state)
+      storeUpdateQty(productId, quantity);
+    } else {
+      // Non-active cart — direct API call
+      fetch(`/api/catalog/carts/${cart.id}/items`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, quantity }),
+      }).catch(() => {});
+    }
+    // Optimistically update the query cache
+    queryClient.setQueryData<Cart[]>(['my-carts'], (prev = []) =>
+      prev.map((c) =>
+        c.id !== cart.id ? c : {
+          ...c,
+          items: quantity <= 0
+            ? (c.items ?? []).filter((i) => i.productId !== productId)
+            : (c.items ?? []).map((i) =>
+                i.productId === productId ? { ...i, quantity } : i
+              ),
+        }
+      )
+    );
   }
 
   const totalValue = (cart: Cart) =>
@@ -170,16 +200,19 @@ export default function CartsView() {
           const isActive = cartId === cart.id;
           const isDeleting = deletingId === cart.id;
           const isRenaming = renamingId === cart.id;
-          const itemCount = cart.items?.length ?? 0;
-          const pzCount = (cart.items ?? []).reduce((s, i) => s + i.quantity, 0);
+          const isExpanded = expandedId === cart.id;
+          const items = cart.items ?? [];
+          const itemCount = items.length;
+          const pzCount = items.reduce((s, i) => s + i.quantity, 0);
           const value = totalValue(cart);
 
           return (
             <div
               key={cart.id}
-              className={`bg-white border rounded overflow-hidden transition-all ${
+              className={cn(
+                'bg-white border rounded overflow-hidden transition-all',
                 isActive ? 'border-accent shadow-luxury' : 'border-border'
-              }`}
+              )}
             >
               <div className="p-4 space-y-3">
                 {/* Name row */}
@@ -211,7 +244,7 @@ export default function CartsView() {
                     </p>
                   </div>
 
-                  {/* Actions */}
+                  {/* Icon actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={() => { setRenamingId(cart.id); setRenameInput(cart.name); }}
@@ -232,7 +265,7 @@ export default function CartsView() {
                 </div>
 
                 {/* Button row */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {!isActive && (
                     <button
                       onClick={() => handleActivate(cart)}
@@ -242,15 +275,84 @@ export default function CartsView() {
                     </button>
                   )}
                   <button
-                    onClick={handleGoToCatalog}
+                    onClick={() => router.push('/catalog/products')}
                     disabled={!isActive}
                     className="text-xs border border-border rounded px-3 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     title={isActive ? 'Vai al catalogo' : 'Seleziona prima questo carrello'}
                   >
-                    {isActive ? '+ Aggiungi prodotti' : 'Aggiungi prodotti'}
+                    + Aggiungi prodotti
                   </button>
+                  {itemCount > 0 && (
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : cart.id)}
+                      className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-primary transition-colors"
+                    >
+                      {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                      {isExpanded ? 'Nascondi' : `Vedi prodotti (${itemCount})`}
+                    </button>
+                  )}
                 </div>
               </div>
+
+              {/* Expanded product list */}
+              {isExpanded && itemCount > 0 && (
+                <div className="border-t border-border/60">
+                  {items.map((item) => {
+                    const hasLotWarning = !isValidLotQuantity(item.quantity, item.product.lotSize);
+                    return (
+                      <div
+                        key={item.productId}
+                        className={cn(
+                          'flex items-start gap-3 px-4 py-3 border-b border-border/40 last:border-b-0',
+                          hasLotWarning && 'bg-amber-50/50'
+                        )}
+                      >
+                        {/* Thumbnail */}
+                        <div className="w-10 h-10 flex-shrink-0 rounded bg-cream border border-border overflow-hidden">
+                          <ProductImage
+                            src={item.product.imageUrl}
+                            alt={item.product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+
+                        {/* Info + controls */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-2xs font-mono text-gray-400 leading-none mb-0.5">{item.product.code}</p>
+                          <p className="text-xs text-primary leading-snug line-clamp-1 mb-1.5">{item.product.name}</p>
+                          <div className="flex items-center gap-2">
+                            <QuantitySelector
+                              value={item.quantity}
+                              onChange={(qty) => handleUpdateQty(cart, item.productId, qty)}
+                              lotSize={item.product.lotSize}
+                              min={0}
+                              compact
+                            />
+                            <span className="text-xs font-medium text-primary ml-auto">
+                              {formatCurrency(Number(item.product.costPrice) * item.quantity)}
+                            </span>
+                          </div>
+                          {hasLotWarning && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <AlertCircle size={10} className="text-amber-500 flex-shrink-0" />
+                              <p className="text-2xs text-amber-600">Multiplo di {item.product.lotSize}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Remove */}
+                        <button
+                          onClick={() => handleUpdateQty(cart, item.productId, 0)}
+                          className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0 mt-0.5 p-0.5"
+                          title="Rimuovi"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
