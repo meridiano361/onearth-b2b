@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Bell } from 'lucide-react';
+import { Bell, X } from 'lucide-react';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -34,6 +34,7 @@ async function saveSubscription(sub: PushSubscription, email: string): Promise<b
 export default function PushNotificationSetup() {
   const { data: session } = useSession();
   const [phase, setPhase] = useState<Phase>('loading');
+  const [dismissed, setDismissed] = useState(false);
   const email = session?.user?.email ?? '';
 
   useEffect(() => {
@@ -105,7 +106,7 @@ export default function PushNotificationSetup() {
     }
   }
 
-  if (phase === 'loading' || phase === 'unsupported' || phase === 'subscribed' || phase === 'denied-perm') return null;
+  if (phase === 'loading' || phase === 'unsupported' || phase === 'subscribed' || phase === 'denied-perm' || dismissed) return null;
 
   if (phase === 'ios-browser') {
     return (
@@ -119,6 +120,9 @@ export default function PushNotificationSetup() {
             Su iPhone tocca <strong>condividi</strong> <span className="inline-block">⎙</span> in Safari, poi <strong>&ldquo;Aggiungi a schermata Home&rdquo;</strong>. Apri l&apos;app installata e attiva le notifiche.
           </p>
         </div>
+        <button onClick={() => setDismissed(true)} className="flex-shrink-0 text-gray-300 hover:text-gray-500 transition-colors -mt-1 -mr-1 p-1">
+          <X size={14} />
+        </button>
       </div>
     );
   }
@@ -141,6 +145,9 @@ export default function PushNotificationSetup() {
           {phase === 'busy' ? 'Attivazione…' : 'Abilita notifiche'}
         </button>
       </div>
+      <button onClick={() => setDismissed(true)} className="flex-shrink-0 text-gray-300 hover:text-gray-500 transition-colors -mt-1 -mr-1 p-1">
+        <X size={14} />
+      </button>
     </div>
   );
 }
