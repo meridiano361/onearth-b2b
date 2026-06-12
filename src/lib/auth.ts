@@ -45,18 +45,17 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Troppi tentativi. Riprova tra qualche minuto.');
         }
 
-        // Try operator first
-        const operator = await prisma.operator.findFirst({
-          where: { email },
+        // Try operator first — iterate all active operators with this email
+        // (multiple records can share the same email after bulk imports)
+        const operators = await prisma.operator.findMany({
+          where: { email, attivo: true },
           include: { organization: true },
+          orderBy: { createdAt: 'desc' },
         });
 
-        if (operator && operator.attivo) {
+        for (const operator of operators) {
           const valid = await bcrypt.compare(credentials.password, operator.passwordHash);
-          if (!valid) {
-            securityLog('login_failed', { email, ip, reason: 'wrong_password', userType: 'operator' });
-            throw new Error('Email o password non validi');
-          }
+          if (!valid) continue;
           securityLog('login_success', { email, ip, userType: 'operator', id: operator.id });
           const ua = (req as any)?.headers?.['user-agent'] ?? undefined;
           prisma.accessLog.create({
@@ -78,10 +77,14 @@ export const authOptions: NextAuthOptions = {
           };
         }
 
+        // No operator matched — check if any inactive operator has this email
+        const inactiveOperator = await prisma.operator.findFirst({ where: { email, attivo: false } });
+
         // Fall back to Customer model (also covers inactive-operator case)
         const customer = await prisma.customer.findUnique({ where: { email } });
         if (!customer) {
-          if (operator && !operator.attivo) throw new Error('Account disabilitato. Contatta il supporto.');
+          if (inactiveOperator) throw new Error('Account disabilitato. Contatta il supporto.');
+          securityLog('login_failed', { email, ip, reason: 'wrong_password', userType: 'operator' });
           throw new Error('Email o password non validi');
         }
         if (!customer.isActive) throw new Error('Account disabilitato. Contatta il supporto.');
