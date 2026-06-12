@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-12
+// AGGIORNATO: 2026-06-12 (esposizione moda)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -374,6 +374,7 @@ export default function AssistenzaPage() {
             <Bullet><span className="font-medium">Accesso:</span> nella home del catalogo compare il selettore <em>Casa 27 / Moda PE27</em>. Clicca su Moda PE27 per entrare nella sezione.</Bullet>
             <Bullet><span className="font-medium">Catalogo Moda:</span> sfoglia tutti i prodotti PE27 con ricerca per nome, codice e colore e filtro per famiglia.</Bullet>
             <Bullet><span className="font-medium">Total Look:</span> crea look curati abbinando più prodotti PE27. Ogni look ha un titolo, una descrizione e una foto di copertina opzionale. Puoi aggiungere tutti i prodotti di un look al carrello in un click.</Bullet>
+            <Bullet><span className="font-medium">Esposizione:</span> componi outfit a parete selezionando una palette colori PE27, una fantasia/texture dominante, i capi principali (zona centro) e gli accessori coordinati (zona destra). Da ogni outfit puoi aggiungere al carrello tutti i prodotti, solo i capi o solo gli accessori.</Bullet>
             <Bullet><span className="font-medium">Ordini:</span> gli ordini moda si creano con il carrello standard e sono accessibili dalla sezione I miei Ordini.</Bullet>
           </ul>
         </section>

@@ -95,10 +95,11 @@ model Product {
 
   category   Category?   @relation(fields: [categoryId], references: [id])
   collection Collection? @relation(fields: [collectionId], references: [id])
-  orderItems OrderItem[]
-  favorites  Favorite[]
-  cartItems  CartItem[]
+  orderItems   OrderItem[]
+  favorites    Favorite[]
+  cartItems    CartItem[]
   lookProdotti LookProdotto[]
+  outfitItems  OutfitItem[]
 
   @@map("products")
 }
@@ -661,6 +662,39 @@ model AlbumFoto {
   album      Album    @relation(fields: [albumId], references: [id], onDelete: Cascade)
 
   @@map("album_foto")
+}
+
+model OutfitEspositivo {
+  id          String   @id @default(cuid())
+  titolo      String
+  descrizione String?
+  collezione  String   @default("PE27")
+  coloriGuida Json     @default("[]") // [{hex: string, label: string}]
+  fantasia    String?                 // e.g. "Misto lino / cotone grezzo"
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  ordine      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items OutfitItem[]
+
+  @@map("outfit_espositivi")
+}
+
+model OutfitItem {
+  id        String  @id @default(cuid())
+  outfitId  String
+  productId String
+  zona      String  @default("centro") // 'centro' | 'destra'
+  ordine    Int     @default(0)
+  note      String?
+
+  outfit  OutfitEspositivo @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+  product Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([outfitId, productId])
+  @@map("outfit_items")
 }
 
 model Look {

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Grid3x3, Layers, Package2, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Grid3x3, Layers, Package2, LayoutGrid, ArrowLeft, ChevronRight } from 'lucide-react';
 import { CATALOG_BRANCHES } from '@/lib/catalogBranches';
 
 const CASA_BRANCH = CATALOG_BRANCHES.find((b) => b.id === 'casa27')!;
@@ -21,6 +21,13 @@ const NAV_ITEMS = [
     label: 'Total Look',
     description: 'Outfit e abbinamenti curati',
     accent: '#2d1a4d',
+  },
+  {
+    href: '/moda/esposizione',
+    icon: LayoutGrid,
+    label: 'Esposizione',
+    description: 'Composizione outfit a parete',
+    accent: '#1a2a3d',
   },
   {
     href: '/catalog/orders',
