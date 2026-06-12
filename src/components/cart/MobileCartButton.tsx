@@ -34,7 +34,7 @@ export default function MobileCartButton() {
           />
           <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-xl max-h-[85vh] flex flex-col shadow-luxury-xl">
             <div className="flex items-center justify-between px-4 pt-4 pb-2">
-              <span className="text-xs font-medium text-primary uppercase tracking-wide">Il tuo Ordine</span>
+              <span className="text-xs font-medium text-primary uppercase tracking-wide">Carrello corrente</span>
               <button
                 onClick={() => setIsOpen(false)}
                 className="text-gray-400 hover:text-primary transition-colors"

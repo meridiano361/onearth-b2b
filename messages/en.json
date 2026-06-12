@@ -13,7 +13,7 @@
         "menu": "Menu"
     },
     "cart": {
-        "title": "Current Order",
+        "title": "Current Cart",
         "clearTooltip": "Clear cart",
         "clearConfirm": "Clear the entire order?",
         "emptyTitle": "Your order is empty",

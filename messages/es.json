@@ -13,7 +13,7 @@
         "menu": "Menú"
     },
     "cart": {
-        "title": "Pedido Actual",
+        "title": "Cesta Actual",
         "clearTooltip": "Vaciar carrito",
         "clearConfirm": "¿Vaciar todo el pedido?",
         "emptyTitle": "Tu pedido está vacío",

@@ -13,7 +13,7 @@
         "menu": "Menu"
     },
     "cart": {
-        "title": "Commande en cours",
+        "title": "Panier en cours",
         "clearTooltip": "Vider le panier",
         "clearConfirm": "Vider toute la commande ?",
         "emptyTitle": "Votre commande est vide",

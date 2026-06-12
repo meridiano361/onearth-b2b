@@ -13,7 +13,7 @@
         "menu": "Menu"
     },
     "cart": {
-        "title": "Ordine Corrente",
+        "title": "Carrello Corrente",
         "clearTooltip": "Svuota carrello",
         "clearConfirm": "Svuotare l'intero ordine?",
         "emptyTitle": "Il tuo ordine è vuoto",

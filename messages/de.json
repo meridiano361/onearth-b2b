@@ -53,7 +53,7 @@
         "budgetPlaceholder": "z. B. 5000"
     },
     "cart": {
-        "title": "Aktuelle Bestellung",
+        "title": "Aktueller Warenkorb",
         "clearTooltip": "Warenkorb leeren",
         "clearConfirm": "Die gesamte Bestellung leeren?",
         "emptyTitle": "Ihre Bestellung ist leer",

@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag } from 'lucide-react';
+import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag, Plus } from 'lucide-react';
+import Link from 'next/link';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
@@ -144,6 +145,18 @@ export default function CartSidebar() {
             </button>
           )}
         </div>
+
+        {/* Aggiungi prodotti */}
+        {cartId && (
+          <div className="px-4 pt-2 pb-2 flex-shrink-0">
+            <Link
+              href="/catalog/products"
+              className="w-full py-1.5 text-xs font-medium rounded border border-dashed border-border text-gray-400 hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Plus size={11} /> Aggiungi prodotti
+            </Link>
+          </div>
+        )}
 
         {/* Crea Ordine */}
         {!isEmpty && (
