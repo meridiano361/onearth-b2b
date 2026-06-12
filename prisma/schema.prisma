@@ -98,6 +98,7 @@ model Product {
   orderItems OrderItem[]
   favorites  Favorite[]
   cartItems  CartItem[]
+  lookProdotti LookProdotto[]
 
   @@map("products")
 }
@@ -659,4 +660,34 @@ model AlbumFoto {
   album      Album    @relation(fields: [albumId], references: [id], onDelete: Cascade)
 
   @@map("album_foto")
+}
+
+model Look {
+  id          String   @id @default(cuid())
+  titolo      String
+  descrizione String?
+  imageUrl    String?
+  collezione  String   @default("PE27")
+  isActive    Boolean  @default(true)
+  ordine      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prodotti LookProdotto[]
+
+  @@map("looks")
+}
+
+model LookProdotto {
+  id        String  @id @default(cuid())
+  lookId    String
+  productId String
+  ordine    Int     @default(0)
+  note      String?
+
+  look    Look    @relation(fields: [lookId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([lookId, productId])
+  @@map("look_prodotti")
 }

@@ -2,10 +2,13 @@
 
 import { useMemo, useState, useEffect, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { Globe, Mic, ShoppingBag, Check, Heart, Film, X } from 'lucide-react';
+import { Globe, Mic, ShoppingBag, Check, Heart, Film, X, Home, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const MODA_EMAIL = 'e.mazzolari@meridiano361.it';
 import { useCartStore } from '@/store/cartStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { ProductImage } from '@/components/ui/ProductImage';
@@ -308,6 +311,8 @@ function NotificationPopup({ notification, onClose }: { notification: Notificati
 export default function CustomerHome() {
   const th = useTranslations('home');
   const { home: hs, social: ss, comunicazione: cs, comunicazione2: cs2 } = useSettings();
+  const { data: session } = useSession();
+  const isModaUser = session?.user?.email === MODA_EMAIL;
 
   const [popupDismissed, setPopupDismissed] = useState(false);
 
@@ -402,6 +407,29 @@ export default function CustomerHome() {
         {/* ── Comunicazione: in cima ───────────────────────────── */}
         {cs.posizione === 'top' && <section>{commBox}</section>}
         {cs2.posizione === 'top' && <section>{commBox2}</section>}
+
+        {/* ── Selettore collezione (solo per e.mazzolari@meridiano361.it) ── */}
+        {isModaUser && (
+          <section className="flex gap-3">
+            <div className="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 border-primary bg-primary text-white cursor-default">
+              <Home size={16} className="flex-shrink-0 opacity-80" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold leading-none">Casa 27</p>
+                <p className="text-2xs opacity-60 mt-0.5">In corso</p>
+              </div>
+            </div>
+            <Link
+              href="/moda"
+              className="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 border-border bg-white hover:border-primary/50 transition-colors group"
+            >
+              <Sparkles size={16} className="flex-shrink-0 text-gray-400 group-hover:text-primary transition-colors" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-primary leading-none">Moda PE27</p>
+                <p className="text-2xs text-gray-400 mt-0.5">Collezione Moda</p>
+              </div>
+            </Link>
+          </section>
+        )}
 
         {/* ── Top CTA ─────────────────────────────────────────── */}
         <div className="flex justify-center">

@@ -2,6 +2,8 @@ import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 import { isAdminRole, canVisit } from '@/lib/roles';
 
+const MODA_EMAIL = 'e.mazzolari@meridiano361.it';
+
 export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
@@ -15,6 +17,13 @@ export default withAuth(
       }
       if (!canVisit(role, pathname)) {
         return NextResponse.redirect(new URL('/admin', req.url));
+      }
+    }
+
+    // Moda PE27 — exclusive to MODA_EMAIL
+    if (pathname.startsWith('/moda')) {
+      if ((token?.email as string) !== MODA_EMAIL) {
+        return NextResponse.redirect(new URL('/catalog', req.url));
       }
     }
 
@@ -48,6 +57,8 @@ export const config = {
     '/orders/:path*',
     '/admin',
     '/admin/:path*',
+    '/moda/:path*',
+    '/moda',
     '/seleziona-destinazione',
   ],
 };

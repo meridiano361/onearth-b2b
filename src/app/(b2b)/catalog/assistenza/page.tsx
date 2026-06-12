@@ -1,8 +1,8 @@
-// AGGIORNATO: 2026-06-12d
+// AGGIORNATO: 2026-06-12
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
-  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge, Bell, Settings,
+  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge, Bell, Settings, Sparkles,
 } from 'lucide-react';
 
 export const metadata = { title: 'Guida all\'app — ON EARTH' };
@@ -26,6 +26,7 @@ const SECTIONS = [
   { id: 'mie-destinazioni',   label: 'Le mie Destinazioni',               icon: MapPin },
   { id: 'multilingua',        label: 'Multilingua',                       icon: Globe },
   { id: 'impostazioni',       label: 'Impostazioni',                      icon: Settings },
+  { id: 'moda-pe27',          label: 'Moda PE27',                         icon: Sparkles },
   { id: 'assistenza-tecnica', label: 'Assistenza tecnica',                icon: HelpCircle },
 ];
 
@@ -363,9 +364,23 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 19. Assistenza tecnica */}
+        {/* 19. Moda PE27 */}
+        <section id="moda-pe27" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={19} icon={Sparkles} label="Moda PE27" />
+          <p className="text-sm text-gray-600 mb-3">
+            La sezione <strong>Moda PE27</strong> è accessibile esclusivamente dall&apos;account amministratore e raccoglie la collezione moda Primavera/Estate 2027.
+          </p>
+          <ul className="space-y-2">
+            <Bullet><span className="font-medium">Accesso:</span> nella home del catalogo compare il selettore <em>Casa 27 / Moda PE27</em>. Clicca su Moda PE27 per entrare nella sezione.</Bullet>
+            <Bullet><span className="font-medium">Catalogo Moda:</span> sfoglia tutti i prodotti PE27 con ricerca per nome, codice e colore e filtro per famiglia.</Bullet>
+            <Bullet><span className="font-medium">Total Look:</span> crea look curati abbinando più prodotti PE27. Ogni look ha un titolo, una descrizione e una foto di copertina opzionale. Puoi aggiungere tutti i prodotti di un look al carrello in un click.</Bullet>
+            <Bullet><span className="font-medium">Ordini:</span> gli ordini moda si creano con il carrello standard e sono accessibili dalla sezione I miei Ordini.</Bullet>
+          </ul>
+        </section>
+
+        {/* 20. Assistenza tecnica */}
         <section id="assistenza-tecnica" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={19} icon={HelpCircle} label="Assistenza tecnica" />
+          <SectionHeader n={20} icon={HelpCircle} label="Assistenza tecnica" />
           <p className="text-sm text-gray-600">
             Per problemi tecnici{' '}
             <a
