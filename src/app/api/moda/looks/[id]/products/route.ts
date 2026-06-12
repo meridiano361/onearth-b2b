@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireModaSession } from '@/lib/modaAccess';
+import { requireModaSession } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 import type { LookProductTipo } from '@/lib/modaConfig';
 
