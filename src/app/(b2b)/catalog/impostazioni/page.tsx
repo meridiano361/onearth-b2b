@@ -193,7 +193,7 @@ export default function ImpostazioniPage() {
 
       {/* ── Dati account ── */}
       <div className="bg-white border border-border rounded-xl px-5">
-        <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider pt-5 pb-1">Il tuo account</p>
+        <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider pt-5 pb-1">Account</p>
 
         <InfoRow icon={<User size={16} />} label="Organizzazione" value={session?.user?.companyName ?? '—'} />
         <InfoRow icon={<Mail size={16} />} label="Email di accesso" value={session?.user?.email ?? '—'} />
@@ -203,7 +203,7 @@ export default function ImpostazioniPage() {
 
       {/* ── Destinazioni ── */}
       <div className="bg-white border border-border rounded-xl px-5">
-        <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider pt-5 pb-1">Punti vendita</p>
+        <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider pt-5 pb-1">Destinazioni</p>
         <Link
           href="/catalog/destinazioni"
           className="flex items-center justify-between py-4 group"
