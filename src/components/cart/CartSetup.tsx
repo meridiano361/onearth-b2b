@@ -11,8 +11,15 @@ import type { Cart } from '@/types';
 /** Loads the active cart from server on login, and shows the select-cart modal when needed. */
 export default function CartSetup() {
   const { status } = useSession();
-  const { cartId, setCart, clearCart, pendingProduct, setPendingProduct, addItem } = useCartStore();
+  const { cartId, items, setCart, clearCart, pendingProduct, setPendingProduct, addItem } = useCartStore();
   const queryClient = useQueryClient();
+
+  // Invalidate my-carts whenever local items change so CartsView always shows fresh data
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    queryClient.invalidateQueries({ queryKey: ['my-carts'] });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
 
   // Load cart from server when authenticated
   useEffect(() => {

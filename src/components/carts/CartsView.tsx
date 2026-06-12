@@ -22,6 +22,8 @@ export default function CartsView() {
   const { data: carts = [], isLoading } = useQuery<Cart[]>({
     queryKey: ['my-carts'],
     queryFn: () => fetch('/api/catalog/carts').then((r) => r.json()).then((d) => d.data as Cart[]),
+    refetchOnMount: 'always',
+    staleTime: 0,
   });
 
   const [newName, setNewName] = useState('');
