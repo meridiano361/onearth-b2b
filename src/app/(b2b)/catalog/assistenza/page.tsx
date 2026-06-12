@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-11f
+// AGGIORNATO: 2026-06-12
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, MapPin, Package,
@@ -163,6 +163,7 @@ export default function AssistenzaPage() {
             <Bullet>Clicca ❤️ su un prodotto per aggiungerlo ai Preferiti.</Bullet>
             <Bullet>Usa <span className="font-medium">+</span> e <span className="font-medium">−</span> per aggiungere quantità all&apos;ordine corrente nella barra a destra.</Bullet>
             <Bullet>I prodotti CA27 hanno il badge <span className="font-medium">NUOVO</span>.</Bullet>
+            <Bullet>Il carrello è sincronizzato tra tutti i tuoi dispositivi: se aggiungi prodotti da un telefono, li ritrovi esattamente uguali accedendo dallo stesso account su un altro dispositivo.</Bullet>
           </ul>
         </section>
 

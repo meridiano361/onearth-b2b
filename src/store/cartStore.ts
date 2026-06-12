@@ -17,6 +17,7 @@ interface CartStore {
   setCustomerId: (id: string | null) => void;
   setCollectionId: (id: string | null) => void;
   setNotes: (notes: string) => void;
+  bulkSet: (items: CartItem[], notes?: string) => void;
 
   // Computed
   getTotalItems: () => number;
@@ -79,6 +80,8 @@ export const useCartStore = create<CartStore>()(
       setCollectionId: (id) => set({ collectionId: id }),
 
       setNotes: (notes) => set({ notes }),
+
+      bulkSet: (items, notes) => set({ items, ...(notes !== undefined ? { notes } : {}) }),
 
       getTotalItems: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
 
