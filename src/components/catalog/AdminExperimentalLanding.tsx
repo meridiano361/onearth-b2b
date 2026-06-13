@@ -68,8 +68,8 @@ export default function AdminExperimentalLanding() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                <p className="text-2xs text-white/40 uppercase tracking-[0.2em]">Collezione</p>
-                <p className="text-sm font-light text-white leading-snug mt-0.5 group-hover:text-white/80 transition-colors">Moda PE27</p>
+                <p className="text-2xs text-white/40 tracking-[0.15em]">collezione</p>
+                <p className="text-sm font-light text-white leading-snug mt-0.5 tracking-widest group-hover:text-white/80 transition-colors">MODA PE27</p>
               </div>
             </div>
           </Link>
@@ -89,8 +89,8 @@ export default function AdminExperimentalLanding() {
               )}
               <div className={`absolute inset-0 bg-gradient-to-t ${hasEditorialImage ? 'from-black/70 via-transparent to-transparent' : 'from-black/30 via-transparent to-transparent'}`} />
               <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                <p className={`text-2xs uppercase tracking-[0.2em] ${hasEditorialImage ? 'text-white/50' : 'text-gray-500'}`}>Collezione</p>
-                <p className={`text-sm font-light leading-snug mt-0.5 transition-colors ${hasEditorialImage ? 'text-white group-hover:text-white/80' : 'text-primary'}`}>Casa 2027</p>
+                <p className={`text-2xs tracking-[0.15em] ${hasEditorialImage ? 'text-white/50' : 'text-gray-500'}`}>collezione</p>
+                <p className={`text-sm font-light leading-snug mt-0.5 tracking-widest transition-colors ${hasEditorialImage ? 'text-white group-hover:text-white/80' : 'text-primary'}`}>CASA 27</p>
               </div>
             </div>
           </Link>
