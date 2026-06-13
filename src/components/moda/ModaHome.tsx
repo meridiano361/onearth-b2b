@@ -10,21 +10,35 @@ const COLLECTION_ITEMS = [
   { href: '/moda/ordini',    icon: Package2,     label: 'Ordini',    description: 'I tuoi ordini PE27'            },
 ];
 
+/** Decodes a moda collection code into its full season label.
+ *  PE → Primavera Estate · AI → Autunno Inverno */
+function decodeCollezione(code: string): string {
+  const prefix = code.slice(0, 2).toUpperCase();
+  const year = code.slice(2);
+  const suffix = year ? ` 20${year}` : '';
+  if (prefix === 'PE') return `Primavera Estate${suffix}`;
+  if (prefix === 'AI') return `Autunno Inverno${suffix}`;
+  return code;
+}
+
 export default function ModaHome() {
+  const stagione = decodeCollezione('PE27');
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-[#faf8f5] text-primary">
       {/* Header */}
       <div className="px-5 pt-8 pb-6">
-        <Link href="/catalog" className="flex items-center gap-1.5 text-white/40 hover:text-white/70 transition-colors text-xs mb-8">
+        <Link href="/catalog" className="flex items-center gap-1.5 text-gray-400 hover:text-gray-600 transition-colors text-xs mb-8">
           <ArrowLeft size={13} /> Home
         </Link>
-        <p className="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Collezione</p>
-        <h1 className="text-3xl font-light tracking-tight leading-none">
-          Moda <span className="italic">PE27</span>
+        <p className="text-xs tracking-[0.15em] text-gray-400 mb-1">collezione</p>
+        <h1 className="font-display text-3xl font-light tracking-widest leading-none text-primary">
+          MODA PE27
         </h1>
+        <p className="text-xs text-gray-400 mt-2">{stagione}</p>
       </div>
 
-      <div className="mx-5 h-px bg-white/10" />
+      <div className="mx-5 h-px bg-border" />
 
       {/* Collection nav */}
       <div className="px-5 py-6 space-y-2">
@@ -32,36 +46,36 @@ export default function ModaHome() {
           <Link
             key={href}
             href={href}
-            className="flex items-center gap-4 p-4 rounded-2xl border border-white/10 hover:border-white/25 bg-white/[0.03] hover:bg-white/[0.06] transition-all duration-200 group"
+            className="flex items-center gap-4 p-4 rounded-2xl border border-border hover:border-primary/30 bg-white hover:bg-cream transition-all duration-200 group shadow-sm"
           >
-            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
-              <Icon size={16} className="text-white/70" />
+            <div className="w-10 h-10 rounded-xl bg-cream flex items-center justify-center flex-shrink-0">
+              <Icon size={16} className="text-gray-500" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white leading-none">{label}</p>
-              <p className="text-xs text-white/40 mt-1">{description}</p>
+              <p className="text-sm font-medium text-primary leading-none">{label}</p>
+              <p className="text-xs text-gray-400 mt-1">{description}</p>
             </div>
-            <ChevronRight size={15} className="text-white/20 group-hover:text-white/50 transition-colors flex-shrink-0" />
+            <ChevronRight size={15} className="text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" />
           </Link>
         ))}
       </div>
 
-      <div className="mx-5 h-px bg-white/5" />
+      <div className="mx-5 h-px bg-border" />
 
       {/* Aiuto — condiviso */}
       <div className="px-5 py-4">
         <Link
           href="/catalog/assistenza"
-          className="flex items-center gap-4 p-4 rounded-2xl border border-white/10 hover:border-white/25 bg-white/[0.03] hover:bg-white/[0.06] transition-all duration-200 group"
+          className="flex items-center gap-4 p-4 rounded-2xl border border-border hover:border-primary/30 bg-white hover:bg-cream transition-all duration-200 group shadow-sm"
         >
-          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
-            <HelpCircle size={16} className="text-white/70" />
+          <div className="w-10 h-10 rounded-xl bg-cream flex items-center justify-center flex-shrink-0">
+            <HelpCircle size={16} className="text-gray-500" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white leading-none">Aiuto</p>
-            <p className="text-xs text-white/40 mt-1">Guide e supporto</p>
+            <p className="text-sm font-medium text-primary leading-none">Aiuto</p>
+            <p className="text-xs text-gray-400 mt-1">Guide e supporto</p>
           </div>
-          <ChevronRight size={15} className="text-white/20 group-hover:text-white/50 transition-colors flex-shrink-0" />
+          <ChevronRight size={15} className="text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" />
         </Link>
       </div>
     </div>
