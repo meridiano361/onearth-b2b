@@ -203,16 +203,32 @@ function AddProductsModal({
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
   const [galleryIndex, setGalleryIndex] = useState(0);
 
-  // Products already in the order, derived directly from order items (bypasses API 200-item limit)
+  // Dedicated query for "già nell'ordine" — fetches exact product IDs, no active filter
+  const giaIdsParam = useMemo(
+    () => Array.from(orderProductIds).join(','),
+    [orderProductIds]
+  );
+  const { data: giaProductsRaw } = useQuery<Product[]>({
+    queryKey: ['products-gia', giaIdsParam],
+    queryFn: async () => {
+      if (!giaIdsParam) return [];
+      const res = await fetch(`/api/products?ids=${giaIdsParam}`);
+      if (!res.ok) throw new Error();
+      return (await res.json()).data as Product[];
+    },
+    enabled: presenzaFilter === 'gia' && orderProductIds.size > 0,
+    staleTime: 30_000,
+  });
+
   const giaProducts = useMemo<Product[]>(() => {
-    const base = orderItems.map(i => i.product).filter(Boolean) as Product[];
+    const base = giaProductsRaw ?? [];
     if (!debouncedSearch.trim()) return base;
     const q = debouncedSearch.toLowerCase();
     return base.filter(p =>
       p.code.toLowerCase().includes(q) ||
       p.name.toLowerCase().includes(q)
     );
-  }, [orderItems, debouncedSearch]);
+  }, [giaProductsRaw, debouncedSearch]);
 
   function applyPresenzaFilter(list: Product[]): Product[] {
     if (presenzaFilter === 'non-ancora') return list.filter(p => !orderProductIds.has(p.id));
@@ -237,7 +253,7 @@ function AddProductsModal({
   const fo = filterOptions ?? {};
 
   const catalogParams = useMemo(() => {
-    const p = new URLSearchParams({ active: 'true', limit: '200' });
+    const p = new URLSearchParams({ active: 'true', limit: '2000' });
     const keys = [
       'stagione','colore','temaColore','collezione','tranche',
       'nomLinea','famiglia','sottofamiglia','gruppoOmogeneo',
@@ -269,7 +285,7 @@ function AddProductsModal({
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ['products-for-order', debouncedSearch],
     queryFn: async () => {
-      const params = new URLSearchParams({ active: 'true', limit: '200' });
+      const params = new URLSearchParams({ active: 'true', limit: '2000' });
       if (debouncedSearch) params.set('search', debouncedSearch);
       const res = await fetch(`/api/products?${params}`);
       if (!res.ok) throw new Error();

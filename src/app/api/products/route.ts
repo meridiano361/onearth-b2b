@@ -69,8 +69,14 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '100', 10);
     const skip = (page - 1) * limit;
 
+    // ids=id1,id2,... — fetch exact products by ID (ignores active filter)
+    const ids = searchParams.get('ids');
     const where: any = {};
-    if (active === 'true') where.isActive = true;
+    if (ids) {
+      where.id = { in: ids.split(',').filter(Boolean) };
+    } else {
+      if (active === 'true') where.isActive = true;
+    }
     if (categoryId) where.categoryId = categoryId;
     if (collectionId) where.collectionId = collectionId;
     if (search) {
