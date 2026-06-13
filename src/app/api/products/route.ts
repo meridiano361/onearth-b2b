@@ -81,9 +81,14 @@ export async function GET(req: NextRequest) {
     if (collectionId) where.collectionId = collectionId;
     if (search) {
       where.OR = [
-        { code: { contains: search, mode: 'insensitive' } },
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
+        { code:            { contains: search, mode: 'insensitive' } },
+        { name:            { contains: search, mode: 'insensitive' } },
+        { description:     { contains: search, mode: 'insensitive' } },
+        { famiglia:        { contains: search, mode: 'insensitive' } },
+        { sottofamiglia:   { contains: search, mode: 'insensitive' } },
+        { gruppoOmogeneo:  { contains: search, mode: 'insensitive' } },
+        { nomLinea:        { contains: search, mode: 'insensitive' } },
+        { notes:           { contains: search, mode: 'insensitive' } },
       ];
     }
 

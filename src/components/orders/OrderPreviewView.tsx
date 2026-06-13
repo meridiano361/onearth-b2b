@@ -253,7 +253,7 @@ function AddProductsModal({
   const fo = filterOptions ?? {};
 
   const catalogParams = useMemo(() => {
-    const p = new URLSearchParams({ active: 'true', limit: '2000' });
+    const p = new URLSearchParams({ active: 'true', limit: '9999' });
     const keys = [
       'stagione','colore','temaColore','collezione','tranche',
       'nomLinea','famiglia','sottofamiglia','gruppoOmogeneo',
@@ -285,7 +285,7 @@ function AddProductsModal({
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ['products-for-order', debouncedSearch],
     queryFn: async () => {
-      const params = new URLSearchParams({ active: 'true', limit: '2000' });
+      const params = new URLSearchParams({ active: 'true', limit: '9999' });
       if (debouncedSearch) params.set('search', debouncedSearch);
       const res = await fetch(`/api/products?${params}`);
       if (!res.ok) throw new Error();
