@@ -3,10 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import {
-  Grid3x3, Heart, ShoppingCart, Package2, Film,
-  HelpCircle, ChevronRight, Globe, Mic, Layers,
-} from 'lucide-react';
+import { Globe, Mic } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { canAccessModa } from '@/lib/modaAccess';
 
@@ -34,37 +31,6 @@ const SOCIAL_SVG: Record<string, ReactNode> = {
   ),
 };
 
-type NavRowItem = { href: string; icon: React.ElementType; label: string };
-
-function NavRow({ href, icon: Icon, label }: NavRowItem) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors group"
-    >
-      <Icon size={15} className="text-gray-400 flex-shrink-0" />
-      <span className="flex-1 text-sm text-gray-700">{label}</span>
-      <ChevronRight size={13} className="text-gray-300 group-hover:text-gray-500 flex-shrink-0 transition-colors" />
-    </Link>
-  );
-}
-
-type CollectionCardProps = {
-  header: ReactNode;
-  rows: NavRowItem[];
-};
-
-function CollectionCard({ header, rows }: CollectionCardProps) {
-  return (
-    <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
-      {header}
-      <div className="bg-white divide-y divide-gray-100">
-        {rows.map((row) => <NavRow key={row.href} {...row} />)}
-      </div>
-    </div>
-  );
-}
-
 export default function AdminExperimentalLanding() {
   const { data: session } = useSession();
   const { home: hs, social: ss } = useSettings();
@@ -75,36 +41,20 @@ export default function AdminExperimentalLanding() {
   const hasEditorialImage = hs.editorialAttivo && hs.editorialUrl;
   const visibleSocial = ss.ordine.filter((k) => ss.items[k]?.visibile);
 
-  const modaRows: NavRowItem[] = [
-    { href: '/moda/catalogo',   icon: Grid3x3,     label: 'Catalogo'        },
-    { href: '/moda/preferiti',  icon: Heart,        label: 'Preferiti'       },
-    { href: '/moda/carrelli',   icon: ShoppingCart, label: 'Carrelli'        },
-    { href: '/moda/ordini',     icon: Package2,     label: 'Ordini'          },
-    { href: '/moda/risorse',    icon: Film,         label: 'Risorse e media' },
-    { href: '/moda/looks',      icon: Layers,       label: 'Total Look'      },
-  ];
-
-  const casaRows: NavRowItem[] = [
-    { href: '/catalog/products',  icon: Grid3x3,     label: 'Catalogo'      },
-    { href: '/catalog/preferiti', icon: Heart,        label: 'Preferiti'     },
-    { href: '/catalog/carts',     icon: ShoppingCart, label: 'Carrelli'      },
-    { href: '/catalog/orders',    icon: Package2,     label: 'Ordini'        },
-    { href: '/catalog/risorse',   icon: Film,         label: 'Risorse e media' },
-  ];
-
   return (
     <div className="min-h-screen bg-cream">
-      <div className="max-w-lg mx-auto px-4 py-8 space-y-4">
+      <div className="max-w-lg mx-auto px-4 py-10 space-y-4">
 
-        {/* ── Moda PE27 ── */}
-        <CollectionCard
-          rows={modaRows}
-          header={
-            <div className="relative h-36 overflow-hidden">
+        {/* ── Two collection squares ── */}
+        <div className="grid grid-cols-2 gap-3">
+
+          {/* Moda PE27 */}
+          <Link href="/moda" className="group block">
+            <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm aspect-square relative">
               <div className="absolute inset-0 bg-gradient-to-br from-[#1a0a2e] via-[#0d0d1a] to-[#000000]" />
-              <div className="absolute inset-0 flex items-center justify-end pr-6 select-none pointer-events-none">
+              <div className="absolute inset-0 flex items-center justify-end pr-4 select-none pointer-events-none">
                 <span
-                  className="text-[6rem] font-extralight text-white/[0.05] leading-none tracking-tighter"
+                  className="text-[5rem] font-extralight text-white/[0.05] leading-none tracking-tighter"
                   style={{ fontVariantNumeric: 'tabular-nums' }}
                 >
                   27
@@ -116,45 +66,35 @@ export default function AdminExperimentalLanding() {
                   backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(255,255,255,1) 24px, rgba(255,255,255,1) 25px), repeating-linear-gradient(90deg, transparent, transparent 24px, rgba(255,255,255,1) 24px, rgba(255,255,255,1) 25px)',
                 }}
               />
-              <div className="absolute inset-0 flex items-end p-5">
-                <div>
-                  <p className="text-2xs text-white/35 uppercase tracking-[0.25em]">Primavera · Estate</p>
-                  <p className="text-xl font-light text-white leading-tight tracking-wide mt-0.5">Moda PE27</p>
-                </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+                <p className="text-2xs text-white/40 uppercase tracking-[0.2em]">Collezione</p>
+                <p className="text-sm font-light text-white leading-snug mt-0.5 group-hover:text-white/80 transition-colors">Moda PE27</p>
               </div>
             </div>
-          }
-        />
+          </Link>
 
-        {/* ── Casa 2027 ── */}
-        <CollectionCard
-          rows={casaRows}
-          header={
-            <div className="relative h-36 overflow-hidden">
+          {/* Casa 2027 */}
+          <Link href="/casa" className="group block">
+            <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm aspect-square relative">
               {hasEditorialImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={hs.editorialUrl}
                   alt="Casa 2027"
-                  className="absolute inset-0 w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-br from-[#f0e8de] via-[#e4d5c4] to-[#cdb99e]" />
               )}
-              <div className={`absolute inset-0 bg-gradient-to-t ${hasEditorialImage ? 'from-black/60 to-transparent' : 'from-black/20 to-transparent'}`} />
-              <div className="absolute inset-0 flex items-end p-5">
-                <div>
-                  <p className={`text-2xs uppercase tracking-[0.25em] ${hasEditorialImage ? 'text-white/50' : 'text-gray-500'}`}>Casa · Arredamento</p>
-                  <p className={`text-xl font-light leading-tight tracking-wide mt-0.5 ${hasEditorialImage ? 'text-white' : 'text-primary'}`}>Casa 2027</p>
-                </div>
+              <div className={`absolute inset-0 bg-gradient-to-t ${hasEditorialImage ? 'from-black/70 via-transparent to-transparent' : 'from-black/30 via-transparent to-transparent'}`} />
+              <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+                <p className={`text-2xs uppercase tracking-[0.2em] ${hasEditorialImage ? 'text-white/50' : 'text-gray-500'}`}>Collezione</p>
+                <p className={`text-sm font-light leading-snug mt-0.5 transition-colors ${hasEditorialImage ? 'text-white group-hover:text-white/80' : 'text-primary'}`}>Casa 2027</p>
               </div>
             </div>
-          }
-        />
+          </Link>
 
-        {/* ── Aiuto — shared ── */}
-        <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-white">
-          <NavRow href="/catalog/assistenza" icon={HelpCircle} label="Aiuto" />
         </div>
 
         {/* ── Social ── */}

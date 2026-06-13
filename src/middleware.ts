@@ -19,8 +19,8 @@ export default withAuth(
       }
     }
 
-    // Moda PE27 — exclusive access, see src/lib/modaAccess.ts
-    if (pathname.startsWith('/moda')) {
+    // Moda PE27 and Casa hub — exclusive access while experimental
+    if (pathname.startsWith('/moda') || pathname.startsWith('/casa')) {
       if (!canAccessModa(token?.email as string)) {
         return NextResponse.redirect(new URL('/catalog', req.url));
       }
@@ -58,6 +58,8 @@ export const config = {
     '/admin/:path*',
     '/moda/:path*',
     '/moda',
+    '/casa/:path*',
+    '/casa',
     '/seleziona-destinazione',
   ],
 };
