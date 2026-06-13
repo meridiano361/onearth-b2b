@@ -31,6 +31,26 @@ const SOCIAL_SVG: Record<string, ReactNode> = {
   ),
 };
 
+function RisorseRow({ href, empty }: { href: string; empty?: boolean }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-2.5 px-4 py-3 bg-white hover:bg-gray-50 border-t border-gray-100 transition-colors group"
+    >
+      <Film size={13} className={empty ? 'text-gray-300 flex-shrink-0' : 'text-gray-400 flex-shrink-0'} />
+      <div className="flex-1 min-w-0">
+        <p className={`text-xs font-medium truncate ${empty ? 'text-gray-400' : 'text-gray-700'}`}>
+          Risorse e media
+        </p>
+        <p className="text-2xs text-gray-400 truncate">
+          {empty ? 'Nessuna risorsa disponibile' : 'Documenti, foto, video'}
+        </p>
+      </div>
+      <ChevronRight size={12} className="text-gray-300 group-hover:text-gray-500 flex-shrink-0 transition-colors" />
+    </Link>
+  );
+}
+
 export default function AdminExperimentalLanding() {
   const { data: session } = useSession();
   const { home: hs, social: ss } = useSettings();
@@ -39,28 +59,19 @@ export default function AdminExperimentalLanding() {
   if (!canAccessModa(session?.user?.email)) return null;
 
   const hasEditorialImage = hs.editorialAttivo && hs.editorialUrl;
-
   const visibleSocial = ss.ordine.filter((k) => ss.items[k]?.visibile);
 
   return (
     <div className="min-h-screen bg-cream">
-      <div className="max-w-lg mx-auto px-4 py-10 space-y-6">
+      <div className="max-w-lg mx-auto px-4 py-10 space-y-4">
 
-        {/* ── Brand header ── */}
-        <div className="text-center pb-2">
-          <p className="label-luxury text-accent tracking-widest text-2xs">ON EARTH B2B</p>
-          <h1 className="font-display text-2xl text-primary font-light tracking-wide mt-1">Collezioni</h1>
-        </div>
-
-        {/* ── Collection cards ── */}
+        {/* ── Collection cards — 2-column grid ── */}
         <div className="grid grid-cols-2 gap-3">
 
-          {/* Moda PE27 */}
-          <Link href="/moda" className="group block">
-            <div className="relative overflow-hidden rounded-2xl aspect-[2/3] bg-[#0a0a0f]">
-              {/* Subtle fashion gradient */}
+          {/* ── Moda PE27 ── */}
+          <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
+            <Link href="/moda" className="group block aspect-square relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-[#1a0a2e] via-[#0d0d1a] to-[#000000]" />
-              {/* Large watermark number */}
               <div className="absolute inset-0 flex items-center justify-center select-none pointer-events-none">
                 <span
                   className="text-[5rem] font-extralight text-white/[0.04] leading-none tracking-tighter select-none"
@@ -69,29 +80,27 @@ export default function AdminExperimentalLanding() {
                   27
                 </span>
               </div>
-              {/* Subtle grid texture */}
               <div
                 className="absolute inset-0 opacity-[0.03]"
                 style={{
                   backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(255,255,255,1) 24px, rgba(255,255,255,1) 25px), repeating-linear-gradient(90deg, transparent, transparent 24px, rgba(255,255,255,1) 24px, rgba(255,255,255,1) 25px)',
                 }}
               />
-              {/* Bottom text */}
-              <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
+              <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
                 <p className="text-2xs text-white/40 uppercase tracking-[0.2em]">PE 27</p>
                 <p className="text-sm font-light text-white leading-tight mt-0.5">Moda</p>
-                <div className="mt-2 flex items-center gap-1 text-white/30 group-hover:text-white/60 transition-colors duration-200">
+                <div className="mt-1.5 flex items-center gap-1 text-white/30 group-hover:text-white/60 transition-colors duration-200">
                   <span className="text-2xs">Esplora</span>
                   <ChevronRight size={11} />
                 </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+            <RisorseRow href="/moda/risorse" empty />
+          </div>
 
-          {/* Casa 2027 */}
-          <Link href="/catalog/products" className="group block">
-            <div className="relative overflow-hidden rounded-2xl aspect-[2/3]">
-              {/* Background: editorial image or warm gradient */}
+          {/* ── Casa 2027 ── */}
+          <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
+            <Link href="/catalog/products" className="group block aspect-square relative overflow-hidden">
               {hasEditorialImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -102,40 +111,24 @@ export default function AdminExperimentalLanding() {
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-br from-[#f0e8de] via-[#e4d5c4] to-[#cdb99e]" />
               )}
-              {/* Gradient overlay for text readability */}
               <div className={`absolute inset-0 bg-gradient-to-t ${hasEditorialImage ? 'from-black/70 via-black/10 to-transparent' : 'from-black/30 via-transparent to-transparent'}`} />
-              {/* Bottom text */}
-              <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+              <div className="absolute bottom-0 left-0 right-0 p-3">
                 <p className={`text-2xs uppercase tracking-[0.2em] ${hasEditorialImage ? 'text-white/50' : 'text-gray-500'}`}>CA 27</p>
                 <p className={`text-sm font-light leading-tight mt-0.5 ${hasEditorialImage ? 'text-white' : 'text-primary'}`}>Casa</p>
-                <div className={`mt-2 flex items-center gap-1 transition-colors duration-200 ${hasEditorialImage ? 'text-white/30 group-hover:text-white/60' : 'text-gray-400 group-hover:text-primary'}`}>
+                <div className={`mt-1.5 flex items-center gap-1 transition-colors duration-200 ${hasEditorialImage ? 'text-white/30 group-hover:text-white/60' : 'text-gray-400 group-hover:text-primary'}`}>
                   <span className="text-2xs">Esplora</span>
                   <ChevronRight size={11} />
                 </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+            <RisorseRow href="/catalog/risorse" />
+          </div>
 
         </div>
 
-        {/* ── Risorse e Media ── */}
-        <Link
-          href="/catalog/risorse"
-          className="flex items-center gap-3 bg-white border border-gray-200 shadow-sm rounded-xl px-5 py-4 hover:border-primary/30 transition-colors group"
-        >
-          <div className="w-9 h-9 rounded-lg bg-primary/5 flex items-center justify-center flex-shrink-0">
-            <Film size={17} className="text-primary" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-primary">Risorse e media</p>
-            <p className="text-xs text-gray-400">Documenti PDF, foto, video e altro</p>
-          </div>
-          <ChevronRight size={15} className="ml-auto text-gray-300 group-hover:text-primary transition-colors" />
-        </Link>
-
         {/* ── Social ── */}
         {visibleSocial.length > 0 && (
-          <div className="bg-white border border-gray-200 shadow-sm rounded-xl px-5 py-4">
+          <div className="bg-white border border-gray-200 shadow-sm rounded-2xl px-5 py-4">
             <div className="flex items-center justify-center gap-5 flex-wrap">
               {visibleSocial.map((key) => {
                 const url = ss.items[key]?.url;
