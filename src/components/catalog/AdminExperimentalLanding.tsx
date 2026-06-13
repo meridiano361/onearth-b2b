@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import {
   Grid3x3, Heart, ShoppingCart, Package2, Film,
-  HelpCircle, ChevronRight, Globe, Mic,
+  HelpCircle, ChevronRight, Globe, Mic, Layers,
 } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { canAccessModa } from '@/lib/modaAccess';
@@ -76,11 +76,12 @@ export default function AdminExperimentalLanding() {
   const visibleSocial = ss.ordine.filter((k) => ss.items[k]?.visibile);
 
   const modaRows: NavRowItem[] = [
-    { href: '/moda/catalogo',   icon: Grid3x3,     label: 'Catalogo'      },
-    { href: '/moda/preferiti',  icon: Heart,        label: 'Preferiti'     },
-    { href: '/moda/carrelli',   icon: ShoppingCart, label: 'Carrelli'      },
-    { href: '/catalog/orders',  icon: Package2,     label: 'Ordini'        },
+    { href: '/moda/catalogo',   icon: Grid3x3,     label: 'Catalogo'        },
+    { href: '/moda/preferiti',  icon: Heart,        label: 'Preferiti'       },
+    { href: '/moda/carrelli',   icon: ShoppingCart, label: 'Carrelli'        },
+    { href: '/moda/ordini',     icon: Package2,     label: 'Ordini'          },
     { href: '/moda/risorse',    icon: Film,         label: 'Risorse e media' },
+    { href: '/moda/looks',      icon: Layers,       label: 'Total Look'      },
   ];
 
   const casaRows: NavRowItem[] = [

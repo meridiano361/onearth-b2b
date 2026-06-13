@@ -118,7 +118,7 @@ const CHIP_LABELS: { key: keyof Filters; label: string }[] = [
   { key: 'tranche',            label: 'Tranche' },
 ];
 
-export default function CatalogView() {
+export default function CatalogView({ lockedCollezione }: { lockedCollezione?: string } = {}) {
   const { data: session } = useSession();
   const isCustomer = session?.user?.role === 'CUSTOMER';
   const router = useRouter();
@@ -132,6 +132,8 @@ export default function CatalogView() {
       const v = searchParams.get(urlKey);
       if (v) (init as any)[filterKey] = v;
     }
+    // Locked collection always overrides URL param
+    if (lockedCollezione) init.collezione = lockedCollezione;
     return init;
   });
 
@@ -175,8 +177,9 @@ export default function CatalogView() {
   }
 
   function handleResetAll() {
-    setFilters(EMPTY_FILTERS);
-    updateUrl(EMPTY_FILTERS, sortBy, search);
+    const reset = lockedCollezione ? { ...EMPTY_FILTERS, collezione: lockedCollezione } : EMPTY_FILTERS;
+    setFilters(reset);
+    updateUrl(reset, sortBy, search);
   }
 
   function setSortBy(v: typeof sortBy) {
@@ -223,7 +226,9 @@ export default function CatalogView() {
     setShowMobileFilters(false);
   }
 
-  const hasActiveFilters   = Object.values(filters).some(Boolean);
+  const hasActiveFilters = Object.entries(filters).some(
+    ([k, v]) => v && !(lockedCollezione && k === 'collezione')
+  );
   const activeFilterCount  = Object.values(filters).filter(Boolean).length;
   const pendingFilterCount = Object.values(pendingFilters).filter(Boolean).length;
 
@@ -515,29 +520,31 @@ export default function CatalogView() {
             </div>
           </div>
 
-          {/* Novità / Continuativi chips — always visible inside sticky bar */}
-          <div className="flex items-center gap-1.5 px-4 sm:px-6 pb-2.5">
-            {(['all', 'novita', 'continuativi'] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setNovitaFilter(v)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex-shrink-0 ${
-                  novitaFilter === v
-                    ? 'bg-primary text-background border-primary'
-                    : 'bg-white text-gray-500 border-border hover:bg-cream'
-                }`}
-              >
-                {v === 'all' ? 'Tutti' : v === 'novita' ? 'Novità' : 'Continuativi'}
-              </button>
-            ))}
-          </div>
+          {/* Novità / Continuativi chips — Casa only */}
+          {!lockedCollezione && (
+            <div className="flex items-center gap-1.5 px-4 sm:px-6 pb-2.5">
+              {(['all', 'novita', 'continuativi'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setNovitaFilter(v)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex-shrink-0 ${
+                    novitaFilter === v
+                      ? 'bg-primary text-background border-primary'
+                      : 'bg-white text-gray-500 border-border hover:bg-cream'
+                  }`}
+                >
+                  {v === 'all' ? 'Tutti' : v === 'novita' ? 'Novità' : 'Continuativi'}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Active filter chips — desktop */}
         {hasActiveFilters && (
           <div className="hidden md:flex flex-wrap gap-1.5 px-6 py-2 border-b border-border/50 bg-cream/30">
             {CHIP_LABELS.map(({ key, label }) =>
-              filters[key] ? (
+              filters[key] && !(lockedCollezione && key === 'collezione') ? (
                 <span key={key} className="inline-flex items-center gap-1 text-2xs bg-white border border-border rounded-full px-2.5 py-1 text-primary">
                   <span className="text-gray-400">{label}:</span> {filters[key]}
                   <button onClick={() => setFilter(key, null)} className="text-gray-400 hover:text-primary ml-0.5">
@@ -553,7 +560,7 @@ export default function CatalogView() {
         <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-border/50">
           <p className="label-luxury text-accent">Collezione</p>
           <h1 className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide">
-            CASA 2027
+            {lockedCollezione === 'PE27' ? 'MODA PE27' : 'CASA 2027'}
           </h1>
         </div>
 
