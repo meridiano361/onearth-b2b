@@ -340,6 +340,7 @@ export default function CatalogView({ lockedCollezione }: { lockedCollezione?: s
       hasActiveFilters,
       onResetAll: handleResetAll,
       enabledFilters,
+      lockedCollezione,
     };
   }
 

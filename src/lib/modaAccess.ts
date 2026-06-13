@@ -13,5 +13,5 @@ export type CatalogBranchId = typeof MODA_BRANCH_ID | typeof CASA_BRANCH_ID;
 
 /** Returns true only for the single account that can access Moda PE27. */
 export function canAccessModa(email: string | null | undefined): boolean {
-  return email === MODA_EMAIL;
+  return !!email && email.toLowerCase().trim() === MODA_EMAIL;
 }

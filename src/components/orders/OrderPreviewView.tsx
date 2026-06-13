@@ -181,6 +181,7 @@ function AddProductsModal({
   noProductsLabel,
   addLabel,
   orderProductIds,
+  orderItems,
 }: {
   orderId: string;
   onClose: () => void;
@@ -191,6 +192,7 @@ function AddProductsModal({
   noProductsLabel: string;
   addLabel: string;
   orderProductIds: Set<string>;
+  orderItems: OrderItem[];
 }) {
   const [tab, setTab] = useState<'ricerca' | 'catalogo'>('ricerca');
   const [search, setSearch] = useState('');
@@ -201,9 +203,19 @@ function AddProductsModal({
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
   const [galleryIndex, setGalleryIndex] = useState(0);
 
+  // Products already in the order, derived directly from order items (bypasses API 200-item limit)
+  const giaProducts = useMemo<Product[]>(() => {
+    const base = orderItems.map(i => i.product).filter(Boolean) as Product[];
+    if (!debouncedSearch.trim()) return base;
+    const q = debouncedSearch.toLowerCase();
+    return base.filter(p =>
+      p.code.toLowerCase().includes(q) ||
+      p.name.toLowerCase().includes(q)
+    );
+  }, [orderItems, debouncedSearch]);
+
   function applyPresenzaFilter(list: Product[]): Product[] {
     if (presenzaFilter === 'non-ancora') return list.filter(p => !orderProductIds.has(p.id));
-    if (presenzaFilter === 'gia') return list.filter(p => orderProductIds.has(p.id));
     return list;
   }
 
@@ -535,7 +547,14 @@ function AddProductsModal({
 
           {/* Right: product list */}
           <div className="flex-1 overflow-y-auto">
-            {tab === 'ricerca' ? (
+            {presenzaFilter === 'gia' ? (
+              <>
+                {giaProducts.length === 0 && (
+                  <p className="text-center text-sm text-gray-400 py-12">{noProductsLabel}</p>
+                )}
+                {giaProducts.map(renderProductRow)}
+              </>
+            ) : tab === 'ricerca' ? (
               <>
                 {isLoading && (
                   <div className="flex items-center justify-center py-12">
@@ -884,6 +903,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
           noProductsLabel={t('noProducts')}
           addLabel={t('add')}
           orderProductIds={new Set((order?.items ?? []).map(i => i.productId))}
+          orderItems={order?.items ?? []}
           onAdded={() => {
             queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
             queryClient.invalidateQueries({ queryKey: ['my-orders'] });

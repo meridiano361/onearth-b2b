@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-12 (esposizione moda)
+// AGGIORNATO: 2026-06-13 (filtro collezione PE27, tassonomia merceologica)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -371,9 +371,8 @@ export default function AssistenzaPage() {
             La sezione <strong>Moda PE27</strong> è accessibile esclusivamente dall&apos;account amministratore e raccoglie la collezione moda Primavera/Estate 2027.
           </p>
           <ul className="space-y-2">
-            <Bullet><span className="font-medium">Accesso:</span> nella home del catalogo compare il selettore <em>Casa 27 / Moda PE27</em>. Clicca su Moda PE27 per entrare nella sezione.</Bullet>
-            <Bullet><span className="font-medium">Catalogo Moda:</span> sfoglia tutti i prodotti PE27 con ricerca per nome, codice e colore e filtro per famiglia.</Bullet>
-            <Bullet><span className="font-medium">Total Look:</span> crea look curati abbinando più prodotti PE27. Ogni look ha un titolo, una descrizione e una foto di copertina opzionale. Puoi aggiungere tutti i prodotti di un look al carrello in un click.</Bullet>
+            <Bullet><span className="font-medium">Accesso:</span> dalla home dell&apos;app tocca il quadrato <em>MODA PE27</em> per entrare nella sezione. Da lì puoi navigare a Catalogo, Preferiti, Carrelli e Ordini della collezione.</Bullet>
+            <Bullet><span className="font-medium">Catalogo Moda:</span> mostra solo i prodotti PE27 (il filtro collezione è pre-impostato e bloccato). Usa gli altri filtri per famiglia, classe, sottoclasse e gruppo omogeneo secondo la tassonomia moda.</Bullet>
             <Bullet><span className="font-medium">Esposizione:</span> componi outfit a parete selezionando una palette colori PE27, una fantasia/texture dominante, i capi principali (zona centro) e gli accessori coordinati (zona destra). Da ogni outfit puoi aggiungere al carrello tutti i prodotti, solo i capi o solo gli accessori.</Bullet>
             <Bullet><span className="font-medium">Ordini:</span> gli ordini moda si creano con il carrello standard e sono accessibili dalla sezione I miei Ordini.</Bullet>
           </ul>

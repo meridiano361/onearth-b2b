@@ -34,6 +34,7 @@ interface CatalogFiltersProps {
   hasActiveFilters: boolean;
   onResetAll: () => void;
   enabledFilters?: string[] | null;
+  lockedCollezione?: string;
 }
 
 type FilterRecord = Record<string, string | null>;
@@ -147,6 +148,7 @@ export default function CatalogFilters({
   selectedTranche,            onTrancheChange,
   hasActiveFilters,           onResetAll,
   enabledFilters,
+  lockedCollezione,
 }: CatalogFiltersProps) {
   const t = useTranslations('filters');
   const show = (key: string) => !enabledFilters || enabledFilters.length === 0 || enabledFilters.includes(key);
@@ -214,7 +216,7 @@ export default function CatalogFilters({
         {show('colore')             && <FilterSelect label={t('colore')}             allLabel={t('all')} value={selectedColore}             options={opts.colore}             onChange={onColoreChange} />}
         {show('temaColore')         && <FilterSelect label={t('temaColore')}         allLabel={t('all')} value={selectedTemaColore}         options={opts.temaColore}         onChange={onTemaColoreChange} />}
         {show('stagione')           && <FilterSelect label={t('stagione')}           allLabel={t('all')} value={selectedStagione}           options={opts.stagione}           onChange={onStagioneChange} />}
-        {show('collezione')         && <FilterSelect label={t('collezione')}         allLabel={t('all')} value={selectedCollezione}         options={opts.collezione}         onChange={onCollezioneChange} />}
+        {show('collezione') && !lockedCollezione && <FilterSelect label={t('collezione')} allLabel={t('all')} value={selectedCollezione} options={opts.collezione} onChange={onCollezioneChange} />}
         {show('produttore')         && <FilterSelect label={t('produttore')}         allLabel={t('all')} value={selectedProduttore}         options={opts.produttore}         onChange={onProduttoreChange} />}
         {show('tranche')            && <FilterSelect label={t('tranche')}            allLabel={t('all')} value={selectedTranche}           options={opts.tranche}            onChange={onTrancheChange} />}
 

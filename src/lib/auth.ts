@@ -68,7 +68,7 @@ export const authOptions: NextAuthOptions = {
           }).catch(() => {});
           return {
             id: operator.id,
-            email: operator.email,
+            email,
             role: 'OPERATOR' as AppRole,
             companyName: operator.organization.nome,
             customerCode: '',
@@ -97,7 +97,7 @@ export const authOptions: NextAuthOptions = {
         securityLog('login_success', { email, ip, userType: 'customer', id: customer.id });
         return {
           id: customer.id,
-          email: customer.email,
+          email,
           role: customer.role as AppRole,
           companyName: customer.companyName,
           customerCode: customer.customerCode,
@@ -109,6 +109,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
+        token.email = user.email;
         token.role = user.role;
         token.companyName = user.companyName;
         token.customerCode = user.customerCode;
@@ -130,6 +131,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id as string;
+        session.user.email = (token.email as string) ?? session.user.email;
         session.user.role = token.role as AppRole;
         session.user.companyName = token.companyName as string;
         session.user.customerCode = token.customerCode as string;
