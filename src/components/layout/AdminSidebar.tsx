@@ -20,6 +20,7 @@ import {
   Paintbrush,
   Bell,
   BarChart2,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -112,20 +113,39 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
         ))}
       </nav>
 
-      {/* Footer: role badge + logout */}
+      {/* Footer: role badge + preview links + logout */}
       <div className="px-3 py-4 border-t border-white/10 space-y-1">
         {role && role !== 'CUSTOMER' && (
           <p className="px-3 text-2xs text-gray-600 uppercase tracking-widest mb-2">{role.replace('_', ' ')}</p>
         )}
+
+        {/* Anteprima app attuale — impersona un cliente */}
+        <Link
+          href="/admin/preview"
+          onClick={onClose}
+          className="flex items-start gap-3 px-3 py-2.5 w-full rounded text-xs text-gray-500 hover:text-white hover:bg-white/5 transition-all duration-150"
+        >
+          <Eye size={15} className="flex-shrink-0 mt-px" />
+          <span className="leading-tight">
+            Anteprima app attuale
+            <span className="block text-2xs text-gray-700 mt-0.5">come la vede il cliente</span>
+          </span>
+        </Link>
+
+        {/* Anteprima nuova app — landing sperimentale admin */}
         <a
           href="/catalog"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 px-3 py-2.5 w-full rounded text-xs text-gray-500 hover:text-white hover:bg-white/5 transition-all duration-150"
+          className="flex items-start gap-3 px-3 py-2.5 w-full rounded text-xs text-gray-500 hover:text-white hover:bg-white/5 transition-all duration-150"
         >
-          <Eye size={15} />
-          Vai al Catalogo
+          <Sparkles size={15} className="flex-shrink-0 mt-px" />
+          <span className="leading-tight">
+            Anteprima nuova app
+            <span className="block text-2xs text-gray-700 mt-0.5">nascosta, in sviluppo</span>
+          </span>
         </a>
+
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           className="flex items-center gap-3 px-3 py-2.5 w-full rounded text-xs text-gray-500 hover:text-white hover:bg-white/5 transition-all duration-150"
