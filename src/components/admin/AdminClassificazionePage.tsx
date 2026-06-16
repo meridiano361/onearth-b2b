@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, Trash2, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -35,10 +35,18 @@ const TIPI = [
   { tipo: 'temaColore', label: 'Tema colore' },
 ];
 
-function normalizeValue(tipo: string, v: string): string {
+// Tipi gerarchici legati al GM root (escluse le flat lookup table)
+const HIERARCHY_TIPI = new Set(['gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo']);
+
+type Tree = 'casa' | 'moda';
+
+function normalizeValue(tipo: string, v: string, tree: Tree): string {
   const t = v.trim();
   if (!t) return t;
   if (tipo === 'nomLinea' || tipo === 'collezione') return t.toUpperCase();
+  // Albero MODA: tutta la gerarchia in MAIUSCOLO
+  if (tree === 'moda' && HIERARCHY_TIPI.has(tipo)) return t.toUpperCase();
+  // Albero CASA: Title Case
   return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
 }
 
@@ -56,7 +64,15 @@ interface ValoreItem {
   createdAt: string;
 }
 
-function ClassificazioneTab({ tipo }: { tipo: string }) {
+function ClassificazioneTab({
+  tipo,
+  treeGmId,
+  tree,
+}: {
+  tipo: string;
+  treeGmId: string | undefined;
+  tree: Tree;
+}) {
   const queryClient = useQueryClient();
   const [selectedParentId, setSelectedParentId] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -69,19 +85,40 @@ function ClassificazioneTab({ tipo }: { tipo: string }) {
 
   const parentConfig = PARENT_CONFIG[tipo];
 
-  // Load parent options for hierarchy child types
+  // Quando cambia l'albero: auto-selezione per la tab Famiglia (1 solo GM),
+  // reset per gli altri livelli (l'utente deve scegliere il genitore).
+  useEffect(() => {
+    if (!treeGmId) return;
+    if (tipo === 'famiglia') {
+      setSelectedParentId(treeGmId);
+      setNewParentId(treeGmId);
+    } else {
+      setSelectedParentId('');
+    }
+    setIsAdding(false);
+  }, [treeGmId, tipo]);
+
+  // Load parent options for hierarchy child types,
+  // filtrate all'albero selezionato per i livelli che hanno famiglia come genitore.
   const { data: parentData } = useQuery({
-    queryKey: ['cls-admin', parentConfig?.parentTipo],
-    queryFn: () =>
-      fetch(`/api/classificazione/${parentConfig!.parentTipo}`).then((r) => r.json()) as Promise<{ data: ValoreItem[] }>,
+    queryKey: ['cls-admin', parentConfig?.parentTipo, treeGmId ?? 'all'],
+    queryFn: () => {
+      let url = `/api/classificazione/${parentConfig!.parentTipo}`;
+      // Per il tab Classe, il genitore è Famiglia: filtriamo alle famiglie dell'albero
+      if (treeGmId && parentConfig!.parentTipo === 'famiglia') {
+        url += `?parentId=${treeGmId}`;
+      }
+      return fetch(url).then((r) => r.json()) as Promise<{ data: ValoreItem[] }>;
+    },
     enabled: !!parentConfig,
   });
 
   const parentOptions = parentData?.data || [];
 
-  // Load items — for hierarchy children, require a parent to be selected
+  // Load items — for hierarchy children, require a parent to be selected.
+  // Per la tab GruppoMerceologico, filtra al GM dell'albero selezionato.
   const { data, isLoading } = useQuery({
-    queryKey: ['cls-admin', tipo, selectedParentId],
+    queryKey: ['cls-admin', tipo, selectedParentId, treeGmId ?? 'all'],
     queryFn: async () => {
       const url = selectedParentId
         ? `/api/classificazione/${tipo}?parentId=${selectedParentId}`
@@ -93,10 +130,14 @@ function ClassificazioneTab({ tipo }: { tipo: string }) {
     enabled: !parentConfig || !!selectedParentId,
   });
 
-  const items: ValoreItem[] = data?.data || [];
+  const allItems: ValoreItem[] = data?.data || [];
+  // Per la tab GM: mostra solo il GM dell'albero corrente
+  const items: ValoreItem[] = tipo === 'gruppoMerceologico' && treeGmId
+    ? allItems.filter((item) => item.id === treeGmId)
+    : allItems;
 
   async function handleAdd() {
-    const name = normalizeValue(tipo, newNome);
+    const name = normalizeValue(tipo, newNome, tree);
     if (!name) return;
     if (parentConfig && !newParentId) {
       toast.error(`Seleziona ${parentConfig.parentLabel}`);
@@ -130,7 +171,7 @@ function ClassificazioneTab({ tipo }: { tipo: string }) {
   }
 
   async function handleEdit(id: string) {
-    const normNome = normalizeValue(tipo, editNome);
+    const normNome = normalizeValue(tipo, editNome, tree);
     if (!normNome) return;
     try {
       const res = await fetch(`/api/classificazione/${tipo}/${id}`, {
@@ -164,10 +205,14 @@ function ClassificazioneTab({ tipo }: { tipo: string }) {
     }
   }
 
+  // Il selettore del genitore è nascosto per la tab Famiglia quando l'albero
+  // è già selezionato (il GM è auto-impostato e l'utente non deve sceglierlo).
+  const hideParentSelector = tipo === 'famiglia' && !!treeGmId;
+
   return (
     <div>
-      {/* Parent filter for hierarchy child types */}
-      {parentConfig && (
+      {/* Parent filter — nascosto per la tab Famiglia con albero selezionato */}
+      {parentConfig && !hideParentSelector && (
         <div className="mb-4 flex items-center gap-3">
           <label className="text-xs font-medium text-gray-500 whitespace-nowrap">
             Filtra per {parentConfig.parentLabel}:
@@ -202,7 +247,8 @@ function ClassificazioneTab({ tipo }: { tipo: string }) {
       {/* Add form */}
       {isAdding && (
         <div className="flex flex-col gap-2 mb-3 p-3 bg-cream rounded border border-border">
-          {parentConfig && (
+          {/* Selettore genitore nel form: nascosto per Famiglia con albero selezionato */}
+          {parentConfig && !hideParentSelector && (
             <div className="flex items-center gap-2">
               <label className="text-xs text-gray-500 whitespace-nowrap w-28">{parentConfig.parentLabel}:</label>
               <select
@@ -222,7 +268,7 @@ function ClassificazioneTab({ tipo }: { tipo: string }) {
               autoFocus
               value={newNome}
               onChange={(e) => setNewNome(e.target.value)}
-              onBlur={() => setNewNome(normalizeValue(tipo, newNome))}
+              onBlur={() => setNewNome(normalizeValue(tipo, newNome, tree))}
               onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setIsAdding(false); setNewNome(''); } }}
               placeholder="Nuovo valore..."
               className="flex-1 text-sm border border-border rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent bg-white"
@@ -264,7 +310,7 @@ function ClassificazioneTab({ tipo }: { tipo: string }) {
                           autoFocus
                           value={editNome}
                           onChange={(e) => setEditNome(e.target.value)}
-                          onBlur={() => setEditNome(normalizeValue(tipo, editNome))}
+                          onBlur={() => setEditNome(normalizeValue(tipo, editNome, tree))}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleEdit(item.id);
                             if (e.key === 'Escape') setEditingId(null);
@@ -538,6 +584,29 @@ function ProduttoriTab() {
 
 export default function AdminClassificazionePage() {
   const [activeTab, setActiveTab] = useState(TIPI[0].tipo);
+  const [selectedTree, setSelectedTree] = useState<Tree>('casa');
+
+  // Carica tutti i GM per ricavare l'id radice di ciascun albero
+  const { data: gmList } = useQuery<ValoreItem[]>({
+    queryKey: ['cls-gm-list'],
+    queryFn: async () => {
+      const res = await fetch('/api/classificazione/gruppoMerceologico');
+      return (await res.json()).data as ValoreItem[];
+    },
+    staleTime: 60_000,
+  });
+
+  const treeGmId = useMemo(() => {
+    if (!gmList) return undefined;
+    const name = selectedTree === 'moda' ? 'MODA' : 'Casa e regalo';
+    return gmList.find((gm) => gm.nome === name)?.id;
+  }, [gmList, selectedTree]);
+
+  // Quando si cambia albero, resetta la tab attiva alla prima gerarchica
+  function handleTreeChange(tree: Tree) {
+    setSelectedTree(tree);
+    setActiveTab(TIPI[0].tipo);
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -547,7 +616,41 @@ export default function AdminClassificazionePage() {
         <p className="text-sm text-gray-400 mt-0.5">Gestione valori di classificazione prodotti</p>
       </div>
 
-      {/* Tab bar */}
+      {/* ── Selettore albero ── */}
+      <div className="mb-6 flex items-center gap-3">
+        <span className="text-xs font-medium text-gray-500">Albero:</span>
+        <div className="flex items-center bg-gray-100 rounded-lg p-1 gap-0.5">
+          <button
+            onClick={() => handleTreeChange('casa')}
+            className={cn(
+              'px-4 py-1.5 text-xs font-medium rounded-md transition-colors',
+              selectedTree === 'casa'
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-gray-500 hover:text-primary'
+            )}
+          >
+            Casa e regalo
+          </button>
+          <button
+            onClick={() => handleTreeChange('moda')}
+            className={cn(
+              'px-4 py-1.5 text-xs font-medium rounded-md transition-colors',
+              selectedTree === 'moda'
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-gray-500 hover:text-primary'
+            )}
+          >
+            Moda PE27
+          </button>
+        </div>
+        {selectedTree === 'moda' && (
+          <span className="text-2xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+            Valori in MAIUSCOLO
+          </span>
+        )}
+      </div>
+
+      {/* ── Tab bar ── */}
       <div className="flex flex-wrap gap-1 mb-6 border-b border-border pb-0">
         {TIPI.map(({ tipo, label }) => (
           <button
@@ -576,10 +679,15 @@ export default function AdminClassificazionePage() {
         </button>
       </div>
 
-      {/* Tab content */}
+      {/* ── Tab content ── */}
       {TIPI.map(({ tipo }) =>
         activeTab === tipo ? (
-          <ClassificazioneTab key={tipo} tipo={tipo} />
+          <ClassificazioneTab
+            key={`${tipo}-${selectedTree}`}
+            tipo={tipo}
+            treeGmId={HIERARCHY_TIPI.has(tipo) ? treeGmId : undefined}
+            tree={selectedTree}
+          />
         ) : null
       )}
       {activeTab === 'produttori' && <ProduttoriTab />}
