@@ -49,6 +49,8 @@ const schema = z
     modello: z.string().optional(),
     taglia: z.string().optional(),
     bloccoColore: z.string().optional(),
+    costoIeConReso: z.string().optional(),
+    costoIeSenzaReso: z.string().optional(),
     lotSize: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 1)),
     iva: z.string().default('22').transform(Number),
     costPrice: z.string().min(1, 'Obbligatorio').transform(Number),
@@ -153,6 +155,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           modello: (product as any).modello || '',
           taglia: (product as any).taglia || '',
           bloccoColore: (product as any).bloccoColore || '',
+          costoIeConReso: (product as any).costoIeConReso != null ? String((product as any).costoIeConReso) : '',
+          costoIeSenzaReso: (product as any).costoIeSenzaReso != null ? String((product as any).costoIeSenzaReso) : '',
           lotSize: String(product.lotSize),
           iva: String(product.iva ?? 22),
           costPrice: String(product.costPrice),
@@ -314,6 +318,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           modello: (v as any).modello || null,
           taglia: (v as any).taglia || null,
           bloccoColore: (v as any).bloccoColore || null,
+          costoIeConReso: (v as any).costoIeConReso ? parseFloat((v as any).costoIeConReso) || null : null,
+          costoIeSenzaReso: (v as any).costoIeSenzaReso ? parseFloat((v as any).costoIeSenzaReso) || null : null,
           fasciaRicarico: v.fasciaRicarico || null,
           fasciaSconto: v.fasciaSconto ? parseFloat(v.fasciaSconto) || null : null,
           tranche: v.tranche || null,
@@ -820,6 +826,39 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           </div>
         </div>
       </div>
+
+      {isModa && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">COSTO I.E. CON RESO (€)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+              <input
+                {...register('costoIeConReso')}
+                type="number"
+                step="0.01"
+                min="0"
+                className={priceInputClass}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">COSTO I.E. SENZA RESO (€)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+              <input
+                {...register('costoIeSenzaReso')}
+                type="number"
+                step="0.01"
+                min="0"
+                className={priceInputClass}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <Combobox

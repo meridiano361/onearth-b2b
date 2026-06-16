@@ -50,6 +50,11 @@ const updateSchema = z.object({
   tranche: z.string().optional().nullable(),
   paese: z.string().optional().nullable(),
   iva: z.coerce.number().int().min(0).max(100).optional(),
+  modello: z.string().optional().nullable(),
+  taglia: z.string().optional().nullable(),
+  bloccoColore: z.string().optional().nullable(),
+  costoIeConReso: z.coerce.number().positive().optional().nullable(),
+  costoIeSenzaReso: z.coerce.number().positive().optional().nullable(),
 });
 
 export async function GET(
