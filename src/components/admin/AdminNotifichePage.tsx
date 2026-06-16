@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Plus, Pencil, Trash2, Copy, Eye, EyeOff, Bell, Smartphone, Mail } from 'lucide-react';
+import { Plus, Pencil, Trash2, Copy, Eye, EyeOff, Bell, Smartphone, Mail, Send } from 'lucide-react';
 
 type Notification = {
   id: string;
@@ -337,6 +337,13 @@ export default function AdminNotifichePage() {
     qc.invalidateQueries({ queryKey: ['admin-notifications'] });
   }
 
+  async function handleResend(n: Notification) {
+    if (!confirm(`Reinviare "${n.titolo}" a tutti i clienti?`)) return;
+    const res = await fetch(`/api/admin/notifications/${n.id}/send`, { method: 'POST' });
+    if (!res.ok) { toast.error('Errore nel reinvio'); return; }
+    toast.success('Notifica reinviata');
+  }
+
   async function handleDelete(id: string) {
     if (!confirm('Eliminare questa notifica?')) return;
     const res = await fetch(`/api/admin/notifications/${id}`, { method: 'DELETE' });
@@ -426,6 +433,10 @@ export default function AdminNotifichePage() {
                         <button onClick={() => toggleAttiva(n)} title={n.attiva ? 'Disattiva' : 'Attiva'}
                           className="p-1.5 text-gray-400 hover:text-primary transition-colors rounded">
                           {n.attiva ? <EyeOff size={13} /> : <Eye size={13} />}
+                        </button>
+                        <button onClick={() => handleResend(n)} title="Reinvia a tutti"
+                          className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors rounded">
+                          <Send size={13} />
                         </button>
                         <button onClick={() => handleDuplicate(n)} title="Duplica"
                           className="p-1.5 text-gray-400 hover:text-primary transition-colors rounded">
