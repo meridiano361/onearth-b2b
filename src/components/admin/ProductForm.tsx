@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRef, useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Languages, Loader2, X } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
@@ -12,6 +12,13 @@ import PaeseSelect from '@/components/ui/PaeseSelect';
 import Combobox from '@/components/ui/Combobox';
 import toast from 'react-hot-toast';
 import type { Product } from '@/types';
+import {
+  MODA_GRUPPO_MERCEOLOGICO,
+  MODA_FAMIGLIE,
+  getModaClassi,
+  getModaSottoclassi,
+  getModaGruppiOmogenei,
+} from '@/lib/modaTassonomia';
 
 const IVA_OPTIONS = [0, 4, 5, 10, 22];
 
@@ -156,6 +163,27 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         }
       : { isActive: true, lotSize: '1', iva: '22' },
   });
+
+  // ── Gruppo merceologico options from classification tables ────
+  const { data: gmOptions } = useQuery<{ id: string; nome: string }[]>({
+    queryKey: ['cls-gm-options'],
+    queryFn: async () => {
+      const res = await fetch('/api/classificazione/gruppoMerceologico');
+      return (await res.json()).data as { id: string; nome: string }[];
+    },
+    staleTime: 60_000,
+  });
+
+  // ── MODA dependent selects ────────────────────────────────────
+  const watchedGm = watch('gruppoMerceologico');
+  const watchedFamiglia = watch('famiglia');
+  const watchedClasse = watch('classe');
+  const watchedSottoclasse = watch('sottoclasse');
+  const isModa = watchedGm === MODA_GRUPPO_MERCEOLOGICO;
+
+  const modaClassi = isModa ? getModaClassi(watchedFamiglia || '') : [];
+  const modaSottoclassi = isModa ? getModaSottoclassi(watchedFamiglia || '', watchedClasse || '') : [];
+  const modaGruppiOmogenei = isModa ? getModaGruppiOmogenei(watchedFamiglia || '', watchedClasse || '', watchedSottoclasse || '') : [];
 
   // ── Image preview sync ────────────────────────────────────────
   const watchedImageUrl = watch('imageUrl');
@@ -339,61 +367,147 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
 
       {/* ── Classificazione gerarchica ── */}
       <SectionLabel>Classificazione</SectionLabel>
+
+      {/* Gruppo merceologico — select da tabelle classificazione */}
       <div className="grid grid-cols-2 gap-4">
-        <Combobox
-          label="Gruppo merceologico"
-          field="gruppoMerceologico"
-          value={watch('gruppoMerceologico') || ''}
-          onChange={(v) => setValue('gruppoMerceologico', v)}
-        />
-        <Combobox
-          label="Famiglia"
-          field="famiglia"
-          value={watch('famiglia') || ''}
-          onChange={(v) => setValue('famiglia', v)}
-        />
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Gruppo merceologico</label>
+          <select
+            value={watch('gruppoMerceologico') || ''}
+            onChange={(e) => {
+              setValue('gruppoMerceologico', e.target.value);
+              // Cascade reset dei livelli inferiori al cambio GM
+              setValue('famiglia', '');
+              setValue('classe', '');
+              setValue('sottoclasse', '');
+              setValue('gruppoOmogeneo', '');
+            }}
+            className={selectClass}
+          >
+            <option value="">— nessuno —</option>
+            {gmOptions?.map((gm) => (
+              <option key={gm.id} value={gm.nome}>{gm.nome}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Famiglia */}
+        {isModa ? (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Famiglia</label>
+            <select
+              value={watchedFamiglia || ''}
+              onChange={(e) => {
+                setValue('famiglia', e.target.value);
+                setValue('classe', '');
+                setValue('sottoclasse', '');
+                setValue('gruppoOmogeneo', '');
+              }}
+              className={selectClass}
+            >
+              <option value="">— seleziona —</option>
+              {MODA_FAMIGLIE.map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <Combobox
+            label="Famiglia"
+            field="famiglia"
+            value={watch('famiglia') || ''}
+            onChange={(v) => setValue('famiglia', v)}
+          />
+        )}
       </div>
+
+      {/* Classe + Sottoclasse */}
       <div className="grid grid-cols-2 gap-4">
-        <Combobox
-          label="Classe"
-          field="classe"
-          value={watch('classe') || ''}
-          onChange={(v) => setValue('classe', v)}
-        />
-        <Combobox
-          label="Sottoclasse"
-          field="sottoclasse"
-          value={watch('sottoclasse') || ''}
-          onChange={(v) => setValue('sottoclasse', v)}
-        />
+        {isModa ? (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Classe</label>
+            <select
+              value={watchedClasse || ''}
+              onChange={(e) => {
+                setValue('classe', e.target.value);
+                setValue('sottoclasse', '');
+                setValue('gruppoOmogeneo', '');
+              }}
+              disabled={!watchedFamiglia}
+              className={selectClass}
+            >
+              <option value="">— seleziona —</option>
+              {modaClassi.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <Combobox
+            label="Classe"
+            field="classe"
+            value={watch('classe') || ''}
+            onChange={(v) => setValue('classe', v)}
+          />
+        )}
+
+        {isModa ? (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Sottoclasse</label>
+            <select
+              value={watchedSottoclasse || ''}
+              onChange={(e) => {
+                setValue('sottoclasse', e.target.value);
+                setValue('gruppoOmogeneo', '');
+              }}
+              disabled={!watchedClasse || modaSottoclassi.length === 0}
+              className={selectClass}
+            >
+              <option value="">
+                {modaSottoclassi.length === 0 && watchedClasse ? '— nessuna sottoclasse —' : '— seleziona —'}
+              </option>
+              {modaSottoclassi.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <Combobox
+            label="Sottoclasse"
+            field="sottoclasse"
+            value={watch('sottoclasse') || ''}
+            onChange={(v) => setValue('sottoclasse', v)}
+          />
+        )}
       </div>
-      <div className="grid grid-cols-3 gap-4">
-        <Combobox
-          label="Classe 2"
-          field="classe"
-          value={(watch as any)('classe2') || ''}
-          onChange={(v) => (setValue as any)('classe2', v)}
-        />
-        <Combobox
-          label="Sottoclasse 2"
-          field="sottoclasse"
-          value={(watch as any)('sottoclasse2') || ''}
-          onChange={(v) => (setValue as any)('sottoclasse2', v)}
-        />
-        <Combobox
-          label="Gruppo omogeneo 2"
-          field="gruppoOmogeneo"
-          value={(watch as any)('gruppoOmogeneo2') || ''}
-          onChange={(v) => (setValue as any)('gruppoOmogeneo2', v)}
-        />
-      </div>
+
+      {/* Gruppo omogeneo — solo MODA mostra select dipendente */}
       <div className="grid grid-cols-2 gap-4">
-        <Combobox
-          label="Gruppo omogeneo"
-          field="gruppoOmogeneo"
-          value={watch('gruppoOmogeneo') || ''}
-          onChange={(v) => setValue('gruppoOmogeneo', v)}
-        />
+        {isModa ? (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Gruppo omogeneo</label>
+            <select
+              value={watch('gruppoOmogeneo') || ''}
+              onChange={(e) => setValue('gruppoOmogeneo', e.target.value)}
+              disabled={!watchedSottoclasse || modaGruppiOmogenei.length === 0}
+              className={selectClass}
+            >
+              <option value="">
+                {modaGruppiOmogenei.length === 0 && watchedSottoclasse ? '— nessuno —' : '— seleziona —'}
+              </option>
+              {modaGruppiOmogenei.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <Combobox
+            label="Gruppo omogeneo"
+            field="gruppoOmogeneo"
+            value={watch('gruppoOmogeneo') || ''}
+            onChange={(v) => setValue('gruppoOmogeneo', v)}
+          />
+        )}
         <Combobox
           label="Linea"
           field="nomLinea"
@@ -401,6 +515,30 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           onChange={(v) => setValue('nomLinea', v)}
         />
       </div>
+
+      {/* Classe 2 / Sottoclasse 2 / Gruppo omogeneo 2 — nascosti per MODA */}
+      {!isModa && (
+        <div className="grid grid-cols-3 gap-4">
+          <Combobox
+            label="Classe 2"
+            field="classe"
+            value={(watch as any)('classe2') || ''}
+            onChange={(v) => (setValue as any)('classe2', v)}
+          />
+          <Combobox
+            label="Sottoclasse 2"
+            field="sottoclasse"
+            value={(watch as any)('sottoclasse2') || ''}
+            onChange={(v) => (setValue as any)('sottoclasse2', v)}
+          />
+          <Combobox
+            label="Gruppo omogeneo 2"
+            field="gruppoOmogeneo"
+            value={(watch as any)('gruppoOmogeneo2') || ''}
+            onChange={(v) => (setValue as any)('gruppoOmogeneo2', v)}
+          />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <Combobox
           label="Stagione"
