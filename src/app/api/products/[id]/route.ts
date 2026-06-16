@@ -95,6 +95,9 @@ export async function PATCH(
     const body = await req.json();
     const data = normalizeProductClassificationFields(updateSchema.parse(body));
 
+    // Normalize code to uppercase (consistent with POST)
+    if (data.code) data.code = data.code.toUpperCase().trim();
+
     // Normalize name only for automated flows (imports), not manual admin edits
     if (data.name && !(body as any).skipNameNormalization) {
       const linea = data.nomLinea !== undefined
@@ -135,6 +138,9 @@ export async function PATCH(
     }
     if (err.code === 'P2025') {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+    if (err.code === 'P2002') {
+      return NextResponse.json({ error: 'Codice già in uso da un altro prodotto' }, { status: 409 });
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
