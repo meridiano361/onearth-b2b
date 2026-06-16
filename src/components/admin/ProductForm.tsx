@@ -180,6 +180,21 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     staleTime: 60_000,
   });
 
+  // ── Auto-fill paese da produttore ────────────────────────────
+  const watchedProduttore = watch('produttore');
+  useEffect(() => {
+    if (!watchedProduttore?.trim()) return;
+    const timer = setTimeout(async () => {
+      if (getValues('paese')) return; // non sovrascrivere se già impostato
+      try {
+        const res = await fetch(`/api/admin/produttori/paese?nome=${encodeURIComponent(watchedProduttore.trim())}`);
+        const { paese } = await res.json();
+        if (paese) setValue('paese', paese, { shouldDirty: true });
+      } catch { /* silently ignore */ }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [watchedProduttore]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── MODA dependent selects ────────────────────────────────────
   const watchedGm = watch('gruppoMerceologico');
   const watchedFamiglia = watch('famiglia');
