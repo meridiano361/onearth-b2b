@@ -80,6 +80,9 @@ model Product {
   temaColore3        String?
   temaColore4        String?
   temaColore5        String?
+  modello            String?
+  taglia             String?
+  bloccoColore       String?
   fasciaRicarico     String?
   fasciaSconto       Decimal? @db.Decimal(5, 2)
   collezione         String?
@@ -188,6 +191,20 @@ model TemaColore {
   nome      String   @unique
   createdAt DateTime @default(now())
   @@map("cls_temi_colore")
+}
+
+model Modello {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("cls_modelli")
+}
+
+model BloccoColore {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  @@map("cls_blocchi_colore")
 }
 
 model Produttore {

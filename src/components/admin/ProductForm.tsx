@@ -46,6 +46,9 @@ const schema = z
     temaColore3: z.string().optional(),
     temaColore4: z.string().optional(),
     temaColore5: z.string().optional(),
+    modello: z.string().optional(),
+    taglia: z.string().optional(),
+    bloccoColore: z.string().optional(),
     lotSize: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 1)),
     iva: z.string().default('22').transform(Number),
     costPrice: z.string().min(1, 'Obbligatorio').transform(Number),
@@ -146,6 +149,9 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           temaColore3: product.temaColore3 || '',
           temaColore4: product.temaColore4 || '',
           temaColore5: product.temaColore5 || '',
+          modello: (product as any).modello || '',
+          taglia: (product as any).taglia || '',
+          bloccoColore: (product as any).bloccoColore || '',
           lotSize: String(product.lotSize),
           iva: String(product.iva ?? 22),
           costPrice: String(product.costPrice),
@@ -289,6 +295,9 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           temaColore3: (v as any).temaColore3 || null,
           temaColore4: (v as any).temaColore4 || null,
           temaColore5: (v as any).temaColore5 || null,
+          modello: (v as any).modello || null,
+          taglia: (v as any).taglia || null,
+          bloccoColore: (v as any).bloccoColore || null,
           fasciaRicarico: v.fasciaRicarico || null,
           fasciaSconto: v.fasciaSconto ? parseFloat(v.fasciaSconto) || null : null,
           tranche: v.tranche || null,
@@ -508,13 +517,45 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
             onChange={(v) => setValue('gruppoOmogeneo', v)}
           />
         )}
-        <Combobox
-          label="Linea"
-          field="nomLinea"
-          value={watch('nomLinea') || ''}
-          onChange={(v) => setValue('nomLinea', v)}
-        />
+        {isModa ? (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Modello</label>
+            <Combobox
+              label=""
+              field="modello"
+              value={watch('modello') || ''}
+              onChange={(v) => setValue('modello', v)}
+            />
+          </div>
+        ) : (
+          <Combobox
+            label="Linea"
+            field="nomLinea"
+            value={watch('nomLinea') || ''}
+            onChange={(v) => setValue('nomLinea', v)}
+          />
+        )}
       </div>
+
+      {/* Taglia (solo MODA) */}
+      {isModa && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Taglia</label>
+            <select
+              value={watch('taglia') || ''}
+              onChange={(e) => setValue('taglia', e.target.value)}
+              className={selectClass}
+            >
+              <option value="">— nessuna —</option>
+              {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+          <div />
+        </div>
+      )}
 
       {/* Classe 2 / Sottoclasse 2 / Gruppo omogeneo 2 — nascosti per MODA */}
       {!isModa && (
@@ -555,14 +596,23 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       </div>
       <div className="grid grid-cols-2 gap-4">
         <Combobox label="Colore" field="colore" value={watch('colore') || ''} onChange={(v) => setValue('colore', v)} />
-        <Combobox
-          label="Tema colore"
-          field="temaColore"
-          value={watch('temaColore') || ''}
-          onChange={(v) => { setValue('temaColore', v); if (!v) { setValue('temaColore2', ''); setValue('temaColore3', ''); setValue('temaColore4', ''); setValue('temaColore5', ''); } }}
-        />
+        {isModa ? (
+          <Combobox
+            label="Blocco colore"
+            field="bloccoColore"
+            value={watch('bloccoColore') || ''}
+            onChange={(v) => setValue('bloccoColore', v)}
+          />
+        ) : (
+          <Combobox
+            label="Tema colore"
+            field="temaColore"
+            value={watch('temaColore') || ''}
+            onChange={(v) => { setValue('temaColore', v); if (!v) { setValue('temaColore2', ''); setValue('temaColore3', ''); setValue('temaColore4', ''); setValue('temaColore5', ''); } }}
+          />
+        )}
       </div>
-      {watch('temaColore') && (
+      {!isModa && watch('temaColore') && (
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-end gap-1">
             <div className="flex-1">
@@ -580,7 +630,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           ) : <div />}
         </div>
       )}
-      {watch('temaColore2') && watch('temaColore3') && (
+      {!isModa && watch('temaColore2') && watch('temaColore3') && (
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-end gap-1">
             <div className="flex-1">

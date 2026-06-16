@@ -21,6 +21,8 @@ const TIPO_DELEGATE: Record<string, PrismaDelegate> = {
   collezione: prisma.collezione,
   colore: prisma.colore,
   temaColore: prisma.temaColore,
+  modello: prisma.modello,
+  bloccoColore: prisma.bloccoColore,
 };
 
 // FK field name that links each level to its parent

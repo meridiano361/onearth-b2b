@@ -22,7 +22,7 @@ function PaeseSelectInline({ value, onChange }: { value: string; onChange: (v: s
   );
 }
 
-const TIPI = [
+const TIPI_CASA = [
   { tipo: 'gruppoMerceologico', label: 'Gruppo merceologico' },
   { tipo: 'famiglia', label: 'Famiglia' },
   { tipo: 'classe', label: 'Classe' },
@@ -35,8 +35,22 @@ const TIPI = [
   { tipo: 'temaColore', label: 'Tema colore' },
 ];
 
+const TIPI_MODA = [
+  { tipo: 'gruppoMerceologico', label: 'Gruppo merceologico' },
+  { tipo: 'famiglia', label: 'Famiglia' },
+  { tipo: 'classe', label: 'Classe' },
+  { tipo: 'sottoclasse', label: 'Sottoclasse' },
+  { tipo: 'gruppoOmogeneo', label: 'Gruppo omogeneo' },
+  { tipo: 'modello', label: 'Modello' },
+  { tipo: 'taglia', label: 'Taglia' },
+  { tipo: 'bloccoColore', label: 'Blocco colore' },
+];
+
 // Tipi gerarchici legati al GM root (escluse le flat lookup table)
 const HIERARCHY_TIPI = new Set(['gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo']);
+
+// Taglie MODA — valori fissi, non gestibili da admin
+const TAGLIE_MODA = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
 type Tree = 'casa' | 'moda';
 
@@ -371,6 +385,29 @@ function ClassificazioneTab({
   );
 }
 
+function TaglieTab() {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs text-gray-400">{TAGLIE_MODA.length} valori fissi</p>
+        <span className="text-2xs text-gray-400 italic">Valori non modificabili</span>
+      </div>
+      <div className="bg-white border border-border rounded overflow-hidden">
+        <table className="table-luxury w-full">
+          <tbody>
+            {TAGLIE_MODA.map((t) => (
+              <tr key={t}>
+                <td className="py-3 px-4 text-sm text-primary">{t}</td>
+                <td className="py-3 px-4 w-36" />
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function ProduttoriTab() {
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
@@ -581,7 +618,7 @@ function ProduttoriTab() {
 }
 
 export default function AdminClassificazionePage() {
-  const [activeTab, setActiveTab] = useState(TIPI[0].tipo);
+  const [activeTab, setActiveTab] = useState(TIPI_CASA[0].tipo);
   const [selectedTree, setSelectedTree] = useState<Tree>('casa');
 
   // Carica tutti i GM per ricavare l'id radice di ciascun albero
@@ -596,14 +633,15 @@ export default function AdminClassificazionePage() {
 
   const treeGmId = useMemo(() => {
     if (!gmList) return undefined;
-    const name = selectedTree === 'moda' ? 'MODA' : 'Casa e regalo';
+    const name = selectedTree === 'moda' ? 'Moda' : 'Casa e regalo';
     return gmList.find((gm) => gm.nome === name)?.id;
   }, [gmList, selectedTree]);
 
-  // Quando si cambia albero, resetta la tab attiva alla prima gerarchica
+  // Quando si cambia albero, resetta la tab attiva alla prima tab dell'albero scelto
   function handleTreeChange(tree: Tree) {
     setSelectedTree(tree);
-    setActiveTab(TIPI[0].tipo);
+    const tipi = tree === 'moda' ? TIPI_MODA : TIPI_CASA;
+    setActiveTab(tipi[0].tipo);
   }
 
   return (
@@ -644,46 +682,59 @@ export default function AdminClassificazionePage() {
       </div>
 
       {/* ── Tab bar ── */}
-      <div className="flex flex-wrap gap-1 mb-6 border-b border-border pb-0">
-        {TIPI.map(({ tipo, label }) => (
-          <button
-            key={tipo}
-            onClick={() => setActiveTab(tipo)}
-            className={cn(
-              'px-3 py-2 text-xs font-medium transition-colors border-b-2 -mb-px',
-              activeTab === tipo
-                ? 'border-accent text-accent'
-                : 'border-transparent text-gray-500 hover:text-primary hover:border-gray-300'
+      {(() => {
+        const tipi = selectedTree === 'moda' ? TIPI_MODA : TIPI_CASA;
+        return (
+          <div className="flex flex-wrap gap-1 mb-6 border-b border-border pb-0">
+            {tipi.map(({ tipo, label }) => (
+              <button
+                key={tipo}
+                onClick={() => setActiveTab(tipo)}
+                className={cn(
+                  'px-3 py-2 text-xs font-medium transition-colors border-b-2 -mb-px',
+                  activeTab === tipo
+                    ? 'border-accent text-accent'
+                    : 'border-transparent text-gray-500 hover:text-primary hover:border-gray-300'
+                )}
+              >
+                {label}
+              </button>
+            ))}
+            {selectedTree === 'casa' && (
+              <button
+                onClick={() => setActiveTab('produttori')}
+                className={cn(
+                  'px-3 py-2 text-xs font-medium transition-colors border-b-2 -mb-px',
+                  activeTab === 'produttori'
+                    ? 'border-accent text-accent'
+                    : 'border-transparent text-gray-500 hover:text-primary hover:border-gray-300'
+                )}
+              >
+                Produttori
+              </button>
             )}
-          >
-            {label}
-          </button>
-        ))}
-        <button
-          onClick={() => setActiveTab('produttori')}
-          className={cn(
-            'px-3 py-2 text-xs font-medium transition-colors border-b-2 -mb-px',
-            activeTab === 'produttori'
-              ? 'border-accent text-accent'
-              : 'border-transparent text-gray-500 hover:text-primary hover:border-gray-300'
-          )}
-        >
-          Produttori
-        </button>
-      </div>
+          </div>
+        );
+      })()}
 
       {/* ── Tab content ── */}
-      {TIPI.map(({ tipo }) =>
-        activeTab === tipo ? (
-          <ClassificazioneTab
-            key={`${tipo}-${selectedTree}`}
-            tipo={tipo}
-            treeGmId={HIERARCHY_TIPI.has(tipo) ? treeGmId : undefined}
-            tree={selectedTree}
-          />
-        ) : null
+      {activeTab === 'taglia' && selectedTree === 'moda' ? (
+        <TaglieTab />
+      ) : (
+        <>
+          {(selectedTree === 'moda' ? TIPI_MODA : TIPI_CASA).map(({ tipo }) =>
+            activeTab === tipo && tipo !== 'taglia' ? (
+              <ClassificazioneTab
+                key={`${tipo}-${selectedTree}`}
+                tipo={tipo}
+                treeGmId={HIERARCHY_TIPI.has(tipo) ? treeGmId : undefined}
+                tree={selectedTree}
+              />
+            ) : null
+          )}
+          {activeTab === 'produttori' && selectedTree === 'casa' && <ProduttoriTab />}
+        </>
       )}
-      {activeTab === 'produttori' && <ProduttoriTab />}
     </div>
   );
 }
