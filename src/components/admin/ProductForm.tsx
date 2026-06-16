@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRef, useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Languages, Loader2, X } from 'lucide-react';
+import { Languages, Loader2, X, Lock, Unlock } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import PaeseSelect from '@/components/ui/PaeseSelect';
@@ -115,6 +115,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const [isUploading3, setIsUploading3] = useState(false);
   const [isUploading4, setIsUploading4] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [codeEditable, setCodeEditable] = useState(!product); // in edit mode starts locked
 
   const {
     register,
@@ -348,12 +349,38 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       {/* ── Anagrafica ── */}
       <SectionLabel>Anagrafica</SectionLabel>
       <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Codice *"
-          {...register('code')}
-          error={errors.code?.message}
-          placeholder="OE-CAT-001"
-        />
+        <div>
+          <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
+            Codice *
+          </label>
+          <div className="flex gap-1.5">
+            <input
+              {...register('code')}
+              readOnly={!codeEditable}
+              placeholder="OE-CAT-001"
+              className={`flex-1 h-9 border rounded px-3 text-sm transition-all focus:outline-none focus:ring-1 ${
+                codeEditable
+                  ? 'border-border text-primary bg-white focus:border-accent focus:ring-accent/20'
+                  : 'border-dashed border-border text-gray-500 bg-gray-50 cursor-default select-none'
+              }`}
+            />
+            {isEdit && (
+              <button
+                type="button"
+                onClick={() => setCodeEditable((v) => !v)}
+                title={codeEditable ? 'Blocca codice' : 'Modifica codice'}
+                className={`flex-shrink-0 h-9 w-9 flex items-center justify-center rounded border transition-colors ${
+                  codeEditable
+                    ? 'border-accent text-accent bg-accent/5 hover:bg-accent/10'
+                    : 'border-border text-gray-400 hover:text-primary hover:bg-cream'
+                }`}
+              >
+                {codeEditable ? <Unlock size={13} /> : <Lock size={13} />}
+              </button>
+            )}
+          </div>
+          {errors.code && <p className="mt-1.5 text-xs text-red-500">{errors.code.message}</p>}
+        </div>
         <Input
           label="Nome prodotto *"
           {...register('name')}
