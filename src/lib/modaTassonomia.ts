@@ -2,76 +2,72 @@
  * Albero merceologico per la collezione Moda PE27.
  * Struttura: gruppoMerceologico → famiglia → classe → sottoclasse → gruppoOmogeneo[]
  *
- * Regole:
- * - Solo MODA come gruppo merceologico
- * - Nessuna voce BIMBO / BIMBA / INTIMO / SCARPE
- * - Tutto maiuscolo
- * - Classificare nel nodo più specifico disponibile
+ * Formato: sentence case (iniziale maiuscola, resto minuscolo).
  */
 
-export const MODA_GRUPPO_MERCEOLOGICO = 'MODA' as const;
+export const MODA_GRUPPO_MERCEOLOGICO = 'Moda' as const;
 
-export type ModaFamiglia = 'ABBIGLIAMENTO' | 'ACCESSORI PERSONA' | 'BIGIOTTERIA E GIOIELLERIA';
+export type ModaFamiglia = 'Abbigliamento' | 'Accessori persona' | 'Bigiotteria e gioielleria';
 
 /** Full hierarchy: famiglia → classe → sottoclasse → gruppoOmogeneo[] */
 export const MODA_TASSONOMIA: Record<ModaFamiglia, Record<string, Record<string, string[]>>> = {
-  ABBIGLIAMENTO: {
-    DONNA: {
-      ABITI:            ['CASUAL', 'ELEGANTI', 'PRENDISOLE'],
-      'BERMUDA E SHORTS': ['CASUAL', 'ELEGANTI'],
-      CAMICIE:          ['MANICA 3-4', 'MANICA CORTA', 'MANICA LUNGA'],
-      CAPISPALLA:       ['CASUAL', 'ELEGANTI'],
-      CARDIGANS:        ['CASUAL', 'ELEGANTI'],
-      GILET:            ['GILET'],
-      GONNE:            ['CASUAL', 'ELEGANTI'],
-      JEANS:            ['JEANS'],
-      KURTA:            ['MANICA 3-4', 'MANICA CORTA', 'MANICA LUNGA'],
-      MAGLIE:           ['CASUAL', 'ELEGANTI'],
-      PANTALONI:        ['CASUAL', 'ELEGANTI'],
-      'PONCHOS DONNA':  ['PONCHOS DONNA'],
-      TEES:             ['LUPETTO', 'MANICA 3-4', 'MANICA CORTA', 'MANICA LUNGA'],
-      'TOP E CANOTTE':  ['TOP E CANOTTE'],
+  Abbigliamento: {
+    Donna: {
+      Abiti:              ['Casual', 'Eleganti', 'Prendisole'],
+      'Bermuda e shorts': ['Casual', 'Eleganti'],
+      Camicie:            ['Manica 3-4', 'Manica corta', 'Manica lunga'],
+      Capispalla:         ['Casual', 'Eleganti'],
+      Cardigans:          ['Casual', 'Eleganti'],
+      Gilet:              ['Gilet'],
+      Gonne:              ['Casual', 'Eleganti'],
+      Jeans:              ['Jeans'],
+      Kurta:              ['Manica 3-4', 'Manica corta', 'Manica lunga'],
+      Maglie:             ['Casual', 'Eleganti'],
+      Pantaloni:          ['Casual', 'Eleganti'],
+      'Ponchos donna':    ['Ponchos donna'],
+      Tees:               ['Lupetto', 'Manica 3-4', 'Manica corta', 'Manica lunga'],
+      'Top e canotte':    ['Top e canotte'],
     },
-    'TEMPO LIBERO': {},
-    UOMO: {},
+    'Tempo libero': {},
+    Uomo: {},
   },
 
-  'ACCESSORI PERSONA': {
-    DONNA: {
-      'ACCESSORI BORSETTA':   ['BUSTINE E POCHETTE', 'PORTAFOGLI', 'SPECCHIETTI', 'VENTAGLI'],
-      'ACCESSORI PERSONALI':  ['BANDANNAS E FASCE CAPELLI', 'CAPPELLI', 'CINTURE', 'GUANTI', 'SCIARPE', 'SCIARPINE', 'STOLE E FOULARD'],
-      'ALTRI ACCESSORI':      ['BEAUTY'],
-      BORSE:                  ['BORSINE DA FESTA', 'IN FIBRA', 'IN PELLE', 'IN TESSUTO', 'SACCHE', 'SHOPPER', 'ZAINI'],
-      'FERMACAPELLI E SPILLE': ['FERMACAPELLI ED ELASTICI', 'SPILLE'],
-      PAREI:                  ['PAREI'],
-      'SCALDASPALLE E COLLI': ['COLLI', 'SCALDASPALLE'],
+  'Accessori persona': {
+    Donna: {
+      'Accessori borsetta':   ['Bustine e pochette', 'Portafogli', 'Specchietti', 'Ventagli'],
+      'Accessori personali':  ['Bandannas e fasce capelli', 'Cappelli', 'Cinture', 'Guanti', 'Sciarpe', 'Sciarpine', 'Stole e foulard'],
+      'Altri accessori':      ['Beauty'],
+      Borse:                  ['Borsine da festa', 'In fibra', 'In pelle', 'In tessuto', 'Sacche', 'Shopper', 'Zaini'],
+      'Fermacapelli e spille': ['Fermacapelli ed elastici', 'Spille'],
+      Parei:                  ['Parei'],
+      'Scaldaspalle e colli': ['Colli', 'Scaldaspalle'],
     },
-    UNISEX: {
-      'ALTRI ACCESSORI': ['ACCESSORI VARI', 'BEAUTY', 'PORTA CELLULARE', 'PORTA MACCHINA DIGITALE', 'PORTA OCCHIALI', 'PORTACHIAVI', 'PORTAMONETE'],
-      BORSE:             ['BORSA PORTA COMPUTER', 'BORSE DA UFFICIO', 'BORSE E ACCESSORI PER IL TRASPORTO', 'BORSE IN MATERIALI DI RICICLO', 'BORSINE PORTADOCUMENTI', 'MARSUPI', 'ZAINI'],
+    Unisex: {
+      'Altri accessori': ['Accessori vari', 'Beauty', 'Porta cellulare', 'Porta macchina digitale', 'Porta occhiali', 'Portachiavi', 'Portamonete'],
+      Borse:             ['Borsa porta computer', 'Borse da ufficio', 'Borse e accessori per il trasporto', 'Borse in materiali di riciclo', 'Borsine portadocumenti', 'Marsupi', 'Zaini'],
     },
-    UOMO: {
-      'ACCESSORI PERSONALI': ['BANDANNAS', 'CAPPELLI', 'CINTURE', 'CRAVATTE', 'GUANTI', 'SCIARPE', 'SCIARPINE'],
-      'ALTRI ACCESSORI':     ['PORTAFOGLI'],
-      BORSE:                 ['BORSELLI', 'IN PELLE', 'IN TESSUTO'],
+    Uomo: {
+      'Accessori personali': ['Bandannas', 'Cappelli', 'Cinture', 'Cravatte', 'Guanti', 'Sciarpe', 'Sciarpine'],
+      'Altri accessori':     ['Portafogli'],
+      Borse:                 ['Borselli', 'In pelle', 'In tessuto'],
     },
   },
 
-  'BIGIOTTERIA E GIOIELLERIA': {
-    DONNA: {
-      ANELLI:              ['BIGIOTTERIA', 'MATERIALI PREZIOSI'],
-      BRACCIALI:           ['BIGIOTTERIA', 'MATERIALI PREZIOSI'],
-      CAVIGLIERE:          ['CAVIGLIERE DONNA'],
-      'COLLANE E PENDENTI': ['BIGIOTTERIA', 'MATERIALI PREZIOSI'],
-      ORECCHINI:           ['BIGIOTTERIA', 'MATERIALI PREZIOSI'],
-      PARURE:              ['BIGIOTTERIA', 'MATERIALI PREZIOSI'],
-      PIERCING:            ['PIERCING'],
+  'Bigiotteria e gioielleria': {
+    Donna: {
+      Anelli:              ['Bigiotteria', 'Materiali preziosi'],
+      Bracciali:           ['Bigiotteria', 'Materiali preziosi'],
+      Cavigliere:          ['Cavigliere donna'],
+      'Collane e pendenti': ['Bigiotteria', 'Materiali preziosi'],
+      Orecchini:           ['Bigiotteria', 'Materiali preziosi'],
+      Parure:              ['Bigiotteria', 'Materiali preziosi'],
+      Piercing:            ['Piercing'],
     },
-    UOMO: {
-      ANELLI:              [],
-      BRACCIALI:           [],
-      'COLLANE E PENDENTI': [],
-      ORECCHINI:           [],
+    Uomo: {
+      Anelli:              [],
+      Bracciali:           [],
+      'Collane e pendenti': [],
+      Orecchini:           [],
     },
   },
 };

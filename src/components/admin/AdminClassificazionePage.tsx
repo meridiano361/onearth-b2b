@@ -40,13 +40,11 @@ const HIERARCHY_TIPI = new Set(['gruppoMerceologico', 'famiglia', 'classe', 'sot
 
 type Tree = 'casa' | 'moda';
 
-function normalizeValue(tipo: string, v: string, tree: Tree): string {
+function normalizeValue(tipo: string, v: string, _tree: Tree): string {
   const t = v.trim();
   if (!t) return t;
   if (tipo === 'nomLinea' || tipo === 'collezione') return t.toUpperCase();
-  // Albero MODA: tutta la gerarchia in MAIUSCOLO
-  if (tree === 'moda' && HIERARCHY_TIPI.has(tipo)) return t.toUpperCase();
-  // Albero CASA: Title Case
+  // Sentence case per tutti i valori gerarchici (CASA e MODA)
   return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
 }
 
@@ -643,11 +641,6 @@ export default function AdminClassificazionePage() {
             Moda PE27
           </button>
         </div>
-        {selectedTree === 'moda' && (
-          <span className="text-2xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-            Valori in MAIUSCOLO
-          </span>
-        )}
       </div>
 
       {/* ── Tab bar ── */}
