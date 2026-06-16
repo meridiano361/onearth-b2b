@@ -356,12 +356,11 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           <div className="flex gap-1.5">
             <input
               {...register('code')}
-              readOnly={!codeEditable}
               placeholder="OE-CAT-001"
-              className={`flex-1 h-9 border rounded px-3 text-sm transition-all focus:outline-none focus:ring-1 ${
-                codeEditable
-                  ? 'border-border text-primary bg-white focus:border-accent focus:ring-accent/20'
-                  : 'border-dashed border-border text-gray-500 bg-gray-50 cursor-default select-none'
+              className={`flex-1 h-9 border rounded px-3 text-sm font-mono focus:outline-none ${
+                isEdit && !codeEditable
+                  ? 'border-dashed border-border bg-gray-50 text-gray-500 cursor-default pointer-events-none'
+                  : 'border-accent bg-white text-primary focus:ring-1 focus:ring-accent/20'
               }`}
             />
             {isEdit && (
