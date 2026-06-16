@@ -1,20 +1,25 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { ImagePlus, CheckCircle, AlertCircle, X, Upload, Loader2 } from 'lucide-react';
+import { ImagePlus, CheckCircle, AlertCircle, X, Upload, Loader2, AlertTriangle } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import toast from 'react-hot-toast';
+import { parseImageFilename, invalidReason } from '@/lib/parseImageFilename';
 
 interface FileEntry {
   file: File;
   preview: string;
-  code: string;
+  productCode: string;
+  imageIndex: number;
+  valid: boolean;
+  invalidReason?: string;
 }
 
 interface UploadResult {
   uploaded: number;
   notFound: string[];
   errors: Array<{ file: string; message: string }>;
+  nonConforming: Array<{ file: string; message: string }>;
   total: number;
 }
 
@@ -31,20 +36,45 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
   function handleFiles(files: FileList | null) {
     if (!files) return;
     const newEntries: FileEntry[] = [];
+
     for (const file of Array.from(files)) {
       if (!file.type.startsWith('image/')) continue;
-      const code = file.name.replace(/\.[^/.]+$/, '').toUpperCase().trim();
+      const parsed = parseImageFilename(file.name);
       const preview = URL.createObjectURL(file);
-      newEntries.push({ file, preview, code });
+
+      if (parsed.valid) {
+        newEntries.push({
+          file,
+          preview,
+          productCode: parsed.productCode,
+          imageIndex: parsed.imageIndex,
+          valid: true,
+        });
+      } else {
+        newEntries.push({
+          file,
+          preview,
+          productCode: file.name.replace(/\.[^/.]+$/, ''),
+          imageIndex: 0,
+          valid: false,
+          invalidReason: invalidReason(parsed.reason),
+        });
+      }
     }
+
     setEntries((prev) => {
-      const existing = new Set(prev.map((e) => e.code));
-      return [...prev, ...newEntries.filter((e) => !existing.has(e.code))];
+      // dedup per nome file originale
+      const existing = new Set(prev.map((e) => e.file.name));
+      return [...prev, ...newEntries.filter((e) => !existing.has(e.file.name))];
     });
   }
 
-  function removeEntry(code: string) {
-    setEntries((prev) => prev.filter((e) => e.code !== code));
+  function removeEntry(filename: string) {
+    setEntries((prev) => {
+      const entry = prev.find((e) => e.file.name === filename);
+      if (entry) URL.revokeObjectURL(entry.preview);
+      return prev.filter((e) => e.file.name !== filename);
+    });
   }
 
   async function handleUpload() {
@@ -76,6 +106,9 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
     setResult(null);
   }
 
+  const validCount = entries.filter((e) => e.valid).length;
+  const invalidCount = entries.filter((e) => !e.valid).length;
+
   if (result) {
     return (
       <div className="space-y-4">
@@ -88,7 +121,7 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
           <div>
             <p className="font-medium text-primary">Caricamento completato</p>
             <p className="text-sm text-gray-500">
-              {result.uploaded} foto caricate · {result.notFound.length} codici non trovati · {result.errors.length} errori
+              {result.uploaded} foto caricate · {result.notFound.length} codici non trovati · {result.errors.length} errori · {result.nonConforming?.length ?? 0} non conformi
             </p>
           </div>
         </div>
@@ -104,9 +137,18 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
           </div>
         )}
 
+        {(result.nonConforming?.length ?? 0) > 0 && (
+          <div className="border border-orange-200 rounded bg-orange-50 p-3">
+            <p className="text-xs font-medium text-orange-700 mb-1">File non conformi (ignorati):</p>
+            {result.nonConforming.map((e, i) => (
+              <p key={i} className="text-2xs text-orange-700 font-mono">{e.file} — {e.message}</p>
+            ))}
+          </div>
+        )}
+
         {result.errors.length > 0 && (
           <div className="border border-red-100 rounded bg-red-50 p-3">
-            <p className="text-xs font-medium text-red-600 mb-1">Errori:</p>
+            <p className="text-xs font-medium text-red-600 mb-1">Errori upload:</p>
             {result.errors.map((e, i) => (
               <p key={i} className="text-2xs text-red-600">{e.file}: {e.message}</p>
             ))}
@@ -123,15 +165,15 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
 
   return (
     <div className="space-y-4">
-      {/* Drop zone / file picker */}
+      {/* Drop zone */}
       <div
         onClick={() => inputRef.current?.click()}
         className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-gray-400 hover:bg-cream/50 transition-all"
       >
         <ImagePlus size={32} className="mx-auto text-gray-300 mb-3" />
         <p className="text-sm font-medium text-primary mb-1">Seleziona le immagini</p>
-        <p className="text-xs text-gray-400">Il nome del file deve corrispondere al codice prodotto</p>
-        <p className="text-2xs text-gray-300 mt-1">es. HUBM300007830.jpg → prodotto con codice HUBM300007830</p>
+        <p className="text-xs text-gray-400">Convezione nome file: <span className="font-mono">codice_N.jpg</span></p>
+        <p className="text-2xs text-gray-300 mt-1">es. 123_1.jpg → foto 1 del prodotto 123 · 123_2.jpg → foto 2 del prodotto 123</p>
         <button className="mt-4 px-4 py-2 text-xs font-semibold bg-primary text-background rounded hover:bg-warm-darker transition-colors">
           Sfoglia file
         </button>
@@ -147,17 +189,47 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
 
       {/* File list */}
       {entries.length > 0 && (
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          <p className="text-xs font-medium text-primary">{entries.length} file selezionati:</p>
+        <div className="space-y-2 max-h-72 overflow-y-auto">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-primary">{entries.length} file selezionati</p>
+            {invalidCount > 0 && (
+              <span className="text-2xs text-orange-600 flex items-center gap-1">
+                <AlertTriangle size={11} />
+                {invalidCount} non conform{invalidCount === 1 ? 'e' : 'i'} (saranno ignorat{invalidCount === 1 ? 'o' : 'i'})
+              </span>
+            )}
+          </div>
+
           {entries.map((entry) => (
-            <div key={entry.code} className="flex items-center gap-3 p-2 border border-border rounded bg-white">
+            <div
+              key={entry.file.name}
+              className={`flex items-center gap-3 p-2 border rounded bg-white ${
+                entry.valid ? 'border-border' : 'border-orange-200 bg-orange-50/40'
+              }`}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={entry.preview} alt={entry.code} className="w-10 h-10 object-cover rounded flex-shrink-0" />
+              <img src={entry.preview} alt={entry.file.name} className="w-10 h-10 object-cover rounded flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-mono text-primary truncate">{entry.code}</p>
-                <p className="text-2xs text-gray-400 truncate">{entry.file.name}</p>
+                {entry.valid ? (
+                  <>
+                    <p className="text-xs text-primary">
+                      <span className="font-mono font-medium">{entry.productCode}</span>
+                      <span className="text-gray-400 mx-1">·</span>
+                      <span className="text-gray-500">foto {entry.imageIndex}</span>
+                    </p>
+                    <p className="text-2xs text-gray-400 truncate">{entry.file.name}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-orange-700 flex items-center gap-1">
+                      <AlertTriangle size={11} />
+                      {entry.invalidReason}
+                    </p>
+                    <p className="text-2xs text-gray-400 truncate font-mono">{entry.file.name}</p>
+                  </>
+                )}
               </div>
-              <button onClick={() => removeEntry(entry.code)} className="text-gray-300 hover:text-gray-600 flex-shrink-0">
+              <button onClick={() => removeEntry(entry.file.name)} className="text-gray-300 hover:text-gray-600 flex-shrink-0">
                 <X size={13} />
               </button>
             </div>
@@ -169,10 +241,10 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
         <Button variant="ghost" onClick={reset} disabled={!entries.length}>Azzera</Button>
         <Button
           onClick={handleUpload}
-          disabled={!entries.length || isUploading}
+          disabled={!validCount || isUploading}
           icon={isUploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
         >
-          {isUploading ? 'Caricamento...' : `Carica ${entries.length} foto`}
+          {isUploading ? 'Caricamento...' : `Carica ${validCount} foto`}
         </Button>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { getSupabaseClient } from '@/lib/supabase';
+import { parseImageFilename, imageIndexToField, invalidReason } from '@/lib/parseImageFilename';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,25 +20,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nessun file ricevuto' }, { status: 400 });
     }
 
-    const supabase = getSupabaseClient();
-    let uploaded = 0;
-    const notFound: string[] = [];
-    const errors: Array<{ file: string; message: string }> = [];
+    // ── Parsing ──────────────────────────────────────────────────────────────
+    type ValidEntry = { file: File; productCode: string; imageIndex: number };
+    const validEntries: ValidEntry[] = [];
+    const nonConforming: Array<{ file: string; message: string }> = [];
 
     for (const file of files) {
-      const ext = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')) : '';
-      const code = file.name.replace(/\.[^/.]+$/, '').toUpperCase().trim();
-
-      if (!code) {
-        errors.push({ file: file.name, message: 'Nome file non valido' });
-        continue;
+      const parsed = parseImageFilename(file.name);
+      if (!parsed.valid) {
+        nonConforming.push({ file: file.name, message: invalidReason(parsed.reason) });
+      } else {
+        validEntries.push({ file, productCode: parsed.productCode, imageIndex: parsed.imageIndex });
       }
+    }
 
-      const product = await prisma.product.findUnique({ where: { code }, select: { id: true } });
-      if (!product) {
-        notFound.push(code);
-        continue;
-      }
+    if (!validEntries.length) {
+      return NextResponse.json({
+        uploaded: 0, notFound: [], errors: [], nonConforming, total: files.length,
+      });
+    }
+
+    // ── Lookup prodotti ───────────────────────────────────────────────────────
+    const uniqueCodes = [...new Set(validEntries.map((e) => e.productCode))];
+    const products = await prisma.product.findMany({
+      where: { code: { in: uniqueCodes } },
+      select: { id: true, code: true },
+    });
+    const productByCode = new Map(products.map((p) => [p.code, p.id]));
+
+    const notFound: string[] = uniqueCodes.filter((c) => !productByCode.has(c));
+
+    // ── Upload e aggiornamento per slot ───────────────────────────────────────
+    const supabase = getSupabaseClient();
+    let uploaded = 0;
+    const errors: Array<{ file: string; message: string }> = [];
+
+    for (const { file, productCode, imageIndex } of validEntries) {
+      const productId = productByCode.get(productCode);
+      if (!productId) continue; // già in notFound
 
       try {
         const buffer = Buffer.from(await file.arrayBuffer());
@@ -50,16 +70,26 @@ export async function POST(req: NextRequest) {
         if (uploadError) throw new Error(uploadError.message);
 
         const { data: urlData } = supabase.storage.from('products').getPublicUrl(storagePath);
-        const imageUrl = urlData.publicUrl;
+        const field = imageIndexToField(imageIndex);
 
-        await prisma.product.update({ where: { id: product.id }, data: { imageUrl } });
+        await prisma.product.update({
+          where: { id: productId },
+          data: { [field]: urlData.publicUrl },
+        });
+
         uploaded++;
       } catch (err: any) {
         errors.push({ file: file.name, message: err.message || 'Upload fallito' });
       }
     }
 
-    return NextResponse.json({ uploaded, notFound, errors, total: files.length });
+    return NextResponse.json({
+      uploaded,
+      notFound,
+      errors,
+      nonConforming,
+      total: files.length,
+    });
   } catch (err) {
     console.error('Image import error:', err);
     return NextResponse.json({ error: 'Errore interno' }, { status: 500 });
