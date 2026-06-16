@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRef, useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Languages, Loader2, X, Lock, Unlock } from 'lucide-react';
+import { Languages, Loader2, X, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import PaeseSelect from '@/components/ui/PaeseSelect';
@@ -393,6 +393,18 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           placeholder="es. Copritavolo GEOMETRIC 140x240"
         />
       </div>
+
+      {isEdit && codeEditable && (
+        <div className="flex gap-2.5 rounded border border-amber-200 bg-amber-50 px-3 py-2.5">
+          <AlertTriangle size={14} className="flex-shrink-0 text-amber-500 mt-px" />
+          <div className="text-xs text-amber-800 space-y-1">
+            <p className="font-semibold">Stai modificando il codice prodotto</p>
+            <p>Le immagini già caricate mantengono il vecchio codice nel filename e nell'URL — il prodotto continua a funzionare normalmente.</p>
+            <p>Dopo il salvataggio, i futuri caricamenti foto in blocco e gli import da file devono usare il <span className="font-semibold">nuovo codice</span>.</p>
+          </div>
+        </div>
+      )}
+
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Descrizione (IT)</label>
         <textarea
