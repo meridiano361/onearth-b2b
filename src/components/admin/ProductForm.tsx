@@ -216,6 +216,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       ? { code: p.pantoneCode, name: p.pantoneName ?? '', hex: p.pantoneHex ?? '', systemType: p.pantoneSystemType ?? 'FHI-TCX' }
       : null
   );
+  const [pantoneError, setPantoneError] = useState<string | null>(null);
 
   // ── Queries ─────────────────────────────────────────────────────────────
   const { data: colorBlocks } = useQuery<{ id: number; name: string; sort_order: number }[]>({
@@ -443,6 +444,14 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   // ── Submit ────────────────────────────────────────────────────────────────
   async function onSubmit(values: FormValues) {
     const v = values as unknown as z.output<typeof schema>;
+
+    const isModaProduct = (v.gruppoMerceologico ?? '').toLowerCase() === 'moda';
+    if (isModaProduct && !selectedPantone?.code) {
+      setPantoneError('Il Pantone è obbligatorio per i prodotti MODA');
+      return;
+    }
+    setPantoneError(null);
+
     try {
       const url    = isEdit ? `/api/products/${product!.id}` : '/api/products';
       const method = isEdit ? 'PATCH' : 'POST';
@@ -770,8 +779,17 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
 
       {/* Pantone FHI-TCX */}
       <div>
-        <label className={lbl}>Pantone FHI-TCX</label>
-        <ProductPantoneForm value={selectedPantone} onChange={setSelectedPantone} />
+        <label className={lbl}>
+          Pantone FHI-TCX{isModa && <span className="text-red-400 ml-0.5">*</span>}
+        </label>
+        <ProductPantoneForm
+          value={selectedPantone}
+          onChange={(v) => {
+            setSelectedPantone(v);
+            if (v) setPantoneError(null);
+          }}
+        />
+        {pantoneError && <p className="mt-1 text-xs text-red-500">{pantoneError}</p>}
       </div>
 
       {/* Materiali */}

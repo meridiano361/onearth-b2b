@@ -207,6 +207,10 @@ export async function POST(req: NextRequest) {
     const { colorBlockIds, ...rest } = parsed;
     const data = normalizeProductClassificationFields(rest);
 
+    if (data.gruppoMerceologico?.toLowerCase() === 'moda' && !data.pantoneCode) {
+      return NextResponse.json({ error: 'Il Pantone è obbligatorio per i prodotti MODA' }, { status: 400 });
+    }
+
     const product = await prisma.product.create({
       data: {
         code: data.code.toUpperCase().trim(),

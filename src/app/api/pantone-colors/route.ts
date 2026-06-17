@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { isAdminRole } from '@/lib/roles';
 import { getSupabaseClient } from '@/lib/supabase';
 import { prisma } from '@/lib/prisma';
 
@@ -81,5 +82,40 @@ export async function GET() {
       },
       { status: 500 }
     );
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !isAdminRole(session.user.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { code, name, hex_code, system_type } = await req.json();
+
+    if (!code?.trim() || !name?.trim() || !hex_code?.trim()) {
+      return NextResponse.json({ error: 'code, name e hex_code sono obbligatori' }, { status: 400 });
+    }
+
+    const safeType = (system_type?.trim()) || 'FHI-TCX';
+
+    const rows = await prisma.$queryRaw<
+      { id: bigint; code: string; name: string; hex_code: string; system_type: string }[]
+    >`
+      INSERT INTO public.pantone_colors (code, name, hex_code, system_type)
+      VALUES (${code.trim()}, ${name.trim()}, ${hex_code.trim()}, ${safeType})
+      RETURNING id, code, name, hex_code, system_type
+    `;
+
+    const row = rows[0];
+    console.log('[pantone-colors] POST created:', row.code, row.name);
+    return NextResponse.json({ data: { ...row, id: Number(row.id) } }, { status: 201 });
+  } catch (err: any) {
+    if (err.code === '23505') {
+      return NextResponse.json({ error: 'Codice Pantone già esistente' }, { status: 409 });
+    }
+    console.error('[pantone-colors] POST error:', err.message);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
