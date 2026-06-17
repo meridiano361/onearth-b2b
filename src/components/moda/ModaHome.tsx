@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { Grid3x3, Heart, ShoppingCart, Package2, HelpCircle, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Grid3x3, Heart, ShoppingCart, Package2, Palette, HelpCircle, ArrowLeft, ChevronRight } from 'lucide-react';
 
 const COLLECTION_ITEMS = [
-  { href: '/moda/catalogo',  icon: Grid3x3,     label: 'Catalogo',  description: 'Sfoglia tutti i prodotti PE27' },
-  { href: '/moda/preferiti', icon: Heart,        label: 'Preferiti', description: 'I tuoi prodotti preferiti'     },
-  { href: '/moda/carrelli',  icon: ShoppingCart, label: 'Carrelli',  description: 'I tuoi carrelli attivi'        },
-  { href: '/moda/ordini',    icon: Package2,     label: 'Ordini',    description: 'I tuoi ordini PE27'            },
+  { href: '/moda/catalogo',     icon: Grid3x3,     label: 'Catalogo',     description: 'Sfoglia tutti i prodotti PE27' },
+  { href: '/moda/preferiti',    icon: Heart,        label: 'Preferiti',    description: 'I tuoi prodotti preferiti'     },
+  { href: '/moda/color-wheel',  icon: Palette,      label: 'Color Wheel',  description: 'Abbinamenti cromatici e visual merchandising' },
+  { href: '/moda/carrelli',     icon: ShoppingCart, label: 'Carrelli',     description: 'I tuoi carrelli attivi'        },
+  { href: '/moda/ordini',       icon: Package2,     label: 'Ordini',       description: 'I tuoi ordini PE27'            },
 ];
 
 /** Decodes a moda collection code into its full season label.

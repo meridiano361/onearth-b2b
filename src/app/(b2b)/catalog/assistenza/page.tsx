@@ -1,8 +1,8 @@
-// AGGIORNATO: 2026-06-17 (filtro blocco colore)
+// AGGIORNATO: 2026-06-17
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
-  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge, Bell, Settings, Sparkles,
+  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge, Bell, Settings, Sparkles, Palette,
 } from 'lucide-react';
 
 export const metadata = { title: 'Guida all\'app — ON EARTH' };
@@ -27,6 +27,7 @@ const SECTIONS = [
   { id: 'multilingua',        label: 'Multilingua',                       icon: Globe },
   { id: 'impostazioni',       label: 'Impostazioni',                      icon: Settings },
   { id: 'moda-pe27',          label: 'Moda PE27',                         icon: Sparkles },
+  { id: 'color-wheel',        label: 'Color Wheel',                       icon: Palette },
   { id: 'assistenza-tecnica', label: 'Assistenza tecnica',                icon: HelpCircle },
 ];
 
@@ -378,9 +379,24 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 20. Assistenza tecnica */}
+        {/* 20. Color Wheel */}
+        <section id="color-wheel" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={20} icon={Palette} label="Color Wheel" />
+          <p className="text-sm text-gray-600 mb-3">
+            La <strong>Color Wheel</strong> è uno strumento di visual merchandising per i prodotti Moda PE27.
+            Visualizza la ruota cromatica e trova abbinamenti ottimali per tavoli, pareti e vetrine.
+          </p>
+          <ul className="space-y-2">
+            <Bullet><span className="font-medium">Ruota:</span> 12 famiglie cromatiche + neutri. Ogni segmento mostra quanti prodotti appartengono a quella famiglia colore. Clicca un segmento per filtrare.</Bullet>
+            <Bullet><span className="font-medium">Selezione prodotto:</span> clicca un prodotto per vedere gli abbinamenti — analoghi, complementari, neutri compatibili — calcolati dal colore Pantone primario.</Bullet>
+            <Bullet><span className="font-medium">Set per esposizione:</span> il pannello suggerimenti propone automaticamente set cromatici: tono su tono, analoghi, complementari e hero + neutri, con uno score di qualità visiva.</Bullet>
+            <Bullet><span className="font-medium">Pantone primario:</span> il colore che guida il posizionamento in ruota è il Pantone marcato come <em>principale</em> (stella) nel form prodotto admin.</Bullet>
+          </ul>
+        </section>
+
+        {/* 21. Assistenza tecnica */}
         <section id="assistenza-tecnica" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={20} icon={HelpCircle} label="Assistenza tecnica" />
+          <SectionHeader n={21} icon={HelpCircle} label="Assistenza tecnica" />
           <p className="text-sm text-gray-600">
             Per problemi tecnici{' '}
             <a
