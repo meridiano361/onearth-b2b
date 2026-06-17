@@ -96,6 +96,10 @@ export interface Product {
   fantasia: string | null;
   lavorazione: string | null;
   dettaglio: string | null;
+  pantoneCode: string | null;
+  pantoneName: string | null;
+  pantoneHex: string | null;
+  pantoneSystemType: string | null;
   createdAt: string;
   category?: Category | null;
 }

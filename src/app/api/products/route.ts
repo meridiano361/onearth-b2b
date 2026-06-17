@@ -63,6 +63,10 @@ const productSchema = z.object({
   fantasia: z.string().optional().nullable(),
   lavorazione: z.string().optional().nullable(),
   dettaglio: z.string().optional().nullable(),
+  pantoneCode: z.string().optional().nullable(),
+  pantoneName: z.string().optional().nullable(),
+  pantoneHex: z.string().optional().nullable(),
+  pantoneSystemType: z.string().optional().nullable(),
 });
 
 export async function GET(req: NextRequest) {
@@ -256,6 +260,10 @@ export async function POST(req: NextRequest) {
         fantasia: data.fantasia || null,
         lavorazione: data.lavorazione || null,
         dettaglio: data.dettaglio || null,
+        pantoneCode: data.pantoneCode || null,
+        pantoneName: data.pantoneName || null,
+        pantoneHex: data.pantoneHex || null,
+        pantoneSystemType: data.pantoneSystemType || null,
       },
       include: { category: true },
     });

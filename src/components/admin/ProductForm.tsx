@@ -26,6 +26,7 @@ import {
   CONFERENTE_OPTIONS,
   STAGIONE_OPTIONS,
 } from '@/lib/productConstants';
+import ProductPantoneForm, { type PantoneValue } from './ProductPantoneForm';
 
 const IVA_OPTIONS = [0, 4, 5, 10, 22];
 
@@ -133,6 +134,10 @@ const schema = z
     modello: z.string().optional(),
     colore: z.string().optional(),
     lavorazione: z.string().optional(),
+    pantoneCode: z.string().optional(),
+    pantoneName: z.string().optional(),
+    pantoneHex: z.string().optional(),
+    pantoneSystemType: z.string().optional(),
     materiale1: z.string().optional(),
     materiale2: z.string().optional(),
     materiale3: z.string().optional(),
@@ -205,6 +210,11 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const [isTranslating, setIsTranslating] = useState(false);
   const [selectedColorBlocks, setSelectedColorBlocks] = useState<Set<number>>(
     () => new Set<number>(p?.colorBlockIds ?? [])
+  );
+  const [selectedPantone, setSelectedPantone] = useState<PantoneValue | null>(() =>
+    p?.pantoneCode
+      ? { code: p.pantoneCode, name: p.pantoneName ?? '', hex: p.pantoneHex ?? '', systemType: p.pantoneSystemType ?? 'FHI-TCX' }
+      : null
   );
 
   // ── Queries ─────────────────────────────────────────────────────────────
@@ -484,6 +494,10 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           imageUrl3:      v.imageUrl3      || null,
           imageUrl4:      v.imageUrl4      || null,
           colorBlockIds:  [...selectedColorBlocks],
+          pantoneCode:    selectedPantone?.code    || null,
+          pantoneName:    selectedPantone?.name    || null,
+          pantoneHex:     selectedPantone?.hex     || null,
+          pantoneSystemType: selectedPantone?.systemType || null,
         }),
       });
 
@@ -752,6 +766,12 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           value={watch('lavorazione') || ''}
           onChange={(v) => setValue('lavorazione', v)}
         />
+      </div>
+
+      {/* Pantone FHI-TCX */}
+      <div>
+        <label className={lbl}>Pantone FHI-TCX</label>
+        <ProductPantoneForm value={selectedPantone} onChange={setSelectedPantone} />
       </div>
 
       {/* Materiali */}
