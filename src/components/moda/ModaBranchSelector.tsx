@@ -16,11 +16,11 @@ const ICON_MAP = {
  */
 export default function ModaBranchSelector({ activeBranchId }: { activeBranchId: 'casa27' | 'modaPE27' }) {
   const { data: session } = useSession();
-  const email = session?.user?.email ?? null;
+  const role = session?.user?.role ?? null;
 
-  if (!hasMultipleBranches(email)) return null;
+  if (!hasMultipleBranches(role)) return null;
 
-  const branches = getVisibleBranches(email);
+  const branches = getVisibleBranches(role);
 
   return (
     <section className="flex gap-3">

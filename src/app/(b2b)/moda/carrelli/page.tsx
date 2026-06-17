@@ -6,6 +6,6 @@ import CartsView from '@/components/carts/CartsView';
 
 export default async function ModaCarrelli() {
   const session = await getServerSession(authOptions);
-  if (!session || !canAccessModa(session.user?.email)) redirect('/catalog');
+  if (!session || !canAccessModa(session.user?.role)) redirect('/catalog');
   return <CartsView />;
 }

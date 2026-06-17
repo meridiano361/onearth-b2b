@@ -36,7 +36,7 @@ export default function AdminExperimentalLanding() {
   const { home: hs, social: ss } = useSettings();
 
   // Client-side safety guard — server already verified, this is defence-in-depth
-  if (!canAccessModa(session?.user?.email)) return null;
+  if (!canAccessModa(session?.user?.role)) return null;
 
   const hasEditorialImage = hs.editorialAttivo && hs.editorialUrl;
   const visibleSocial = ss.ordine.filter((k) => ss.items[k]?.visibile);

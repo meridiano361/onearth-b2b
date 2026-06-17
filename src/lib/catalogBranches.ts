@@ -5,7 +5,7 @@
  */
 
 import type { CatalogBranchId } from './modaAccess';
-import { MODA_EMAIL, MODA_COLLEZIONE, MODA_BRANCH_ID, CASA_BRANCH_ID, canAccessModa } from './modaAccess';
+import { MODA_COLLEZIONE, MODA_BRANCH_ID, CASA_BRANCH_ID, canAccessModa } from './modaAccess';
 
 export type CatalogBranch = {
   id: CatalogBranchId;
@@ -15,8 +15,8 @@ export type CatalogBranch = {
   rootRoute: string;
   collezione: string | null;
   iconName: 'home' | 'sparkles';
-  /** Returns whether a given email is allowed to see this branch. */
-  canAccess: (email: string | null | undefined) => boolean;
+  /** Returns whether a given role is allowed to see this branch. */
+  canAccess: (role: string | null | undefined) => boolean;
 };
 
 export const CATALOG_BRANCHES: CatalogBranch[] = [
@@ -42,14 +42,14 @@ export const CATALOG_BRANCHES: CatalogBranch[] = [
   },
 ];
 
-/** Returns branches visible to a given email. */
-export function getVisibleBranches(email: string | null | undefined): CatalogBranch[] {
-  return CATALOG_BRANCHES.filter((b) => b.canAccess(email));
+/** Returns branches visible to a given role. */
+export function getVisibleBranches(role: string | null | undefined): CatalogBranch[] {
+  return CATALOG_BRANCHES.filter((b) => b.canAccess(role));
 }
 
 /** True if a user can see more than one branch (i.e. the selector should be shown). */
-export function hasMultipleBranches(email: string | null | undefined): boolean {
-  return getVisibleBranches(email).length > 1;
+export function hasMultipleBranches(role: string | null | undefined): boolean {
+  return getVisibleBranches(role).length > 1;
 }
 
-export { MODA_EMAIL, canAccessModa };
+export { canAccessModa };

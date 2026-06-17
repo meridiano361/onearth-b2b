@@ -9,6 +9,6 @@ export const metadata: Metadata = { title: 'Ordini Moda PE27 — ON EARTH B2B' }
 
 export default async function ModaOrdini() {
   const session = await getServerSession(authOptions);
-  if (!session || !canAccessModa(session.user?.email)) redirect('/catalog');
+  if (!session || !canAccessModa(session.user?.role)) redirect('/catalog');
   return <CustomerOrdersView />;
 }

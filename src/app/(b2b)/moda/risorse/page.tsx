@@ -9,6 +9,6 @@ export const metadata: Metadata = { title: 'Risorse e Media — Moda PE27' };
 
 export default async function ModaRisorsePage() {
   const session = await getServerSession(authOptions);
-  if (!session || !canAccessModa(session.user?.email)) redirect('/catalog');
+  if (!session || !canAccessModa(session.user?.role)) redirect('/catalog');
   return <ModaRisorse />;
 }

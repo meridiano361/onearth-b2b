@@ -9,6 +9,6 @@ export const metadata: Metadata = { title: 'Moda PE27 — ON EARTH' };
 
 export default async function ModaPage() {
   const session = await getServerSession(authOptions);
-  if (!session || !canAccessModa(session.user?.email)) redirect('/catalog');
+  if (!session || !canAccessModa(session.user?.role)) redirect('/catalog');
   return <ModaHome />;
 }

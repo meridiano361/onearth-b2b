@@ -21,7 +21,7 @@ export default withAuth(
 
     // Moda PE27 and Casa hub — exclusive access while experimental
     if (pathname.startsWith('/moda') || pathname.startsWith('/casa')) {
-      if (!canAccessModa(token?.email as string)) {
+      if (!canAccessModa(role)) {
         return NextResponse.redirect(new URL('/catalog', req.url));
       }
     }
