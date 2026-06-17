@@ -18,6 +18,9 @@ const ALLOWED_FIELDS = [
   'gruppoOmogeneo',
   'fasciaRicarico',
   'tranche',
+  'modello',
+  'lavorazione',
+  'dettaglio',
 ] as const;
 
 type AllowedField = (typeof ALLOWED_FIELDS)[number];

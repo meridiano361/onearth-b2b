@@ -85,6 +85,17 @@ export interface Product {
   costoIeConReso: number | null;
   costoIeSenzaReso: number | null;
   colorBlockIds: number[];
+  conferente: string | null;
+  materiale1: string | null;
+  materiale2: string | null;
+  materiale3: string | null;
+  composizione: string | null;
+  certificazione1: string | null;
+  certificazione2: string | null;
+  certificazione3: string | null;
+  fantasia: string | null;
+  lavorazione: string | null;
+  dettaglio: string | null;
   createdAt: string;
   category?: Category | null;
 }

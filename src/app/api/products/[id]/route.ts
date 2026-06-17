@@ -56,6 +56,17 @@ const updateSchema = z.object({
   bloccoColore: z.string().optional().nullable(),
   costoIeConReso: z.coerce.number().positive().optional().nullable(),
   costoIeSenzaReso: z.coerce.number().positive().optional().nullable(),
+  conferente: z.string().optional().nullable(),
+  materiale1: z.string().optional().nullable(),
+  materiale2: z.string().optional().nullable(),
+  materiale3: z.string().optional().nullable(),
+  composizione: z.string().optional().nullable(),
+  certificazione1: z.string().optional().nullable(),
+  certificazione2: z.string().optional().nullable(),
+  certificazione3: z.string().optional().nullable(),
+  fantasia: z.string().optional().nullable(),
+  lavorazione: z.string().optional().nullable(),
+  dettaglio: z.string().optional().nullable(),
 });
 
 export async function GET(

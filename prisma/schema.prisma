@@ -91,6 +91,17 @@ model Product {
   tranche            String?
   paese              String?
   iva                Int      @default(22)
+  conferente         String?
+  materiale1         String?
+  materiale2         String?
+  materiale3         String?
+  composizione       String?
+  certificazione1    String?
+  certificazione2    String?
+  certificazione3    String?
+  fantasia           String?
+  lavorazione        String?
+  dettaglio          String?
   descrizioneEn      String?
   descrizioneDe      String?
   descrizioneFr      String?
