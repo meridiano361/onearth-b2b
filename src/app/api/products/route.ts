@@ -63,10 +63,7 @@ const productSchema = z.object({
   fantasia: z.string().optional().nullable(),
   lavorazione: z.string().optional().nullable(),
   dettaglio: z.string().optional().nullable(),
-  pantoneCode: z.string().optional().nullable(),
-  pantoneName: z.string().optional().nullable(),
-  pantoneHex: z.string().optional().nullable(),
-  pantoneSystemType: z.string().optional().nullable(),
+  pantoneColorIds: z.array(z.coerce.number().int()).optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -155,7 +152,7 @@ export async function GET(req: NextRequest) {
       prisma.product.count({ where }),
     ]);
 
-    // Fetch color block IDs for all returned products
+    // Fetch color blocks and pantone entries for all returned products
     const productIds = products.map((p) => p.id);
     type CbLink = { product_id: string; color_block_id: bigint };
     const cbLinks = productIds.length > 0
@@ -172,6 +169,28 @@ export async function GET(req: NextRequest) {
       cbByProductId.set(link.product_id, arr);
     }
 
+    type PpLink = {
+      product_id: string; pantone_color_id: bigint; code: string;
+      name: string; hex_code: string; system_type: string;
+      sort_order: number; is_primary: boolean;
+    };
+    const ppLinks = productIds.length > 0
+      ? await prisma.$queryRaw<PpLink[]>`
+          SELECT pp.product_id, pp.pantone_color_id, pc.code, pc.name, pc.hex_code, pc.system_type,
+                 pp.sort_order, pp.is_primary
+          FROM   product_pantones pp
+          JOIN   pantone_colors pc ON pc.id = pp.pantone_color_id
+          WHERE  pp.product_id = ANY(${productIds}::text[])
+          ORDER  BY pp.sort_order ASC
+        `
+      : [];
+    const ppByProductId = new Map<string, typeof ppLinks>();
+    for (const link of ppLinks) {
+      const arr = ppByProductId.get(link.product_id) ?? [];
+      arr.push(link);
+      ppByProductId.set(link.product_id, arr);
+    }
+
     // Serialize Decimals
     const serialized = products.map((p) => ({
       ...p,
@@ -180,6 +199,11 @@ export async function GET(req: NextRequest) {
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
       colorBlockIds: cbByProductId.get(p.id) ?? [],
+      pantoneColors: (ppByProductId.get(p.id) ?? []).map((pp) => ({
+        pantoneColorId: Number(pp.pantone_color_id),
+        code: pp.code, name: pp.name, hex_code: pp.hex_code,
+        system_type: pp.system_type, sortOrder: pp.sort_order, isPrimary: pp.is_primary,
+      })),
     }));
 
     return NextResponse.json({
@@ -204,10 +228,10 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const parsed = productSchema.parse(body);
-    const { colorBlockIds, ...rest } = parsed;
+    const { colorBlockIds, pantoneColorIds, ...rest } = parsed;
     const data = normalizeProductClassificationFields(rest);
 
-    if (data.gruppoMerceologico?.toLowerCase() === 'moda' && !data.pantoneCode) {
+    if (data.gruppoMerceologico?.toLowerCase() === 'moda' && (!pantoneColorIds || pantoneColorIds.length === 0)) {
       return NextResponse.json({ error: 'Il Pantone è obbligatorio per i prodotti MODA' }, { status: 400 });
     }
 
@@ -264,10 +288,6 @@ export async function POST(req: NextRequest) {
         fantasia: data.fantasia || null,
         lavorazione: data.lavorazione || null,
         dettaglio: data.dettaglio || null,
-        pantoneCode: data.pantoneCode || null,
-        pantoneName: data.pantoneName || null,
-        pantoneHex: data.pantoneHex || null,
-        pantoneSystemType: data.pantoneSystemType || null,
       },
       include: { category: true },
     });
@@ -278,6 +298,17 @@ export async function POST(req: NextRequest) {
         await prisma.$executeRaw`
           INSERT INTO product_color_blocks (product_id, color_block_id)
           VALUES (${product.id}, ${BigInt(cbId)})
+        `;
+      }
+    }
+
+    // Sync pantone many-to-many
+    if (pantoneColorIds && pantoneColorIds.length > 0) {
+      for (let i = 0; i < pantoneColorIds.length; i++) {
+        await prisma.$executeRaw`
+          INSERT INTO product_pantones (product_id, pantone_color_id, sort_order, is_primary)
+          VALUES (${product.id}, ${BigInt(pantoneColorIds[i])}, ${i}, ${i === 0})
+          ON CONFLICT (product_id, pantone_color_id) DO NOTHING
         `;
       }
     }

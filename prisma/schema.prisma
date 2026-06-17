@@ -102,10 +102,6 @@ model Product {
   fantasia           String?
   lavorazione        String?
   dettaglio          String?
-  pantoneCode        String? @map("pantone_code")
-  pantoneName        String? @map("pantone_name")
-  pantoneHex         String? @map("pantone_hex")
-  pantoneSystemType  String? @map("pantone_system_type")
   descrizioneEn      String?
   descrizioneDe      String?
   descrizioneFr      String?

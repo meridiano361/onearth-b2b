@@ -11,7 +11,7 @@ import Button from '@/components/ui/Button';
 import PaeseSelect from '@/components/ui/PaeseSelect';
 import Combobox from '@/components/ui/Combobox';
 import toast from 'react-hot-toast';
-import type { Product } from '@/types';
+import type { Product, ProductPantoneEntry } from '@/types';
 import {
   MODA_GRUPPO_MERCEOLOGICO,
   MODA_FAMIGLIE,
@@ -26,7 +26,7 @@ import {
   CONFERENTE_OPTIONS,
   STAGIONE_OPTIONS,
 } from '@/lib/productConstants';
-import ProductPantoneForm, { type PantoneValue } from './ProductPantoneForm';
+import ProductPantoneForm from './ProductPantoneForm';
 
 const IVA_OPTIONS = [0, 4, 5, 10, 22];
 
@@ -134,10 +134,6 @@ const schema = z
     modello: z.string().optional(),
     colore: z.string().optional(),
     lavorazione: z.string().optional(),
-    pantoneCode: z.string().optional(),
-    pantoneName: z.string().optional(),
-    pantoneHex: z.string().optional(),
-    pantoneSystemType: z.string().optional(),
     materiale1: z.string().optional(),
     materiale2: z.string().optional(),
     materiale3: z.string().optional(),
@@ -211,10 +207,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const [selectedColorBlocks, setSelectedColorBlocks] = useState<Set<number>>(
     () => new Set<number>(p?.colorBlockIds ?? [])
   );
-  const [selectedPantone, setSelectedPantone] = useState<PantoneValue | null>(() =>
-    p?.pantoneCode
-      ? { code: p.pantoneCode, name: p.pantoneName ?? '', hex: p.pantoneHex ?? '', systemType: p.pantoneSystemType ?? 'FHI-TCX' }
-      : null
+  const [selectedPantones, setSelectedPantones] = useState<ProductPantoneEntry[]>(
+    () => p?.pantoneColors ?? []
   );
   const [pantoneError, setPantoneError] = useState<string | null>(null);
 
@@ -446,7 +440,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     const v = values as unknown as z.output<typeof schema>;
 
     const isModaProduct = (v.gruppoMerceologico ?? '').toLowerCase() === 'moda';
-    if (isModaProduct && !selectedPantone?.code) {
+    if (isModaProduct && selectedPantones.length === 0) {
       setPantoneError('Il Pantone è obbligatorio per i prodotti MODA');
       return;
     }
@@ -502,11 +496,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           imageUrl2:      v.imageUrl2      || null,
           imageUrl3:      v.imageUrl3      || null,
           imageUrl4:      v.imageUrl4      || null,
-          colorBlockIds:  [...selectedColorBlocks],
-          pantoneCode:    selectedPantone?.code    || null,
-          pantoneName:    selectedPantone?.name    || null,
-          pantoneHex:     selectedPantone?.hex     || null,
-          pantoneSystemType: selectedPantone?.systemType || null,
+          colorBlockIds:   [...selectedColorBlocks],
+          pantoneColorIds: selectedPantones.map((p) => p.pantoneColorId),
         }),
       });
 
@@ -783,10 +774,10 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           Pantone FHI-TCX{isModa && <span className="text-red-400 ml-0.5">*</span>}
         </label>
         <ProductPantoneForm
-          value={selectedPantone}
+          value={selectedPantones}
           onChange={(v) => {
-            setSelectedPantone(v);
-            if (v) setPantoneError(null);
+            setSelectedPantones(v);
+            if (v.length > 0) setPantoneError(null);
           }}
         />
         {pantoneError && <p className="mt-1 text-xs text-red-500">{pantoneError}</p>}

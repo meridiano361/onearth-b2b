@@ -67,10 +67,7 @@ const updateSchema = z.object({
   fantasia: z.string().optional().nullable(),
   lavorazione: z.string().optional().nullable(),
   dettaglio: z.string().optional().nullable(),
-  pantoneCode: z.string().optional().nullable(),
-  pantoneName: z.string().optional().nullable(),
-  pantoneHex: z.string().optional().nullable(),
-  pantoneSystemType: z.string().optional().nullable(),
+  pantoneColorIds: z.array(z.coerce.number().int()).optional(),
 });
 
 export async function GET(
@@ -88,9 +85,22 @@ export async function GET(
 
     if (!product) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const colorBlockLinks = await prisma.$queryRaw<{ color_block_id: bigint }[]>`
-      SELECT color_block_id FROM product_color_blocks WHERE product_id = ${params.id}
-    `;
+    const [colorBlockLinks, pantoneLinks] = await Promise.all([
+      prisma.$queryRaw<{ color_block_id: bigint }[]>`
+        SELECT color_block_id FROM product_color_blocks WHERE product_id = ${params.id}
+      `,
+      prisma.$queryRaw<{
+        pantone_color_id: bigint; code: string; name: string;
+        hex_code: string; system_type: string; sort_order: number; is_primary: boolean;
+      }[]>`
+        SELECT pp.pantone_color_id, pc.code, pc.name, pc.hex_code, pc.system_type,
+               pp.sort_order, pp.is_primary
+        FROM   product_pantones pp
+        JOIN   pantone_colors pc ON pc.id = pp.pantone_color_id
+        WHERE  pp.product_id = ${params.id}
+        ORDER  BY pp.sort_order ASC
+      `,
+    ]);
 
     return NextResponse.json({
       data: {
@@ -101,6 +111,11 @@ export async function GET(
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
         colorBlockIds: colorBlockLinks.map((r) => Number(r.color_block_id)),
+        pantoneColors: pantoneLinks.map((pp) => ({
+          pantoneColorId: Number(pp.pantone_color_id),
+          code: pp.code, name: pp.name, hex_code: pp.hex_code,
+          system_type: pp.system_type, sortOrder: pp.sort_order, isPrimary: pp.is_primary,
+        })),
       },
     });
   } catch (err) {
@@ -120,10 +135,10 @@ export async function PATCH(
 
     const body = await req.json();
     const parsed = updateSchema.parse(body);
-    const { colorBlockIds, ...rest } = parsed;
+    const { colorBlockIds, pantoneColorIds, ...rest } = parsed;
     const data = normalizeProductClassificationFields(rest);
 
-    if (data.gruppoMerceologico?.toLowerCase() === 'moda' && !data.pantoneCode) {
+    if (data.gruppoMerceologico?.toLowerCase() === 'moda' && (!pantoneColorIds || pantoneColorIds.length === 0)) {
       return NextResponse.json({ error: 'Il Pantone è obbligatorio per i prodotti MODA' }, { status: 400 });
     }
 
@@ -151,6 +166,17 @@ export async function PATCH(
         await prisma.$executeRaw`
           INSERT INTO product_color_blocks (product_id, color_block_id)
           VALUES (${params.id}, ${BigInt(cbId)})
+        `;
+      }
+    }
+
+    // Sync pantone many-to-many
+    if (pantoneColorIds !== undefined) {
+      await prisma.$executeRaw`DELETE FROM product_pantones WHERE product_id = ${params.id}`;
+      for (let i = 0; i < pantoneColorIds.length; i++) {
+        await prisma.$executeRaw`
+          INSERT INTO product_pantones (product_id, pantone_color_id, sort_order, is_primary)
+          VALUES (${params.id}, ${BigInt(pantoneColorIds[i])}, ${i}, ${i === 0})
         `;
       }
     }

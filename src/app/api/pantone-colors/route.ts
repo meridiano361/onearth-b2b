@@ -31,13 +31,14 @@ export async function GET() {
 
   // ── Tentativo 1: Supabase PostgREST ──────────────────────────────────────────
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
+  const { data: rawData, error } = await supabase
     .from('pantone_colors')
-    .select('code, name, hex_code, system_type')
+    .select('id, code, name, hex_code, system_type')
     .eq('system_type', 'FHI-TCX')
     .order('code', { ascending: true });
 
   if (!error) {
+    const data = rawData?.map((r: any) => ({ ...r, id: Number(r.id) }));
     console.log('[pantone-colors] Supabase OK, rows:', data?.length ?? 0);
     return NextResponse.json({ data });
   }
@@ -57,15 +58,16 @@ export async function GET() {
   console.log('[pantone-colors] Fallback → Prisma direct query...');
   try {
     const rows = await prisma.$queryRaw<
-      { code: string; name: string; hex_code: string; system_type: string }[]
+      { id: bigint; code: string; name: string; hex_code: string; system_type: string }[]
     >`
-      SELECT code, name, hex_code, system_type
+      SELECT id, code, name, hex_code, system_type
       FROM   public.pantone_colors
       WHERE  system_type = 'FHI-TCX'
       ORDER  BY code ASC
     `;
-    console.log('[pantone-colors] Prisma fallback OK, rows:', rows.length);
-    return NextResponse.json({ data: rows });
+    const data = rows.map((r) => ({ ...r, id: Number(r.id) }));
+    console.log('[pantone-colors] Prisma fallback OK, rows:', data.length);
+    return NextResponse.json({ data });
   } catch (prismaErr: any) {
     console.error('[pantone-colors] Prisma fallback error:', prismaErr.message);
     return NextResponse.json(

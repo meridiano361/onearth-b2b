@@ -96,12 +96,19 @@ export interface Product {
   fantasia: string | null;
   lavorazione: string | null;
   dettaglio: string | null;
-  pantoneCode: string | null;
-  pantoneName: string | null;
-  pantoneHex: string | null;
-  pantoneSystemType: string | null;
+  pantoneColors: ProductPantoneEntry[];
   createdAt: string;
   category?: Category | null;
+}
+
+export interface ProductPantoneEntry {
+  pantoneColorId: number;
+  code: string;
+  name: string;
+  hex_code: string;
+  system_type: string;
+  sortOrder: number;
+  isPrimary: boolean;
 }
 
 export interface ClassificazioneValore {
