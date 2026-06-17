@@ -11,7 +11,7 @@ import BulkImageUpload from './BulkImageUpload';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type PhotoProduct = { id: string; code: string; name: string };
+type PhotoProduct = { id: string; code: string; name: string; slot: number };
 
 type Photo = {
   path: string;
@@ -19,6 +19,9 @@ type Photo = {
   size: number;
   createdAt: string;
   url: string;
+  status: 'in-uso' | 'da-collegare' | 'orfana';
+  parsedCode: string | null;
+  parsedSlot: number | null;
   product: PhotoProduct | null;
 };
 
@@ -103,7 +106,7 @@ function DetailModal({
           {photo.product ? (
             <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded p-3">
               <div>
-                <p className="text-xs font-medium text-green-700">In uso</p>
+                <p className="text-xs font-medium text-green-700">In uso — foto {photo.product.slot}</p>
                 <p className="text-2xs text-gray-600 mt-0.5">
                   <span className="font-mono">{photo.product.code}</span> — {photo.product.name}
                 </p>
@@ -125,9 +128,19 @@ function DetailModal({
                 </button>
               </div>
             </div>
+          ) : photo.status === 'da-collegare' ? (
+            <div className="bg-amber-50 border border-amber-200 rounded p-3">
+              <p className="text-xs font-medium text-amber-700">Da collegare</p>
+              {photo.parsedCode && (
+                <p className="text-2xs text-gray-600 mt-0.5">
+                  Codice rilevato dal filename: <span className="font-mono font-medium">{photo.parsedCode}</span>
+                  {photo.parsedSlot ? ` (foto ${photo.parsedSlot})` : ''}
+                </p>
+              )}
+            </div>
           ) : (
             <div className="bg-red-50 border border-red-200 rounded p-3">
-              <p className="text-xs font-medium text-red-600">Foto orfana — nessun prodotto la usa</p>
+              <p className="text-xs font-medium text-red-600">Orfana — nessun prodotto la usa</p>
             </div>
           )}
 
@@ -321,7 +334,7 @@ function PhotoCard({
   onDelete: (path: string) => void;
   onCollega: (photo: Photo) => void;
 }) {
-  const isOrphan = !photo.product;
+  const isOrphan = photo.status === 'orfana';
 
   return (
     <div
@@ -353,12 +366,14 @@ function PhotoCard({
       <div className="absolute top-2 right-2 z-10">
         <span
           className={`text-2xs font-medium px-1.5 py-0.5 rounded ${
-            isOrphan
-              ? 'bg-red-100 text-red-600'
-              : 'bg-green-100 text-green-700'
+            photo.status === 'in-uso'
+              ? 'bg-green-100 text-green-700'
+              : photo.status === 'da-collegare'
+              ? 'bg-amber-100 text-amber-700'
+              : 'bg-red-100 text-red-600'
           }`}
         >
-          {isOrphan ? 'Orfana' : 'In uso'}
+          {photo.status === 'in-uso' ? 'In uso' : photo.status === 'da-collegare' ? 'Da collegare' : 'Orfana'}
         </span>
       </div>
 
@@ -454,9 +469,9 @@ export default function AdminFotoPage() {
 
   // ── Computed stats ────────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    const total   = allPhotos.length;
-    const inUse   = allPhotos.filter((p) => p.product !== null).length;
-    const orphan  = total - inUse;
+    const total      = allPhotos.length;
+    const inUse      = allPhotos.filter((p) => p.status === 'in-uso').length;
+    const orphan     = allPhotos.filter((p) => p.status === 'orfana').length;
     const totalBytes = allPhotos.reduce((s, p) => s + p.size, 0);
     return { total, inUse, orphan, totalBytes };
   }, [allPhotos]);
@@ -464,8 +479,8 @@ export default function AdminFotoPage() {
   // ── Filtered + sorted list ────────────────────────────────────────────────
   const photos = useMemo(() => {
     let list = allPhotos;
-    if (filterMode === 'orphan')  list = list.filter((p) => !p.product);
-    if (filterMode === 'in-use')  list = list.filter((p) => !!p.product);
+    if (filterMode === 'orphan')  list = list.filter((p) => p.status === 'orfana');
+    if (filterMode === 'in-use')  list = list.filter((p) => p.status === 'in-uso');
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -495,7 +510,7 @@ export default function AdminFotoPage() {
   }
 
   function selectOrphans() {
-    setSelected(new Set(allPhotos.filter((p) => !p.product).map((p) => p.path)));
+    setSelected(new Set(allPhotos.filter((p) => p.status === 'orfana').map((p) => p.path)));
   }
 
   // ── Delete handler ────────────────────────────────────────────────────────

@@ -50,10 +50,10 @@ const schema = z
     taglia: z.string().optional(),
     bloccoColore: z.string().optional(),
     costoIeConReso: z.string().optional(),
-    costoIeSenzaReso: z.string().optional(),
+    costoIeSenzaReso: z.string().min(1, 'Obbligatorio'),
     lotSize: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 1)),
     iva: z.string().default('22').transform(Number),
-    costPrice: z.string().min(1, 'Obbligatorio').transform(Number),
+    costPrice: z.string().optional().transform((v) => (v ? Number(v) : 0)),
     retailPrice: z.string().min(1, 'Obbligatorio').transform(Number),
     fasciaRicarico: z.string().optional(),
     fasciaSconto: z.string().optional(),
@@ -68,8 +68,9 @@ const schema = z
   })
   .refine(
     (d) => {
-      if (!d.costPrice || !d.retailPrice) return true;
-      return d.retailPrice >= d.costPrice * (1 + d.iva / 100) - 0.001;
+      const cost = d.costoIeSenzaReso ? Number(d.costoIeSenzaReso) : 0;
+      if (!cost || !d.retailPrice) return true;
+      return d.retailPrice >= cost * (1 + d.iva / 100) - 0.001;
     },
     {
       message: 'Prezzo vendita i.i. inferiore al costo × (1 + IVA%)',
@@ -155,10 +156,14 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           taglia: (product as any).taglia || '',
           bloccoColore: (product as any).bloccoColore || '',
           costoIeConReso: (product as any).costoIeConReso != null ? String((product as any).costoIeConReso) : '',
-          costoIeSenzaReso: (product as any).costoIeSenzaReso != null ? String((product as any).costoIeSenzaReso) : '',
+          costoIeSenzaReso: (product as any).costoIeSenzaReso != null
+            ? String((product as any).costoIeSenzaReso)
+            : String(product.costPrice),
           lotSize: String(product.lotSize),
           iva: String(product.iva ?? 22),
-          costPrice: String(product.costPrice),
+          costPrice: (product as any).costoIeSenzaReso != null
+            ? String((product as any).costoIeSenzaReso)
+            : String(product.costPrice),
           retailPrice: String(product.retailPrice),
           fasciaRicarico: product.fasciaRicarico || '',
           fasciaSconto: product.fasciaSconto != null ? String(product.fasciaSconto) : '',
@@ -208,7 +213,9 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const watchedFamiglia = watch('famiglia');
   const watchedClasse = watch('classe');
   const watchedSottoclasse = watch('sottoclasse');
-  const isModa = watchedGm === MODA_GRUPPO_MERCEOLOGICO;
+  const watchedGruppoOmogeneo = watch('gruppoOmogeneo');
+  // In edit mode derive isModa from the product prop to avoid dependency on async gmOptions load
+  const isModa = (isEdit ? (watchedGm ?? product?.gruppoMerceologico) : watchedGm) === MODA_GRUPPO_MERCEOLOGICO;
 
   const modaClassi = isModa ? getModaClassi(watchedFamiglia || '') : [];
   const modaSottoclassi = isModa ? getModaSottoclassi(watchedFamiglia || '', watchedClasse || '') : [];
@@ -237,11 +244,19 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const fmtPct = (v: number | null) =>
     v === null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
 
+  // ── Computed con reso ─────────────────────────────────────────
+  const watchedCostoConReso = watch('costoIeConReso');
+  const costoConResoNum = parseFloat(String(watchedCostoConReso || 0)) || 0;
+  const scontoConReso = pvn > 0 && costoConResoNum > 0 ? ((pvn - costoConResoNum) / pvn) * 100 : null;
+  const ricaricoConReso = costoConResoNum > 0 && pvn > 0 ? ((pvn - costoConResoNum) / costoConResoNum) * 100 : null;
+
   // Pre-computed register objects so we can override onChange
   const costPriceReg = register('costPrice');
   const retailPriceReg = register('retailPrice');
   const ivaReg = register('iva');
   const fasciaScReg = register('fasciaSconto');
+  const fasciaRicaricoReg = register('fasciaRicarico');
+  const costoSenzaResoReg = register('costoIeSenzaReso');
 
   async function uploadFile(
     file: File,
@@ -359,7 +374,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       <SectionLabel>Anagrafica</SectionLabel>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium tracking-wide uppercase text-gray-600 mb-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
             Codice *
           </label>
           <input
@@ -370,7 +385,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           {errors.code && <p className="mt-1.5 text-xs text-red-500">{errors.code.message}</p>}
         </div>
         <Input
-          label="Nome prodotto *"
+          label="Nome *"
           {...register('name')}
           error={errors.name?.message}
           placeholder="es. Copritavolo GEOMETRIC 140x240"
@@ -424,14 +439,16 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Gruppo merceologico</label>
           <select
-            value={watch('gruppoMerceologico') || ''}
+            value={watchedGm || ''}
             onChange={(e) => {
-              setValue('gruppoMerceologico', e.target.value);
-              // Cascade reset dei livelli inferiori al cambio GM
-              setValue('famiglia', '');
-              setValue('classe', '');
-              setValue('sottoclasse', '');
-              setValue('gruppoOmogeneo', '');
+              setValue('gruppoMerceologico', e.target.value, { shouldDirty: true });
+              // In create mode cascade-reset taxonomy; in edit mode preserve existing values
+              if (!isEdit) {
+                setValue('famiglia', '');
+                setValue('classe', '');
+                setValue('sottoclasse', '');
+                setValue('gruppoOmogeneo', '');
+              }
             }}
             className={selectClass}
           >
@@ -466,8 +483,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           <Combobox
             label="Famiglia"
             field="famiglia"
-            value={watch('famiglia') || ''}
-            onChange={(v) => setValue('famiglia', v)}
+            value={watchedFamiglia || ''}
+            onChange={(v) => setValue('famiglia', v, { shouldDirty: true })}
           />
         )}
       </div>
@@ -497,8 +514,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           <Combobox
             label="Classe"
             field="classe"
-            value={watch('classe') || ''}
-            onChange={(v) => setValue('classe', v)}
+            value={watchedClasse || ''}
+            onChange={(v) => setValue('classe', v, { shouldDirty: true })}
           />
         )}
 
@@ -526,8 +543,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           <Combobox
             label="Sottoclasse"
             field="sottoclasse"
-            value={watch('sottoclasse') || ''}
-            onChange={(v) => setValue('sottoclasse', v)}
+            value={watchedSottoclasse || ''}
+            onChange={(v) => setValue('sottoclasse', v, { shouldDirty: true })}
           />
         )}
       </div>
@@ -538,7 +555,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Gruppo omogeneo</label>
             <select
-              value={watch('gruppoOmogeneo') || ''}
+              value={watchedGruppoOmogeneo || ''}
               onChange={(e) => setValue('gruppoOmogeneo', e.target.value)}
               disabled={!watchedSottoclasse || modaGruppiOmogenei.length === 0}
               className={selectClass}
@@ -555,8 +572,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           <Combobox
             label="Gruppo omogeneo"
             field="gruppoOmogeneo"
-            value={watch('gruppoOmogeneo') || ''}
-            onChange={(v) => setValue('gruppoOmogeneo', v)}
+            value={watchedGruppoOmogeneo || ''}
+            onChange={(v) => setValue('gruppoOmogeneo', v, { shouldDirty: true })}
           />
         )}
         {isModa ? (
@@ -713,7 +730,12 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
               const sconto = parseFloat(String(getValues('fasciaSconto') || ''));
               if (!isNaN(sconto) && retailNum > 0) {
                 const newPvn = retailNum / (1 + newIva / 100);
-                setValue('costPrice', Math.max(0, newPvn * (1 - sconto / 100)).toFixed(2));
+                const newCost = Math.max(0, newPvn * (1 - sconto / 100));
+                setValue('costPrice', newCost.toFixed(2));
+                setValue('costoIeSenzaReso', newCost.toFixed(2));
+                if (newCost > 0) {
+                  setValue('fasciaRicarico', ((newPvn - newCost) / newCost * 100).toFixed(1));
+                }
               }
             }}
             className={selectClass}
@@ -727,10 +749,13 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         </div>
       </div>
 
+      {/* costPrice is hidden and auto-synced from costoIeSenzaReso */}
+      <input type="hidden" {...costPriceReg} />
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Prezzo costo i.e. (€) *
+            Costo i.e. senza reso (€) *
           </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
@@ -738,27 +763,30 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
               type="number"
               step="0.01"
               min="0"
-              {...costPriceReg}
+              {...costoSenzaResoReg}
               onChange={(e) => {
-                costPriceReg.onChange(e);
+                costoSenzaResoReg.onChange(e);
                 const cost = parseFloat(e.target.value);
+                setValue('costPrice', e.target.value || '');
                 if (!isNaN(cost) && pvn > 0) {
                   setValue('fasciaSconto', ((1 - cost / pvn) * 100).toFixed(2));
+                  setValue('fasciaRicarico', ((pvn - cost) / cost * 100).toFixed(1));
                 } else if (!e.target.value) {
                   setValue('fasciaSconto', '');
+                  setValue('fasciaRicarico', '');
                 }
               }}
               className={priceInputClass}
               placeholder="0.00"
             />
           </div>
-          {errors.costPrice && (
-            <p className="text-xs text-red-500 mt-0.5">{errors.costPrice.message}</p>
+          {errors.costoIeSenzaReso && (
+            <p className="text-xs text-red-500 mt-0.5">{errors.costoIeSenzaReso.message}</p>
           )}
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Prezzo vendita i.i. (€) *
+            Vendita i.i. (€) *
           </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
@@ -773,7 +801,12 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
                 const sconto = parseFloat(String(getValues('fasciaSconto') || ''));
                 if (!isNaN(sconto) && !isNaN(newRetail) && newRetail > 0) {
                   const newPvn = newRetail / (1 + ivaNum / 100);
-                  setValue('costPrice', Math.max(0, newPvn * (1 - sconto / 100)).toFixed(2));
+                  const newCost = Math.max(0, newPvn * (1 - sconto / 100));
+                  setValue('costPrice', newCost.toFixed(2));
+                  setValue('costoIeSenzaReso', newCost.toFixed(2));
+                  if (newCost > 0) {
+                    setValue('fasciaRicarico', ((newPvn - newCost) / newCost * 100).toFixed(1));
+                  }
                 }
               }}
               className={priceInputClass}
@@ -792,12 +825,55 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Combobox
-          label="Fascia di ricarico"
-          field="fasciaRicarico"
-          value={watch('fasciaRicarico') || ''}
-          onChange={(v) => setValue('fasciaRicarico', v)}
-        />
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Costo i.e. con reso (€)</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+            <input
+              {...register('costoIeConReso')}
+              type="number"
+              step="0.01"
+              min="0"
+              className={priceInputClass}
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+        <div />
+      </div>
+
+      {costoConResoNum > 0 && (
+        <div className="grid grid-cols-2 gap-4">
+          <ReadOnlyField label="% Ricarico con reso" value={fmtPct(ricaricoConReso)} />
+          <ReadOnlyField label="% Sconto con reso" value={fmtPct(scontoConReso)} />
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Fascia di ricarico (%)</label>
+          <div className="relative">
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              {...fasciaRicaricoReg}
+              onChange={(e) => {
+                fasciaRicaricoReg.onChange(e);
+                const ric = parseFloat(e.target.value);
+                if (!isNaN(ric) && pvn > 0) {
+                  const newCost = pvn / (1 + ric / 100);
+                  setValue('costPrice', newCost.toFixed(2));
+                  setValue('costoIeSenzaReso', newCost.toFixed(2));
+                  setValue('fasciaSconto', ((1 - newCost / pvn) * 100).toFixed(2));
+                }
+              }}
+              className="w-full h-9 border border-border rounded pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              placeholder="es. 100"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+          </div>
+        </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Fascia di sconto (%)</label>
           <div className="relative">
@@ -811,7 +887,12 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
                 fasciaScReg.onChange(e);
                 const sconto = parseFloat(e.target.value);
                 if (!isNaN(sconto) && pvn > 0) {
-                  setValue('costPrice', Math.max(0, pvn * (1 - sconto / 100)).toFixed(2));
+                  const newCost = Math.max(0, pvn * (1 - sconto / 100));
+                  setValue('costPrice', newCost.toFixed(2));
+                  setValue('costoIeSenzaReso', newCost.toFixed(2));
+                  if (newCost > 0) {
+                    setValue('fasciaRicarico', ((pvn - newCost) / newCost * 100).toFixed(1));
+                  }
                 }
               }}
               className="w-full h-9 border border-border rounded pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
@@ -822,38 +903,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         </div>
       </div>
 
-      {isModa && (
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">COSTO I.E. CON RESO (€)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
-              <input
-                {...register('costoIeConReso')}
-                type="number"
-                step="0.01"
-                min="0"
-                className={priceInputClass}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">COSTO I.E. SENZA RESO (€)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
-              <input
-                {...register('costoIeSenzaReso')}
-                type="number"
-                step="0.01"
-                min="0"
-                className={priceInputClass}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="grid grid-cols-2 gap-4">
         <Combobox
