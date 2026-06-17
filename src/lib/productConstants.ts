@@ -56,7 +56,7 @@ export const TAGLIA_OPTIONS = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'] as const
 export const CONFERENTE_OPTIONS = [
   'Altraqualità',
   'Equomercato',
-  'Meridiano361',
+  'Meridiano 361',
   'Prism',
 ] as const;
 

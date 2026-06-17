@@ -38,7 +38,7 @@ const pct = 'w-full h-9 border border-border rounded pl-3 pr-8 text-sm focus:out
 // ── Sub-components ────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-2xs font-semibold tracking-widest uppercase text-gray-400 mb-3 pt-2">
+    <p className="text-2xs font-semibold tracking-widest text-gray-400 mb-3 pt-2">
       {children}
     </p>
   );
