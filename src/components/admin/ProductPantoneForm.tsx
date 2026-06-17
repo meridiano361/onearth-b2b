@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { X, Search } from 'lucide-react';
+import { X, Search, Loader2, AlertCircle } from 'lucide-react';
 
 interface PantoneColor {
   code: string;
@@ -28,11 +28,22 @@ export default function ProductPantoneForm({ value, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { data: colors = [], isLoading } = useQuery<PantoneColor[]>({
+  const {
+    data: colors = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery<PantoneColor[], Error>({
     queryKey: ['pantone-colors-fhi-tcx'],
     queryFn: async () => {
+      console.log('[Pantone] fetch /api/pantone-colors...');
       const res = await fetch('/api/pantone-colors');
       const json = await res.json();
+      if (!res.ok) {
+        console.error('[Pantone] API error', res.status, json);
+        throw new Error(json.error ?? `HTTP ${res.status}`);
+      }
+      console.log('[Pantone] ricevuti', json.data?.length ?? 0, 'colori');
       return json.data ?? [];
     },
     staleTime: 600_000,
@@ -40,10 +51,14 @@ export default function ProductPantoneForm({ value, onChange }: Props) {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return colors.slice(0, 60);
-    return colors
-      .filter((c) => c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q))
-      .slice(0, 60);
+    const result = q
+      ? colors.filter(
+          (c) => c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
+        )
+      : colors;
+    const sliced = result.slice(0, 60);
+    console.log('[Pantone] filtered:', sliced.length, 'risultati, query:', JSON.stringify(q));
+    return sliced;
   }, [colors, search]);
 
   useEffect(() => {
@@ -57,6 +72,7 @@ export default function ProductPantoneForm({ value, onChange }: Props) {
   }, []);
 
   function handleSelect(c: PantoneColor) {
+    console.log('[Pantone] selezionato:', c.code, c.name, c.hex_code);
     onChange({ code: c.code, name: c.name, hex: c.hex_code, systemType: c.system_type });
     setSearch('');
     setOpen(false);
@@ -87,39 +103,75 @@ export default function ProductPantoneForm({ value, onChange }: Props) {
         </div>
       )}
 
-      {/* Input ricerca */}
+      {/* Errore fetch */}
+      {isError && (
+        <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+          <AlertCircle size={13} className="flex-shrink-0" />
+          <span>Errore caricamento colori: {error?.message ?? 'sconosciuto'}</span>
+        </div>
+      )}
+
+      {/* Input ricerca — mai disabled, l'icona cambia in spinner durante loading */}
       <div className="relative">
-        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        {isLoading ? (
+          <Loader2
+            size={13}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin pointer-events-none"
+          />
+        ) : (
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        )}
         <input
           type="text"
           value={search}
-          placeholder={isLoading ? 'Caricamento colori…' : 'Cerca per codice o nome…'}
-          disabled={isLoading}
-          onFocus={() => setOpen(true)}
-          onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
-          className="w-full h-9 border border-border rounded pl-8 pr-3 text-sm text-primary placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
+          placeholder={
+            isLoading
+              ? 'Caricamento colori…'
+              : isError
+              ? 'Errore — ricarica la pagina'
+              : 'Cerca per codice o nome…'
+          }
+          onFocus={() => {
+            console.log('[Pantone] focus, colors:', colors.length, 'isLoading:', isLoading);
+            setOpen(true);
+          }}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setOpen(true);
+          }}
+          className="w-full h-9 border border-border rounded pl-8 pr-3 text-sm text-primary placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent"
         />
       </div>
 
-      {/* Dropdown risultati */}
-      {open && filtered.length > 0 && (
+      {/* Dropdown */}
+      {open && !isLoading && !isError && (
         <div className="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-border rounded shadow-lg">
-          {filtered.map((c) => (
-            <button
-              key={c.code}
-              type="button"
-              onClick={() => handleSelect(c)}
-              className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-cream text-left transition-colors"
-            >
-              <div
-                className="w-5 h-5 rounded flex-shrink-0 border border-border/60"
-                style={{ backgroundColor: c.hex_code }}
-              />
-              <span className="text-xs font-medium text-primary">{c.code}</span>
-              <span className="text-xs text-gray-500 truncate">{c.name}</span>
-              <span className="text-2xs text-gray-400 font-mono ml-auto flex-shrink-0">{c.hex_code}</span>
-            </button>
-          ))}
+          {filtered.length === 0 ? (
+            <p className="px-3 py-4 text-xs text-gray-400 text-center">
+              {search
+                ? `Nessun risultato per "${search}"`
+                : 'Nessun colore disponibile'}
+            </p>
+          ) : (
+            filtered.map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                // preventDefault impedisce il blur sull'input prima che il click venga registrato
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => handleSelect(c)}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-cream text-left transition-colors"
+              >
+                <div
+                  className="w-5 h-5 rounded flex-shrink-0 border border-border/60"
+                  style={{ backgroundColor: c.hex_code }}
+                />
+                <span className="text-xs font-medium text-primary">{c.code}</span>
+                <span className="text-xs text-gray-500 truncate">{c.name}</span>
+                <span className="text-2xs text-gray-400 font-mono ml-auto flex-shrink-0">{c.hex_code}</span>
+              </button>
+            ))
+          )}
         </div>
       )}
     </div>
