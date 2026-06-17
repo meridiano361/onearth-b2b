@@ -11,6 +11,7 @@ import { syncProductClassification } from '@/lib/syncClassification';
 import { translateProduct } from '@/lib/translate';
 
 const productSchema = z.object({
+  colorBlockIds: z.array(z.coerce.number().int()).optional(),
   code: z.string().min(1),
   name: z.string().min(1),
   description: z.string().optional().nullable(),
@@ -139,6 +140,23 @@ export async function GET(req: NextRequest) {
       prisma.product.count({ where }),
     ]);
 
+    // Fetch color block IDs for all returned products
+    const productIds = products.map((p) => p.id);
+    type CbLink = { product_id: string; color_block_id: bigint };
+    const cbLinks = productIds.length > 0
+      ? await prisma.$queryRaw<CbLink[]>`
+          SELECT product_id, color_block_id
+          FROM product_color_blocks
+          WHERE product_id = ANY(${productIds}::text[])
+        `
+      : [];
+    const cbByProductId = new Map<string, number[]>();
+    for (const link of cbLinks) {
+      const arr = cbByProductId.get(link.product_id) ?? [];
+      arr.push(Number(link.color_block_id));
+      cbByProductId.set(link.product_id, arr);
+    }
+
     // Serialize Decimals
     const serialized = products.map((p) => ({
       ...p,
@@ -146,6 +164,7 @@ export async function GET(req: NextRequest) {
       retailPrice: Number(p.retailPrice),
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
+      colorBlockIds: cbByProductId.get(p.id) ?? [],
     }));
 
     return NextResponse.json({
@@ -169,7 +188,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const data = normalizeProductClassificationFields(productSchema.parse(body));
+    const parsed = productSchema.parse(body);
+    const { colorBlockIds, ...rest } = parsed;
+    const data = normalizeProductClassificationFields(rest);
 
     const product = await prisma.product.create({
       data: {
@@ -216,6 +237,16 @@ export async function POST(req: NextRequest) {
       },
       include: { category: true },
     });
+
+    // Sync color blocks many-to-many
+    if (colorBlockIds && colorBlockIds.length > 0) {
+      for (const cbId of colorBlockIds) {
+        await prisma.$executeRaw`
+          INSERT INTO product_color_blocks (product_id, color_block_id)
+          VALUES (${product.id}, ${BigInt(cbId)})
+        `;
+      }
+    }
 
     void syncProductClassification(data);
 

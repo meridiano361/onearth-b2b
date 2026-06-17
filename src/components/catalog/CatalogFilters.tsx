@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useQuery } from '@tanstack/react-query';
 import type { Product } from '@/types';
 
 interface CatalogFiltersProps {
@@ -31,6 +32,8 @@ interface CatalogFiltersProps {
   onProduttoreChange: (v: string | null) => void;
   selectedTranche: string | null;
   onTrancheChange: (v: string | null) => void;
+  selectedBloccoColore: { id: number; name: string } | null;
+  onBloccoColoreChange: (v: { id: number; name: string } | null) => void;
   hasActiveFilters: boolean;
   onResetAll: () => void;
   enabledFilters?: string[] | null;
@@ -146,11 +149,21 @@ export default function CatalogFilters({
   selectedCollezione,         onCollezioneChange,
   selectedProduttore,         onProduttoreChange,
   selectedTranche,            onTrancheChange,
+  selectedBloccoColore,       onBloccoColoreChange,
   hasActiveFilters,           onResetAll,
   enabledFilters,
   lockedCollezione,
 }: CatalogFiltersProps) {
   const t = useTranslations('filters');
+
+  const { data: colorBlocks } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ['color-blocks'],
+    queryFn: async () => {
+      const res = await fetch('/api/color-blocks');
+      return (await res.json()).data;
+    },
+    staleTime: 300_000,
+  });
   const show = (key: string) => !enabledFilters || enabledFilters.length === 0 || enabledFilters.includes(key);
 
   // Flat record of all active selections — used by computeOptions for each filter
@@ -219,6 +232,22 @@ export default function CatalogFilters({
         {show('collezione') && !lockedCollezione && <FilterSelect label={t('collezione')} allLabel={t('all')} value={selectedCollezione} options={opts.collezione} onChange={onCollezioneChange} />}
         {show('produttore')         && <FilterSelect label={t('produttore')}         allLabel={t('all')} value={selectedProduttore}         options={opts.produttore}         onChange={onProduttoreChange} />}
         {show('tranche')            && <FilterSelect label={t('tranche')}            allLabel={t('all')} value={selectedTranche}           options={opts.tranche}            onChange={onTrancheChange} />}
+        {show('bloccoColore') && colorBlocks && colorBlocks.length > 0 && (
+          <FilterSelect
+            label={t('bloccoColore')}
+            allLabel={t('all')}
+            value={selectedBloccoColore?.name ?? null}
+            options={colorBlocks.map((cb) => ({
+              value: cb.name,
+              count: products.filter((p) => (p.colorBlockIds ?? []).includes(cb.id)).length,
+            }))}
+            onChange={(name) => {
+              if (!name) { onBloccoColoreChange(null); return; }
+              const cb = colorBlocks.find((c) => c.name === name);
+              if (cb) onBloccoColoreChange({ id: cb.id, name: cb.name });
+            }}
+          />
+        )}
 
       </div>
     </div>

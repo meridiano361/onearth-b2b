@@ -862,14 +862,14 @@ export default function AdminProductsPage() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={!!editingProduct} onClose={() => setEditingProduct(null)} title="Modifica Prodotto" size="lg">
+      <Modal isOpen={!!editingProduct} onClose={() => setEditingProduct(null)} title="Modifica Prodotto" size="xl">
         {editingProduct && (
           <ProductForm product={editingProduct} onSuccess={() => { setEditingProduct(null); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }} onCancel={() => setEditingProduct(null)} />
         )}
       </Modal>
 
       {/* Create Modal */}
-      <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)} title="Aggiungi Prodotto" size="lg">
+      <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)} title="Aggiungi Prodotto" size="xl">
         <ProductForm onSuccess={() => { setShowCreateForm(false); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }} onCancel={() => setShowCreateForm(false)} />
       </Modal>
 

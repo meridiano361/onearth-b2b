@@ -79,6 +79,12 @@ export interface Product {
   descrizioneDe: string | null;
   descrizioneFr: string | null;
   descrizioneEs: string | null;
+  modello: string | null;
+  taglia: string | null;
+  bloccoColore: string | null;
+  costoIeConReso: number | null;
+  costoIeSenzaReso: number | null;
+  colorBlockIds: number[];
   createdAt: string;
   category?: Category | null;
 }

@@ -243,7 +243,8 @@
         "stagione": "Temporada",
         "collezione": "Colección",
         "produttore": "Fabricante",
-        "tranche": "Tramo"
+        "tranche": "Tramo",
+        "bloccoColore": "Bloque de color"
     },
     "home": {
         "greeting": "Hola",

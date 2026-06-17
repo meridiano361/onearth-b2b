@@ -243,7 +243,8 @@
         "stagione": "Season",
         "collezione": "Collection",
         "produttore": "Manufacturer",
-        "tranche": "Tranche"
+        "tranche": "Tranche",
+        "bloccoColore": "Colour block"
     },
     "home": {
         "greeting": "Hello",

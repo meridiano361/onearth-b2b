@@ -48,7 +48,6 @@ const schema = z
     temaColore5: z.string().optional(),
     modello: z.string().optional(),
     taglia: z.string().optional(),
-    bloccoColore: z.string().optional(),
     costoIeConReso: z.string().optional(),
     costoIeSenzaReso: z.string().min(1, 'Obbligatorio'),
     lotSize: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 1)),
@@ -118,6 +117,18 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const [isUploading3, setIsUploading3] = useState(false);
   const [isUploading4, setIsUploading4] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [selectedColorBlocks, setSelectedColorBlocks] = useState<Set<number>>(
+    () => new Set<number>((product as any)?.colorBlockIds ?? [])
+  );
+
+  const { data: colorBlocks } = useQuery<{ id: number; name: string; sort_order: number }[]>({
+    queryKey: ['color-blocks'],
+    queryFn: async () => {
+      const res = await fetch('/api/color-blocks');
+      return (await res.json()).data;
+    },
+    staleTime: 300_000,
+  });
 
   const {
     register,
@@ -154,7 +165,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           temaColore5: product.temaColore5 || '',
           modello: (product as any).modello || '',
           taglia: (product as any).taglia || '',
-          bloccoColore: (product as any).bloccoColore || '',
           costoIeConReso: (product as any).costoIeConReso != null ? String((product as any).costoIeConReso) : '',
           costoIeSenzaReso: (product as any).costoIeSenzaReso != null
             ? String((product as any).costoIeSenzaReso)
@@ -335,7 +345,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           temaColore5: (v as any).temaColore5 || null,
           modello: (v as any).modello || null,
           taglia: (v as any).taglia || null,
-          bloccoColore: (v as any).bloccoColore || null,
+          colorBlockIds: [...selectedColorBlocks],
           costoIeConReso: (v as any).costoIeConReso ? parseFloat((v as any).costoIeConReso) || null : null,
           costoIeSenzaReso: (v as any).costoIeSenzaReso ? parseFloat((v as any).costoIeSenzaReso) || null : null,
           fasciaRicarico: v.fasciaRicarico || null,
@@ -655,21 +665,12 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       </div>
       <div className="grid grid-cols-2 gap-4">
         <Combobox label="Colore" field="colore" value={watch('colore') || ''} onChange={(v) => setValue('colore', v)} />
-        {isModa ? (
-          <Combobox
-            label="Blocco colore"
-            field="bloccoColore"
-            value={watch('bloccoColore') || ''}
-            onChange={(v) => setValue('bloccoColore', v)}
-          />
-        ) : (
-          <Combobox
-            label="Tema colore"
-            field="temaColore"
-            value={watch('temaColore') || ''}
-            onChange={(v) => { setValue('temaColore', v); if (!v) { setValue('temaColore2', ''); setValue('temaColore3', ''); setValue('temaColore4', ''); setValue('temaColore5', ''); } }}
-          />
-        )}
+        <Combobox
+          label="Tema colore"
+          field="temaColore"
+          value={watch('temaColore') || ''}
+          onChange={(v) => { setValue('temaColore', v); if (!v) { setValue('temaColore2', ''); setValue('temaColore3', ''); setValue('temaColore4', ''); setValue('temaColore5', ''); } }}
+        />
       </div>
       {!isModa && watch('temaColore') && (
         <div className="grid grid-cols-2 gap-4">
@@ -705,6 +706,33 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
               {watch('temaColore5') && <button type="button" onClick={() => setValue('temaColore5', '')} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors"><X size={13} /></button>}
             </div>
           ) : <div />}
+        </div>
+      )}
+
+      {/* ── Blocchi colore ── */}
+      {colorBlocks && colorBlocks.length > 0 && (
+        <div>
+          <SectionLabel>Blocchi colore</SectionLabel>
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            {colorBlocks.map((cb) => (
+              <label key={cb.id} className="flex items-center gap-1.5 cursor-pointer text-sm text-primary">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-accent"
+                  checked={selectedColorBlocks.has(cb.id)}
+                  onChange={(e) => {
+                    setSelectedColorBlocks((prev) => {
+                      const next = new Set(prev);
+                      if (e.target.checked) next.add(cb.id);
+                      else next.delete(cb.id);
+                      return next;
+                    });
+                  }}
+                />
+                {cb.name}
+              </label>
+            ))}
+          </div>
         </div>
       )}
 

@@ -146,20 +146,28 @@ export default function CatalogView({ lockedCollezione }: { lockedCollezione?: s
   const [novitaFilter, setNovitaFilter] = useState<'all' | 'novita' | 'continuativi'>('all');
 
   // ── Mobile drawer state ──────────────────────────────────────
+  const [bloccoColoreFilter, setBloccoColoreFilter] = useState<{ id: number; name: string } | null>(() => {
+    const v = searchParams.get('bcol');
+    const n = searchParams.get('bcoln');
+    return v && n ? { id: Number(v), name: n } : null;
+  });
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [pendingFilters, setPendingFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [pendingBloccoColore, setPendingBloccoColore] = useState<{ id: number; name: string } | null>(null);
 
   const { favoriteIds } = useFavorites();
   const { mode: viewMode, changeMode: setViewMode } = useViewMode();
   const tn = useTranslations('nav');
 
   // ── URL update helper ────────────────────────────────────────
-  function updateUrl(f: Filters, sort: string, q: string) {
+  function updateUrl(f: Filters, sort: string, q: string, bcol?: { id: number; name: string } | null) {
     const params = new URLSearchParams();
     for (const [filterKey, urlKey] of Object.entries(URL_KEYS)) {
       const v = (f as any)[filterKey];
       if (v) params.set(urlKey, v);
     }
+    const resolvedBcol = bcol !== undefined ? bcol : bloccoColoreFilter;
+    if (resolvedBcol) { params.set('bcol', String(resolvedBcol.id)); params.set('bcoln', resolvedBcol.name); }
     if (sort && sort !== 'az') params.set('sort', sort);
     if (q.trim()) params.set('q', q.trim());
     const qs = params.toString();
@@ -179,7 +187,8 @@ export default function CatalogView({ lockedCollezione }: { lockedCollezione?: s
   function handleResetAll() {
     const reset = lockedCollezione ? { ...EMPTY_FILTERS, collezione: lockedCollezione } : EMPTY_FILTERS;
     setFilters(reset);
-    updateUrl(reset, sortBy, search);
+    setBloccoColoreFilter(null);
+    updateUrl(reset, sortBy, search, null);
   }
 
   function setSortBy(v: typeof sortBy) {
@@ -203,6 +212,7 @@ export default function CatalogView({ lockedCollezione }: { lockedCollezione?: s
   // ── Mobile drawer helpers ────────────────────────────────────
   function openMobileFilters() {
     setPendingFilters({ ...filters });
+    setPendingBloccoColore(bloccoColoreFilter);
     setShowMobileFilters(true);
   }
 
@@ -215,22 +225,25 @@ export default function CatalogView({ lockedCollezione }: { lockedCollezione?: s
 
   function applyMobileFilters() {
     setFilters(pendingFilters);
-    updateUrl(pendingFilters, sortBy, search);
+    setBloccoColoreFilter(pendingBloccoColore);
+    updateUrl(pendingFilters, sortBy, search, pendingBloccoColore);
     setShowMobileFilters(false);
   }
 
   function resetMobileFilters() {
     setPendingFilters(EMPTY_FILTERS);
+    setPendingBloccoColore(null);
     setFilters(EMPTY_FILTERS);
-    updateUrl(EMPTY_FILTERS, sortBy, search);
+    setBloccoColoreFilter(null);
+    updateUrl(EMPTY_FILTERS, sortBy, search, null);
     setShowMobileFilters(false);
   }
 
-  const hasActiveFilters = Object.entries(filters).some(
+  const hasActiveFilters = bloccoColoreFilter !== null || Object.entries(filters).some(
     ([k, v]) => v && !(lockedCollezione && k === 'collezione')
   );
-  const activeFilterCount  = Object.values(filters).filter(Boolean).length;
-  const pendingFilterCount = Object.values(pendingFilters).filter(Boolean).length;
+  const activeFilterCount  = (bloccoColoreFilter ? 1 : 0) + Object.values(filters).filter(Boolean).length;
+  const pendingFilterCount = (pendingBloccoColore ? 1 : 0) + Object.values(pendingFilters).filter(Boolean).length;
 
   // ── Products ─────────────────────────────────────────────────
   const { data: productsData, isLoading: productsLoading } = useQuery({
@@ -291,6 +304,7 @@ export default function CatalogView({ lockedCollezione }: { lockedCollezione?: s
     if (collezione)         result = result.filter((p) => p.collezione         === collezione);
     if (produttore)         result = result.filter((p) => p.produttore         === produttore);
     if (tranche)            result = result.filter((p) => p.tranche            === tranche);
+    if (bloccoColoreFilter) result = result.filter((p) => (p.colorBlockIds ?? []).includes(bloccoColoreFilter.id));
     if (onlyFavorites)      result = result.filter((p) => favoriteIds.has(p.id));
     if (novitaFilter === 'novita')       result = result.filter((p) => p.collezione === 'CA27');
     if (novitaFilter === 'continuativi') result = result.filter((p) => p.collezione !== 'CA27');
@@ -314,7 +328,7 @@ export default function CatalogView({ lockedCollezione }: { lockedCollezione?: s
     });
 
     return result;
-  }, [products, debouncedSearch, filters, onlyFavorites, favoriteIds, sortBy, novitaFilter]);
+  }, [products, debouncedSearch, filters, bloccoColoreFilter, onlyFavorites, favoriteIds, sortBy, novitaFilter]);
 
   const PAGE_SIZE = 60;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -322,7 +336,12 @@ export default function CatalogView({ lockedCollezione }: { lockedCollezione?: s
   const visibleProducts = filteredProducts.slice(0, visibleCount);
   const hasMore = visibleCount < filteredProducts.length;
 
-  function makeFilterProps(currentFilters: Filters, onFilterChange: (key: keyof Filters, value: string | null) => void) {
+  function makeFilterProps(
+    currentFilters: Filters,
+    onFilterChange: (key: keyof Filters, value: string | null) => void,
+    currentBloccoColore: { id: number; name: string } | null,
+    onBloccoColoreChange: (v: { id: number; name: string } | null) => void,
+  ) {
     return {
       products,
       selectedGruppoMerceologico: currentFilters.gruppoMerceologico, onGruppoMerceologicoChange: (v: string | null) => onFilterChange('gruppoMerceologico', v),
@@ -337,6 +356,7 @@ export default function CatalogView({ lockedCollezione }: { lockedCollezione?: s
       selectedCollezione:         currentFilters.collezione,         onCollezioneChange:         (v: string | null) => onFilterChange('collezione', v),
       selectedProduttore:         currentFilters.produttore,         onProduttoreChange:         (v: string | null) => onFilterChange('produttore', v),
       selectedTranche:            currentFilters.tranche,            onTrancheChange:            (v: string | null) => onFilterChange('tranche', v),
+      selectedBloccoColore:       currentBloccoColore,               onBloccoColoreChange,
       hasActiveFilters,
       onResetAll: handleResetAll,
       enabledFilters,
@@ -344,8 +364,11 @@ export default function CatalogView({ lockedCollezione }: { lockedCollezione?: s
     };
   }
 
-  const desktopFilterProps = makeFilterProps(filters, setFilter);
-  const pendingFilterProps = makeFilterProps(pendingFilters, setPendingFilter);
+  const desktopFilterProps = makeFilterProps(filters, setFilter, bloccoColoreFilter, (v) => {
+    setBloccoColoreFilter(v);
+    updateUrl(filters, sortBy, search, v);
+  });
+  const pendingFilterProps = makeFilterProps(pendingFilters, setPendingFilter, pendingBloccoColore, setPendingBloccoColore);
 
   return (
     <div className="flex h-full">
@@ -553,6 +576,14 @@ export default function CatalogView({ lockedCollezione }: { lockedCollezione?: s
                   </button>
                 </span>
               ) : null
+            )}
+            {bloccoColoreFilter && (
+              <span className="inline-flex items-center gap-1 text-2xs bg-white border border-border rounded-full px-2.5 py-1 text-primary">
+                <span className="text-gray-400">Blocco colore:</span> {bloccoColoreFilter.name}
+                <button onClick={() => { setBloccoColoreFilter(null); updateUrl(filters, sortBy, search, null); }} className="text-gray-400 hover:text-primary ml-0.5">
+                  <X size={10} />
+                </button>
+              </span>
             )}
           </div>
         )}

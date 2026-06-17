@@ -10,6 +10,7 @@ import { syncProductClassification } from '@/lib/syncClassification';
 import { translateProduct } from '@/lib/translate';
 
 const updateSchema = z.object({
+  colorBlockIds: z.array(z.coerce.number().int()).optional(),
   code: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
@@ -72,6 +73,10 @@ export async function GET(
 
     if (!product) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+    const colorBlockLinks = await prisma.$queryRaw<{ color_block_id: bigint }[]>`
+      SELECT color_block_id FROM product_color_blocks WHERE product_id = ${params.id}
+    `;
+
     return NextResponse.json({
       data: {
         ...product,
@@ -80,6 +85,7 @@ export async function GET(
         fasciaSconto: product.fasciaSconto != null ? Number(product.fasciaSconto) : null,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
+        colorBlockIds: colorBlockLinks.map((r) => Number(r.color_block_id)),
       },
     });
   } catch (err) {
@@ -98,7 +104,9 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const data = normalizeProductClassificationFields(updateSchema.parse(body));
+    const parsed = updateSchema.parse(body);
+    const { colorBlockIds, ...rest } = parsed;
+    const data = normalizeProductClassificationFields(rest);
 
     // Normalize code to uppercase (consistent with POST)
     if (data.code) data.code = data.code.toUpperCase().trim();
@@ -116,6 +124,17 @@ export async function PATCH(
       data,
       include: { category: true },
     });
+
+    // Sync color blocks many-to-many
+    if (colorBlockIds !== undefined) {
+      await prisma.$executeRaw`DELETE FROM product_color_blocks WHERE product_id = ${params.id}`;
+      for (const cbId of colorBlockIds) {
+        await prisma.$executeRaw`
+          INSERT INTO product_color_blocks (product_id, color_block_id)
+          VALUES (${params.id}, ${BigInt(cbId)})
+        `;
+      }
+    }
 
     void syncProductClassification(data);
 
