@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power } from 'lucide-react';
+import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power, Sparkles, Home } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -82,6 +82,8 @@ export default function AdminProductsPage() {
   const [showBulkImages, setShowBulkImages] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCollectionPicker, setShowCollectionPicker] = useState(false);
+  const [createCollectionHint, setCreateCollectionHint] = useState<'moda' | 'casa' | null>(null);
   const [showTranslateConfirm, setShowTranslateConfirm] = useState(false);
   const [isTranslatingAll, setIsTranslatingAll] = useState(false);
   const [translateProgress, setTranslateProgress] = useState<{ done: number; total: number } | null>(null);
@@ -505,7 +507,7 @@ export default function AdminProductsPage() {
           <Button variant="secondary" icon={<Languages size={13} />} onClick={() => setShowTranslateConfirm(true)}>
             <span className="hidden sm:inline">Traduci tutti</span>
           </Button>
-          <Button icon={<Plus size={13} />} onClick={() => setShowCreateForm(true)}>
+          <Button icon={<Plus size={13} />} onClick={() => setShowCollectionPicker(true)}>
             <span className="hidden sm:inline">Aggiungi Prodotto</span>
             <span className="sm:hidden">Aggiungi</span>
           </Button>
@@ -868,9 +870,34 @@ export default function AdminProductsPage() {
         )}
       </Modal>
 
+      {/* Collection picker */}
+      <Modal isOpen={showCollectionPicker} onClose={() => setShowCollectionPicker(false)} title="Aggiungi prodotto" size="sm">
+        <p className="text-sm text-gray-500 mb-4">Scegli la collezione del nuovo prodotto.</p>
+        <div className="grid grid-cols-2 gap-3">
+          {([
+            { hint: 'moda' as const, icon: Sparkles, label: 'Moda' },
+            { hint: 'casa' as const, icon: Home,     label: 'Casa'  },
+          ]).map(({ hint, icon: Icon, label }) => (
+            <button
+              key={hint}
+              onClick={() => { setCreateCollectionHint(hint); setShowCollectionPicker(false); setShowCreateForm(true); }}
+              className="flex flex-col items-center gap-3 py-8 border-2 border-border rounded-xl hover:border-accent/50 hover:bg-cream transition-all group"
+            >
+              <Icon size={22} className="text-gray-400 group-hover:text-accent transition-colors" />
+              <span className="font-medium text-primary text-sm">{label}</span>
+            </button>
+          ))}
+        </div>
+      </Modal>
+
       {/* Create Modal */}
-      <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)} title="Aggiungi Prodotto" size="2xl">
-        <ProductForm onSuccess={() => { setShowCreateForm(false); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }} onCancel={() => setShowCreateForm(false)} />
+      <Modal isOpen={showCreateForm} onClose={() => { setShowCreateForm(false); setCreateCollectionHint(null); }} title="Aggiungi Prodotto" size="2xl">
+        <ProductForm
+          key={createCollectionHint ?? 'default'}
+          initialValues={createCollectionHint === 'moda' ? { gruppoMerceologico: 'Moda' } : undefined}
+          onSuccess={() => { setShowCreateForm(false); setCreateCollectionHint(null); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }}
+          onCancel={() => { setShowCreateForm(false); setCreateCollectionHint(null); }}
+        />
       </Modal>
 
       {/* Bulk Edit Modal */}

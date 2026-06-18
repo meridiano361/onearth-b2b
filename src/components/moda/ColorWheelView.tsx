@@ -172,7 +172,7 @@ export default function ColorWheelView() {
       <div className="px-4 sm:px-6 py-4 border-b border-border/50">
         <p className="label-luxury text-accent">Moda PE27</p>
         <h1 className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide">
-          Color Wheel
+          Ruota Cromatica
         </h1>
         <p className="text-xs text-gray-400 mt-0.5">{totalProducts} prodotti con colore Pantone</p>
       </div>

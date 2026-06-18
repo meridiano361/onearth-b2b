@@ -27,7 +27,7 @@ const SECTIONS = [
   { id: 'multilingua',        label: 'Multilingua',                       icon: Globe },
   { id: 'impostazioni',       label: 'Impostazioni',                      icon: Settings },
   { id: 'moda-pe27',          label: 'Moda PE27',                         icon: Sparkles },
-  { id: 'color-wheel',        label: 'Color Wheel',                       icon: Palette },
+  { id: 'ruota-cromatica',    label: 'Ruota Cromatica',                   icon: Palette },
   { id: 'assistenza-tecnica', label: 'Assistenza tecnica',                icon: HelpCircle },
 ];
 
@@ -379,11 +379,11 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 20. Color Wheel */}
-        <section id="color-wheel" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={20} icon={Palette} label="Color Wheel" />
+        {/* 20. Ruota Cromatica */}
+        <section id="ruota-cromatica" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={20} icon={Palette} label="Ruota Cromatica" />
           <p className="text-sm text-gray-600 mb-3">
-            La <strong>Color Wheel</strong> è uno strumento di visual merchandising per i prodotti Moda PE27.
+            La <strong>Ruota Cromatica</strong> è uno strumento di visual merchandising per i prodotti Moda PE27.
             Visualizza la ruota cromatica e trova abbinamenti ottimali per tavoli, pareti e vetrine.
           </p>
           <ul className="space-y-2">

@@ -184,12 +184,13 @@ type FormValues = z.input<typeof schema>;
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface ProductFormProps {
   product?: Product;
+  initialValues?: { gruppoMerceologico?: string };
   onSuccess: () => void;
   onCancel: () => void;
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) {
+export default function ProductForm({ product, initialValues, onSuccess, onCancel }: ProductFormProps) {
   const isEdit = !!product;
   const queryClient = useQueryClient();
   const p = product as any;
@@ -284,7 +285,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       imageUrl3: product.imageUrl3 || '',
       imageUrl4: product.imageUrl4 || '',
       isActive: product.isActive,
-    } : { isActive: true, lotSize: '1', iva: '22' },
+    } : { isActive: true, lotSize: '1', iva: '22', gruppoMerceologico: initialValues?.gruppoMerceologico ?? '' },
   });
 
   // ── Watchers ─────────────────────────────────────────────────────────────
