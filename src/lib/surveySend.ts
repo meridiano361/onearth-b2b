@@ -37,9 +37,13 @@ export interface SendSurveyResult {
 export async function sendSurveyToAllCustomers(surveyId: string): Promise<SendSurveyResult> {
   const survey = await prisma.survey.findUniqueOrThrow({ where: { id: surveyId } });
 
-  // Get all recipients not yet sent
+  // Get all recipients who still need push OR email (each channel idempotent)
   const recipients = await prisma.surveyRecipient.findMany({
-    where: { surveyId, status: { in: ['pending', 'sent'] }, emailSentAt: null, pushSentAt: null },
+    where: {
+      surveyId,
+      status: { notIn: ['completed'] },
+      OR: [{ emailSentAt: null }, { pushSentAt: null }],
+    },
     include: {
       customer: { select: { email: true, companyName: true, isActive: true } },
     },
@@ -66,49 +70,53 @@ export async function sendSurveyToAllCustomers(surveyId: string): Promise<SendSu
       .map(async (recipient) => {
         const surveyUrl = `${APP_URL}/survey/${survey.slug}?token=${recipient.token}`;
         const subs = subsByEmail.get(recipient.email) ?? [];
-        let pushedOk = false;
-        let emailOk = false;
+        let pushedOk = !!recipient.pushSentAt;   // already sent → treat as ok
+        let emailOk = !!recipient.emailSentAt;   // already sent → treat as ok
 
-        // Push
-        for (const sub of subs) {
-          try {
-            await sendPush(sub, {
-              title: 'OnEarth',
-              body: 'Aiutaci a migliorare l\'app: lascia la tua opinione in 2 minuti.',
-              url: surveyUrl,
-            });
-            pushedOk = true;
-            pushSent++;
-          } catch (e: any) {
-            if (e?.statusCode === 410 || e?.statusCode === 404) {
-              await prisma.pushSubscription.deleteMany({ where: { endpoint: sub.endpoint } });
-            } else {
-              console.error('[survey-push] push failed for', recipient.email, e?.message);
+        // Push — only if not already sent
+        if (!recipient.pushSentAt) {
+          for (const sub of subs) {
+            try {
+              await sendPush(sub, {
+                title: 'OnEarth',
+                body: 'Aiutaci a migliorare l\'app: lascia la tua opinione in 2 minuti.',
+                url: surveyUrl,
+              });
+              pushedOk = true;
+              pushSent++;
+            } catch (e: any) {
+              if (e?.statusCode === 410 || e?.statusCode === 404) {
+                await prisma.pushSubscription.deleteMany({ where: { endpoint: sub.endpoint } });
+              } else {
+                console.error('[survey-push] push failed for', recipient.email, e?.message);
+              }
             }
           }
         }
 
-        // Email
-        const result = await sendSurveyInviteEmail({
-          to: recipient.email,
-          companyName: recipient.customer.companyName,
-          surveySlug: survey.slug,
-          token: recipient.token,
-        });
-        if (result.sent) {
-          emailOk = true;
-          emailSent++;
-        } else {
-          console.error('[survey-email] email failed for', recipient.email, result.error);
-          if (!pushedOk) errors++;
+        // Email — only if not already sent
+        if (!recipient.emailSentAt) {
+          const result = await sendSurveyInviteEmail({
+            to: recipient.email,
+            companyName: recipient.customer.companyName,
+            surveySlug: survey.slug,
+            token: recipient.token,
+          });
+          if (result.sent) {
+            emailOk = true;
+            emailSent++;
+          } else {
+            console.error('[survey-email] email failed for', recipient.email, result.error);
+            if (!pushedOk) errors++;
+          }
         }
 
         const channel = pushedOk && emailOk ? 'both' : pushedOk ? 'push' : emailOk ? 'email' : 'none';
         await prisma.surveyRecipient.update({
           where: { id: recipient.id },
           data: {
-            pushSentAt: pushedOk ? new Date() : undefined,
-            emailSentAt: emailOk ? new Date() : undefined,
+            pushSentAt: pushedOk && !recipient.pushSentAt ? new Date() : undefined,
+            emailSentAt: emailOk && !recipient.emailSentAt ? new Date() : undefined,
             deliveryChannel: channel,
             status: pushedOk || emailOk ? 'sent' : 'pending',
           },
