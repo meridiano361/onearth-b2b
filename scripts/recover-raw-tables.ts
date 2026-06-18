@@ -28,7 +28,7 @@ async function main() {
   await prisma.$executeRaw`
     CREATE TABLE IF NOT EXISTS pantone_colors (
       id          BIGSERIAL PRIMARY KEY,
-      code        TEXT NOT NULL,
+      code        TEXT NOT NULL UNIQUE,
       name        TEXT NOT NULL,
       hex_code    TEXT,
       system_type TEXT NOT NULL DEFAULT 'FHI-TCX',
