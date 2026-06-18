@@ -3,7 +3,13 @@
  * registra i destinatari e lancia l'invio push + email a tutti i clienti attivi.
  *
  * Eseguire con:
- *   npx tsx scripts/launch-survey-giugno-2026.ts
+ *   npx tsx --env-file=.env.local scripts/launch-survey-giugno-2026.ts
+ *
+ * Modalità test (crea survey + destinatari, NON invia push/email):
+ *   npx tsx --env-file=.env.local scripts/launch-survey-giugno-2026.ts --test-only
+ *
+ * Invio bulk definitivo (via UI admin):
+ *   Vai su /admin/recensioni e clicca "Invia ora"
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -16,14 +22,14 @@ const QUESTIONS = [
   {
     sortOrder: 1,
     questionKey: 'soddisfazione',
-    questionText: 'Quanto sei soddisfattə dell\'app?',
+    questionText: 'Quanto sei soddisfatto dell\'esperienza complessiva con l\'app?',
     questionType: 'stars',
     optionsJson: null,
   },
   {
     sortOrder: 2,
     questionKey: 'facilita_uso',
-    questionText: 'Quanto è stato facile utilizzarla?',
+    questionText: 'Quanto è stato facile utilizzare l\'app?',
     questionType: 'stars',
     optionsJson: null,
   },
@@ -75,7 +81,7 @@ async function main() {
       data: {
         slug: SLUG,
         title: 'Aiutaci a migliorare l\'app. Lascia la tua opinione: bastano solo 2 minuti.',
-        description: 'Rispondi entro domenica 21 giugno.',
+        description: 'Stiamo raccogliendo feedback per migliorare l\'esperienza d\'uso dell\'app OnEarth. Il questionario è breve e richiede circa 2 minuti.',
         startsAt: new Date(),
         endsAt: new Date('2026-06-21T23:59:59Z'),
         status: 'active',
@@ -126,9 +132,21 @@ async function main() {
   }
   console.log(`${newRecipients} nuovi destinatari registrati (${customers.length} totali)`);
 
+  const testOnly = process.argv.includes('--test-only');
+
+  if (testOnly) {
+    console.log('\n✅ Modalità --test-only: survey e destinatari creati, invio SALTATO.');
+    console.log('   Per testare la survey:');
+    const sample = await prisma.surveyRecipient.findFirst({ where: { surveyId: survey.id } });
+    if (sample) {
+      console.log(`   → Apri: /survey/${SLUG}?token=${sample.token}`);
+    }
+    console.log('   Per il bulk send definitivo, vai su /admin/recensioni e clicca "Invia ora".');
+    return;
+  }
+
   // 4. Send push + email
   console.log('Avvio invio push + email...');
-  // Dynamic import to avoid issues with module resolution
   const { sendSurveyToAllCustomers } = await import('../src/lib/surveySend');
   const result = await sendSurveyToAllCustomers(survey.id);
 
