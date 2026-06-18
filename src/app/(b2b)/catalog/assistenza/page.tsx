@@ -1,8 +1,8 @@
-// AGGIORNATO: 2026-06-17
+// AGGIORNATO: 2026-06-18
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
-  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge, Bell, Settings, Sparkles, Palette,
+  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge, Bell, Settings, Sparkles, Palette, MessageSquare,
 } from 'lucide-react';
 
 export const metadata = { title: 'Guida all\'app — ON EARTH' };
@@ -28,6 +28,7 @@ const SECTIONS = [
   { id: 'impostazioni',       label: 'Impostazioni',                      icon: Settings },
   { id: 'moda-pe27',          label: 'Moda PE27',                         icon: Sparkles },
   { id: 'ruota-cromatica',    label: 'Ruota Cromatica',                   icon: Palette },
+  { id: 'survey',             label: 'Questionario',                      icon: MessageSquare },
   { id: 'assistenza-tecnica', label: 'Assistenza tecnica',                icon: HelpCircle },
 ];
 
@@ -394,9 +395,19 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 21. Assistenza tecnica */}
+        {/* 21. Questionario */}
+        <section id="survey" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={21} icon={MessageSquare} label="Questionario" />
+          <p className="text-sm text-gray-600 mb-2">
+            Abbiamo inviato un breve questionario (2 minuti) per raccogliere il tuo feedback sull'app.
+            Puoi rispondere cliccando il link nell'email che hai ricevuto oppure direttamente dal link nella notifica push.
+          </p>
+          <p className="text-xs text-gray-400">Il questionario è disponibile fino a domenica 21 giugno 2026.</p>
+        </section>
+
+        {/* 22. Assistenza tecnica */}
         <section id="assistenza-tecnica" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={21} icon={HelpCircle} label="Assistenza tecnica" />
+          <SectionHeader n={22} icon={HelpCircle} label="Assistenza tecnica" />
           <p className="text-sm text-gray-600">
             Per problemi tecnici{' '}
             <a

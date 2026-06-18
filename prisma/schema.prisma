@@ -296,6 +296,8 @@ model Customer {
   orders                 Order[]
   carts                  Cart[]
   customerNotifReads     CustomerNotificationRead[]
+  surveyRecipients       SurveyRecipient[]
+  surveyResponses        SurveyResponse[]
 
   @@map("customers")
 }
@@ -725,6 +727,95 @@ model OutfitItem {
 
   @@unique([outfitId, productId])
   @@map("outfit_items")
+}
+
+// ─── Survey ───────────────────────────────────────────────────────────────────
+
+model Survey {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime
+  status      String   @default("draft") // draft | active | closed
+  createdAt   DateTime @default(now())
+
+  questions  SurveyQuestion[]
+  recipients SurveyRecipient[]
+  responses  SurveyResponse[]
+
+  @@map("surveys")
+}
+
+model SurveyQuestion {
+  id           String   @id @default(cuid())
+  surveyId     String
+  sortOrder    Int
+  questionKey  String
+  questionText String
+  questionType String   // stars | multi_select | single_select | text
+  optionsJson  Json?
+  required     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  @@unique([surveyId, questionKey])
+  @@map("survey_questions")
+}
+
+model SurveyRecipient {
+  id              String    @id @default(cuid())
+  surveyId        String
+  customerId      String
+  email           String
+  token           String    @unique @default(cuid())
+  pushSentAt      DateTime?
+  emailSentAt     DateTime?
+  openedAt        DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  deliveryChannel String?   // push | email | both | none
+  status          String    @default("pending") // pending | sent | opened | started | completed
+  createdAt       DateTime  @default(now())
+
+  survey   Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([surveyId, customerId])
+  @@map("survey_recipients")
+}
+
+model SurveyResponse {
+  id            String    @id @default(cuid())
+  surveyId      String
+  customerId    String
+  submittedAt   DateTime  @default(now())
+  sourceChannel String?   // push | email | in_app
+  completed     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+
+  survey   Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  customer Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  answers  SurveyAnswer[]
+
+  @@unique([surveyId, customerId])
+  @@map("survey_responses")
+}
+
+model SurveyAnswer {
+  id           String   @id @default(cuid())
+  responseId   String
+  questionKey  String
+  answerText   String?
+  answerNumber Decimal? @db.Decimal(5, 2)
+  answerJson   Json?
+  createdAt    DateTime @default(now())
+
+  response SurveyResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@map("survey_answers")
 }
 
 model Look {
