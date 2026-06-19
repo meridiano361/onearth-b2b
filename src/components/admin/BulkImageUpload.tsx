@@ -17,6 +17,8 @@ interface FileEntry {
 
 interface UploadResult {
   uploaded: number;
+  uploadedLinked: number;
+  uploadedOrphan: number;
   notFound: string[];
   errors: Array<{ file: string; message: string }>;
   nonConforming: Array<{ file: string; message: string }>;
@@ -121,19 +123,29 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
           <div>
             <p className="font-medium text-primary">Caricamento completato</p>
             <p className="text-sm text-gray-500">
-              {result.uploaded} foto caricate · {result.notFound.length} codici non trovati · {result.errors.length} errori · {result.nonConforming?.length ?? 0} non conformi
+              {result.uploadedLinked > 0 && `${result.uploadedLinked} collegate · `}
+              {result.uploadedOrphan > 0 && `${result.uploadedOrphan} in attesa del prodotto · `}
+              {result.errors.length > 0 && `${result.errors.length} errori · `}
+              {(result.nonConforming?.length ?? 0) > 0 && `${result.nonConforming.length} non conformi`}
             </p>
           </div>
         </div>
 
-        {result.notFound.length > 0 && (
-          <div className="border border-amber-200 rounded bg-amber-50 p-3">
-            <p className="text-xs font-medium text-amber-700 mb-1">Codici non trovati nel DB:</p>
-            <div className="flex flex-wrap gap-1.5">
-              {result.notFound.map((code) => (
-                <span key={code} className="px-2 py-0.5 bg-white border border-amber-200 rounded text-2xs font-mono text-amber-700">{code}</span>
-              ))}
-            </div>
+        {result.uploadedOrphan > 0 && (
+          <div className="border border-blue-200 rounded bg-blue-50 p-3">
+            <p className="text-xs font-medium text-blue-700 mb-1">
+              {result.uploadedOrphan} foto caricate ma senza prodotto ancora
+            </p>
+            <p className="text-2xs text-blue-600">
+              Le foto sono nel bucket e visibili in <strong>Gestione foto</strong>. Quando il prodotto verrà creato con lo stesso codice, potrai collegarle da lì.
+            </p>
+            {result.notFound.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {result.notFound.map((code) => (
+                  <span key={code} className="px-2 py-0.5 bg-white border border-blue-200 rounded text-2xs font-mono text-blue-700">{code}</span>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -53,12 +53,13 @@ export async function GET() {
           { imageUrl2: { not: null } },
           { imageUrl3: { not: null } },
           { imageUrl4: { not: null } },
+          { imageUrl5: { not: null } },
         ],
       },
-      select: { id: true, code: true, name: true, imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true },
+      select: { id: true, code: true, name: true, imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true, imageUrl5: true },
     });
 
-    // Build URL → {product, slot} map for all 4 image slots
+    // Build URL → {product, slot} map for all 5 image slots
     const urlToProduct = new Map<string, { id: string; code: string; name: string; slot: number }>();
     for (const p of products) {
       const slots: [string | null, number][] = [
@@ -66,6 +67,7 @@ export async function GET() {
         [p.imageUrl2, 2],
         [p.imageUrl3, 3],
         [p.imageUrl4, 4],
+        [(p as any).imageUrl5, 5],
       ];
       for (const [url, slot] of slots) {
         if (url && !urlToProduct.has(url)) {
@@ -128,12 +130,13 @@ export async function DELETE(req: NextRequest) {
     const { error } = await supabase.storage.from(BUCKET).remove(paths);
     if (error) throw new Error(error.message);
 
-    // Detach deleted images from all 4 slots
+    // Detach deleted images from all 5 slots
     await Promise.all([
-      prisma.product.updateMany({ where: { imageUrl: { in: urls } }, data: { imageUrl: null } }),
+      prisma.product.updateMany({ where: { imageUrl:  { in: urls } }, data: { imageUrl:  null } }),
       prisma.product.updateMany({ where: { imageUrl2: { in: urls } }, data: { imageUrl2: null } }),
       prisma.product.updateMany({ where: { imageUrl3: { in: urls } }, data: { imageUrl3: null } }),
       prisma.product.updateMany({ where: { imageUrl4: { in: urls } }, data: { imageUrl4: null } }),
+      prisma.product.updateMany({ where: { imageUrl5: { in: urls } }, data: { imageUrl5: null } }),
     ]);
 
     return NextResponse.json({ deleted: paths.length });

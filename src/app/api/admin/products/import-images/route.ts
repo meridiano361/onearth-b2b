@@ -52,13 +52,11 @@ export async function POST(req: NextRequest) {
 
     // ── Upload e aggiornamento per slot ───────────────────────────────────────
     const supabase = getSupabaseClient();
-    let uploaded = 0;
+    let uploadedLinked = 0;
+    let uploadedOrphan = 0;
     const errors: Array<{ file: string; message: string }> = [];
 
     for (const { file, productCode, imageIndex } of validEntries) {
-      const productId = productByCode.get(productCode);
-      if (!productId) continue; // già in notFound
-
       try {
         const buffer = Buffer.from(await file.arrayBuffer());
         const storagePath = `products/${file.name}`;
@@ -69,22 +67,29 @@ export async function POST(req: NextRequest) {
 
         if (uploadError) throw new Error(uploadError.message);
 
-        const { data: urlData } = supabase.storage.from('products').getPublicUrl(storagePath);
-        const field = imageIndexToField(imageIndex);
-
-        await prisma.product.update({
-          where: { id: productId },
-          data: { [field]: urlData.publicUrl },
-        });
-
-        uploaded++;
+        const productId = productByCode.get(productCode);
+        if (productId) {
+          const { data: urlData } = supabase.storage.from('products').getPublicUrl(storagePath);
+          const field = imageIndexToField(imageIndex);
+          await prisma.product.update({
+            where: { id: productId },
+            data: { [field]: urlData.publicUrl },
+          });
+          uploadedLinked++;
+        } else {
+          // Uploaded to bucket but no product yet — visible as "da-collegare" in /admin/foto
+          uploadedOrphan++;
+        }
       } catch (err: any) {
         errors.push({ file: file.name, message: err.message || 'Upload fallito' });
       }
     }
 
+    const uploaded = uploadedLinked + uploadedOrphan;
     return NextResponse.json({
       uploaded,
+      uploadedLinked,
+      uploadedOrphan,
       notFound,
       errors,
       nonConforming,
