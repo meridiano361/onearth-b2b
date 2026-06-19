@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
-import { Send, Download, Star, Users, Mail, Bell, Eye, CheckCircle, ChevronRight, Loader2 } from 'lucide-react';
+import { Send, Download, Star, Users, Mail, Bell, Eye, CheckCircle, ChevronRight, Loader2, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const SURVEY_ID_KEY = 'recensione-app-giugno-2026';
@@ -88,6 +88,13 @@ export default function AdminRecensioniPage() {
           <p className="text-sm text-gray-400 mt-0.5 max-w-xl leading-snug">{survey.title}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/admin/recensioni/modifica"
+            className="flex items-center gap-1.5 px-3 py-2 border border-border rounded text-xs text-gray-600 hover:bg-cream transition-colors"
+          >
+            <Pencil size={13} />
+            <span className="hidden sm:inline">Modifica questionario</span>
+          </Link>
           <Link
             href="/admin/recensioni/risposte"
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded text-xs text-gray-600 hover:bg-cream transition-colors"
