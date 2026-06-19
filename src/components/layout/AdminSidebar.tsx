@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
@@ -7,7 +8,7 @@ import {
   LayoutDashboard, Package, Users, ShoppingCart, Layers,
   LogOut, Settings, X, UserPlus, Eye, FileText,
   Image as ImageIcon, BookOpen, Paintbrush, Bell,
-  BarChart2, MessageSquare,
+  BarChart2, MessageSquare, ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -68,6 +69,15 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = session?.user?.role ?? '';
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+
+  function toggleGroup(label: string) {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
+  }
 
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href;
@@ -117,46 +127,53 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
             const visibleItems = entry.items.filter((i) => canSee(i.roles));
             if (visibleItems.length === 0) return null;
             const groupActive = visibleItems.some((i) => isActive(i.href, i.exact));
+            const isOpen = openGroups.has(entry.groupLabel) || groupActive;
             return (
               <div key={entry.groupLabel}>
-                <p className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 text-xs font-medium',
-                  groupActive ? 'text-white' : 'text-gray-500'
-                )}>
+                <button
+                  onClick={() => toggleGroup(entry.groupLabel)}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 w-full rounded text-xs font-medium transition-all duration-150',
+                    groupActive ? 'text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  )}
+                >
                   <entry.icon size={15} />
-                  {entry.groupLabel}
-                </p>
-                <div className="ml-3 pl-3 border-l border-white/10 space-y-0.5">
-                  {visibleItems.map((item) => {
-                    const active = isActive(item.href, item.exact);
-                    if (item.external) {
+                  <span className="flex-1 text-left">{entry.groupLabel}</span>
+                  <ChevronDown size={13} className={cn('transition-transform duration-200', isOpen && 'rotate-180')} />
+                </button>
+                {isOpen && (
+                  <div className="ml-3 pl-3 border-l border-white/10 space-y-0.5 mb-0.5">
+                    {visibleItems.map((item) => {
+                      const active = isActive(item.href, item.exact);
+                      if (item.external) {
+                        return (
+                          <a
+                            key={item.href}
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={onClose}
+                            className={linkClass(active)}
+                          >
+                            <item.icon size={13} />
+                            {item.label}
+                          </a>
+                        );
+                      }
                       return (
-                        <a
+                        <Link
                           key={item.href}
                           href={item.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
                           onClick={onClose}
                           className={linkClass(active)}
                         >
                           <item.icon size={13} />
                           {item.label}
-                        </a>
+                        </Link>
                       );
-                    }
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={onClose}
-                        className={linkClass(active)}
-                      >
-                        <item.icon size={13} />
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                </div>
+                    })}
+                  </div>
+                )}
               </div>
             );
           }
