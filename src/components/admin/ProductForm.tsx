@@ -576,9 +576,6 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
       {/* ── SCHEDA ARTICOLO (solo Moda, in Anagrafica) ────────────── */}
       {isModa && (
         <>
-          <Divider />
-          <SectionLabel>Scheda articolo</SectionLabel>
-
           {/* Dettaglio + Modello */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Combobox
