@@ -34,7 +34,6 @@ const IVA_OPTIONS = [0, 4, 5, 10, 22];
 const lbl = 'block text-xs font-medium text-gray-600 mb-1';
 const sel = 'w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent';
 const pri = 'w-full h-9 border border-border rounded pl-7 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent';
-const pct = 'w-full h-9 border border-border rounded pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-accent';
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -346,7 +345,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
   const guadagnoConReso = pvn > 0 && costoConReso > 0 ? pvn - costoConReso : null;
 
   const fmtPct  = (v: number | null) => v === null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
-  const fmtEuro = (v: number | null) => v === null ? '—' : `€ ${v.toFixed(2)}`;
+  const fmtEuro = (v: number | null) => v === null ? '—' : `€ ${v.toFixed(2)}`;
 
   // ── Pre-computed register refs ────────────────────────────────────────────
   const costPriceReg      = register('costPrice');
@@ -356,7 +355,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
   const fasciaRicaricoReg = register('fasciaRicarico');
   const costoSenzaResoReg = register('costoIeSenzaReso');
 
-  // ── Bidirectional price handlers ──────────────────────────────────────────
+  // ── Price handlers ────────────────────────────────────────────────────────
   function handleCostoChange(e: React.ChangeEvent<HTMLInputElement>) {
     costoSenzaResoReg.onChange(e);
     const cost = parseFloat(e.target.value);
@@ -393,17 +392,6 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
       setValue('costPrice', newCost.toFixed(2));
       setValue('costoIeSenzaReso', newCost.toFixed(2));
       if (newCost > 0) setValue('fasciaRicarico', ((newPvn - newCost) / newCost * 100).toFixed(1));
-    }
-  }
-
-  function handleRicaricoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    fasciaRicaricoReg.onChange(e);
-    const ric = parseFloat(e.target.value);
-    if (!isNaN(ric) && pvn > 0) {
-      const newCost = pvn / (1 + ric / 100);
-      setValue('costPrice', newCost.toFixed(2));
-      setValue('costoIeSenzaReso', newCost.toFixed(2));
-      setValue('fasciaSconto', ((1 - newCost / pvn) * 100).toFixed(2));
     }
   }
 
@@ -585,6 +573,120 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
         />
       </div>
 
+      {/* ── SCHEDA ARTICOLO (solo Moda, in Anagrafica) ────────────── */}
+      {isModa && (
+        <>
+          <Divider />
+          <SectionLabel>Scheda articolo</SectionLabel>
+
+          {/* Dettaglio + Modello */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Combobox
+              label="Dettaglio"
+              field="dettaglio"
+              value={watch('dettaglio') || ''}
+              onChange={(v) => setValue('dettaglio', v)}
+            />
+            <Combobox
+              label="Modello"
+              field="modello"
+              value={watch('modello') || ''}
+              onChange={(v) => setValue('modello', v)}
+            />
+          </div>
+
+          {/* Colore + Lavorazione */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Combobox
+              label="Colore"
+              field="colore"
+              value={watch('colore') || ''}
+              onChange={(v) => setValue('colore', v)}
+            />
+            <Combobox
+              label="Lavorazione"
+              field="lavorazione"
+              value={watch('lavorazione') || ''}
+              onChange={(v) => setValue('lavorazione', v)}
+            />
+          </div>
+
+          {/* Pantone FHI-TCX (obbligatorio per Moda) */}
+          <div>
+            <label className={lbl}>
+              Pantone FHI-TCX <span className="text-red-400 ml-0.5">*</span>
+            </label>
+            <ProductPantoneForm
+              value={selectedPantones}
+              onChange={(v) => {
+                setSelectedPantones(v);
+                if (v.length > 0) setPantoneError(null);
+              }}
+            />
+            {pantoneError && <p className="mt-1 text-xs text-red-500">{pantoneError}</p>}
+          </div>
+
+          {/* Materiali */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <MaterialField label="Materiale 1" value={watch('materiale1') || ''} onChange={(v) => setValue('materiale1', v)} />
+            <MaterialField label="Materiale 2" value={watch('materiale2') || ''} onChange={(v) => setValue('materiale2', v)} />
+            <MaterialField label="Materiale 3" value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
+          </div>
+
+          {/* Composizione */}
+          <Input label="Composizione" {...register('composizione')} placeholder="es. 80% cotone, 20% poliestere" />
+
+          {/* Certificazioni */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input label="Certificazione 1" {...register('certificazione1')} placeholder="es. GOTS" />
+            <Input label="Certificazione 2" {...register('certificazione2')} placeholder="es. Oeko-Tex" />
+            <Input label="Certificazione 3" {...register('certificazione3')} placeholder="es. Fair Trade" />
+          </div>
+
+          {/* Fantasia */}
+          <div>
+            <label className={lbl}>Fantasia</label>
+            <select {...register('fantasia')} className={sel}>
+              <option value="">— nessuna —</option>
+              {FANTASIA_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+
+          {/* Blocchi colore */}
+          {colorBlocks && colorBlocks.length > 0 && (
+            <div>
+              <p className={lbl}>Blocchi colore</p>
+              <div className="flex flex-wrap gap-2 pt-0.5">
+                {colorBlocks.map((cb) => {
+                  const active = selectedColorBlocks.has(cb.id);
+                  return (
+                    <button
+                      key={cb.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedColorBlocks((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(cb.id)) next.delete(cb.id);
+                          else next.add(cb.id);
+                          return next;
+                        });
+                      }}
+                      className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
+                        active
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-white text-gray-600 border-border hover:border-gray-400'
+                      }`}
+                    >
+                      {cb.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       <Divider />
 
       {/* ── CLASSIFICAZIONE ───────────────────────────────────────── */}
@@ -606,7 +708,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
         </div>
       </div>
 
-      {/* Gruppo merceologico - Famiglia */}
+      {/* Gruppo merceologico + Famiglia */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={lbl}>Gruppo merceologico</label>
@@ -655,7 +757,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
         )}
       </div>
 
-      {/* Classe - Sottoclasse */}
+      {/* Classe + Sottoclasse */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {isModa ? (
           <div>
@@ -704,7 +806,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
         )}
       </div>
 
-      {/* Gruppo omogeneo - Dettaglio */}
+      {/* Gruppo omogeneo + Dettaglio (Dettaglio solo per !Moda) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {isModa ? (
           <div>
@@ -729,117 +831,74 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
             onChange={(v) => setValue('gruppoOmogeneo', v, { shouldDirty: true })}
           />
         )}
-        <Combobox
-          label="Dettaglio"
-          field="dettaglio"
-          value={watch('dettaglio') || ''}
-          onChange={(v) => setValue('dettaglio', v)}
-        />
+        {!isModa && (
+          <Combobox
+            label="Dettaglio"
+            field="dettaglio"
+            value={watch('dettaglio') || ''}
+            onChange={(v) => setValue('dettaglio', v)}
+          />
+        )}
       </div>
 
-      {/* Linea - Modello */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Combobox
-          label="Linea"
-          field="nomLinea"
-          value={watch('nomLinea') || ''}
-          onChange={(v) => setValue('nomLinea', v)}
-        />
-        <Combobox
-          label="Modello"
-          field="modello"
-          value={watch('modello') || ''}
-          onChange={(v) => setValue('modello', v)}
-        />
-      </div>
-
-      {/* Colore - Lavorazione */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Combobox
-          label="Colore"
-          field="colore"
-          value={watch('colore') || ''}
-          onChange={(v) => setValue('colore', v)}
-        />
-        <Combobox
-          label="Lavorazione"
-          field="lavorazione"
-          value={watch('lavorazione') || ''}
-          onChange={(v) => setValue('lavorazione', v)}
-        />
-      </div>
-
-      {/* Pantone FHI-TCX */}
-      <div>
-        <label className={lbl}>
-          Pantone FHI-TCX{isModa && <span className="text-red-400 ml-0.5">*</span>}
-        </label>
-        <ProductPantoneForm
-          value={selectedPantones}
-          onChange={(v) => {
-            setSelectedPantones(v);
-            if (v.length > 0) setPantoneError(null);
-          }}
-        />
-        {pantoneError && <p className="mt-1 text-xs text-red-500">{pantoneError}</p>}
-      </div>
-
-      {/* Materiali */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <MaterialField label="Materiale 1" value={watch('materiale1') || ''} onChange={(v) => setValue('materiale1', v)} />
-        <MaterialField label="Materiale 2" value={watch('materiale2') || ''} onChange={(v) => setValue('materiale2', v)} />
-        <MaterialField label="Materiale 3" value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
-      </div>
-
-      {/* Composizione */}
-      <Input label="Composizione" {...register('composizione')} placeholder="es. 80% cotone, 20% poliestere" />
-
-      {/* Certificazioni */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Input label="Certificazione 1" {...register('certificazione1')} placeholder="es. GOTS" />
-        <Input label="Certificazione 2" {...register('certificazione2')} placeholder="es. Oeko-Tex" />
-        <Input label="Certificazione 3" {...register('certificazione3')} placeholder="es. Fair Trade" />
-      </div>
-
-      {/* Fantasia */}
-      <div>
-        <label className={lbl}>Fantasia</label>
-        <select {...register('fantasia')} className={sel}>
-          <option value="">— nessuna —</option>
-          {FANTASIA_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
-        </select>
-      </div>
-
-      {/* Blocco colore (solo Moda) */}
-      {isModa && colorBlocks && colorBlocks.length > 0 && (
-        <div>
-          <p className={lbl}>Blocchi colore</p>
-          <div className="flex flex-wrap gap-x-5 gap-y-2 pt-0.5">
-            {colorBlocks.map((cb) => (
-              <label key={cb.id} className="flex items-center gap-1.5 cursor-pointer text-sm text-primary select-none">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 accent-accent"
-                  checked={selectedColorBlocks.has(cb.id)}
-                  onChange={(e) => {
-                    setSelectedColorBlocks((prev) => {
-                      const next = new Set(prev);
-                      if (e.target.checked) next.add(cb.id);
-                      else next.delete(cb.id);
-                      return next;
-                    });
-                  }}
-                />
-                {cb.name}
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Tema colore (solo Casa) */}
+      {/* Campi scheda articolo per prodotti NON-Moda (rimangono in Classificazione) */}
       {!isModa && (
         <>
+          {/* Colore + Lavorazione */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Combobox
+              label="Colore"
+              field="colore"
+              value={watch('colore') || ''}
+              onChange={(v) => setValue('colore', v)}
+            />
+            <Combobox
+              label="Lavorazione"
+              field="lavorazione"
+              value={watch('lavorazione') || ''}
+              onChange={(v) => setValue('lavorazione', v)}
+            />
+          </div>
+
+          {/* Pantone FHI-TCX (opzionale per non-Moda) */}
+          <div>
+            <label className={lbl}>Pantone FHI-TCX</label>
+            <ProductPantoneForm
+              value={selectedPantones}
+              onChange={(v) => {
+                setSelectedPantones(v);
+                if (v.length > 0) setPantoneError(null);
+              }}
+            />
+          </div>
+
+          {/* Materiali */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <MaterialField label="Materiale 1" value={watch('materiale1') || ''} onChange={(v) => setValue('materiale1', v)} />
+            <MaterialField label="Materiale 2" value={watch('materiale2') || ''} onChange={(v) => setValue('materiale2', v)} />
+            <MaterialField label="Materiale 3" value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
+          </div>
+
+          {/* Composizione */}
+          <Input label="Composizione" {...register('composizione')} placeholder="es. 80% cotone, 20% poliestere" />
+
+          {/* Certificazioni */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input label="Certificazione 1" {...register('certificazione1')} placeholder="es. GOTS" />
+            <Input label="Certificazione 2" {...register('certificazione2')} placeholder="es. Oeko-Tex" />
+            <Input label="Certificazione 3" {...register('certificazione3')} placeholder="es. Fair Trade" />
+          </div>
+
+          {/* Fantasia */}
+          <div>
+            <label className={lbl}>Fantasia</label>
+            <select {...register('fantasia')} className={sel}>
+              <option value="">— nessuna —</option>
+              {FANTASIA_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+
+          {/* Tema colore (solo Casa) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Combobox
               label="Tema colore"
@@ -929,10 +988,12 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
       {/* ── PREZZI ────────────────────────────────────────────────── */}
       <SectionLabel>Prezzi</SectionLabel>
 
+      {/* Campi hidden per stato form */}
       <input type="hidden" {...costPriceReg} />
       <input type="hidden" {...fasciaScReg} />
+      <input type="hidden" {...fasciaRicaricoReg} />
 
-      {/* Costo senza reso - Costo con reso */}
+      {/* Costo senza reso + Costo con reso */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={lbl}>Costo i.e. senza reso (€) *</label>
@@ -968,7 +1029,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
         </div>
       </div>
 
-      {/* IVA - Prezzo vendita */}
+      {/* IVA + Prezzo vendita */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={lbl}>IVA (%)</label>
@@ -1000,24 +1061,10 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
         </div>
       </div>
 
-      {/* Ricarico senza reso (editable) - Ricarico con reso (readonly) */}
+      {/* Ricarico (entrambi calcolati) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className={lbl}>Ricarico senza reso (%)</label>
-          <div className="relative">
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              {...fasciaRicaricoReg}
-              onChange={handleRicaricoChange}
-              className={pct}
-              placeholder="es. 100"
-            />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
-          </div>
-        </div>
-        <ReadOnlyField label="Ricarico con reso (%)" value={fmtPct(ricaricoConReso)} />
+        <ReadOnlyField label="Ricarico senza reso (%)" value={fmtPct(ricarico)} />
+        <ReadOnlyField label="Ricarico con reso (%)"   value={fmtPct(ricaricoConReso)} />
       </div>
 
       {/* Margini */}
