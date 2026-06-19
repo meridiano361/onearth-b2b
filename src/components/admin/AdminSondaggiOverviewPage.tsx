@@ -5,7 +5,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, Send, Download, Star, Users, Mail, Bell,
-  Eye, CheckCircle, Loader2, Pencil, MessageSquare,
+  Eye, CheckCircle, Loader2, Pencil, MessageSquare, Contact,
 } from 'lucide-react';
 
 interface QuestionStat {
@@ -50,7 +50,12 @@ export default function AdminSondaggiOverviewPage({ surveyId }: { surveyId: stri
 
   const sendMutation = useMutation({
     mutationFn: () => fetch(`/api/admin/surveys/${surveyId}/send`, { method: 'POST' }).then((r) => r.json()),
-    onSuccess: (result) => toast.success(`Invio completato: ${result.emailSent ?? 0} email, ${result.pushSent ?? 0} push`),
+    onSuccess: (result) => {
+      const msg = `${result.emailSent ?? 0} email, ${result.pushSent ?? 0} push inviati`;
+      const failed = result.emailFailed ?? 0;
+      if (failed > 0) toast.error(`${msg} — ${failed} email fallite`);
+      else toast.success(`Invio completato: ${msg}`);
+    },
     onError: () => toast.error("Errore durante l'invio"),
   });
 
@@ -82,6 +87,9 @@ export default function AdminSondaggiOverviewPage({ surveyId }: { surveyId: stri
               {survey.status === 'active' ? 'Attivo' : survey.status === 'closed' ? 'Chiuso' : 'Bozza'}
             </span>
           )}
+          <Link href={`/admin/sondaggi/${surveyId}/destinatari`} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded text-xs text-gray-600 hover:bg-cream transition-colors">
+            <Contact size={13} /> Destinatari
+          </Link>
           <Link href={`/admin/sondaggi/${surveyId}/risposte`} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded text-xs text-gray-600 hover:bg-cream transition-colors">
             <MessageSquare size={13} /> Risposte
           </Link>
