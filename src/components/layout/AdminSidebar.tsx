@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Package, Users, ShoppingCart, Layers,
   LogOut, Settings, X, UserPlus, Eye, FileText,
   Image as ImageIcon, BookOpen, Paintbrush, Bell,
-  BarChart2, Sparkles, MessageSquare,
+  BarChart2, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -37,15 +37,7 @@ function isGroup(e: NavEntry): e is NavGroup {
 // Alphabetical order (Italian labels)
 const NAV: NavEntry[] = [
   { href: '/admin/analytics',        label: 'Analisi',           icon: BarChart2,       roles: ['SUPER_ADMIN', 'ADMIN'] },
-  {
-    groupLabel: 'Anteprima',
-    icon: Eye,
-    roles: ['SUPER_ADMIN', 'ADMIN'],
-    items: [
-      { href: '/admin/preview', label: 'App attuale', icon: Eye,      roles: ['SUPER_ADMIN', 'ADMIN'] },
-      { href: '/catalog',       label: 'Nuova app',   icon: Sparkles, roles: ['SUPER_ADMIN', 'ADMIN'], external: true },
-    ],
-  },
+  { href: '/admin/anteprima',        label: 'Anteprima',         icon: Eye,             roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/catalogo-pdf',     label: 'Catalogo PDF',      icon: BookOpen,        roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/classificazione',  label: 'Classificazione',   icon: Layers,          roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO'] },
   {

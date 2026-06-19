@@ -1,5 +1,5 @@
-import AdminPreviewPage from '@/components/admin/AdminPreviewPage';
+import { redirect } from 'next/navigation';
 
 export default function PreviewPage() {
-  return <AdminPreviewPage />;
+  redirect('/admin/anteprima');
 }
