@@ -524,7 +524,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       if (!(v as any).modello?.trim())    missing.push('Modello');
       if (!(v as any).materiale1?.trim()) missing.push('Materiale 1');
       if (!v.colore?.trim())              missing.push('Colore');
-      if (sizeVariants.length === 0 && !(v as any).taglia?.trim()) missing.push('Taglia');
+      if (v.famiglia === 'Abbigliamento' && sizeVariants.length === 0 && !(v as any).taglia?.trim()) missing.push('Taglia');
       if (missing.length > 0) {
         toast.error(`Campi obbligatori per MODA mancanti: ${missing.join(', ')}`);
         return;
@@ -672,7 +672,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
             {sizeVariants.length === 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className={lbl}>Taglia *</label>
+                  <label className={lbl}>Taglia{watchedFamiglia === 'Abbigliamento' ? ' *' : ''}</label>
                   <select {...register('taglia')} className={sel}>
                     <option value="">— nessuna —</option>
                     {TAGLIA_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
