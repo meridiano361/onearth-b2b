@@ -107,7 +107,7 @@ export default function AdminRecensioniPage() {
             className="flex items-center gap-1.5 px-3 py-2 bg-black text-white rounded text-xs hover:bg-gray-800 transition-colors disabled:opacity-50"
           >
             {sendMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-            <span className="hidden sm:inline">Invia ora</span>
+            Invia email sondaggio a tutti i clienti
           </button>
         </div>
       </div>

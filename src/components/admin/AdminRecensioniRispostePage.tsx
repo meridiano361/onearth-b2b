@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { ArrowLeft, Search, Download, Star, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { ArrowLeft, Search, Download, Star, ChevronDown, ChevronUp, Loader2, Trash2 } from 'lucide-react';
 
 const SURVEY_SLUG = 'recensione-app-giugno-2026';
 
@@ -31,6 +32,8 @@ export default function AdminRecensioniRispostePage() {
   const [filterDemetra, setFilterDemetra] = useState('');
   const [filterLowRating, setFilterLowRating] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const qc = useQueryClient();
 
   const { data: surveysData } = useQuery<{ surveys: Survey[] }>({
     queryKey: ['admin-surveys'],
@@ -53,6 +56,23 @@ export default function AdminRecensioniRispostePage() {
   });
 
   const responses = data?.responses ?? [];
+
+  async function handleDelete(responseId: string, customerName: string) {
+    if (!survey) return;
+    if (!confirm(`Eliminare la risposta di "${customerName}"? L'operazione non è reversibile.`)) return;
+    setDeletingId(responseId);
+    try {
+      const res = await fetch(`/api/admin/surveys/${survey.id}/responses/${responseId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      toast.success('Risposta eliminata');
+      qc.invalidateQueries({ queryKey: ['admin-survey-responses'] });
+      qc.invalidateQueries({ queryKey: ['admin-survey-stats'] });
+    } catch {
+      toast.error('Errore durante l\'eliminazione');
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const selectClass = 'h-8 border border-border rounded px-2 text-xs text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent';
 
@@ -129,11 +149,12 @@ export default function AdminRecensioniRispostePage() {
                 <th className="text-center px-3 py-3 text-gray-500 font-medium">Demetra</th>
                 <th className="text-left px-3 py-3 text-gray-500 font-medium w-40">Suggerimento</th>
                 <th className="w-8 px-2"></th>
+                <th className="w-8 px-2"></th>
               </tr>
             </thead>
             <tbody>
               {responses.length === 0 ? (
-                <tr><td colSpan={10} className="py-12 text-center text-gray-400">Nessuna risposta</td></tr>
+                <tr><td colSpan={11} className="py-12 text-center text-gray-400">Nessuna risposta</td></tr>
               ) : (
                 responses.map((r) => (
                   <>
@@ -173,10 +194,20 @@ export default function AdminRecensioniRispostePage() {
                       <td className="px-2 py-3 text-gray-400">
                         {expandedId === r.id ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                       </td>
+                      <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => handleDelete(r.id, r.customer.companyName)}
+                          disabled={deletingId === r.id}
+                          className="p-1 text-gray-300 hover:text-red-500 transition-colors disabled:opacity-40"
+                          title="Elimina risposta"
+                        >
+                          {deletingId === r.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                        </button>
+                      </td>
                     </tr>
                     {expandedId === r.id && (
                       <tr key={r.id + '-expanded'} className="bg-gray-50/80">
-                        <td colSpan={10} className="px-6 py-4">
+                        <td colSpan={11} className="px-6 py-4">
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-2xl">
                             <Detail label="Cliente" value={`${r.customer.companyName} (${r.customer.customerCode})`} />
                             <Detail label="Email" value={r.customer.email} />
