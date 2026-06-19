@@ -48,7 +48,15 @@ const NAV: NavEntry[] = [
   },
   { href: '/admin/catalogo-pdf',     label: 'Catalogo PDF',      icon: BookOpen,        roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/classificazione',  label: 'Classificazione',   icon: Layers,          roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO'] },
-  { href: '/admin/customers',        label: 'Clienti',           icon: Users,           roles: ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE'] },
+  {
+    groupLabel: 'Clienti',
+    icon: Users,
+    roles: ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE'],
+    items: [
+      { href: '/admin/customers',       label: 'Lista clienti',     icon: Users,     roles: ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE'] },
+      { href: '/admin/access-requests', label: 'Richieste accesso', icon: UserPlus,  roles: ['SUPER_ADMIN', 'ADMIN'] },
+    ],
+  },
   { href: '/admin',                  label: 'Dashboard',         icon: LayoutDashboard, exact: true },
   { href: '/admin/documenti',        label: 'Documenti',         icon: FileText,        roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/foto',             label: 'Foto',              icon: ImageIcon,       roles: ['SUPER_ADMIN', 'ADMIN'] },
@@ -57,7 +65,6 @@ const NAV: NavEntry[] = [
   { href: '/admin/orders',           label: 'Ordini',            icon: ShoppingCart,    roles: ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE'] },
   { href: '/admin/personalizzazione',label: 'Personalizzazione', icon: Paintbrush,      roles: ['SUPER_ADMIN'] },
   { href: '/admin/products',         label: 'Prodotti',          icon: Package,         roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO', 'COMMERCIALE'] },
-  { href: '/admin/access-requests',  label: 'Richieste Accesso', icon: UserPlus,        roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/sondaggi',         label: 'Sondaggi',          icon: MessageSquare,   roles: ['SUPER_ADMIN', 'ADMIN'] },
 ];
 
