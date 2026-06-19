@@ -19,6 +19,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     orderBy: { submittedAt: 'asc' },
   });
 
+
   function getAnswer(answers: typeof responses[0]['answers'], key: string): string {
     const a = answers.find((x) => x.questionKey === key);
     if (!a) return '';
@@ -43,9 +44,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const rows = responses.map((r) =>
     [
       new Date(r.submittedAt).toLocaleDateString('it-IT'),
-      r.customer.companyName,
-      r.customer.email,
-      r.customer.customerCode,
+      r.respondentName ?? r.customer?.companyName ?? r.email,
+      r.email,
+      r.customer?.customerCode ?? '',
       r.sourceChannel ?? '',
       getAnswer(r.answers, 'soddisfazione'),
       getAnswer(r.answers, 'facilita_uso'),

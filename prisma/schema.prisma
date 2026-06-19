@@ -768,8 +768,9 @@ model SurveyQuestion {
 model SurveyRecipient {
   id              String    @id @default(cuid())
   surveyId        String
-  customerId      String
+  customerId      String?
   email           String
+  respondentName  String?   // companyName (customer) o nome+cognome (operator)
   token           String    @unique @default(cuid())
   pushSentAt      DateTime?
   emailSentAt     DateTime?
@@ -780,27 +781,29 @@ model SurveyRecipient {
   status          String    @default("pending") // pending | sent | opened | started | completed
   createdAt       DateTime  @default(now())
 
-  survey   Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  survey   Survey    @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  @@unique([surveyId, customerId])
+  @@unique([surveyId, email])
   @@map("survey_recipients")
 }
 
 model SurveyResponse {
   id            String    @id @default(cuid())
   surveyId      String
-  customerId    String
+  customerId    String?
+  email         String
+  respondentName String?
   submittedAt   DateTime  @default(now())
   sourceChannel String?   // push | email | in_app
   completed     Boolean   @default(false)
   createdAt     DateTime  @default(now())
 
   survey   Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  customer Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer Customer?      @relation(fields: [customerId], references: [id], onDelete: Cascade)
   answers  SurveyAnswer[]
 
-  @@unique([surveyId, customerId])
+  @@unique([surveyId, email])
   @@map("survey_responses")
 }
 

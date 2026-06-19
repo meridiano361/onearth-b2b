@@ -25,46 +25,54 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
   if (now > survey.endsAt) return NextResponse.json({ error: 'Survey scaduta' }, { status: 410 });
   if (survey.status !== 'active') return NextResponse.json({ error: 'Survey non attiva' }, { status: 410 });
 
-  // Resolve customer
+  // Resolve respondent from token or session
+  let respondentEmail: string | null = null;
+  let respondentName: string | null = null;
   let customerId: string | null = null;
   let recipientId: string | null = null;
 
   if (body.token) {
     const recipient = await prisma.surveyRecipient.findUnique({ where: { token: body.token } });
     if (recipient?.surveyId === survey.id) {
-      customerId = recipient.customerId;
+      respondentEmail = recipient.email;
+      respondentName = recipient.respondentName ?? null;
+      customerId = recipient.customerId ?? null;
       recipientId = recipient.id;
     }
   }
 
-  if (!customerId) {
+  if (!respondentEmail) {
     const session = await getServerSession(authOptions);
     if (session?.user?.email) {
-      const customer = await prisma.customer.findUnique({ where: { email: session.user.email } });
+      respondentEmail = session.user.email;
+      const customer = await prisma.customer.findUnique({ where: { email: respondentEmail } });
       if (customer) {
         customerId = customer.id;
+        respondentName = customer.companyName;
         const r = await prisma.surveyRecipient.findUnique({
-          where: { surveyId_customerId: { surveyId: survey.id, customerId: customer.id } },
+          where: { surveyId_email: { surveyId: survey.id, email: respondentEmail } },
         });
         recipientId = r?.id ?? null;
       }
     }
   }
 
-  if (!customerId) return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
+  if (!respondentEmail) return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
 
-  // Idempotency: if already completed, reject
+  // Idempotency: reject if already completed
   const existing = await prisma.surveyResponse.findUnique({
-    where: { surveyId_customerId: { surveyId: survey.id, customerId } },
+    where: { surveyId_email: { surveyId: survey.id, email: respondentEmail } },
   });
   if (existing?.completed) return NextResponse.json({ error: 'Già risposto' }, { status: 409 });
 
   // Upsert response
   const response = await prisma.surveyResponse.upsert({
-    where: { surveyId_customerId: { surveyId: survey.id, customerId } },
+    where: { surveyId_email: { surveyId: survey.id, email: respondentEmail } },
     create: {
       surveyId: survey.id,
       customerId,
+      email: respondentEmail,
+      respondentName,
       sourceChannel: body.sourceChannel ?? 'in_app',
       completed: true,
       submittedAt: now,
@@ -76,7 +84,6 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
     },
   });
 
-  // Delete existing answers, then insert new ones
   await prisma.surveyAnswer.deleteMany({ where: { responseId: response.id } });
   for (const a of body.answers) {
     await prisma.surveyAnswer.create({
@@ -90,7 +97,6 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
     });
   }
 
-  // Update recipient status
   if (recipientId) {
     await prisma.surveyRecipient.update({
       where: { id: recipientId },

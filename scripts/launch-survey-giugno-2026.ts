@@ -121,7 +121,7 @@ async function main() {
   let newRecipients = 0;
   for (const c of customers) {
     const exists = await prisma.surveyRecipient.findUnique({
-      where: { surveyId_customerId: { surveyId: survey.id, customerId: c.id } },
+      where: { surveyId_email: { surveyId: survey.id, email: c.email } },
     });
     if (!exists) {
       await prisma.surveyRecipient.create({

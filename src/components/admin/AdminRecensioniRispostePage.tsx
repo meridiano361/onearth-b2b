@@ -17,7 +17,9 @@ interface ResponseRow {
   id: string;
   submittedAt: string;
   sourceChannel: string | null;
-  customer: { id: string; companyName: string; email: string; customerCode: string };
+  respondentName: string;
+  email: string;
+  customerCode: string | null;
   soddisfazione: number | null;
   facilitaUso: number | null;
   sezioniUtili: string[] | null;
@@ -167,8 +169,8 @@ export default function AdminRecensioniRispostePage() {
                         {new Date(r.submittedAt).toLocaleDateString('it-IT')}
                       </td>
                       <td className="px-4 py-3">
-                        <p className="font-medium text-primary">{r.customer.companyName}</p>
-                        <p className="text-gray-400 text-2xs">{r.customer.email}</p>
+                        <p className="font-medium text-primary">{r.respondentName}</p>
+                        <p className="text-gray-400 text-2xs">{r.email}</p>
                       </td>
                       <td className="px-4 py-3">
                         <ChannelBadge channel={r.sourceChannel} />
@@ -196,7 +198,7 @@ export default function AdminRecensioniRispostePage() {
                       </td>
                       <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => handleDelete(r.id, r.customer.companyName)}
+                          onClick={() => handleDelete(r.id, r.respondentName)}
                           disabled={deletingId === r.id}
                           className="p-1 text-gray-300 hover:text-red-500 transition-colors disabled:opacity-40"
                           title="Elimina risposta"
@@ -209,8 +211,8 @@ export default function AdminRecensioniRispostePage() {
                       <tr key={r.id + '-expanded'} className="bg-gray-50/80">
                         <td colSpan={11} className="px-6 py-4">
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-2xl">
-                            <Detail label="Cliente" value={`${r.customer.companyName} (${r.customer.customerCode})`} />
-                            <Detail label="Email" value={r.customer.email} />
+                            <Detail label="Cliente" value={r.customerCode ? `${r.respondentName} (${r.customerCode})` : r.respondentName} />
+                            <Detail label="Email" value={r.email} />
                             <Detail label="Canale" value={r.sourceChannel ?? '—'} />
                             <Detail label="Soddisfazione" value={r.soddisfazione ? `${r.soddisfazione}/5` : '—'} />
                             <Detail label="Facilità d'uso" value={r.facilitaUso ? `${r.facilitaUso}/5` : '—'} />

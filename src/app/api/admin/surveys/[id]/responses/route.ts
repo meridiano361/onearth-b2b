@@ -38,7 +38,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     id: r.id,
     submittedAt: r.submittedAt,
     sourceChannel: r.sourceChannel,
-    customer: r.customer,
+    respondentName: r.respondentName ?? r.customer?.companyName ?? r.email,
+    email: r.email,
+    customerCode: r.customer?.customerCode ?? null,
     soddisfazione: getAnswer(r.answers, 'soddisfazione'),
     facilitaUso: getAnswer(r.answers, 'facilita_uso'),
     sezioniUtili: getAnswer(r.answers, 'sezioni_utili'),
@@ -61,8 +63,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const q = search.toLowerCase();
     rows = rows.filter(
       (r) =>
-        r.customer.companyName.toLowerCase().includes(q) ||
-        r.customer.email.toLowerCase().includes(q) ||
+        r.respondentName.toLowerCase().includes(q) ||
+        r.email.toLowerCase().includes(q) ||
         (typeof r.suggerimento === 'string' && r.suggerimento.toLowerCase().includes(q))
     );
   }

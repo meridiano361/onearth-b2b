@@ -13,20 +13,17 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   });
   if (!survey) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // Resolve customer from token or session
-  let customerId: string | null = null;
+  // Resolve respondent email from token or session
+  let respondentEmail: string | null = null;
 
   if (token) {
     const recipient = await prisma.surveyRecipient.findUnique({ where: { token } });
-    if (recipient?.surveyId === survey.id) customerId = recipient.customerId;
+    if (recipient?.surveyId === survey.id) respondentEmail = recipient.email;
   }
 
-  if (!customerId) {
+  if (!respondentEmail) {
     const session = await getServerSession(authOptions);
-    if (session?.user?.role === 'CUSTOMER') {
-      const customer = await prisma.customer.findUnique({ where: { email: session.user.email! } });
-      customerId = customer?.id ?? null;
-    }
+    if (session?.user?.email) respondentEmail = session.user.email;
   }
 
   const now = new Date();
@@ -34,9 +31,9 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   const notStarted = now < survey.startsAt;
 
   let alreadyCompleted = false;
-  if (customerId) {
+  if (respondentEmail) {
     const existing = await prisma.surveyResponse.findUnique({
-      where: { surveyId_customerId: { surveyId: survey.id, customerId } },
+      where: { surveyId_email: { surveyId: survey.id, email: respondentEmail } },
     });
     alreadyCompleted = !!existing?.completed;
   }
@@ -61,7 +58,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
       required: q.required,
       sortOrder: q.sortOrder,
     })),
-    customerId,
+    customerId: respondentEmail,
     alreadyCompleted,
   });
 }

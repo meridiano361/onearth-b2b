@@ -44,9 +44,6 @@ export async function sendSurveyToAllCustomers(surveyId: string): Promise<SendSu
       status: { notIn: ['completed'] },
       OR: [{ emailSentAt: null }, { pushSentAt: null }],
     },
-    include: {
-      customer: { select: { email: true, companyName: true, isActive: true } },
-    },
   });
 
   // Build email → push subscriptions map
@@ -66,7 +63,6 @@ export async function sendSurveyToAllCustomers(surveyId: string): Promise<SendSu
 
   await Promise.allSettled(
     recipients
-      .filter((r) => r.customer.isActive)
       .map(async (recipient) => {
         const surveyUrl = `${APP_URL}/survey/${survey.slug}?token=${recipient.token}`;
         const subs = subsByEmail.get(recipient.email) ?? [];
@@ -98,7 +94,7 @@ export async function sendSurveyToAllCustomers(surveyId: string): Promise<SendSu
         if (!recipient.emailSentAt) {
           const result = await sendSurveyInviteEmail({
             to: recipient.email,
-            companyName: recipient.customer.companyName,
+            companyName: recipient.respondentName ?? recipient.email,
             surveySlug: survey.slug,
             token: recipient.token,
           });

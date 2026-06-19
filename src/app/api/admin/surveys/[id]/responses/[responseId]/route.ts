@@ -22,7 +22,7 @@ export async function DELETE(
 
   // Reset recipient status so they can re-submit if needed
   await prisma.surveyRecipient.updateMany({
-    where: { surveyId: params.id, customerId: response.customerId },
+    where: { surveyId: params.id, email: response.email },
     data: { completedAt: null, status: 'sent' },
   });
 

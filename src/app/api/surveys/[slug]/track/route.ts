@@ -20,13 +20,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { slug: stri
   if (!recipientId) {
     const session = await getServerSession(authOptions);
     if (session?.user?.email) {
-      const customer = await prisma.customer.findUnique({ where: { email: session.user.email } });
-      if (customer) {
-        const r = await prisma.surveyRecipient.findUnique({
-          where: { surveyId_customerId: { surveyId: survey.id, customerId: customer.id } },
-        });
-        recipientId = r?.id ?? null;
-      }
+      const r = await prisma.surveyRecipient.findUnique({
+        where: { surveyId_email: { surveyId: survey.id, email: session.user.email } },
+      });
+      recipientId = r?.id ?? null;
     }
   }
 
