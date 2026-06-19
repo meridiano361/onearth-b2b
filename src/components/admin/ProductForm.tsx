@@ -203,6 +203,11 @@ function extractMatName(raw: string): string {
   return m ? m[1].toLowerCase() : '';
 }
 
+function extractPct(raw: string): number {
+  const m = (raw || '').match(/^(\d+(?:\.\d+)?)\s*%/);
+  return m ? parseFloat(m[1]) : 0;
+}
+
 function buildComposizione(mat1: string, mat2: string, mat3: string): string {
   return [mat1, mat2, mat3].filter(Boolean).map((m) => m.toLowerCase()).join(' ');
 }
@@ -513,6 +518,19 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     }
     setPantoneError(null);
 
+    if (isModaProduct) {
+      const missing: string[] = [];
+      if (!(v as any).dettaglio?.trim())  missing.push('Dettaglio');
+      if (!(v as any).modello?.trim())    missing.push('Modello');
+      if (!(v as any).materiale1?.trim()) missing.push('Materiale 1');
+      if (!v.colore?.trim())              missing.push('Colore');
+      if (sizeVariants.length === 0 && !(v as any).taglia?.trim()) missing.push('Taglia');
+      if (missing.length > 0) {
+        toast.error(`Campi obbligatori per MODA mancanti: ${missing.join(', ')}`);
+        return;
+      }
+    }
+
     try {
       const url    = isEdit ? `/api/products/${product!.id}` : '/api/products';
       const method = isEdit ? 'PATCH' : 'POST';
@@ -627,8 +645,8 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       {/* Moda: Dettaglio + Modello */}
       {isModa && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Combobox label="Dettaglio" field="dettaglio" value={watch('dettaglio') || ''} onChange={(v) => setValue('dettaglio', v)} />
-          <Combobox label="Modello"   field="modello"   value={watch('modello') || ''}   onChange={(v) => setValue('modello', v)} />
+          <Combobox label="Dettaglio *" field="dettaglio" value={watch('dettaglio') || ''} onChange={(v) => setValue('dettaglio', v)} />
+          <Combobox label="Modello *"   field="modello"   value={watch('modello') || ''}   onChange={(v) => setValue('modello', v)} />
         </div>
       )}
 
@@ -654,7 +672,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
             {sizeVariants.length === 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className={lbl}>Taglia</label>
+                  <label className={lbl}>Taglia *</label>
                   <select {...register('taglia')} className={sel}>
                     <option value="">— nessuna —</option>
                     {TAGLIA_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -713,7 +731,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       {isModa && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Combobox label="Colore"      field="colore"      value={watch('colore') || ''}      onChange={(v) => setValue('colore', v)} />
+            <Combobox label="Colore *"    field="colore"      value={watch('colore') || ''}      onChange={(v) => setValue('colore', v)} />
             <Combobox label="Lavorazione" field="lavorazione" value={watch('lavorazione') || ''} onChange={(v) => setValue('lavorazione', v)} />
           </div>
 
@@ -727,10 +745,19 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <MaterialFieldWithPct label="Materiale 1" value={watch('materiale1') || ''} onChange={(v) => setValue('materiale1', v)} />
-            <MaterialFieldWithPct label="Materiale 2" value={watch('materiale2') || ''} onChange={(v) => setValue('materiale2', v)} />
-            <MaterialFieldWithPct label="Materiale 3" value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
+            <MaterialFieldWithPct label="Materiale 1 *" value={watch('materiale1') || ''} onChange={(v) => setValue('materiale1', v)} />
+            <MaterialFieldWithPct label="Materiale 2"   value={watch('materiale2') || ''} onChange={(v) => setValue('materiale2', v)} />
+            <MaterialFieldWithPct label="Materiale 3"   value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
           </div>
+
+          {(() => {
+            const tot = extractPct(watchedMat1 || '') + extractPct(watchedMat2 || '') + extractPct(watchedMat3 || '');
+            return tot > 0 && Math.round(tot) !== 100 ? (
+              <p className="text-xs text-amber-600 flex items-center gap-1">
+                <span>⚠</span> Le percentuali sommano <strong>{tot.toFixed(0)}%</strong> — devono fare 100%.
+              </p>
+            ) : null;
+          })()}
 
           <Input label="Composizione" {...register('composizione')} />
 
