@@ -4,24 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import {
-  LayoutDashboard,
-  Package,
-  Users,
-  ShoppingCart,
-  Layers,
-  LogOut,
-  Settings,
-  X,
-  UserPlus,
-  Eye,
-  FileText,
-  Image as ImageIcon,
-  BookOpen,
-  Paintbrush,
-  Bell,
-  BarChart2,
-  Sparkles,
-  MessageSquare,
+  LayoutDashboard, Package, Users, ShoppingCart, Layers,
+  LogOut, Settings, X, UserPlus, Eye, FileText,
+  Image as ImageIcon, BookOpen, Paintbrush, Bell,
+  BarChart2, Sparkles, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -31,25 +17,48 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   exact?: boolean;
-  roles?: string[]; // undefined = all admin roles
+  roles?: string[];
+  external?: boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: '/admin',                  label: 'Dashboard',          icon: LayoutDashboard, exact: true },
-  { href: '/admin/orders',           label: 'Ordini',             icon: ShoppingCart,    roles: ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE'] },
-  { href: '/admin/products',         label: 'Prodotti',           icon: Package,         roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO', 'COMMERCIALE'] },
-  { href: '/admin/customers',        label: 'Clienti',            icon: Users,           roles: ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE'] },
-  { href: '/admin/classificazione',  label: 'Classificazione',    icon: Layers,          roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO'] },
-  { href: '/admin/access-requests',  label: 'Richieste Accesso',  icon: UserPlus,        roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { href: '/admin/documenti',        label: 'Documenti',          icon: FileText,        roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { href: '/admin/foto',             label: 'Foto',               icon: ImageIcon,       roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { href: '/admin/catalogo-pdf',     label: 'Catalogo PDF',       icon: BookOpen,        roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { href: '/admin/preview',          label: 'Anteprima cliente',  icon: Eye,             roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { href: '/admin/notifiche',         label: 'Notifiche',          icon: Bell,            roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { href: '/admin/sondaggi',           label: 'Sondaggi',           icon: MessageSquare,   roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { href: '/admin/analytics',         label: 'Analytics',          icon: BarChart2,       roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { href: '/admin/personalizzazione', label: 'Personalizzazione', icon: Paintbrush,      roles: ['SUPER_ADMIN'] },
-  { href: '/admin/impostazioni',     label: 'Impostazioni',       icon: Settings,        roles: ['SUPER_ADMIN'] },
+interface NavGroup {
+  groupLabel: string;
+  icon: React.ElementType;
+  roles?: string[];
+  items: NavItem[];
+}
+
+type NavEntry = NavItem | NavGroup;
+
+function isGroup(e: NavEntry): e is NavGroup {
+  return 'groupLabel' in e;
+}
+
+// Alphabetical order (Italian labels)
+const NAV: NavEntry[] = [
+  { href: '/admin/analytics',        label: 'Analisi',           icon: BarChart2,       roles: ['SUPER_ADMIN', 'ADMIN'] },
+  {
+    groupLabel: 'Anteprima',
+    icon: Eye,
+    roles: ['SUPER_ADMIN', 'ADMIN'],
+    items: [
+      { href: '/admin/preview', label: 'App attuale', icon: Eye,      roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { href: '/catalog',       label: 'Nuova app',   icon: Sparkles, roles: ['SUPER_ADMIN', 'ADMIN'], external: true },
+    ],
+  },
+  { href: '/admin/catalogo-pdf',     label: 'Catalogo PDF',      icon: BookOpen,        roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { href: '/admin/classificazione',  label: 'Classificazione',   icon: Layers,          roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO'] },
+  { href: '/admin/customers',        label: 'Clienti',           icon: Users,           roles: ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE'] },
+  { href: '/admin',                  label: 'Dashboard',         icon: LayoutDashboard, exact: true },
+  { href: '/admin/documenti',        label: 'Documenti',         icon: FileText,        roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { href: '/admin/foto',             label: 'Foto',              icon: ImageIcon,       roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { href: '/admin/impostazioni',     label: 'Impostazioni',      icon: Settings,        roles: ['SUPER_ADMIN'] },
+  { href: '/admin/notifiche',        label: 'Notifiche',         icon: Bell,            roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { href: '/admin/orders',           label: 'Ordini',            icon: ShoppingCart,    roles: ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE'] },
+  { href: '/admin/personalizzazione',label: 'Personalizzazione', icon: Paintbrush,      roles: ['SUPER_ADMIN'] },
+  { href: '/admin/products',         label: 'Prodotti',          icon: Package,         roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO', 'COMMERCIALE'] },
+  { href: '/admin/access-requests',  label: 'Richieste Accesso', icon: UserPlus,        roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { href: '/admin/sondaggi',         label: 'Sondaggi',          icon: MessageSquare,   roles: ['SUPER_ADMIN', 'ADMIN'] },
 ];
 
 interface AdminSidebarProps {
@@ -61,14 +70,20 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
   const { data: session } = useSession();
   const role = session?.user?.role ?? '';
 
-  const visibleItems = NAV_ITEMS.filter(
-    (item) => !item.roles || item.roles.includes(role)
-  );
-
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href;
     return pathname === href || pathname.startsWith(href + '/');
   }
+
+  function canSee(roles?: string[]) {
+    return !roles || roles.includes(role);
+  }
+
+  const linkClass = (active: boolean) =>
+    cn(
+      'flex items-center gap-3 px-3 py-2.5 rounded text-xs font-medium transition-all duration-150',
+      active ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'
+    );
 
   return (
     <aside className="w-56 bg-primary flex flex-col h-full flex-shrink-0">
@@ -97,57 +112,76 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {visibleItems.map(({ href, label, icon: Icon, exact }) => (
-          <Link
-            key={href}
-            href={href}
-            onClick={onClose}
-            className={cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded text-xs font-medium transition-all duration-150',
-              isActive(href, exact)
-                ? 'bg-white/10 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
-            )}
-          >
-            <Icon size={15} />
-            {label}
-          </Link>
-        ))}
+        {NAV.map((entry) => {
+          if (isGroup(entry)) {
+            if (!canSee(entry.roles)) return null;
+            const visibleItems = entry.items.filter((i) => canSee(i.roles));
+            if (visibleItems.length === 0) return null;
+            const groupActive = visibleItems.some((i) => isActive(i.href, i.exact));
+            return (
+              <div key={entry.groupLabel}>
+                <p className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 text-xs font-medium',
+                  groupActive ? 'text-white' : 'text-gray-500'
+                )}>
+                  <entry.icon size={15} />
+                  {entry.groupLabel}
+                </p>
+                <div className="ml-3 pl-3 border-l border-white/10 space-y-0.5">
+                  {visibleItems.map((item) => {
+                    const active = isActive(item.href, item.exact);
+                    if (item.external) {
+                      return (
+                        <a
+                          key={item.href}
+                          href={item.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={onClose}
+                          className={linkClass(active)}
+                        >
+                          <item.icon size={13} />
+                          {item.label}
+                        </a>
+                      );
+                    }
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={onClose}
+                        className={linkClass(active)}
+                      >
+                        <item.icon size={13} />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          }
+
+          if (!canSee(entry.roles)) return null;
+          return (
+            <Link
+              key={entry.href}
+              href={entry.href}
+              onClick={onClose}
+              className={linkClass(isActive(entry.href, entry.exact))}
+            >
+              <entry.icon size={15} />
+              {entry.label}
+            </Link>
+          );
+        })}
       </nav>
 
-      {/* Footer: role badge + preview links + logout */}
+      {/* Footer: role badge + logout */}
       <div className="px-3 py-4 border-t border-white/10 space-y-1">
         {role && role !== 'CUSTOMER' && (
           <p className="px-3 text-2xs text-gray-600 uppercase tracking-widest mb-2">{role.replace('_', ' ')}</p>
         )}
-
-        {/* Anteprima app attuale — impersona un cliente */}
-        <Link
-          href="/admin/preview"
-          onClick={onClose}
-          className="flex items-start gap-3 px-3 py-2.5 w-full rounded text-xs text-gray-500 hover:text-white hover:bg-white/5 transition-all duration-150"
-        >
-          <Eye size={15} className="flex-shrink-0 mt-px" />
-          <span className="leading-tight">
-            Anteprima app attuale
-            <span className="block text-2xs text-gray-700 mt-0.5">come la vede il cliente</span>
-          </span>
-        </Link>
-
-        {/* Anteprima nuova app — landing sperimentale admin */}
-        <a
-          href="/catalog"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-start gap-3 px-3 py-2.5 w-full rounded text-xs text-gray-500 hover:text-white hover:bg-white/5 transition-all duration-150"
-        >
-          <Sparkles size={15} className="flex-shrink-0 mt-px" />
-          <span className="leading-tight">
-            Anteprima nuova app
-            <span className="block text-2xs text-gray-700 mt-0.5">nascosta, in sviluppo</span>
-          </span>
-        </a>
-
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           className="flex items-center gap-3 px-3 py-2.5 w-full rounded text-xs text-gray-500 hover:text-white hover:bg-white/5 transition-all duration-150"
