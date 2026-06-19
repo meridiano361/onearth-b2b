@@ -1,5 +1,5 @@
-import AdminRecensioniModificaPage from '@/components/admin/AdminRecensioniModificaPage';
+import { redirect } from 'next/navigation';
 
-export default function Page() {
-  return <AdminRecensioniModificaPage />;
+export default function ModificaPage() {
+  redirect('/admin/sondaggi');
 }

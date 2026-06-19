@@ -1,8 +1,5 @@
-import { Metadata } from 'next';
-import AdminRecensioniRispostePage from '@/components/admin/AdminRecensioniRispostePage';
-
-export const metadata: Metadata = { title: 'Risposte Survey — Admin' };
+import { redirect } from 'next/navigation';
 
 export default function RispostePage() {
-  return <AdminRecensioniRispostePage />;
+  redirect('/admin/sondaggi');
 }

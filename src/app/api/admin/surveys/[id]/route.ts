@@ -12,7 +12,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const survey = await prisma.survey.findUnique({
     where: { id: params.id },
-    include: { questions: { orderBy: { sortOrder: 'asc' } } },
+    include: {
+      questions: { orderBy: { sortOrder: 'asc' } },
+      _count: { select: { responses: true } },
+    },
   });
   if (!survey) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 

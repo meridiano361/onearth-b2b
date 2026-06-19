@@ -4,6 +4,10 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 
+function stripHtml(html: string) {
+  return html.replace(/<[^>]*>/g, '').trim();
+}
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session || !isAdminRole(session.user.role)) {
@@ -11,20 +15,19 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 
   const surveyId = params.id;
-  const url = req.nextUrl;
-  const search = url.searchParams.get('search') ?? '';
-  const filterPrenotazioni = url.searchParams.get('prenotazioni') ?? '';
-  const filterDemetra = url.searchParams.get('demetra') ?? '';
-  const filterLowRating = url.searchParams.get('lowRating') === '1';
+  const search = req.nextUrl.searchParams.get('search') ?? '';
 
-  const responses = await prisma.surveyResponse.findMany({
-    where: { surveyId, completed: true },
-    include: {
-      customer: { select: { id: true, companyName: true, email: true, customerCode: true } },
-      answers: true,
-    },
-    orderBy: { submittedAt: 'desc' },
-  });
+  const [questions, responses] = await Promise.all([
+    prisma.surveyQuestion.findMany({ where: { surveyId }, orderBy: { sortOrder: 'asc' } }),
+    prisma.surveyResponse.findMany({
+      where: { surveyId, completed: true },
+      include: {
+        customer: { select: { id: true, companyName: true, email: true, customerCode: true } },
+        answers: true,
+      },
+      orderBy: { submittedAt: 'desc' },
+    }),
+  ]);
 
   function getAnswer(answers: typeof responses[0]['answers'], key: string) {
     const a = answers.find((x) => x.questionKey === key);
@@ -34,40 +37,35 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     return a.answerText ?? null;
   }
 
-  let rows = responses.map((r) => ({
-    id: r.id,
-    submittedAt: r.submittedAt,
-    sourceChannel: r.sourceChannel,
-    respondentName: r.respondentName ?? r.customer?.companyName ?? r.email,
-    email: r.email,
-    customerCode: r.customer?.customerCode ?? null,
-    soddisfazione: getAnswer(r.answers, 'soddisfazione'),
-    facilitaUso: getAnswer(r.answers, 'facilita_uso'),
-    sezioniUtili: getAnswer(r.answers, 'sezioni_utili'),
-    prenotazioniFuture: getAnswer(r.answers, 'prenotazioni_future'),
-    usoDemetra: getAnswer(r.answers, 'uso_demetra'),
-    suggerimento: getAnswer(r.answers, 'suggerimento'),
-  }));
+  let rows = responses.map((r) => {
+    const answersMap: Record<string, unknown> = {};
+    for (const q of questions) {
+      answersMap[q.questionKey] = getAnswer(r.answers, q.questionKey);
+    }
+    return {
+      id: r.id,
+      submittedAt: r.submittedAt,
+      sourceChannel: r.sourceChannel,
+      respondentName: r.respondentName ?? r.customer?.companyName ?? r.email,
+      email: r.email,
+      customerCode: r.customer?.customerCode ?? null,
+      answers: answersMap,
+    };
+  });
 
-  // Filters
-  if (filterPrenotazioni) {
-    rows = rows.filter((r) => r.prenotazioniFuture === filterPrenotazioni);
-  }
-  if (filterDemetra) {
-    rows = rows.filter((r) => r.usoDemetra === filterDemetra);
-  }
-  if (filterLowRating) {
-    rows = rows.filter((r) => (r.soddisfazione as number) <= 2 || (r.facilitaUso as number) <= 2);
-  }
   if (search) {
     const q = search.toLowerCase();
-    rows = rows.filter(
-      (r) =>
-        r.respondentName.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q) ||
-        (typeof r.suggerimento === 'string' && r.suggerimento.toLowerCase().includes(q))
-    );
+    rows = rows.filter((r) => {
+      if (r.respondentName.toLowerCase().includes(q)) return true;
+      if (r.email.toLowerCase().includes(q)) return true;
+      return Object.values(r.answers).some(
+        (v) => typeof v === 'string' && v.toLowerCase().includes(q)
+      );
+    });
   }
 
-  return NextResponse.json({ responses: rows });
+  return NextResponse.json({
+    questions: questions.map((q) => ({ key: q.questionKey, text: stripHtml(q.questionText), type: q.questionType })),
+    responses: rows,
+  });
 }

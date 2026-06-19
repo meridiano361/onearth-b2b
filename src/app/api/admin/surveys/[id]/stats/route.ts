@@ -4,6 +4,10 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 
+function stripHtml(html: string) {
+  return html.replace(/<[^>]*>/g, '').trim();
+}
+
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session || !isAdminRole(session.user.role)) {
@@ -11,16 +15,16 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
 
   const surveyId = params.id;
-  const survey = await prisma.survey.findUnique({ where: { id: surveyId } });
-  if (!survey) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const [recipients, responses, answers] = await Promise.all([
+  const [survey, questions, recipients, responses, answers] = await Promise.all([
+    prisma.survey.findUnique({ where: { id: surveyId } }),
+    prisma.surveyQuestion.findMany({ where: { surveyId }, orderBy: { sortOrder: 'asc' } }),
     prisma.surveyRecipient.findMany({ where: { surveyId } }),
     prisma.surveyResponse.findMany({ where: { surveyId, completed: true } }),
-    prisma.surveyAnswer.findMany({
-      where: { response: { surveyId } },
-    }),
+    prisma.surveyAnswer.findMany({ where: { response: { surveyId } } }),
   ]);
+
+  if (!survey) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const totalRecipients = recipients.length;
   const totalPushSent = recipients.filter((r) => r.pushSentAt).length;
@@ -29,45 +33,37 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const totalCompleted = responses.length;
   const responseRate = totalRecipients > 0 ? (totalCompleted / totalRecipients) * 100 : 0;
 
-  // Star averages
-  function avgStars(key: string) {
-    const vals = answers
-      .filter((a) => a.questionKey === key && a.answerNumber !== null)
-      .map((a) => Number(a.answerNumber));
-    return vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
-  }
+  const questionStats = questions.map((q) => {
+    const qAnswers = answers.filter((a) => a.questionKey === q.questionKey);
 
-  // Distribution for star questions
-  function starDist(key: string) {
-    const dist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    answers
-      .filter((a) => a.questionKey === key && a.answerNumber !== null)
-      .forEach((a) => { const n = Math.round(Number(a.answerNumber)); if (n >= 1 && n <= 5) dist[n]++; });
-    return dist;
-  }
+    if (q.questionType === 'stars') {
+      const nums = qAnswers.filter((a) => a.answerNumber !== null).map((a) => Number(a.answerNumber));
+      const dist: Record<string, number> = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
+      nums.forEach((n) => { const k = Math.round(n); if (k >= 1 && k <= 5) dist[String(k)]++; });
+      const avg = nums.length > 0 ? nums.reduce((s, v) => s + v, 0) / nums.length : null;
+      return { key: q.questionKey, text: stripHtml(q.questionText), type: 'stars', dist, avg, total: nums.length };
+    }
 
-  // Single-select distribution
-  function selectDist(key: string) {
-    const dist: Record<string, number> = {};
-    answers
-      .filter((a) => a.questionKey === key && a.answerText)
-      .forEach((a) => { dist[a.answerText!] = (dist[a.answerText!] ?? 0) + 1; });
-    return dist;
-  }
+    if (q.questionType === 'single_select') {
+      const dist: Record<string, number> = {};
+      qAnswers.filter((a) => a.answerText).forEach((a) => { dist[a.answerText!] = (dist[a.answerText!] ?? 0) + 1; });
+      return { key: q.questionKey, text: stripHtml(q.questionText), type: 'single_select', dist, total: qAnswers.length };
+    }
 
-  // Multi-select counts
-  function multiSelectCounts(key: string) {
-    const counts: Record<string, number> = {};
-    answers
-      .filter((a) => a.questionKey === key && a.answerJson)
-      .forEach((a) => {
-        const opts = a.answerJson as string[];
-        if (Array.isArray(opts)) {
-          opts.forEach((o) => { counts[o] = (counts[o] ?? 0) + 1; });
+    if (q.questionType === 'multi_select') {
+      const dist: Record<string, number> = {};
+      qAnswers.forEach((a) => {
+        if (Array.isArray(a.answerJson)) {
+          (a.answerJson as string[]).forEach((o) => { dist[o] = (dist[o] ?? 0) + 1; });
         }
       });
-    return counts;
-  }
+      return { key: q.questionKey, text: stripHtml(q.questionText), type: 'multi_select', dist, total: qAnswers.length };
+    }
+
+    // text
+    const answered = qAnswers.filter((a) => a.answerText && a.answerText.trim()).length;
+    return { key: q.questionKey, text: stripHtml(q.questionText), type: 'text', dist: {}, total: answered };
+  });
 
   return NextResponse.json({
     totalRecipients,
@@ -76,12 +72,6 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     totalOpened,
     totalCompleted,
     responseRate: Math.round(responseRate * 10) / 10,
-    avgSoddisfazione: avgStars('soddisfazione'),
-    avgFacilitaUso: avgStars('facilita_uso'),
-    distSoddisfazione: starDist('soddisfazione'),
-    distFacilitaUso: starDist('facilita_uso'),
-    distSezioniUtili: multiSelectCounts('sezioni_utili'),
-    distPrenotazioniFuture: selectDist('prenotazioni_future'),
-    distUsoDemetra: selectDist('uso_demetra'),
+    questions: questionStats,
   });
 }
