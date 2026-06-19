@@ -55,7 +55,7 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   );
 }
 
-// Materiale con percentuale (es. "10% Lino") — solo Moda
+// Materiale con percentuale (es. "10% Lino") — usato sia per Moda che Casa
 function MaterialFieldWithPct({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const parse = (v: string) => {
     const m = (v || '').match(/^(\d+(?:\.\d+)?)\s*%\s+(.+)$/);
@@ -115,35 +115,6 @@ function MaterialFieldWithPct({ label, value, onChange }: { label: string; value
   );
 }
 
-// Materiale semplice (Casa)
-function MaterialField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  const isCustom = !!value && !(MATERIALE_OPTIONS as readonly string[]).includes(value);
-  const [selectVal, setSelectVal] = useState(isCustom ? 'Altro' : value);
-  const [custom, setCustom] = useState(isCustom ? value : '');
-  return (
-    <div>
-      <label className={lbl}>{label}</label>
-      <select
-        value={selectVal}
-        onChange={(e) => { const v = e.target.value; setSelectVal(v); if (v !== 'Altro') { setCustom(''); onChange(v); } }}
-        className={sel}
-      >
-        <option value="">— nessuno —</option>
-        {MATERIALE_OPTIONS.map((m) => <option key={m} value={m}>{m}</option>)}
-        <option value="Altro">Altro</option>
-      </select>
-      {selectVal === 'Altro' && (
-        <input
-          type="text" value={custom}
-          onChange={(e) => { setCustom(e.target.value); onChange(e.target.value); }}
-          placeholder="Specifica materiale…"
-          className="mt-1.5 w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent"
-        />
-      )}
-    </div>
-  );
-}
-
 // ── Zod schema ────────────────────────────────────────────────────────────────
 const schema = z
   .object({
@@ -174,11 +145,16 @@ const schema = z
     certificazione2: z.string().optional(),
     certificazione3: z.string().optional(),
     fantasia: z.string().optional(),
-    temaColore: z.string().optional(),
-    temaColore2: z.string().optional(),
-    temaColore3: z.string().optional(),
-    temaColore4: z.string().optional(),
-    temaColore5: z.string().optional(),
+    temaColore:   z.string().optional(),
+    temaColore2:  z.string().optional(),
+    temaColore3:  z.string().optional(),
+    temaColore4:  z.string().optional(),
+    temaColore5:  z.string().optional(),
+    temaColore6:  z.string().optional(),
+    temaColore7:  z.string().optional(),
+    temaColore8:  z.string().optional(),
+    temaColore9:  z.string().optional(),
+    temaColore10: z.string().optional(),
     costoIeSenzaReso: z.string().min(1, 'Obbligatorio'),
     costoIeConReso: z.string().optional(),
     costPrice: z.string().optional().transform((v) => (v ? Number(v) : 0)),
@@ -190,7 +166,7 @@ const schema = z
     lotSize: z.string().optional().transform((v) => (v ? parseInt(v, 10) : 1)),
     tranche: z.string().optional(),
     notes: z.string().optional(),
-    imageUrl: z.string().optional(),
+    imageUrl:  z.string().optional(),
     imageUrl2: z.string().optional(),
     imageUrl3: z.string().optional(),
     imageUrl4: z.string().optional(),
@@ -214,6 +190,11 @@ interface ProductFormProps {
   onSuccess: () => void;
   onCancel: () => void;
 }
+
+const TEMA_FIELDS = [
+  'temaColore', 'temaColore2', 'temaColore3', 'temaColore4', 'temaColore5',
+  'temaColore6', 'temaColore7', 'temaColore8', 'temaColore9', 'temaColore10',
+] as const;
 
 export default function ProductForm({ product, initialValues, onSuccess, onCancel }: ProductFormProps) {
   const isEdit = !!product;
@@ -291,11 +272,16 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
       certificazione2: p.certificazione2 || '',
       certificazione3: p.certificazione3 || '',
       fantasia: p.fantasia || '',
-      temaColore: product.temaColore || '',
-      temaColore2: product.temaColore2 || '',
-      temaColore3: product.temaColore3 || '',
-      temaColore4: product.temaColore4 || '',
-      temaColore5: product.temaColore5 || '',
+      temaColore:   product.temaColore   || '',
+      temaColore2:  product.temaColore2  || '',
+      temaColore3:  product.temaColore3  || '',
+      temaColore4:  product.temaColore4  || '',
+      temaColore5:  product.temaColore5  || '',
+      temaColore6:  p.temaColore6  || '',
+      temaColore7:  p.temaColore7  || '',
+      temaColore8:  p.temaColore8  || '',
+      temaColore9:  p.temaColore9  || '',
+      temaColore10: p.temaColore10 || '',
       costoIeSenzaReso: p.costoIeSenzaReso != null ? String(p.costoIeSenzaReso) : String(product.costPrice),
       costoIeConReso: p.costoIeConReso != null ? String(p.costoIeConReso) : '',
       costPrice: p.costoIeSenzaReso != null ? String(p.costoIeSenzaReso) : String(product.costPrice),
@@ -307,7 +293,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
       lotSize: String(product.lotSize),
       tranche: product.tranche || '',
       notes: product.notes || '',
-      imageUrl: product.imageUrl || '',
+      imageUrl:  product.imageUrl  || '',
       imageUrl2: product.imageUrl2 || '',
       imageUrl3: product.imageUrl3 || '',
       imageUrl4: product.imageUrl4 || '',
@@ -502,6 +488,11 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
           temaColore3:    (v as any).temaColore3    || null,
           temaColore4:    (v as any).temaColore4    || null,
           temaColore5:    (v as any).temaColore5    || null,
+          temaColore6:    (v as any).temaColore6    || null,
+          temaColore7:    (v as any).temaColore7    || null,
+          temaColore8:    (v as any).temaColore8    || null,
+          temaColore9:    (v as any).temaColore9    || null,
+          temaColore10:   (v as any).temaColore10   || null,
           costoIeSenzaReso: (v as any).costoIeSenzaReso ? parseFloat((v as any).costoIeSenzaReso) || null : null,
           costoIeConReso:   (v as any).costoIeConReso  ? parseFloat((v as any).costoIeConReso)  || null : null,
           fasciaRicarico: v.fasciaRicarico || null,
@@ -532,8 +523,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
   }
 
   function clearTemaFrom(n: number) {
-    const fields = ['temaColore', 'temaColore2', 'temaColore3', 'temaColore4', 'temaColore5'] as const;
-    for (let i = n - 1; i < fields.length; i++) setValue(fields[i], '');
+    for (let i = n - 1; i < TEMA_FIELDS.length; i++) setValue(TEMA_FIELDS[i], '');
   }
 
   // ── JSX ───────────────────────────────────────────────────────────────────
@@ -569,7 +559,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
         </div>
       )}
 
-      {/* ── Moda: Dettaglio + Modello (subito dopo codice/nome) ── */}
+      {/* Moda: Dettaglio + Modello */}
       {isModa && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Combobox label="Dettaglio" field="dettaglio" value={watch('dettaglio') || ''} onChange={(v) => setValue('dettaglio', v)} />
@@ -577,30 +567,26 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
         </div>
       )}
 
-      {/* Casa: Descrizione */}
+      {/* Casa: Linea */}
       {!isModa && (
-        <div>
-          <label className={lbl}>Descrizione (IT)</label>
-          <textarea
-            {...register('description')}
-            rows={3}
-            placeholder="Descrizione italiana del prodotto…"
-            className="w-full border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-          />
-        </div>
+        <Combobox label="Linea" field="nomLinea" value={watch('nomLinea') || ''} onChange={(v) => setValue('nomLinea', v)} />
       )}
 
-      {/* Taglia + Misure */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className={lbl}>Taglia</label>
-          <select {...register('taglia')} className={sel}>
-            <option value="">— nessuna —</option>
-            {TAGLIA_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
+      {/* Moda: Taglia + Misure | Casa: Misure */}
+      {isModa ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={lbl}>Taglia</label>
+            <select {...register('taglia')} className={sel}>
+              <option value="">— nessuna —</option>
+              {TAGLIA_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <Input label="Misure" {...register('misura')} placeholder="es. S / M / L / XL" />
         </div>
+      ) : (
         <Input label="Misure" {...register('misura')} placeholder="es. 30×40 cm" />
-      </div>
+      )}
 
       {/* Produttore + Paese */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -611,13 +597,11 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
       {/* ── Moda: campi specifici in Anagrafica ── */}
       {isModa && (
         <>
-          {/* Colore + Lavorazione */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Combobox label="Colore"     field="colore"     value={watch('colore') || ''}     onChange={(v) => setValue('colore', v)} />
+            <Combobox label="Colore"      field="colore"      value={watch('colore') || ''}      onChange={(v) => setValue('colore', v)} />
             <Combobox label="Lavorazione" field="lavorazione" value={watch('lavorazione') || ''} onChange={(v) => setValue('lavorazione', v)} />
           </div>
 
-          {/* Pantone FHI-TCX * */}
           <div>
             <label className={lbl}>Pantone FHI-TCX <span className="text-red-400 ml-0.5">*</span></label>
             <ProductPantoneForm
@@ -627,17 +611,14 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
             {pantoneError && <p className="mt-1 text-xs text-red-500">{pantoneError}</p>}
           </div>
 
-          {/* % + Materiale 1/2/3 */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <MaterialFieldWithPct label="Materiale 1" value={watch('materiale1') || ''} onChange={(v) => setValue('materiale1', v)} />
             <MaterialFieldWithPct label="Materiale 2" value={watch('materiale2') || ''} onChange={(v) => setValue('materiale2', v)} />
             <MaterialFieldWithPct label="Materiale 3" value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
           </div>
 
-          {/* Composizione */}
           <Input label="Composizione" {...register('composizione')} placeholder="es. 80% cotone, 20% poliestere" />
 
-          {/* Fantasia */}
           <div>
             <label className={lbl}>Fantasia</label>
             <select {...register('fantasia')} className={sel}>
@@ -646,7 +627,6 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
             </select>
           </div>
 
-          {/* Note (in Anagrafica per Moda) */}
           <div>
             <label className={lbl}>Note</label>
             <textarea
@@ -662,8 +642,6 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
       {/* ── Casa: campi specifici in Anagrafica ── */}
       {!isModa && (
         <>
-          <Combobox label="Linea" field="nomLinea" value={watch('nomLinea') || ''} onChange={(v) => setValue('nomLinea', v)} />
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Combobox label="Colore"      field="colore"      value={watch('colore') || ''}      onChange={(v) => setValue('colore', v)} />
             <Combobox label="Lavorazione" field="lavorazione" value={watch('lavorazione') || ''} onChange={(v) => setValue('lavorazione', v)} />
@@ -678,18 +656,12 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <MaterialField label="Materiale 1" value={watch('materiale1') || ''} onChange={(v) => setValue('materiale1', v)} />
-            <MaterialField label="Materiale 2" value={watch('materiale2') || ''} onChange={(v) => setValue('materiale2', v)} />
-            <MaterialField label="Materiale 3" value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
+            <MaterialFieldWithPct label="Materiale 1" value={watch('materiale1') || ''} onChange={(v) => setValue('materiale1', v)} />
+            <MaterialFieldWithPct label="Materiale 2" value={watch('materiale2') || ''} onChange={(v) => setValue('materiale2', v)} />
+            <MaterialFieldWithPct label="Materiale 3" value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
           </div>
 
           <Input label="Composizione" {...register('composizione')} placeholder="es. 80% cotone, 20% poliestere" />
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input label="Certificazione 1" {...register('certificazione1')} placeholder="es. GOTS" />
-            <Input label="Certificazione 2" {...register('certificazione2')} placeholder="es. Oeko-Tex" />
-            <Input label="Certificazione 3" {...register('certificazione3')} placeholder="es. Fair Trade" />
-          </div>
 
           <div>
             <label className={lbl}>Fantasia</label>
@@ -699,49 +671,15 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
             </select>
           </div>
 
-          {/* Tema colore */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Combobox label="Tema colore" field="temaColore" value={watch('temaColore') || ''} onChange={(v) => { setValue('temaColore', v); if (!v) clearTemaFrom(1); }} />
-            {watch('temaColore') ? (
-              <div className="flex items-end gap-1">
-                <div className="flex-1">
-                  <Combobox label="Tema colore 2" field="temaColore" value={watch('temaColore2') || ''} onChange={(v) => { setValue('temaColore2', v); if (!v) clearTemaFrom(2); }} />
-                </div>
-                {watch('temaColore2') && (
-                  <button type="button" onClick={() => clearTemaFrom(2)} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors"><X size={13} /></button>
-                )}
-              </div>
-            ) : <div />}
+          <div>
+            <label className={lbl}>Note</label>
+            <textarea
+              {...register('notes')}
+              rows={2}
+              placeholder="Note aggiuntive…"
+              className="w-full border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+            />
           </div>
-          {watch('temaColore2') && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-end gap-1">
-                <div className="flex-1">
-                  <Combobox label="Tema colore 3" field="temaColore" value={watch('temaColore3') || ''} onChange={(v) => { setValue('temaColore3', v); if (!v) clearTemaFrom(3); }} />
-                </div>
-                {watch('temaColore3') && <button type="button" onClick={() => clearTemaFrom(3)} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors"><X size={13} /></button>}
-              </div>
-              {watch('temaColore3') ? (
-                <div className="flex items-end gap-1">
-                  <div className="flex-1">
-                    <Combobox label="Tema colore 4" field="temaColore" value={watch('temaColore4') || ''} onChange={(v) => { setValue('temaColore4', v); if (!v) setValue('temaColore5', ''); }} />
-                  </div>
-                  {watch('temaColore4') && <button type="button" onClick={() => { setValue('temaColore4', ''); setValue('temaColore5', ''); }} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors"><X size={13} /></button>}
-                </div>
-              ) : <div />}
-            </div>
-          )}
-          {watch('temaColore4') && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-end gap-1">
-                <div className="flex-1">
-                  <Combobox label="Tema colore 5" field="temaColore" value={watch('temaColore5') || ''} onChange={(v) => setValue('temaColore5', v)} />
-                </div>
-                {watch('temaColore5') && <button type="button" onClick={() => setValue('temaColore5', '')} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors"><X size={13} /></button>}
-              </div>
-              <div />
-            </div>
-          )}
         </>
       )}
 
@@ -798,7 +736,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
         )}
       </div>
 
-      {/* Moda: Classe + Sottoclasse + Gruppo omogeneo in 3 colonne */}
+      {/* Moda: Classe + Sottoclasse + Gruppo omogeneo (3 colonne) */}
       {isModa && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
@@ -840,21 +778,16 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
         </div>
       )}
 
-      {/* Casa: Classe + Sottoclasse, poi Gruppo omogeneo + Dettaglio */}
+      {/* Casa: Classe + Sottoclasse + Gruppo omogeneo (3 colonne) */}
       {!isModa && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Combobox label="Classe"      field="classe"      value={watchedClasse || ''}      onChange={(v) => setValue('classe', v, { shouldDirty: true })} />
-            <Combobox label="Sottoclasse" field="sottoclasse" value={watchedSottoclasse || ''} onChange={(v) => setValue('sottoclasse', v, { shouldDirty: true })} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Combobox label="Gruppo omogeneo" field="gruppoOmogeneo" value={watchedGruppoOmogeneo || ''} onChange={(v) => setValue('gruppoOmogeneo', v, { shouldDirty: true })} />
-            <Combobox label="Dettaglio"       field="dettaglio"      value={watch('dettaglio') || ''}     onChange={(v) => setValue('dettaglio', v)} />
-          </div>
-        </>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Combobox label="Classe"          field="classe"         value={watchedClasse || ''}          onChange={(v) => setValue('classe', v, { shouldDirty: true })} />
+          <Combobox label="Sottoclasse"     field="sottoclasse"    value={watchedSottoclasse || ''}     onChange={(v) => setValue('sottoclasse', v, { shouldDirty: true })} />
+          <Combobox label="Gruppo omogeneo" field="gruppoOmogeneo" value={watchedGruppoOmogeneo || ''} onChange={(v) => setValue('gruppoOmogeneo', v, { shouldDirty: true })} />
+        </div>
       )}
 
-      {/* Moda: Blocchi colore (in Classificazione) */}
+      {/* Moda: Blocchi colore */}
       {isModa && colorBlocks && colorBlocks.length > 0 && (
         <div>
           <p className={lbl}>Blocco colore</p>
@@ -878,6 +811,41 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
                 >
                   {cb.name}
                 </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Casa: Tema colore (cascata fino a 10) */}
+      {!isModa && (
+        <div>
+          <p className={lbl}>Tema colore</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+            {TEMA_FIELDS.map((field, i) => {
+              const prevField = i > 0 ? TEMA_FIELDS[i - 1] : null;
+              if (prevField && !watch(prevField)) return null;
+              const val = watch(field) || '';
+              return (
+                <div key={field} className="flex items-end gap-1">
+                  <div className="flex-1">
+                    <Combobox
+                      label={String(i + 1)}
+                      field="temaColore"
+                      value={val}
+                      onChange={(v) => { setValue(field, v); if (!v) clearTemaFrom(i + 1); }}
+                    />
+                  </div>
+                  {val && (
+                    <button
+                      type="button"
+                      onClick={() => clearTemaFrom(i + 1)}
+                      className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -962,20 +930,6 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
         <Input label="Confezione" type="number" min="1" step="1" {...register('lotSize')} placeholder="1" />
         <Combobox label="Tranche" field="tranche" value={watch('tranche') || ''} onChange={(v) => setValue('tranche', v)} />
       </div>
-
-      {/* Note per Casa (sezione separata) */}
-      {!isModa && (
-        <>
-          <Divider />
-          <SectionLabel>Note</SectionLabel>
-          <textarea
-            {...register('notes')}
-            rows={2}
-            placeholder="Note aggiuntive…"
-            className="w-full border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-          />
-        </>
-      )}
 
       <Divider />
 

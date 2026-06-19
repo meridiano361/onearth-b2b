@@ -81,6 +81,11 @@ model Product {
   temaColore3        String?
   temaColore4        String?
   temaColore5        String?
+  temaColore6        String?
+  temaColore7        String?
+  temaColore8        String?
+  temaColore9        String?
+  temaColore10       String?
   modello            String?
   taglia             String?
   bloccoColore       String?
