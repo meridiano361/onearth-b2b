@@ -21,6 +21,7 @@ const updateSchema = z.object({
   imageUrl2: z.string().optional().nullable(),
   imageUrl3: z.string().optional().nullable(),
   imageUrl4: z.string().optional().nullable(),
+  imageUrl5: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   categoryId: z.string().optional().nullable(),
   collectionId: z.string().optional().nullable(),
