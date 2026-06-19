@@ -193,7 +193,10 @@ export default function SurveyWizard({ slug, token }: { slug: string; token?: st
               Lascia la tua opinione: bastano solo 2 minuti.
             </p>
             {data.survey.description && (
-              <p className="text-gray-400 text-xs mb-8">{data.survey.description}</p>
+              <div
+                className="survey-rte text-gray-400 text-xs mb-8 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: data.survey.description }}
+              />
             )}
 
             <div className="space-y-3 mt-8">
@@ -239,9 +242,10 @@ export default function SurveyWizard({ slug, token }: { slug: string; token?: st
       {/* Question */}
       <div className="flex-1 flex flex-col px-6 pt-6 pb-6">
         <div className="max-w-sm mx-auto w-full flex-1 flex flex-col">
-          <h2 className="text-xl font-medium text-gray-900 leading-snug mb-8">
-            {currentQuestion.questionText}
-          </h2>
+          <div
+            className="survey-rte text-xl font-medium text-gray-900 leading-snug mb-8"
+            dangerouslySetInnerHTML={{ __html: currentQuestion.questionText }}
+          />
 
           <div className="flex-1">
             {currentQuestion.questionType === 'stars' && (

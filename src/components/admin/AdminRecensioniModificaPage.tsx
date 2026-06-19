@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Plus, Trash2, ChevronUp, ChevronDown, Loader2, Save, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, ChevronUp, ChevronDown, Loader2, Save, AlertTriangle, Eye } from 'lucide-react';
+import SurveyRichEditor from './SurveyRichEditor';
+import SurveyPreviewModal from './SurveyPreviewModal';
 
 const SURVEY_SLUG = 'recensione-app-giugno-2026';
 
@@ -62,6 +64,7 @@ export default function AdminRecensioniModificaPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasResponses, setHasResponses] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -190,14 +193,23 @@ export default function AdminRecensioniModificaPage() {
             <h1 className="font-display text-2xl text-primary font-light">Modifica questionario</h1>
           </div>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-1.5 px-4 py-2 bg-black text-white rounded text-sm hover:bg-gray-800 transition-colors disabled:opacity-50 flex-shrink-0"
-        >
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          Salva
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => setShowPreview(true)}
+            className="flex items-center gap-1.5 px-3 py-2 border border-border rounded text-xs text-gray-600 hover:bg-cream transition-colors"
+          >
+            <Eye size={13} />
+            <span className="hidden sm:inline">Anteprima</span>
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-1.5 px-4 py-2 bg-black text-white rounded text-sm hover:bg-gray-800 transition-colors disabled:opacity-50"
+          >
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            Salva
+          </button>
+        </div>
       </div>
 
       {hasResponses && (
@@ -220,11 +232,10 @@ export default function AdminRecensioniModificaPage() {
         </Field>
 
         <Field label="Testo di incipit / Descrizione">
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            className="w-full border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-black/20 resize-none"
+          <SurveyRichEditor
+            content={description}
+            onChange={setDescription}
+            variant="full"
           />
         </Field>
 
@@ -248,7 +259,11 @@ export default function AdminRecensioniModificaPage() {
         </div>
 
         <Field label="Stato">
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-black/20 w-auto">
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-black/20 w-auto"
+          >
             <option value="draft">Bozza (non visibile)</option>
             <option value="active">Attiva</option>
             <option value="closed">Chiusa</option>
@@ -287,17 +302,33 @@ export default function AdminRecensioniModificaPage() {
       </section>
 
       {/* Sticky save bar (mobile) */}
-      <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-white border-t border-border px-4 py-3 flex justify-end">
+      <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-white border-t border-border px-4 py-3 flex justify-end gap-2">
+        <button
+          onClick={() => setShowPreview(true)}
+          className="flex items-center gap-1.5 px-3 py-2 border border-border rounded text-xs text-gray-600"
+        >
+          <Eye size={13} /> Anteprima
+        </button>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-1.5 px-5 py-2 bg-black text-white rounded text-sm hover:bg-gray-800 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 px-5 py-2 bg-black text-white rounded text-sm disabled:opacity-50"
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           Salva
         </button>
       </div>
       <div className="h-16 sm:hidden" />
+
+      {/* Preview modal */}
+      {showPreview && (
+        <SurveyPreviewModal
+          title={title}
+          description={description}
+          questions={questions}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </div>
   );
 }
@@ -336,20 +367,10 @@ function QuestionCard({
           {idx + 1}
         </span>
         <div className="flex gap-0.5">
-          <button
-            onClick={onUp}
-            disabled={idx === 0}
-            className="p-1 rounded hover:bg-gray-100 disabled:opacity-25 transition-colors"
-            title="Sposta su"
-          >
+          <button onClick={onUp} disabled={idx === 0} className="p-1 rounded hover:bg-gray-100 disabled:opacity-25 transition-colors" title="Sposta su">
             <ChevronUp size={14} />
           </button>
-          <button
-            onClick={onDown}
-            disabled={idx === total - 1}
-            className="p-1 rounded hover:bg-gray-100 disabled:opacity-25 transition-colors"
-            title="Sposta giù"
-          >
+          <button onClick={onDown} disabled={idx === total - 1} className="p-1 rounded hover:bg-gray-100 disabled:opacity-25 transition-colors" title="Sposta giù">
             <ChevronDown size={14} />
           </button>
         </div>
@@ -359,22 +380,17 @@ function QuestionCard({
           </span>
         )}
         <div className="flex-1" />
-        <button
-          onClick={onDelete}
-          className="p-1.5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-          title="Elimina domanda"
-        >
+        <button onClick={onDelete} className="p-1.5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="Elimina domanda">
           <Trash2 size={14} />
         </button>
       </div>
 
-      {/* Text */}
+      {/* Question text — rich editor */}
       <Field label="Testo della domanda">
-        <input
-          value={q.questionText}
-          onChange={(e) => onChange({ questionText: e.target.value })}
-          placeholder="Scrivi qui la domanda..."
-          className="w-full border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-black/20"
+        <SurveyRichEditor
+          content={q.questionText}
+          onChange={(html) => onChange({ questionText: html })}
+          variant="inline"
         />
       </Field>
 
@@ -384,7 +400,7 @@ function QuestionCard({
           <select
             value={q.questionType}
             onChange={(e) => onChange({ questionType: e.target.value as QuestionType })}
-            className="w-full border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-black/20 w-auto"
+            className="border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-black/20 w-auto"
           >
             {(Object.entries(TYPE_LABELS) as [QuestionType, string][]).map(([val, label]) => (
               <option key={val} value={val}>{label}</option>
@@ -403,7 +419,7 @@ function QuestionCard({
         </label>
       </div>
 
-      {/* Options (conditional) */}
+      {/* Options */}
       {hasOptions && (
         <Field label={`Opzioni di risposta — una per riga${q.questionType === 'multi_select' ? ' (selezione multipla)' : ' (selezione singola)'}`}>
           <textarea
