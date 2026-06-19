@@ -573,7 +573,157 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
         />
       </div>
 
-      {/* ── SCHEDA ARTICOLO (solo Moda, in Anagrafica) ────────────── */}
+      {/* ── Campi prodotto Casa (in Anagrafica) ──────────────────── */}
+      {!isModa && (
+        <>
+          {/* Linea */}
+          <Combobox
+            label="Linea"
+            field="nomLinea"
+            value={watch('nomLinea') || ''}
+            onChange={(v) => setValue('nomLinea', v)}
+          />
+
+          {/* Colore + Lavorazione */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Combobox
+              label="Colore"
+              field="colore"
+              value={watch('colore') || ''}
+              onChange={(v) => setValue('colore', v)}
+            />
+            <Combobox
+              label="Lavorazione"
+              field="lavorazione"
+              value={watch('lavorazione') || ''}
+              onChange={(v) => setValue('lavorazione', v)}
+            />
+          </div>
+
+          {/* Pantone FHI-TCX (opzionale per Casa) */}
+          <div>
+            <label className={lbl}>Pantone FHI-TCX</label>
+            <ProductPantoneForm
+              value={selectedPantones}
+              onChange={(v) => {
+                setSelectedPantones(v);
+                if (v.length > 0) setPantoneError(null);
+              }}
+            />
+          </div>
+
+          {/* Materiali */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <MaterialField label="Materiale 1" value={watch('materiale1') || ''} onChange={(v) => setValue('materiale1', v)} />
+            <MaterialField label="Materiale 2" value={watch('materiale2') || ''} onChange={(v) => setValue('materiale2', v)} />
+            <MaterialField label="Materiale 3" value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
+          </div>
+
+          {/* Composizione */}
+          <Input label="Composizione" {...register('composizione')} placeholder="es. 80% cotone, 20% poliestere" />
+
+          {/* Certificazioni */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input label="Certificazione 1" {...register('certificazione1')} placeholder="es. GOTS" />
+            <Input label="Certificazione 2" {...register('certificazione2')} placeholder="es. Oeko-Tex" />
+            <Input label="Certificazione 3" {...register('certificazione3')} placeholder="es. Fair Trade" />
+          </div>
+
+          {/* Fantasia */}
+          <div>
+            <label className={lbl}>Fantasia</label>
+            <select {...register('fantasia')} className={sel}>
+              <option value="">— nessuna —</option>
+              {FANTASIA_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+
+          {/* Tema colore */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Combobox
+              label="Tema colore"
+              field="temaColore"
+              value={watch('temaColore') || ''}
+              onChange={(v) => { setValue('temaColore', v); if (!v) clearTemaFrom(1); }}
+            />
+            {watch('temaColore') ? (
+              <div className="flex items-end gap-1">
+                <div className="flex-1">
+                  <Combobox
+                    label="Tema colore 2"
+                    field="temaColore"
+                    value={watch('temaColore2') || ''}
+                    onChange={(v) => { setValue('temaColore2', v); if (!v) clearTemaFrom(2); }}
+                  />
+                </div>
+                {watch('temaColore2') && (
+                  <button type="button" onClick={() => clearTemaFrom(2)} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors">
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            ) : <div />}
+          </div>
+          {watch('temaColore2') && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex items-end gap-1">
+                <div className="flex-1">
+                  <Combobox
+                    label="Tema colore 3"
+                    field="temaColore"
+                    value={watch('temaColore3') || ''}
+                    onChange={(v) => { setValue('temaColore3', v); if (!v) clearTemaFrom(3); }}
+                  />
+                </div>
+                {watch('temaColore3') && (
+                  <button type="button" onClick={() => clearTemaFrom(3)} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors">
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+              {watch('temaColore3') ? (
+                <div className="flex items-end gap-1">
+                  <div className="flex-1">
+                    <Combobox
+                      label="Tema colore 4"
+                      field="temaColore"
+                      value={watch('temaColore4') || ''}
+                      onChange={(v) => { setValue('temaColore4', v); if (!v) setValue('temaColore5', ''); }}
+                    />
+                  </div>
+                  {watch('temaColore4') && (
+                    <button type="button" onClick={() => { setValue('temaColore4', ''); setValue('temaColore5', ''); }} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors">
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+              ) : <div />}
+            </div>
+          )}
+          {watch('temaColore4') && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex items-end gap-1">
+                <div className="flex-1">
+                  <Combobox
+                    label="Tema colore 5"
+                    field="temaColore"
+                    value={watch('temaColore5') || ''}
+                    onChange={(v) => setValue('temaColore5', v)}
+                  />
+                </div>
+                {watch('temaColore5') && (
+                  <button type="button" onClick={() => setValue('temaColore5', '')} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors">
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+              <div />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Campi prodotto Moda (in Anagrafica) ──────────────────── */}
       {isModa && (
         <>
           {/* Dettaglio + Modello */}
@@ -837,156 +987,6 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
           />
         )}
       </div>
-
-      {/* Campi scheda articolo per prodotti NON-Moda (rimangono in Classificazione) */}
-      {!isModa && (
-        <>
-          {/* Linea */}
-          <Combobox
-            label="Linea"
-            field="nomLinea"
-            value={watch('nomLinea') || ''}
-            onChange={(v) => setValue('nomLinea', v)}
-          />
-
-          {/* Colore + Lavorazione */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Combobox
-              label="Colore"
-              field="colore"
-              value={watch('colore') || ''}
-              onChange={(v) => setValue('colore', v)}
-            />
-            <Combobox
-              label="Lavorazione"
-              field="lavorazione"
-              value={watch('lavorazione') || ''}
-              onChange={(v) => setValue('lavorazione', v)}
-            />
-          </div>
-
-          {/* Pantone FHI-TCX (opzionale per non-Moda) */}
-          <div>
-            <label className={lbl}>Pantone FHI-TCX</label>
-            <ProductPantoneForm
-              value={selectedPantones}
-              onChange={(v) => {
-                setSelectedPantones(v);
-                if (v.length > 0) setPantoneError(null);
-              }}
-            />
-          </div>
-
-          {/* Materiali */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <MaterialField label="Materiale 1" value={watch('materiale1') || ''} onChange={(v) => setValue('materiale1', v)} />
-            <MaterialField label="Materiale 2" value={watch('materiale2') || ''} onChange={(v) => setValue('materiale2', v)} />
-            <MaterialField label="Materiale 3" value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
-          </div>
-
-          {/* Composizione */}
-          <Input label="Composizione" {...register('composizione')} placeholder="es. 80% cotone, 20% poliestere" />
-
-          {/* Certificazioni */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input label="Certificazione 1" {...register('certificazione1')} placeholder="es. GOTS" />
-            <Input label="Certificazione 2" {...register('certificazione2')} placeholder="es. Oeko-Tex" />
-            <Input label="Certificazione 3" {...register('certificazione3')} placeholder="es. Fair Trade" />
-          </div>
-
-          {/* Fantasia */}
-          <div>
-            <label className={lbl}>Fantasia</label>
-            <select {...register('fantasia')} className={sel}>
-              <option value="">— nessuna —</option>
-              {FANTASIA_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
-
-          {/* Tema colore (solo Casa) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Combobox
-              label="Tema colore"
-              field="temaColore"
-              value={watch('temaColore') || ''}
-              onChange={(v) => { setValue('temaColore', v); if (!v) clearTemaFrom(1); }}
-            />
-            {watch('temaColore') ? (
-              <div className="flex items-end gap-1">
-                <div className="flex-1">
-                  <Combobox
-                    label="Tema colore 2"
-                    field="temaColore"
-                    value={watch('temaColore2') || ''}
-                    onChange={(v) => { setValue('temaColore2', v); if (!v) clearTemaFrom(2); }}
-                  />
-                </div>
-                {watch('temaColore2') && (
-                  <button type="button" onClick={() => clearTemaFrom(2)} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors">
-                    <X size={13} />
-                  </button>
-                )}
-              </div>
-            ) : <div />}
-          </div>
-          {watch('temaColore2') && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-end gap-1">
-                <div className="flex-1">
-                  <Combobox
-                    label="Tema colore 3"
-                    field="temaColore"
-                    value={watch('temaColore3') || ''}
-                    onChange={(v) => { setValue('temaColore3', v); if (!v) clearTemaFrom(3); }}
-                  />
-                </div>
-                {watch('temaColore3') && (
-                  <button type="button" onClick={() => clearTemaFrom(3)} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors">
-                    <X size={13} />
-                  </button>
-                )}
-              </div>
-              {watch('temaColore3') ? (
-                <div className="flex items-end gap-1">
-                  <div className="flex-1">
-                    <Combobox
-                      label="Tema colore 4"
-                      field="temaColore"
-                      value={watch('temaColore4') || ''}
-                      onChange={(v) => { setValue('temaColore4', v); if (!v) setValue('temaColore5', ''); }}
-                    />
-                  </div>
-                  {watch('temaColore4') && (
-                    <button type="button" onClick={() => { setValue('temaColore4', ''); setValue('temaColore5', ''); }} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors">
-                      <X size={13} />
-                    </button>
-                  )}
-                </div>
-              ) : <div />}
-            </div>
-          )}
-          {watch('temaColore4') && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-end gap-1">
-                <div className="flex-1">
-                  <Combobox
-                    label="Tema colore 5"
-                    field="temaColore"
-                    value={watch('temaColore5') || ''}
-                    onChange={(v) => setValue('temaColore5', v)}
-                  />
-                </div>
-                {watch('temaColore5') && (
-                  <button type="button" onClick={() => setValue('temaColore5', '')} className="pb-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors">
-                    <X size={13} />
-                  </button>
-                )}
-              </div>
-              <div />
-            </div>
-          )}
-        </>
-      )}
 
       <Divider />
 
