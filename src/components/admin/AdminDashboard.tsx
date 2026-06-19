@@ -10,6 +10,7 @@ import {
   ArrowRight,
   Plus,
   Upload,
+  MessageSquare,
 } from 'lucide-react';
 import { formatCurrency, formatDate, getOrderStatusLabel } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
@@ -24,6 +25,8 @@ interface Stats {
 }
 
 export default function AdminDashboard() {
+  const REFRESH = 30_000;
+
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
@@ -31,6 +34,7 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error('Failed');
       return res.json();
     },
+    refetchInterval: REFRESH,
   });
 
   const { data: customersData } = useQuery({
@@ -40,6 +44,7 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error('Failed');
       return res.json();
     },
+    refetchInterval: REFRESH,
   });
 
   const { data: productsData } = useQuery({
@@ -49,10 +54,25 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error('Failed');
       return res.json();
     },
+    refetchInterval: REFRESH,
+  });
+
+  const { data: surveysData } = useQuery({
+    queryKey: ['admin-surveys-summary'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/surveys?limit=100');
+      if (!res.ok) throw new Error('Failed');
+      return res.json();
+    },
+    refetchInterval: REFRESH,
   });
 
   const orders = ordersData?.data || [];
   const revenue = orders.reduce((sum: number, o: any) => sum + Number(o.totalValue), 0);
+
+  const surveys: any[] = surveysData?.data || [];
+  const activeSurveys = surveys.filter((s: any) => s.status === 'active').length;
+  const totalResponses = surveys.reduce((sum: number, s: any) => sum + (s._count?.responses ?? 0), 0);
 
   const statusVariant: Record<string, string> = {
     MERCE_DA_ORDINARE:        'default',
@@ -96,6 +116,22 @@ export default function AdminDashboard() {
       bg: 'bg-amber-50',
       isMonetary: true,
     },
+    {
+      label: 'Sondaggi Attivi',
+      value: activeSurveys,
+      icon: MessageSquare,
+      href: '/admin/sondaggi',
+      color: 'text-purple-600',
+      bg: 'bg-purple-50',
+    },
+    {
+      label: 'Risposte Ricevute',
+      value: totalResponses,
+      icon: MessageSquare,
+      href: '/admin/sondaggi',
+      color: 'text-purple-600',
+      bg: 'bg-purple-50',
+    },
   ];
 
   return (
@@ -108,7 +144,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-10">
         {stats.map(({ label, value, icon: Icon, href, color, bg }) => (
           <Link
             key={label}

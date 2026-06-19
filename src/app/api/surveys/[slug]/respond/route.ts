@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { notifyAdmin } from '@/lib/adminNotify';
 
 interface AnswerPayload {
   questionKey: string;
@@ -103,6 +104,12 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
       data: { completedAt: now, status: 'completed' },
     });
   }
+
+  notifyAdmin({
+    title: `Sondaggio: ${survey.title}`,
+    body: `${respondentName ?? respondentEmail} ha risposto`,
+    url: `/admin/sondaggi/${survey.id}/risposte`,
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

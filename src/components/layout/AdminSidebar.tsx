@@ -35,8 +35,8 @@ function isGroup(e: NavEntry): e is NavGroup {
   return 'groupLabel' in e;
 }
 
-// Alphabetical order (Italian labels)
 const NAV: NavEntry[] = [
+  { href: '/admin',                  label: 'Dashboard',         icon: LayoutDashboard, exact: true },
   { href: '/admin/analytics',        label: 'Analisi',           icon: BarChart2,       roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/anteprima',        label: 'Anteprima',         icon: Eye,             roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/catalogo-pdf',     label: 'Catalogo PDF',      icon: BookOpen,        roles: ['SUPER_ADMIN', 'ADMIN'] },
@@ -50,7 +50,6 @@ const NAV: NavEntry[] = [
       { href: '/admin/access-requests', label: 'Richieste accesso', icon: UserPlus,  roles: ['SUPER_ADMIN', 'ADMIN'] },
     ],
   },
-  { href: '/admin',                  label: 'Dashboard',         icon: LayoutDashboard, exact: true },
   { href: '/admin/documenti',        label: 'Documenti',         icon: FileText,        roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/foto',             label: 'Foto',              icon: ImageIcon,       roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/impostazioni',     label: 'Impostazioni',      icon: Settings,        roles: ['SUPER_ADMIN'] },
