@@ -80,6 +80,57 @@ export async function sendSurveyInviteEmail(params: {
   }
 }
 
+function buildCustomHtml(companyName: string, surveySlug: string, token: string, bodyText: string): string {
+  const surveyUrl = `${APP_URL}/survey/${surveySlug}?token=${token}`;
+  const lines = bodyText.split('\n').filter(Boolean);
+  return `<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F9F6F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:560px;margin:32px auto;background:#FFFFFF;border-radius:8px;overflow:hidden;border:1px solid #DEDAD7;">
+    <div style="background:#000000;padding:28px 40px;text-align:center;">
+      <h1 style="color:#F5F4F2;font-size:20px;font-weight:300;letter-spacing:5px;margin:0;">ON EARTH</h1>
+      <p style="color:#ACA39A;font-size:10px;letter-spacing:3px;margin:6px 0 0;text-transform:uppercase;">B2B Platform</p>
+    </div>
+    <div style="padding:36px 40px;">
+      <p style="color:#6B7280;font-size:13px;margin:0 0 20px;">Gentile ${companyName},</p>
+      ${lines.map((l) => `<p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 16px;">${l}</p>`).join('')}
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${surveyUrl}" style="display:inline-block;background:#000000;color:#FFFFFF;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:14px;font-weight:600;letter-spacing:0.5px;">
+          Vai al sondaggio
+        </a>
+      </div>
+      <p style="color:#9CA3AF;font-size:12px;line-height:1.6;margin:0;">Il link è personale. Se hai già risposto, ignora questo messaggio.</p>
+    </div>
+    <div style="background:#F9F6F1;border-top:1px solid #DEDAD7;padding:16px 40px;text-align:center;">
+      <p style="color:#9CA3AF;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:0;">ON EARTH · on-earth.it</p>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+export async function sendSurveyCustomEmailBatch(
+  items: Array<{ to: string; companyName: string; surveySlug: string; token: string; subject: string; bodyText: string }>
+): Promise<{ sentCount: number; failedEmails: string[] }> {
+  if (items.length === 0) return { sentCount: 0, failedEmails: [] };
+  const resend = getResend();
+  if (!resend) return { sentCount: 0, failedEmails: items.map((i) => i.to) };
+  const payload = items.map((i) => ({
+    from: FROM,
+    to: i.to,
+    subject: i.subject,
+    html: buildCustomHtml(i.companyName, i.surveySlug, i.token, i.bodyText),
+  }));
+  try {
+    const result = await resend.batch.send(payload);
+    if (result.error) return { sentCount: 0, failedEmails: items.map((i) => i.to) };
+    return { sentCount: items.length, failedEmails: [] };
+  } catch {
+    return { sentCount: 0, failedEmails: items.map((i) => i.to) };
+  }
+}
+
 // Sends up to 100 emails per Resend batch call — avoids rate limiting from parallel sends
 export async function sendSurveyInviteEmailBatch(
   items: Array<{ to: string; companyName: string; surveySlug: string; token: string; endsAt?: Date }>

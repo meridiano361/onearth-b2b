@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
+import { FANTASIA_OPTIONS } from '@/lib/productConstants';
 
 const ALLOWED_FIELDS = [
   'produttore',
@@ -21,6 +22,7 @@ const ALLOWED_FIELDS = [
   'modello',
   'lavorazione',
   'dettaglio',
+  'fantasia',
 ] as const;
 
 type AllowedField = (typeof ALLOWED_FIELDS)[number];
@@ -46,12 +48,20 @@ export async function GET(req: NextRequest) {
     select: { [field]: true },
     distinct: [field],
     orderBy: { [field]: 'asc' },
-    take: 8,
+    take: 20,
   });
 
-  const values: string[] = rows
+  const dbValues: string[] = rows
     .map((r: Record<string, unknown>) => r[field])
     .filter((v: unknown): v is string => typeof v === 'string' && v.trim() !== '');
 
-  return NextResponse.json({ data: values });
+  if (field === 'fantasia') {
+    const lower = q.trim().toLowerCase();
+    const staticFiltered = (FANTASIA_OPTIONS as readonly string[])
+      .filter((o) => !lower || o.toLowerCase().includes(lower));
+    const merged = [...new Set([...dbValues, ...staticFiltered])].sort();
+    return NextResponse.json({ data: merged.slice(0, 15) });
+  }
+
+  return NextResponse.json({ data: dbValues.slice(0, 8) });
 }

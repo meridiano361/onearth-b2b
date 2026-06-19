@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRef, useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Languages, Loader2, AlertTriangle, X } from 'lucide-react';
+import { Languages, Loader2, AlertTriangle, X, Plus } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import PaeseSelect from '@/components/ui/PaeseSelect';
@@ -20,7 +20,6 @@ import {
   getModaGruppiOmogenei,
 } from '@/lib/modaTassonomia';
 import {
-  FANTASIA_OPTIONS,
   MATERIALE_OPTIONS,
   TAGLIA_OPTIONS,
   CONFERENTE_OPTIONS,
@@ -187,19 +186,49 @@ type FormValues = z.input<typeof schema>;
 interface ProductFormProps {
   product?: Product;
   initialValues?: { gruppoMerceologico?: string };
+  duplicateSource?: Product;
   onSuccess: () => void;
   onCancel: () => void;
 }
+
+type SizeVariant = { taglia: string; codice: string };
 
 const TEMA_FIELDS = [
   'temaColore', 'temaColore2', 'temaColore3', 'temaColore4', 'temaColore5',
   'temaColore6', 'temaColore7', 'temaColore8', 'temaColore9', 'temaColore10',
 ] as const;
 
-export default function ProductForm({ product, initialValues, onSuccess, onCancel }: ProductFormProps) {
+function extractMatName(raw: string): string {
+  const m = (raw || '').match(/^(?:\d+(?:\.\d+)?\s*%\s+)?(.+)$/);
+  return m ? m[1].toLowerCase() : '';
+}
+
+function buildComposizione(mat1: string, mat2: string, mat3: string): string {
+  return [mat1, mat2, mat3].filter(Boolean).map((m) => m.toLowerCase()).join(' ');
+}
+
+function buildModaName(
+  dettaglio: string, modello: string,
+  mat1: string, mat2: string, mat3: string,
+  colore: string, taglia: string
+): string {
+  const mats = [mat1, mat2, mat3].map(extractMatName).filter(Boolean).join(' ');
+  const parts = [
+    dettaglio ? (dettaglio.charAt(0).toUpperCase() + dettaglio.slice(1).toLowerCase()) : '',
+    modello ? modello.toUpperCase() : '',
+    mats,
+    colore ? colore.toLowerCase() : '',
+    taglia ? taglia.toUpperCase() : '',
+  ].filter(Boolean);
+  return parts.join(' ');
+}
+
+export default function ProductForm({ product, initialValues, duplicateSource, onSuccess, onCancel }: ProductFormProps) {
   const isEdit = !!product;
   const queryClient = useQueryClient();
   const p = product as any;
+  const dup = duplicateSource as any;
+  const src = p ?? dup; // source for pre-filling (edit or duplicate)
 
   const fileInputRef  = useRef<HTMLInputElement>(null);
   const fileInputRef2 = useRef<HTMLInputElement>(null);
@@ -214,12 +243,18 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
   const [isUploading5,  setIsUploading5]  = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [selectedColorBlocks, setSelectedColorBlocks] = useState<Set<number>>(
-    () => new Set<number>(p?.colorBlockIds ?? [])
+    () => new Set<number>(src?.colorBlockIds ?? [])
   );
   const [selectedPantones, setSelectedPantones] = useState<ProductPantoneEntry[]>(
-    () => p?.pantoneColors ?? []
+    () => src?.pantoneColors ?? []
   );
   const [pantoneError, setPantoneError] = useState<string | null>(null);
+  const [sizeVariants, setSizeVariants] = useState<SizeVariant[]>(() => {
+    const raw = src?.sizeVariants;
+    if (!Array.isArray(raw)) return [];
+    if (duplicateSource) return raw.map((v: SizeVariant) => ({ taglia: v.taglia, codice: '' }));
+    return raw;
+  });
 
   // ── Queries ──────────────────────────────────────────────────────────────
   const { data: colorBlocks } = useQuery<{ id: number; name: string; sort_order: number }[]>({
@@ -244,61 +279,62 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: product ? {
-      code: product.code,
-      name: product.name,
-      description: product.description || '',
-      misura: product.misura || '',
-      taglia: p.taglia || '',
-      produttore: product.produttore || '',
-      paese: product.paese || '',
-      collezione: product.collezione || '',
-      stagione: product.stagione || '',
-      gruppoMerceologico: product.gruppoMerceologico || '',
-      famiglia: product.famiglia || '',
-      classe: product.classe || '',
-      sottoclasse: product.sottoclasse || '',
-      gruppoOmogeneo: product.gruppoOmogeneo || '',
-      dettaglio: p.dettaglio || '',
-      nomLinea: product.nomLinea || '',
-      modello: p.modello || '',
-      colore: product.colore || '',
-      lavorazione: p.lavorazione || '',
-      materiale1: p.materiale1 || '',
-      materiale2: p.materiale2 || '',
-      materiale3: p.materiale3 || '',
-      composizione: p.composizione || '',
-      certificazione1: p.certificazione1 || '',
-      certificazione2: p.certificazione2 || '',
-      certificazione3: p.certificazione3 || '',
-      fantasia: p.fantasia || '',
-      temaColore:   product.temaColore   || '',
-      temaColore2:  product.temaColore2  || '',
-      temaColore3:  product.temaColore3  || '',
-      temaColore4:  product.temaColore4  || '',
-      temaColore5:  product.temaColore5  || '',
-      temaColore6:  p.temaColore6  || '',
-      temaColore7:  p.temaColore7  || '',
-      temaColore8:  p.temaColore8  || '',
-      temaColore9:  p.temaColore9  || '',
-      temaColore10: p.temaColore10 || '',
-      costoIeSenzaReso: p.costoIeSenzaReso != null ? String(p.costoIeSenzaReso) : String(product.costPrice),
-      costoIeConReso: p.costoIeConReso != null ? String(p.costoIeConReso) : '',
-      costPrice: p.costoIeSenzaReso != null ? String(p.costoIeSenzaReso) : String(product.costPrice),
-      iva: String(product.iva ?? 22),
-      retailPrice: String(product.retailPrice),
-      fasciaRicarico: product.fasciaRicarico || '',
-      fasciaSconto: product.fasciaSconto != null ? String(product.fasciaSconto) : '',
-      conferente: p.conferente || '',
-      lotSize: String(product.lotSize),
-      tranche: product.tranche || '',
-      notes: product.notes || '',
-      imageUrl:  product.imageUrl  || '',
-      imageUrl2: product.imageUrl2 || '',
-      imageUrl3: product.imageUrl3 || '',
-      imageUrl4: product.imageUrl4 || '',
-      imageUrl5: p.imageUrl5 || '',
-      isActive: product.isActive,
+    defaultValues: src ? {
+      code: product ? product.code : '',
+      name: src.name || '',
+      description: src.description || '',
+      misura: src.misura || '',
+      taglia: src.taglia || '',
+      produttore: src.produttore || '',
+      paese: src.paese || '',
+      collezione: src.collezione || '',
+      stagione: src.stagione || '',
+      gruppoMerceologico: src.gruppoMerceologico || '',
+      famiglia: src.famiglia || '',
+      classe: src.classe || '',
+      sottoclasse: src.sottoclasse || '',
+      gruppoOmogeneo: src.gruppoOmogeneo || '',
+      dettaglio: src.dettaglio || '',
+      nomLinea: src.nomLinea || '',
+      modello: src.modello || '',
+      colore: src.colore || '',
+      lavorazione: src.lavorazione || '',
+      materiale1: src.materiale1 || '',
+      materiale2: src.materiale2 || '',
+      materiale3: src.materiale3 || '',
+      composizione: src.composizione || '',
+      certificazione1: src.certificazione1 || '',
+      certificazione2: src.certificazione2 || '',
+      certificazione3: src.certificazione3 || '',
+      fantasia: src.fantasia || '',
+      temaColore:   src.temaColore   || '',
+      temaColore2:  src.temaColore2  || '',
+      temaColore3:  src.temaColore3  || '',
+      temaColore4:  src.temaColore4  || '',
+      temaColore5:  src.temaColore5  || '',
+      temaColore6:  src.temaColore6  || '',
+      temaColore7:  src.temaColore7  || '',
+      temaColore8:  src.temaColore8  || '',
+      temaColore9:  src.temaColore9  || '',
+      temaColore10: src.temaColore10 || '',
+      costoIeSenzaReso: src.costoIeSenzaReso != null ? String(src.costoIeSenzaReso) : String(src.costPrice ?? ''),
+      costoIeConReso: src.costoIeConReso != null ? String(src.costoIeConReso) : '',
+      costPrice: src.costoIeSenzaReso != null ? String(src.costoIeSenzaReso) : String(src.costPrice ?? ''),
+      iva: String(src.iva ?? 22),
+      retailPrice: String(src.retailPrice ?? ''),
+      fasciaRicarico: src.fasciaRicarico || '',
+      fasciaSconto: src.fasciaSconto != null ? String(src.fasciaSconto) : '',
+      conferente: src.conferente || '',
+      lotSize: String(src.lotSize ?? 1),
+      tranche: src.tranche || '',
+      notes: src.notes || '',
+      // photos cleared when duplicating
+      imageUrl:  product ? (product.imageUrl  || '') : '',
+      imageUrl2: product ? (product.imageUrl2 || '') : '',
+      imageUrl3: product ? (product.imageUrl3 || '') : '',
+      imageUrl4: product ? (product.imageUrl4 || '') : '',
+      imageUrl5: product ? (p.imageUrl5 || '') : '',
+      isActive: src.isActive ?? true,
     } : { isActive: true, lotSize: '1', iva: '22', gruppoMerceologico: initialValues?.gruppoMerceologico ?? '' },
   });
 
@@ -315,6 +351,14 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
   const watchedIva            = watch('iva');
   const watchedCostoConReso   = watch('costoIeConReso');
   const watchedCode           = watch('code');
+  // Moda auto-name sources
+  const watchedDettaglio = watch('dettaglio');
+  const watchedModello   = watch('modello');
+  const watchedColore    = watch('colore');
+  const watchedTaglia    = watch('taglia');
+  const watchedMat1      = watch('materiale1');
+  const watchedMat2      = watch('materiale2');
+  const watchedMat3      = watch('materiale3');
 
   const isModa = (isEdit ? (watchedGm ?? product?.gruppoMerceologico) : watchedGm) === MODA_GRUPPO_MERCEOLOGICO;
   const codeChanged = isEdit && !!product && watchedCode !== product.code;
@@ -330,6 +374,26 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
       return prev;
     });
   }, [watchedImageUrl]);
+
+  const modaNameMountRef = useRef(true);
+  useEffect(() => {
+    if (modaNameMountRef.current) { modaNameMountRef.current = false; return; }
+    if (!isModa) return;
+    const tagliaForName = sizeVariants.length > 0 ? '' : (watchedTaglia || '');
+    const auto = buildModaName(
+      watchedDettaglio || '', watchedModello || '',
+      watchedMat1 || '', watchedMat2 || '', watchedMat3 || '',
+      watchedColore || '', tagliaForName
+    );
+    if (auto) setValue('name', auto, { shouldDirty: true });
+  }, [watchedDettaglio, watchedModello, watchedMat1, watchedMat2, watchedMat3, watchedColore, watchedTaglia, sizeVariants]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const composizioneMountRef = useRef(true);
+  useEffect(() => {
+    if (composizioneMountRef.current) { composizioneMountRef.current = false; return; }
+    if (!isModa) return;
+    setValue('composizione', buildComposizione(watchedMat1 || '', watchedMat2 || '', watchedMat3 || ''), { shouldDirty: true });
+  }, [watchedMat1, watchedMat2, watchedMat3]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!watchedProduttore?.trim()) return;
@@ -507,6 +571,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
           imageUrl5:      v.imageUrl5      || null,
           colorBlockIds:   [...selectedColorBlocks],
           pantoneColorIds: selectedPantones.map((p) => p.pantoneColorId),
+          sizeVariants:    sizeVariants.filter((sv) => sv.taglia && sv.codice),
         }),
       });
 
@@ -546,7 +611,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
           />
           {errors.code && <p className="mt-1 text-xs text-red-500">{errors.code.message}</p>}
         </div>
-        <Input label="Nome *" {...register('name')} error={errors.name?.message} placeholder="es. Copritavolo GEOMETRIC 140×240" />
+        <Input label="Nome *" {...register('name')} error={errors.name?.message} placeholder={isModa ? '' : 'es. Copritavolo GEOMETRIC 140×240'} />
       </div>
 
       {codeChanged && (
@@ -572,17 +637,67 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
         <Combobox label="Linea" field="nomLinea" value={watch('nomLinea') || ''} onChange={(v) => setValue('nomLinea', v)} />
       )}
 
-      {/* Moda: Taglia + Misure | Casa: Misure */}
+      {/* Moda: Taglie e codici + Misure | Casa: Misure */}
       {isModa ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-3">
           <div>
-            <label className={lbl}>Taglia</label>
-            <select {...register('taglia')} className={sel}>
-              <option value="">— nessuna —</option>
-              {TAGLIA_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className={lbl}>Taglie e codici</p>
+              <button
+                type="button"
+                onClick={() => setSizeVariants((prev) => [...prev, { taglia: '', codice: '' }])}
+                className="flex items-center gap-1 text-xs text-accent hover:text-primary transition-colors"
+              >
+                <Plus size={11} /> Aggiungi
+              </button>
+            </div>
+            {sizeVariants.length === 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={lbl}>Taglia</label>
+                  <select {...register('taglia')} className={sel}>
+                    <option value="">— nessuna —</option>
+                    {TAGLIA_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="grid grid-cols-[5rem_1fr_1.5rem] gap-2">
+                  <span className="text-2xs text-gray-400 uppercase tracking-wider">Taglia</span>
+                  <span className="text-2xs text-gray-400 uppercase tracking-wider">Codice</span>
+                  <span />
+                </div>
+                {sizeVariants.map((sv, i) => (
+                  <div key={i} className="grid grid-cols-[5rem_1fr_1.5rem] gap-2 items-center">
+                    <select
+                      value={sv.taglia}
+                      onChange={(e) => setSizeVariants((prev) => prev.map((v, j) => j === i ? { ...v, taglia: e.target.value } : v))}
+                      className={sel}
+                    >
+                      <option value="">—</option>
+                      {TAGLIA_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <input
+                      type="text"
+                      value={sv.codice}
+                      onChange={(e) => setSizeVariants((prev) => prev.map((v, j) => j === i ? { ...v, codice: e.target.value } : v))}
+                      placeholder="es. 123"
+                      className="w-full h-9 border border-border rounded px-3 text-sm font-mono text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSizeVariants((prev) => prev.filter((_, j) => j !== i))}
+                      className="flex items-center justify-center text-gray-300 hover:text-red-400 transition-colors"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <Input label="Misure" {...register('misura')} placeholder="es. S / M / L / XL" />
+          <Input label="Misure" {...register('misura')} />
         </div>
       ) : (
         <Input label="Misure" {...register('misura')} placeholder="es. 30×40 cm" />
@@ -617,15 +732,9 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
             <MaterialFieldWithPct label="Materiale 3" value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
           </div>
 
-          <Input label="Composizione" {...register('composizione')} placeholder="es. 80% cotone, 20% poliestere" />
+          <Input label="Composizione" {...register('composizione')} />
 
-          <div>
-            <label className={lbl}>Fantasia</label>
-            <select {...register('fantasia')} className={sel}>
-              <option value="">— nessuna —</option>
-              {FANTASIA_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
+          <Combobox label="Fantasia" field="fantasia" value={watch('fantasia') || ''} onChange={(v) => setValue('fantasia', v)} />
 
           <div>
             <label className={lbl}>Note</label>
@@ -663,13 +772,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
 
           <Input label="Composizione" {...register('composizione')} placeholder="es. 80% cotone, 20% poliestere" />
 
-          <div>
-            <label className={lbl}>Fantasia</label>
-            <select {...register('fantasia')} className={sel}>
-              <option value="">— nessuna —</option>
-              {FANTASIA_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
+          <Combobox label="Fantasia" field="fantasia" value={watch('fantasia') || ''} onChange={(v) => setValue('fantasia', v)} />
 
           <div>
             <label className={lbl}>Note</label>
@@ -790,7 +893,7 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
       {/* Moda: Blocchi colore */}
       {isModa && colorBlocks && colorBlocks.length > 0 && (
         <div>
-          <p className={lbl}>Blocco colore</p>
+          <p className={lbl}>Blocchi colore</p>
           <div className="flex flex-wrap gap-2 pt-0.5">
             {colorBlocks.map((cb) => {
               const active = selectedColorBlocks.has(cb.id);

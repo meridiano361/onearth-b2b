@@ -1,6 +1,6 @@
 import webPush from 'web-push';
 import { prisma } from '@/lib/prisma';
-import { sendSurveyInviteEmailBatch } from '@/lib/surveyEmail';
+import { sendSurveyInviteEmailBatch, sendSurveyCustomEmailBatch } from '@/lib/surveyEmail';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.b2b.on-earth.it';
 
@@ -143,4 +143,80 @@ export async function sendSurveyToAllCustomers(surveyId: string): Promise<SendSu
   );
 
   return { total: recipients.length, pushSent, emailSent, emailFailed, errors: emailFailed };
+}
+
+export interface SendCustomNotifOptions {
+  title: string;
+  body: string;
+  channel: 'push' | 'email' | 'both';
+  target: 'pending' | 'all';
+}
+
+export async function sendSurveyCustomNotification(
+  surveyId: string,
+  opts: SendCustomNotifOptions
+): Promise<{ total: number; pushSent: number; emailSent: number; emailFailed: number }> {
+  const survey = await prisma.survey.findUniqueOrThrow({ where: { id: surveyId } });
+
+  const recipients = await prisma.surveyRecipient.findMany({
+    where: {
+      surveyId,
+      ...(opts.target === 'pending' ? { status: { notIn: ['completed'] } } : {}),
+    },
+  });
+
+  let pushSent = 0;
+  let emailSent = 0;
+  let emailFailed = 0;
+
+  if (opts.channel !== 'email') {
+    const allSubs = await prisma.pushSubscription.findMany({
+      select: { userEmail: true, endpoint: true, p256dh: true, auth: true },
+    });
+    const subsByEmail = new Map<string, typeof allSubs>();
+    for (const sub of allSubs) {
+      const list = subsByEmail.get(sub.userEmail) ?? [];
+      list.push(sub);
+      subsByEmail.set(sub.userEmail, list);
+    }
+
+    await Promise.allSettled(
+      recipients.map(async (recipient) => {
+        const surveyUrl = `${APP_URL}/survey/${survey.slug}?token=${recipient.token}`;
+        const subs = subsByEmail.get(recipient.email) ?? [];
+        for (const sub of subs) {
+          try {
+            await sendPush(sub, { title: opts.title, body: opts.body, url: surveyUrl });
+            pushSent++;
+          } catch (e: any) {
+            if (e?.statusCode === 410 || e?.statusCode === 404) {
+              await prisma.pushSubscription.deleteMany({ where: { endpoint: sub.endpoint } });
+            } else {
+              console.error('[survey-custom-push]', recipient.email, e?.message);
+            }
+          }
+        }
+      })
+    );
+  }
+
+  if (opts.channel !== 'push') {
+    for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
+      const chunk = recipients.slice(i, i + BATCH_SIZE);
+      const result = await sendSurveyCustomEmailBatch(
+        chunk.map((r) => ({
+          to: r.email,
+          companyName: r.respondentName ?? r.email,
+          surveySlug: survey.slug,
+          token: r.token,
+          subject: opts.title,
+          bodyText: opts.body,
+        }))
+      );
+      emailSent += result.sentCount;
+      emailFailed += result.failedEmails.length;
+    }
+  }
+
+  return { total: recipients.length, pushSent, emailSent, emailFailed };
 }

@@ -108,6 +108,7 @@ model Product {
   fantasia           String?
   lavorazione        String?
   dettaglio          String?
+  sizeVariants       Json?
   descrizioneEn      String?
   descrizioneDe      String?
   descrizioneFr      String?
@@ -747,9 +748,10 @@ model Survey {
   status      String   @default("draft") // draft | active | closed
   createdAt   DateTime @default(now())
 
-  questions  SurveyQuestion[]
-  recipients SurveyRecipient[]
-  responses  SurveyResponse[]
+  questions              SurveyQuestion[]
+  recipients             SurveyRecipient[]
+  responses              SurveyResponse[]
+  scheduledNotifications SurveyScheduledNotification[]
 
   @@map("surveys")
 }
@@ -825,6 +827,24 @@ model SurveyAnswer {
   response SurveyResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
 
   @@map("survey_answers")
+}
+
+model SurveyScheduledNotification {
+  id          String    @id @default(cuid())
+  surveyId    String
+  title       String
+  body        String
+  scheduledAt DateTime
+  channel     String    @default("both")    // push | email | both
+  target      String    @default("pending") // pending | all
+  status      String    @default("pending") // pending | sending | sent | cancelled
+  sentAt      DateTime?
+  sentCount   Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  @@map("survey_scheduled_notifications")
 }
 
 model Look {

@@ -51,7 +51,7 @@ export const MATERIALE_OPTIONS = [
   'Viscosa',
 ] as const;
 
-export const TAGLIA_OPTIONS = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'] as const;
+export const TAGLIA_OPTIONS = ['TU', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'] as const;
 
 export const CONFERENTE_OPTIONS = [
   'Altraqualità',

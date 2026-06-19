@@ -462,9 +462,27 @@ export default function AdminFotoPage() {
   const [deleteTargets, setDeleteTargets] = useState<string[] | null>(null);
   const [deleting, setDeleting]           = useState(false);
 
+  // ── Collega tutte ─────────────────────────────────────────────────────────
+  const [collegandoTutte, setCollegandoTutte] = useState(false);
+
   function refresh() {
     qc.invalidateQueries({ queryKey: ['admin-foto'] });
     setSelected(new Set());
+  }
+
+  async function handleCollegaTutte() {
+    setCollegandoTutte(true);
+    try {
+      const res = await fetch('/api/admin/foto/collega-tutti', { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success(`Collegate ${json.linked} foto${json.slotTaken ? ` · ${json.slotTaken} slot già occupati` : ''}`);
+      refresh();
+    } catch {
+      toast.error('Errore nel collegamento automatico');
+    } finally {
+      setCollegandoTutte(false);
+    }
   }
 
   // ── Computed stats ────────────────────────────────────────────────────────
@@ -563,13 +581,24 @@ export default function AdminFotoPage() {
           <h1 className="text-xl font-semibold text-primary">Gestione foto</h1>
           <p className="text-sm text-gray-400 mt-0.5">Immagini nel bucket Supabase "products"</p>
         </div>
-        <button
-          onClick={() => setShowUpload(true)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-warm-darker transition-colors"
-        >
-          <ImagePlus size={14} />
-          <span className="hidden sm:inline">Carica foto</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCollegaTutte}
+            disabled={collegandoTutte}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border bg-white text-gray-600 rounded-lg hover:bg-cream transition-colors disabled:opacity-50"
+            title="Collega automaticamente tutte le foto da-collegare ai prodotti corrispondenti"
+          >
+            {collegandoTutte ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
+            <span className="hidden sm:inline">Collega tutte</span>
+          </button>
+          <button
+            onClick={() => setShowUpload(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-warm-darker transition-colors"
+          >
+            <ImagePlus size={14} />
+            <span className="hidden sm:inline">Carica foto</span>
+          </button>
+        </div>
       </div>
 
       {/* ── Stats ───────────────────────────────────────────────────────── */}

@@ -74,6 +74,7 @@ const updateSchema = z.object({
   lavorazione: z.string().optional().nullable(),
   dettaglio: z.string().optional().nullable(),
   pantoneColorIds: z.array(z.coerce.number().int()).optional(),
+  sizeVariants: z.array(z.object({ taglia: z.string(), codice: z.string() })).optional().nullable(),
 });
 
 export async function GET(
@@ -141,8 +142,9 @@ export async function PATCH(
 
     const body = await req.json();
     const parsed = updateSchema.parse(body);
-    const { colorBlockIds, pantoneColorIds, ...rest } = parsed;
+    const { colorBlockIds, pantoneColorIds, sizeVariants, ...rest } = parsed;
     const data = normalizeProductClassificationFields(rest);
+    if (sizeVariants !== undefined) (data as any).sizeVariants = sizeVariants?.length ? sizeVariants : null;
 
     if (data.gruppoMerceologico?.toLowerCase() === 'moda' && (!pantoneColorIds || pantoneColorIds.length === 0)) {
       return NextResponse.json({ error: 'Il Pantone è obbligatorio per i prodotti MODA' }, { status: 400 });

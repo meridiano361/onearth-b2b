@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power, Sparkles, Home } from 'lucide-react';
+import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power, Sparkles, Home, Copy } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -84,6 +84,7 @@ export default function AdminProductsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showCollectionPicker, setShowCollectionPicker] = useState(false);
   const [createCollectionHint, setCreateCollectionHint] = useState<'moda' | 'casa' | null>(null);
+  const [duplicatingProduct, setDuplicatingProduct] = useState<Product | null>(null);
   const [showTranslateConfirm, setShowTranslateConfirm] = useState(false);
   const [isTranslatingAll, setIsTranslatingAll] = useState(false);
   const [translateProgress, setTranslateProgress] = useState<{ done: number; total: number } | null>(null);
@@ -735,6 +736,7 @@ export default function AdminProductsPage() {
                       <div className="flex items-center gap-1">
                         <button onClick={() => setPreviewProduct(product)} className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Anteprima"><Eye size={13} /></button>
                         <button onClick={() => setEditingProduct(product)} className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica"><Edit2 size={13} /></button>
+                        <button onClick={() => setDuplicatingProduct(product)} className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Duplica"><Copy size={13} /></button>
                         <button onClick={() => handleToggleActive(product)} className={`p-1.5 rounded transition-colors ${product.isActive ? 'text-green-500 hover:text-gray-400 hover:bg-gray-50' : 'text-gray-300 hover:text-green-500 hover:bg-green-50'}`} title={product.isActive ? 'Disattiva' : 'Attiva'}>
                           <Power size={13} />
                         </button>
@@ -898,6 +900,18 @@ export default function AdminProductsPage() {
           onSuccess={() => { setShowCreateForm(false); setCreateCollectionHint(null); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }}
           onCancel={() => { setShowCreateForm(false); setCreateCollectionHint(null); }}
         />
+      </Modal>
+
+      {/* Duplicate Modal */}
+      <Modal isOpen={!!duplicatingProduct} onClose={() => setDuplicatingProduct(null)} title="Duplica prodotto" size="2xl">
+        {duplicatingProduct && (
+          <ProductForm
+            key={`dup-${duplicatingProduct.id}`}
+            duplicateSource={duplicatingProduct}
+            onSuccess={() => { setDuplicatingProduct(null); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }}
+            onCancel={() => setDuplicatingProduct(null)}
+          />
+        )}
       </Modal>
 
       {/* Bulk Edit Modal */}

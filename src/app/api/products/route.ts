@@ -70,6 +70,7 @@ const productSchema = z.object({
   lavorazione: z.string().optional().nullable(),
   dettaglio: z.string().optional().nullable(),
   pantoneColorIds: z.array(z.coerce.number().int()).optional(),
+  sizeVariants: z.array(z.object({ taglia: z.string(), codice: z.string() })).optional().nullable(),
 });
 
 export async function GET(req: NextRequest) {
@@ -241,7 +242,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const parsed = productSchema.parse(body);
-    const { colorBlockIds, pantoneColorIds, ...rest } = parsed;
+    const { colorBlockIds, pantoneColorIds, sizeVariants, ...rest } = parsed;
     const data = normalizeProductClassificationFields(rest);
 
     if (data.gruppoMerceologico?.toLowerCase() === 'moda' && (!pantoneColorIds || pantoneColorIds.length === 0)) {
@@ -307,6 +308,7 @@ export async function POST(req: NextRequest) {
         fantasia: data.fantasia || null,
         lavorazione: data.lavorazione || null,
         dettaglio: data.dettaglio || null,
+        sizeVariants: sizeVariants?.length ? (sizeVariants as any) : undefined,
       },
       include: { category: true },
     });

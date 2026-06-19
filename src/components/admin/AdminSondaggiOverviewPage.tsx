@@ -1,11 +1,12 @@
 'use client';
 
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, Send, Download, Star, Users, Mail, Bell,
-  Eye, CheckCircle, Loader2, Pencil, MessageSquare, Contact,
+  Eye, CheckCircle, Loader2, Pencil, MessageSquare, Contact, Clock, X,
 } from 'lucide-react';
 
 interface QuestionStat {
@@ -35,7 +36,26 @@ interface SurveyMeta {
   endsAt: string;
 }
 
+interface ScheduledNotif {
+  id: string;
+  title: string;
+  body: string;
+  scheduledAt: string;
+  channel: string;
+  target: string;
+  status: string;
+  sentAt: string | null;
+  sentCount: number;
+}
+
 export default function AdminSondaggiOverviewPage({ surveyId }: { surveyId: string }) {
+  const queryClient = useQueryClient();
+  const [notifTitle, setNotifTitle] = useState('');
+  const [notifBody, setNotifBody] = useState('');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [channel, setChannel] = useState('both');
+  const [target, setTarget] = useState('pending');
+
   const { data: surveyData } = useQuery<{ survey: SurveyMeta }>({
     queryKey: ['admin-survey-meta', surveyId],
     queryFn: () => fetch(`/api/admin/surveys/${surveyId}`).then((r) => r.json()),
@@ -58,6 +78,52 @@ export default function AdminSondaggiOverviewPage({ surveyId }: { surveyId: stri
     },
     onError: () => toast.error("Errore durante l'invio"),
   });
+
+  const { data: notifsData } = useQuery<{ notifications: ScheduledNotif[] }>({
+    queryKey: ['survey-scheduled-notifs', surveyId],
+    queryFn: () => fetch(`/api/admin/surveys/${surveyId}/notifications`).then((r) => r.json()),
+    staleTime: 30_000,
+  });
+
+  const createNotifMutation = useMutation({
+    mutationFn: (payload: { title: string; body: string; scheduledAt: string; channel: string; target: string }) =>
+      fetch(`/api/admin/surveys/${surveyId}/notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then((r) => r.json()),
+    onSuccess: (data) => {
+      if (data.error) { toast.error(data.error); return; }
+      toast.success(data.notification?.status === 'sent' ? 'Notifica inviata' : 'Notifica pianificata');
+      queryClient.invalidateQueries({ queryKey: ['survey-scheduled-notifs', surveyId] });
+      setNotifTitle('');
+      setNotifBody('');
+      setScheduledAt('');
+    },
+    onError: () => toast.error('Errore durante la creazione della notifica'),
+  });
+
+  const cancelNotifMutation = useMutation({
+    mutationFn: (notifId: string) =>
+      fetch(`/api/admin/surveys/${surveyId}/notifications/${notifId}`, { method: 'DELETE' }).then((r) => r.json()),
+    onSuccess: (data) => {
+      if (data.error) { toast.error(data.error); return; }
+      toast.success('Notifica annullata');
+      queryClient.invalidateQueries({ queryKey: ['survey-scheduled-notifs', surveyId] });
+    },
+    onError: () => toast.error("Errore durante l'annullamento"),
+  });
+
+  function sendNow() {
+    if (!notifTitle.trim() || !notifBody.trim()) { toast.error('Titolo e testo obbligatori'); return; }
+    createNotifMutation.mutate({ title: notifTitle, body: notifBody, scheduledAt: new Date().toISOString(), channel, target });
+  }
+
+  function scheduleNotif() {
+    if (!notifTitle.trim() || !notifBody.trim()) { toast.error('Titolo e testo obbligatori'); return; }
+    if (!scheduledAt) { toast.error('Seleziona data e ora'); return; }
+    createNotifMutation.mutate({ title: notifTitle, body: notifBody, scheduledAt: new Date(scheduledAt).toISOString(), channel, target });
+  }
 
   const survey = surveyData?.survey;
 
@@ -161,6 +227,123 @@ export default function AdminSondaggiOverviewPage({ surveyId }: { surveyId: stri
           )}
         </>
       )}
+
+      {/* Scheduled notifications */}
+      <div className="mt-10">
+        <p className="label-luxury text-accent mb-4">Notifiche programmate</p>
+
+        <div className="bg-white border border-border rounded-lg p-5 mb-4">
+          <div className="space-y-3">
+            <input
+              type="text"
+              placeholder="Titolo (es. OnEarth)"
+              value={notifTitle}
+              onChange={(e) => setNotifTitle(e.target.value)}
+              className="w-full border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-black"
+            />
+            <textarea
+              rows={3}
+              placeholder="Testo del messaggio..."
+              value={notifBody}
+              onChange={(e) => setNotifBody(e.target.value)}
+              className="w-full border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-black resize-none"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Data e ora (ora italiana)</label>
+                <input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                  className="w-full border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-black"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Canale</label>
+                <select
+                  value={channel}
+                  onChange={(e) => setChannel(e.target.value)}
+                  className="w-full border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-black bg-white"
+                >
+                  <option value="both">Push + Email</option>
+                  <option value="push">Solo Push</option>
+                  <option value="email">Solo Email</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Destinatari</label>
+                <select
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                  className="w-full border border-border rounded px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-black bg-white"
+                >
+                  <option value="pending">Non rispondenti</option>
+                  <option value="all">Tutti i destinatari</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={sendNow}
+                disabled={createNotifMutation.isPending}
+                className="flex items-center gap-1.5 px-3 py-2 border border-border rounded text-xs text-gray-600 hover:bg-cream transition-colors disabled:opacity-50"
+              >
+                {createNotifMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                Invia ora
+              </button>
+              <button
+                type="button"
+                onClick={scheduleNotif}
+                disabled={createNotifMutation.isPending}
+                className="flex items-center gap-1.5 px-3 py-2 bg-black text-white rounded text-xs hover:bg-gray-800 transition-colors disabled:opacity-50"
+              >
+                {createNotifMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Clock size={13} />}
+                Pianifica
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {(notifsData?.notifications?.length ?? 0) > 0 && (
+          <div className="space-y-2">
+            {notifsData!.notifications.map((n) => (
+              <div key={n.id} className="bg-white border border-border rounded-lg p-4 flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="text-sm font-medium text-primary truncate">{n.title}</span>
+                    <NotifStatusBadge status={n.status} />
+                  </div>
+                  <p className="text-xs text-gray-500 line-clamp-2 mb-2">{n.body}</p>
+                  <div className="flex flex-wrap gap-3 text-xs text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <Clock size={11} />
+                      {new Date(n.scheduledAt).toLocaleString('it-IT', {
+                        timeZone: 'Europe/Rome',
+                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                      })}
+                    </span>
+                    <span>{n.channel === 'both' ? 'Push + Email' : n.channel === 'push' ? 'Solo Push' : 'Solo Email'}</span>
+                    <span>{n.target === 'pending' ? 'Non rispondenti' : 'Tutti'}</span>
+                    {n.sentCount > 0 && <span>{n.sentCount} inviati</span>}
+                  </div>
+                </div>
+                {n.status === 'pending' && (
+                  <button
+                    type="button"
+                    onClick={() => cancelNotifMutation.mutate(n.id)}
+                    disabled={cancelNotifMutation.isPending}
+                    className="text-gray-300 hover:text-red-400 transition-colors p-1 flex-shrink-0 mt-0.5"
+                    title="Annulla"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -232,4 +415,15 @@ function DistChart({ title, dist, total }: { title: string; dist: Record<string,
       </div>
     </div>
   );
+}
+
+function NotifStatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; className: string }> = {
+    pending:   { label: 'In attesa',  className: 'bg-amber-100 text-amber-700' },
+    sending:   { label: 'Invio…',     className: 'bg-blue-100 text-blue-700' },
+    sent:      { label: 'Inviata',    className: 'bg-emerald-100 text-emerald-700' },
+    cancelled: { label: 'Annullata',  className: 'bg-gray-100 text-gray-500' },
+  };
+  const m = map[status] ?? { label: status, className: 'bg-gray-100 text-gray-500' };
+  return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${m.className}`}>{m.label}</span>;
 }
