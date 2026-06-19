@@ -130,10 +130,14 @@ function ProductCard({
           <p className="text-xs font-medium text-primary leading-snug mt-1 h-10 overflow-hidden">{product.name}</p>
         </div>
 
-        <p className="text-2xs text-gray-400 mt-auto">
-          PVP:{' '}
-          <span className="text-gray-600 font-medium">{formatCurrency(product.retailPrice)}</span>
-        </p>
+        <div className="mt-auto space-y-0.5">
+          <p className="text-2xs text-gray-400">
+            PVP: <span className="text-gray-600 font-medium">{formatCurrency(product.retailPrice)}</span>
+          </p>
+          <p className="text-2xs text-gray-400">
+            Costo I.E.: <span className="text-gray-600 font-medium">{formatCurrency(product.costPrice)}</span>
+          </p>
+        </div>
 
         {/* Quantity control — no disabled, UI is optimistic */}
         <div className="flex items-center justify-between pt-2 border-t border-border/60">
