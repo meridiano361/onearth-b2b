@@ -844,21 +844,13 @@ export default function ProductForm({ product, initialValues, onSuccess, onCance
       {/* Campi scheda articolo per prodotti NON-Moda (rimangono in Classificazione) */}
       {!isModa && (
         <>
-          {/* Linea + Modello */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Combobox
-              label="Linea"
-              field="nomLinea"
-              value={watch('nomLinea') || ''}
-              onChange={(v) => setValue('nomLinea', v)}
-            />
-            <Combobox
-              label="Modello"
-              field="modello"
-              value={watch('modello') || ''}
-              onChange={(v) => setValue('modello', v)}
-            />
-          </div>
+          {/* Linea */}
+          <Combobox
+            label="Linea"
+            field="nomLinea"
+            value={watch('nomLinea') || ''}
+            onChange={(v) => setValue('nomLinea', v)}
+          />
 
           {/* Colore + Lavorazione */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
