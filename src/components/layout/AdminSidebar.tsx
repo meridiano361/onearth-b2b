@@ -36,7 +36,7 @@ function isGroup(e: NavEntry): e is NavGroup {
 }
 
 const NAV: NavEntry[] = [
-  { href: '/admin',                  label: 'Dashboard',         icon: LayoutDashboard, exact: true },
+  { href: '/admin',                  label: 'Home',              icon: LayoutDashboard, exact: true },
   { href: '/admin/analytics',        label: 'Analisi',           icon: BarChart2,       roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/anteprima',        label: 'Anteprima',         icon: Eye,             roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/catalogo-pdf',     label: 'Catalogo PDF',      icon: BookOpen,        roles: ['SUPER_ADMIN', 'ADMIN'] },
