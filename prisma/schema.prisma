@@ -831,16 +831,16 @@ model SurveyAnswer {
 
 model SurveyScheduledNotification {
   id          String    @id @default(cuid())
-  surveyId    String
+  surveyId    String    @map("survey_id")
   title       String
   body        String
-  scheduledAt DateTime
-  channel     String    @default("both")    // push | email | both
-  target      String    @default("pending") // pending | all
-  status      String    @default("pending") // pending | sending | sent | cancelled
-  sentAt      DateTime?
-  sentCount   Int       @default(0)
-  createdAt   DateTime  @default(now())
+  scheduledAt DateTime  @map("scheduled_at")
+  channel     String    @default("both")    @map("channel")
+  target      String    @default("pending") @map("target")
+  status      String    @default("pending") @map("status")
+  sentAt      DateTime? @map("sent_at")
+  sentCount   Int       @default(0)         @map("sent_count")
+  createdAt   DateTime  @default(now())     @map("created_at")
 
   survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
 
