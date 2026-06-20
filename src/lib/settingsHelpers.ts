@@ -143,6 +143,10 @@ export interface AppSettingsData {
     soloUnaVolta: boolean;
     scadenza: string;
   };
+  collections: {
+    moda: { bookingDeadline: string };
+    casa: { bookingDeadline: string };
+  };
 }
 
 export const SOCIAL_KEYS = ['instagram', 'facebook', 'pinterest', 'tiktok', 'website', 'podcast'] as const;
@@ -308,6 +312,10 @@ export const DEFAULT_APP_SETTINGS: AppSettingsData = {
     soloUnaVolta: false,
     scadenza: '',
   },
+  collections: {
+    moda: { bookingDeadline: '' },
+    casa: { bookingDeadline: '' },
+  },
 };
 
 export function parseSettingsFromDb(records: { chiave: string; valore: string }[]): AppSettingsData {
@@ -465,6 +473,10 @@ export function parseSettingsFromDb(records: { chiave: string; valore: string }[
       chiudibile:      bool('comunicazione.chiudibile',      false),
       soloUnaVolta:    bool('comunicazione.soloUnaVolta',    false),
       scadenza:        str('comunicazione.scadenza',         ''),
+    },
+    collections: {
+      moda: { bookingDeadline: str('collection.moda.bookingDeadline', '') },
+      casa: { bookingDeadline: str('collection.casa.bookingDeadline', '') },
     },
     comunicazione2: {
       attivo:          bool('comunicazione2.attivo',          false),

@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Grid3x3, Heart, ShoppingCart, Package2, HelpCircle, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Grid3x3, Heart, ShoppingCart, Package2, HelpCircle, ArrowLeft, ChevronRight, Clock, Lock } from 'lucide-react';
+import { useSettings } from '@/contexts/SettingsContext';
 
 const COLLECTION_ITEMS = [
   { href: '/catalog/products',  icon: Grid3x3,     label: 'Catalogo',  description: 'Sfoglia tutti i prodotti Casa 2027' },
@@ -10,7 +11,16 @@ const COLLECTION_ITEMS = [
   { href: '/catalog/orders',    icon: Package2,     label: 'Ordini',    description: 'I tuoi ordini'                      },
 ];
 
+function formatDeadline(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 export default function CasaHome() {
+  const { collections } = useSettings();
+  const deadline = collections.casa.bookingDeadline;
+  const isExpired = deadline ? new Date(deadline) < new Date() : false;
+
   return (
     <div className="min-h-screen bg-[#faf8f5] text-primary">
       {/* Header */}
@@ -22,6 +32,19 @@ export default function CasaHome() {
         <h1 className="font-display text-3xl font-light tracking-wide leading-none text-primary">
           Casa 2027
         </h1>
+
+        {deadline && (
+          <div className={`mt-4 flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${
+            isExpired
+              ? 'bg-gray-100 text-gray-500 border border-gray-200'
+              : 'bg-amber-50 text-amber-700 border border-amber-200'
+          }`}>
+            {isExpired ? <Lock size={12} className="flex-shrink-0" /> : <Clock size={12} className="flex-shrink-0" />}
+            {isExpired
+              ? `Le prenotazioni si sono chiuse il ${formatDeadline(deadline)}`
+              : `Le prenotazioni chiudono il ${formatDeadline(deadline)}`}
+          </div>
+        )}
       </div>
 
       <div className="mx-5 h-px bg-border" />
@@ -48,7 +71,7 @@ export default function CasaHome() {
 
       <div className="mx-5 h-px bg-border" />
 
-      {/* Aiuto — condiviso */}
+      {/* Aiuto */}
       <div className="px-5 py-4">
         <Link
           href="/catalog/assistenza"

@@ -9,6 +9,7 @@ import { normalizeProductClassificationFields } from '@/lib/normalizeClassificat
 import { normalizeProductName } from '@/lib/normalizeProductName';
 import { syncProductClassification } from '@/lib/syncClassification';
 import { translateProduct } from '@/lib/translate';
+import { autoLinkPhotosForProduct } from '@/lib/autoLinkPhotos';
 
 const productSchema = z.object({
   colorBlockIds: z.array(z.coerce.number().int()).optional(),
@@ -31,6 +32,8 @@ const productSchema = z.object({
   famiglia: z.string().optional().nullable(),
   sottofamiglia: z.string().optional().nullable(),
   colore: z.string().optional().nullable(),
+  colore2: z.string().optional().nullable(),
+  colore3: z.string().optional().nullable(),
   nomLinea: z.string().optional().nullable(),
   misura: z.string().optional().nullable(),
   produttore: z.string().optional().nullable(),
@@ -270,6 +273,8 @@ export async function POST(req: NextRequest) {
         famiglia: data.famiglia || null,
         sottofamiglia: data.sottofamiglia || null,
         colore: data.colore || null,
+        colore2: data.colore2 || null,
+        colore3: data.colore3 || null,
         nomLinea: data.nomLinea || null,
         misura: data.misura || null,
         produttore: data.produttore || null,
@@ -335,6 +340,9 @@ export async function POST(req: NextRequest) {
     }
 
     void syncProductClassification(data);
+
+    // Auto-link orphan bucket photos matching this product code
+    void autoLinkPhotosForProduct(product.id, product.code).catch(() => {});
 
     // Auto-translate alla creazione
     const testoPerTrad = data.description || data.name;

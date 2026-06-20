@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power, Sparkles, Home, Copy } from 'lucide-react';
+import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power, Sparkles, Home, Copy, Download } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -113,6 +113,9 @@ export default function AdminProductsPage() {
   // Sort
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  // CSV export
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -482,6 +485,54 @@ export default function AdminProductsPage() {
     );
   }
 
+  function downloadCsv(list: Product[], groupBy: 'none' | 'tranche' | 'conferente') {
+    const sorted = [...list].sort((a, b) => {
+      if (groupBy === 'tranche') {
+        const t = (a.tranche ?? '').localeCompare(b.tranche ?? '', 'it');
+        if (t !== 0) return t;
+      }
+      if (groupBy === 'conferente') {
+        const c = ((a as any).conferente ?? '').localeCompare((b as any).conferente ?? '', 'it');
+        if (c !== 0) return c;
+      }
+      return a.code.localeCompare(b.code, 'it');
+    });
+
+    const esc = (v: any) => {
+      const s = v == null ? '' : String(v);
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
+    const headers = [
+      'Codice', 'Nome', 'Attivo',
+      'Gruppo merceologico', 'Famiglia', 'Classe', 'Sottoclasse', 'Gruppo omogeneo', 'Linea',
+      'Colore 1', 'Colore 2', 'Colore 3', 'Fantasia', 'Taglia', 'Misura',
+      'Materiale 1', 'Materiale 2', 'Materiale 3',
+      'Stagione', 'Collezione', 'Tranche', 'Conferente', 'Produttore',
+      'Costo i.e.', 'Prezzo vendita', 'Iva', 'Confezione',
+    ];
+
+    const rows = sorted.map((p) => [
+      p.code, p.name, p.isActive ? 'Sì' : 'No',
+      p.gruppoMerceologico, p.famiglia, p.classe, p.sottoclasse, p.gruppoOmogeneo, p.nomLinea,
+      p.colore, (p as any).colore2, (p as any).colore3, (p as any).fantasia, p.taglia, p.misura,
+      p.materiale1, p.materiale2, p.materiale3,
+      p.stagione, p.collezione, p.tranche, (p as any).conferente, p.produttore,
+      p.costPrice, p.retailPrice, p.iva, p.lotSize,
+    ].map(esc).join(','));
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const label = groupBy === 'none' ? 'prodotti' : groupBy === 'tranche' ? 'per-tranche' : 'per-conferente';
+    a.href = url;
+    a.download = `${label}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
@@ -499,6 +550,31 @@ export default function AdminProductsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* CSV Export dropdown */}
+          <div className="relative">
+            <Button variant="secondary" icon={<Download size={13} />} onClick={() => setShowExportMenu((v) => !v)}>
+              <span className="hidden sm:inline">Esporta CSV</span>
+            </Button>
+            {showExportMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-border rounded-lg shadow-lg py-1 min-w-[200px]">
+                  <button onClick={() => downloadCsv(products, 'none')}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-cream transition-colors">
+                    Lista corrente ({products.length})
+                  </button>
+                  <button onClick={() => downloadCsv(allProducts, 'tranche')}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-cream transition-colors">
+                    Tutti · raggruppati per tranche
+                  </button>
+                  <button onClick={() => downloadCsv(allProducts, 'conferente')}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-cream transition-colors">
+                    Tutti · raggruppati per conferente
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <Button variant="secondary" icon={<Upload size={13} />} onClick={() => setShowImport(true)}>
             <span className="hidden sm:inline">Importa da Excel</span>
           </Button>
@@ -677,7 +753,7 @@ export default function AdminProductsPage() {
               <th className="hidden lg:table-cell">Tema colore</th>
               <th>{thBtn('costPrice', 'Costo i.e.')}</th>
               <th>{thBtn('retailPrice', 'Vendita i.i.')}</th>
-              <th>%SC</th>
+              <th>% Sc.</th>
               <th>% Ric.</th>
               <th className="text-center">Foto</th>
               <th>Stato</th>

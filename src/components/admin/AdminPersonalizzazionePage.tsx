@@ -488,6 +488,11 @@ export default function AdminPersonalizzazionePage() {
   const [modaData, setModaData] = useState<CollectionData>(DEFAULT_COLLECTION_DATA);
   const [savingModaFiltri, setSavingModaFiltri] = useState(false);
 
+  // Booking deadlines
+  const [modaDeadline, setModaDeadline] = useState('');
+  const [casaDeadline, setCasaDeadline] = useState('');
+  const [savingDeadline, setSavingDeadline] = useState<'moda' | 'casa' | null>(null);
+
   useEffect(() => {
     fetch('/api/admin/catalog-settings')
       .then(r => r.json())
@@ -521,6 +526,9 @@ export default function AdminPersonalizzazionePage() {
         try { const raw = flat['moda.filtriVisibili']; if (raw) modaFiltri = JSON.parse(raw); } catch {}
         setModaData({ menu: parsedModa.menu, scheda: parsedModa.scheda, card: parsedModa.card, ordine: parsedModa.ordine, filtriVisibili: modaFiltri });
       }
+
+      setCasaDeadline(flat['collection.casa.bookingDeadline'] ?? '');
+      setModaDeadline(flat['collection.moda.bookingDeadline'] ?? '');
 
       return parsed;
     },
@@ -566,6 +574,18 @@ export default function AdminPersonalizzazionePage() {
       toast.success('Filtri Casa salvati');
     } catch { toast.error('Errore nel salvataggio'); }
     finally { setSavingCasaFiltri(false); }
+  }
+
+  async function saveDeadline(collection: 'moda' | 'casa') {
+    setSavingDeadline(collection);
+    const key = `collection.${collection}.bookingDeadline`;
+    const value = collection === 'moda' ? modaDeadline : casaDeadline;
+    try {
+      const res = await fetch('/api/admin/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [key]: value }) });
+      if (!res.ok) throw new Error();
+      toast.success('Scadenza salvata');
+    } catch { toast.error('Errore nel salvataggio'); }
+    finally { setSavingDeadline(null); }
   }
 
   async function saveModaFiltri() {
@@ -1131,6 +1151,31 @@ export default function AdminPersonalizzazionePage() {
       {/* ── Collezioni ─────────────────────────────────────────── */}
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-3">Collezioni</p>
+
+        {/* Booking deadlines */}
+        <div className="bg-white border border-border rounded-2xl p-4 mb-4 space-y-3">
+          <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Scadenza prenotazioni</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Casa 2027</label>
+              <div className="flex gap-2">
+                <input type="date" value={casaDeadline} onChange={e => setCasaDeadline(e.target.value)} className="flex-1 border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900" />
+                <button onClick={() => saveDeadline('casa')} disabled={savingDeadline === 'casa'} className="px-3 py-2 text-xs bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                  {savingDeadline === 'casa' ? '...' : 'Salva'}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Moda PE27</label>
+              <div className="flex gap-2">
+                <input type="date" value={modaDeadline} onChange={e => setModaDeadline(e.target.value)} className="flex-1 border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900" />
+                <button onClick={() => saveDeadline('moda')} disabled={savingDeadline === 'moda'} className="px-3 py-2 text-xs bg-gray-900 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                  {savingDeadline === 'moda' ? '...' : 'Salva'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Tab switcher */}
         <div className="flex border-b border-border mb-4">

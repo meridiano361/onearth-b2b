@@ -30,6 +30,8 @@ const updateSchema = z.object({
   famiglia: z.string().optional().nullable(),
   sottofamiglia: z.string().optional().nullable(),
   colore: z.string().optional().nullable(),
+  colore2: z.string().optional().nullable(),
+  colore3: z.string().optional().nullable(),
   nomLinea: z.string().optional().nullable(),
   misura: z.string().optional().nullable(),
   produttore: z.string().optional().nullable(),

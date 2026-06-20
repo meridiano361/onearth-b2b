@@ -33,13 +33,16 @@ const SOCIAL_SVG: Record<string, ReactNode> = {
 
 export default function AdminExperimentalLanding() {
   const { data: session } = useSession();
-  const { home: hs, social: ss } = useSettings();
+  const { home: hs, social: ss, collections } = useSettings();
 
   // Client-side safety guard — server already verified, this is defence-in-depth
   if (!canAccessModa(session?.user?.role)) return null;
 
   const hasEditorialImage = hs.editorialAttivo && hs.editorialUrl;
   const visibleSocial = ss.ordine.filter((k) => ss.items[k]?.visibile);
+  const now = new Date();
+  const modaExpired = collections.moda.bookingDeadline ? new Date(collections.moda.bookingDeadline) < now : false;
+  const casaExpired = collections.casa.bookingDeadline ? new Date(collections.casa.bookingDeadline) < now : false;
 
   return (
     <div className="min-h-screen bg-cream">
@@ -50,7 +53,7 @@ export default function AdminExperimentalLanding() {
 
           {/* Moda PE27 */}
           <Link href="/moda" className="group block">
-            <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm aspect-square relative">
+            <div className={`rounded-2xl overflow-hidden border border-gray-200 shadow-sm aspect-square relative transition-opacity ${modaExpired ? 'opacity-40 grayscale' : ''}`}>
               <div className="absolute inset-0 bg-gradient-to-br from-[#1a0a2e] via-[#0d0d1a] to-[#000000]" />
               <div className="absolute inset-0 flex items-center justify-end pr-4 select-none pointer-events-none">
                 <span
@@ -76,7 +79,7 @@ export default function AdminExperimentalLanding() {
 
           {/* Casa 2027 */}
           <Link href="/casa" className="group block">
-            <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm aspect-square relative">
+            <div className={`rounded-2xl overflow-hidden border border-gray-200 shadow-sm aspect-square relative transition-opacity ${casaExpired ? 'opacity-40 grayscale' : ''}`}>
               {hasEditorialImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img

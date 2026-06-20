@@ -65,6 +65,8 @@ model Product {
   famiglia           String?
   sottofamiglia      String?
   colore             String?
+  colore2            String?
+  colore3            String?
   nomLinea           String?
   misura             String?
   produttore         String?

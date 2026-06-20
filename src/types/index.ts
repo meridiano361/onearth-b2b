@@ -53,6 +53,8 @@ export interface Product {
   famiglia: string | null;
   sottofamiglia: string | null;
   colore: string | null;
+  colore2: string | null;
+  colore3: string | null;
   nomLinea: string | null;
   misura: string | null;
   produttore: string | null;

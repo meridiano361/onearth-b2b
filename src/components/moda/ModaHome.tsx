@@ -1,18 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { Grid3x3, Heart, ShoppingCart, Package2, Palette, HelpCircle, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Grid3x3, Heart, ShoppingCart, Package2, Palette, HelpCircle, ArrowLeft, ChevronRight, Clock, Lock } from 'lucide-react';
+import { useSettings } from '@/contexts/SettingsContext';
 
 const COLLECTION_ITEMS = [
-  { href: '/moda/catalogo',     icon: Grid3x3,     label: 'Catalogo',     description: 'Sfoglia tutti i prodotti PE27' },
-  { href: '/moda/preferiti',    icon: Heart,        label: 'Preferiti',    description: 'I tuoi prodotti preferiti'     },
-  { href: '/moda/ruota-cromatica',  icon: Palette,      label: 'Ruota Cromatica',  description: 'Abbinamenti cromatici e visual merchandising' },
-  { href: '/moda/carrelli',     icon: ShoppingCart, label: 'Carrelli',     description: 'I tuoi carrelli attivi'        },
-  { href: '/moda/ordini',       icon: Package2,     label: 'Ordini',       description: 'I tuoi ordini PE27'            },
+  { href: '/moda/catalogo',        icon: Grid3x3,     label: 'Catalogo',        description: 'Sfoglia tutti i prodotti PE27' },
+  { href: '/moda/preferiti',       icon: Heart,        label: 'Preferiti',       description: 'I tuoi prodotti preferiti'     },
+  { href: '/moda/ruota-cromatica', icon: Palette,      label: 'Ruota Cromatica', description: 'Abbinamenti cromatici e visual merchandising' },
+  { href: '/moda/carrelli',        icon: ShoppingCart, label: 'Carrelli',        description: 'I tuoi carrelli attivi'        },
+  { href: '/moda/ordini',          icon: Package2,     label: 'Ordini',          description: 'I tuoi ordini PE27'            },
 ];
 
-/** Decodes a moda collection code into its full season label.
- *  PE → Primavera Estate · AI → Autunno Inverno */
 function decodeCollezione(code: string): string {
   const prefix = code.slice(0, 2).toUpperCase();
   const year = code.slice(2);
@@ -22,8 +21,16 @@ function decodeCollezione(code: string): string {
   return code;
 }
 
+function formatDeadline(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 export default function ModaHome() {
   const stagione = decodeCollezione('PE27');
+  const { collections } = useSettings();
+  const deadline = collections.moda.bookingDeadline;
+  const isExpired = deadline ? new Date(deadline) < new Date() : false;
 
   return (
     <div className="min-h-screen bg-[#faf8f5] text-primary">
@@ -37,6 +44,19 @@ export default function ModaHome() {
           MODA PE27
         </h1>
         <p className="text-xs text-gray-400 mt-2">{stagione}</p>
+
+        {deadline && (
+          <div className={`mt-4 flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${
+            isExpired
+              ? 'bg-gray-100 text-gray-500 border border-gray-200'
+              : 'bg-amber-50 text-amber-700 border border-amber-200'
+          }`}>
+            {isExpired ? <Lock size={12} className="flex-shrink-0" /> : <Clock size={12} className="flex-shrink-0" />}
+            {isExpired
+              ? `Le prenotazioni si sono chiuse il ${formatDeadline(deadline)}`
+              : `Le prenotazioni chiudono il ${formatDeadline(deadline)}`}
+          </div>
+        )}
       </div>
 
       <div className="mx-5 h-px bg-border" />
@@ -63,7 +83,7 @@ export default function ModaHome() {
 
       <div className="mx-5 h-px bg-border" />
 
-      {/* Aiuto — condiviso */}
+      {/* Aiuto */}
       <div className="px-5 py-4">
         <Link
           href="/catalog/assistenza"

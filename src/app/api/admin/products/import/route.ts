@@ -5,6 +5,7 @@ import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { titleCase } from '@/lib/normalizeClassification';
 import { syncManyProductClassifications } from '@/lib/syncClassification';
+import { splitColori, hasColorSeparator } from '@/lib/coloriUtils';
 
 // ─── Parsers ──────────────────────────────────────────────────────────────────
 
@@ -56,7 +57,11 @@ function buildFieldValue(campo: string, row: any): unknown {
       return row.collezione !== undefined
         ? (str(row.collezione)?.toUpperCase() ?? null)
         : undefined;
-    case 'colore':      return str(row.colore);
+    case 'colore': {
+      const raw = str(row.colore);
+      // Split returned later via buildColorFields; here return the raw value
+      return raw;
+    }
     case 'temaColore':  return str(row.temaColore);
     case 'tranche':     return str(row.tranche);
     case 'lotSize':
@@ -87,6 +92,25 @@ function buildFieldValue(campo: string, row: any): unknown {
   }
 }
 
+/**
+ * If the row has a combined color (e.g. "avorio/bianco") and no colore2/3 columns,
+ * returns { colore, colore2, colore3 } split values; otherwise returns nothing extra.
+ */
+function buildColorFields(row: any): Record<string, string | null> {
+  const raw1 = str(row.colore);
+  const raw2 = str(row.colore2);
+  const raw3 = str(row.colore3);
+  if (raw1 && !raw2 && !raw3 && hasColorSeparator(raw1)) {
+    const [c1, c2, c3] = splitColori(raw1);
+    return { colore: c1 || null, colore2: c2 || null, colore3: c3 || null };
+  }
+  return {
+    ...(raw1 !== undefined ? { colore: raw1 } : {}),
+    ...(raw2 !== undefined ? { colore2: raw2 } : {}),
+    ...(raw3 !== undefined ? { colore3: raw3 } : {}),
+  };
+}
+
 // Fields imported for new products when no selection restriction applies
 const ALL_CREATE_OPTIONAL = [
   'produttore', 'paese', 'misura', 'gruppoMerceologico', 'famiglia', 'classe',
@@ -114,6 +138,10 @@ function buildCreateData(
   for (const campo of fieldsToCheck) {
     const val = buildFieldValue(campo, row);
     if (val !== undefined) data[campo] = val;
+  }
+  // Override colore fields with split values if combined color detected
+  if (fieldsToCheck.includes('colore')) {
+    Object.assign(data, buildColorFields(row));
   }
   return data;
 }
@@ -293,6 +321,10 @@ export async function POST(req: NextRequest) {
           for (const campo of campiDaAggiornare) {
             const val = buildFieldValue(campo, row);
             if (val !== undefined) updateData[campo] = val;
+          }
+          // Split combined color if detected
+          if (campiDaAggiornare.includes('colore')) {
+            Object.assign(updateData, buildColorFields(row));
           }
           if (Object.keys(updateData).length > 0) {
             await prisma.product.update({ where: { id: prodotto.id }, data: updateData });

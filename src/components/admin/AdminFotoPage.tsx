@@ -4,7 +4,7 @@ import { useState, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ImageIcon, Trash2, Link2, Unlink, X, Search, Upload,
-  ZoomIn, ExternalLink, Loader2, CheckSquare, Square, ImagePlus,
+  ZoomIn, ExternalLink, Loader2, CheckSquare, Square, ImagePlus, Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import BulkImageUpload from './BulkImageUpload';
@@ -465,9 +465,30 @@ export default function AdminFotoPage() {
   // ── Collega tutte ─────────────────────────────────────────────────────────
   const [collegandoTutte, setCollegandoTutte] = useState(false);
 
+  // ── Ottimizza ─────────────────────────────────────────────────────────────
+  const [ottimizzando, setOttimizzando] = useState(false);
+
   function refresh() {
     qc.invalidateQueries({ queryKey: ['admin-foto'] });
     setSelected(new Set());
+  }
+
+  async function handleOttimizza() {
+    setOttimizzando(true);
+    try {
+      const res = await fetch('/api/admin/foto/ottimizza', { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      const msg = `Ottimizzate ${json.processed} foto`
+        + (json.errors > 0 ? ` · ${json.errors} errori` : '')
+        + ` · ${json.skipped} già ok`;
+      toast.success(msg, { duration: 5000 });
+      refresh();
+    } catch {
+      toast.error('Errore durante l\'ottimizzazione');
+    } finally {
+      setOttimizzando(false);
+    }
   }
 
   async function handleCollegaTutte() {
@@ -490,8 +511,9 @@ export default function AdminFotoPage() {
     const total      = allPhotos.length;
     const inUse      = allPhotos.filter((p) => p.status === 'in-uso').length;
     const orphan     = allPhotos.filter((p) => p.status === 'orfana').length;
+    const heavy      = allPhotos.filter((p) => p.size > 200 * 1024).length;
     const totalBytes = allPhotos.reduce((s, p) => s + p.size, 0);
-    return { total, inUse, orphan, totalBytes };
+    return { total, inUse, orphan, heavy, totalBytes };
   }, [allPhotos]);
 
   // ── Filtered + sorted list ────────────────────────────────────────────────
@@ -583,6 +605,17 @@ export default function AdminFotoPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={handleOttimizza}
+            disabled={ottimizzando || stats.heavy === 0}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-amber-300 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-40"
+            title="Comprimi a ≤200 KB / 1500×1500 px tutte le foto che superano il limite"
+          >
+            {ottimizzando ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+            <span className="hidden sm:inline">
+              {ottimizzando ? 'Ottimizzazione…' : `Ottimizza${stats.heavy > 0 ? ` (${stats.heavy})` : ''}`}
+            </span>
+          </button>
+          <button
             onClick={handleCollegaTutte}
             disabled={collegandoTutte}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border bg-white text-gray-600 rounded-lg hover:bg-cream transition-colors disabled:opacity-50"
@@ -602,11 +635,12 @@ export default function AdminFotoPage() {
       </div>
 
       {/* ── Stats ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
         {[
-          { label: 'Totale foto',    value: String(stats.total) },
-          { label: 'In uso',         value: String(stats.inUse),  color: 'text-green-600' },
-          { label: 'Orfane',         value: String(stats.orphan), color: stats.orphan > 0 ? 'text-red-500' : undefined },
+          { label: 'Totale foto',     value: String(stats.total) },
+          { label: 'In uso',          value: String(stats.inUse),  color: 'text-green-600' },
+          { label: 'Orfane',          value: String(stats.orphan), color: stats.orphan > 0 ? 'text-red-500' : undefined },
+          { label: 'Da ottimizzare',  value: String(stats.heavy),  color: stats.heavy > 0 ? 'text-amber-500' : 'text-green-600' },
           { label: 'Spazio occupato', value: fmtSize(stats.totalBytes) },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-white border border-border rounded-lg px-4 py-3">

@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRef, useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Languages, Loader2, AlertTriangle, X, Plus } from 'lucide-react';
+import { Languages, Loader2, AlertTriangle, X, Plus, Link } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import PaeseSelect from '@/components/ui/PaeseSelect';
@@ -25,6 +25,7 @@ import {
   CONFERENTE_OPTIONS,
   STAGIONE_OPTIONS,
 } from '@/lib/productConstants';
+import { splitColori, hasColorSeparator } from '@/lib/coloriUtils';
 import ProductPantoneForm from './ProductPantoneForm';
 
 const IVA_OPTIONS = [0, 4, 5, 10, 22];
@@ -135,6 +136,8 @@ const schema = z
     nomLinea: z.string().optional(),
     modello: z.string().optional(),
     colore: z.string().optional(),
+    colore2: z.string().optional(),
+    colore3: z.string().optional(),
     lavorazione: z.string().optional(),
     materiale1: z.string().optional(),
     materiale2: z.string().optional(),
@@ -254,6 +257,11 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     () => src?.pantoneColors ?? []
   );
   const [pantoneError, setPantoneError] = useState<string | null>(null);
+  const [fotoPicker, setFotoPicker] = useState<{
+    slot: 'imageUrl' | 'imageUrl2' | 'imageUrl3' | 'imageUrl4' | 'imageUrl5' | null;
+    options: { url: string; name: string }[];
+    loading: boolean;
+  }>({ slot: null, options: [], loading: false });
   const [sizeVariants, setSizeVariants] = useState<SizeVariant[]>(() => {
     const raw = src?.sizeVariants;
     if (!Array.isArray(raw)) return [];
@@ -302,7 +310,17 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       dettaglio: src.dettaglio || '',
       nomLinea: src.nomLinea || '',
       modello: src.modello || '',
-      colore: src.colore || '',
+      // Auto-split combined colors (e.g. "avorio/bianco") if colore2/3 are empty
+      ...(() => {
+        const raw1 = src.colore || '';
+        const raw2 = src.colore2 || '';
+        const raw3 = src.colore3 || '';
+        if (raw1 && !raw2 && !raw3 && hasColorSeparator(raw1)) {
+          const [c1, c2, c3] = splitColori(raw1);
+          return { colore: c1, colore2: c2, colore3: c3 };
+        }
+        return { colore: raw1, colore2: raw2, colore3: raw3 };
+      })(),
       lavorazione: src.lavorazione || '',
       materiale1: src.materiale1 || '',
       materiale2: src.materiale2 || '',
@@ -506,6 +524,25 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
   const handleFile3 = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) uploadFile(f, 'imageUrl3', setIsUploading3, fileInputRef3); };
   const handleFile4 = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) uploadFile(f, 'imageUrl4', setIsUploading4, fileInputRef4); };
   const handleFile5 = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) uploadFile(f, 'imageUrl5', setIsUploading5, fileInputRef5); };
+
+  // ── Foto picker ──────────────────────────────────────────────────────────
+  async function openFotoPicker(field: 'imageUrl' | 'imageUrl2' | 'imageUrl3' | 'imageUrl4' | 'imageUrl5') {
+    const code = watch('code');
+    setFotoPicker({ slot: field, options: [], loading: true });
+    try {
+      const res = await fetch('/api/admin/foto');
+      if (!res.ok) throw new Error();
+      const { data } = await res.json() as { data: { url: string; name: string; parsedCode: string | null; status: string }[] };
+      const matching = data.filter((f) =>
+        f.status !== 'in-uso' &&
+        (!code || f.parsedCode?.toUpperCase() === code.toUpperCase())
+      );
+      setFotoPicker({ slot: field, options: matching.map((f) => ({ url: f.url, name: f.name })), loading: false });
+    } catch {
+      setFotoPicker({ slot: null, options: [], loading: false });
+      toast.error('Errore nel caricamento delle foto');
+    }
+  }
 
   // ── Submit ────────────────────────────────────────────────────────────────
   async function onSubmit(values: FormValues) {
@@ -730,8 +767,19 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       {/* ── Moda: campi specifici in Anagrafica ── */}
       {isModa && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Combobox label="Colore *"    field="colore"      value={watch('colore') || ''}      onChange={(v) => setValue('colore', v)} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Combobox label="Colore 1 *" field="colore" value={watch('colore') || ''} placeholder="es. rosso"
+              onChange={(v) => {
+                if (hasColorSeparator(v)) {
+                  const [c1, c2, c3] = splitColori(v);
+                  setValue('colore', c1); setValue('colore2', c2); setValue('colore3', c3);
+                } else { setValue('colore', v); }
+              }} />
+            <Combobox label="Colore 2"   field="colore"  value={watch('colore2') || ''} onChange={(v) => setValue('colore2', v)} placeholder="es. blu" />
+            <Combobox label="Colore 3"   field="colore"  value={watch('colore3') || ''} onChange={(v) => setValue('colore3', v)} placeholder="es. bianco" />
+          </div>
+          <p className="text-2xs text-gray-400 -mt-2">Al maschile: rosso, blu, nero, bianco, beige…</p>
+          <div>
             <Combobox label="Lavorazione" field="lavorazione" value={watch('lavorazione') || ''} onChange={(v) => setValue('lavorazione', v)} />
           </div>
 
@@ -778,8 +826,19 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       {/* ── Casa: campi specifici in Anagrafica ── */}
       {!isModa && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Combobox label="Colore"      field="colore"      value={watch('colore') || ''}      onChange={(v) => setValue('colore', v)} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Combobox label="Colore 1" field="colore" value={watch('colore') || ''} placeholder="es. rosso"
+              onChange={(v) => {
+                if (hasColorSeparator(v)) {
+                  const [c1, c2, c3] = splitColori(v);
+                  setValue('colore', c1); setValue('colore2', c2); setValue('colore3', c3);
+                } else { setValue('colore', v); }
+              }} />
+            <Combobox label="Colore 2" field="colore"  value={watch('colore2') || ''} onChange={(v) => setValue('colore2', v)} placeholder="es. blu" />
+            <Combobox label="Colore 3" field="colore"  value={watch('colore3') || ''} onChange={(v) => setValue('colore3', v)} placeholder="es. bianco" />
+          </div>
+          <p className="text-2xs text-gray-400 -mt-2">Al maschile: rosso, blu, nero, bianco, beige…</p>
+          <div>
             <Combobox label="Lavorazione" field="lavorazione" value={watch('lavorazione') || ''} onChange={(v) => setValue('lavorazione', v)} />
           </div>
 
@@ -1088,16 +1147,55 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
           <div className="flex-1 space-y-1.5">
             <p className="text-2xs font-medium text-gray-500">{label}</p>
             <input ref={ref} type="file" accept="image/*" className="hidden" onChange={onChange} />
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button type="button" variant="outline" size="sm" loading={loading} onClick={() => ref.current?.click()}>
                 {loading ? 'Caricamento…' : preview ? 'Cambia' : 'Carica'}
               </Button>
+              <button
+                type="button"
+                onClick={() => fotoPicker.slot === field ? setFotoPicker({ slot: null, options: [], loading: false }) : openFotoPicker(field)}
+                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                <Link size={11} />
+                Cerca foto
+              </button>
               {preview && (
                 <button type="button" onClick={() => setValue(field, '', { shouldDirty: true })} className="text-xs text-red-500 hover:text-red-700">
                   Rimuovi
                 </button>
               )}
             </div>
+            {fotoPicker.slot === field && (
+              <div className="border border-border rounded-lg bg-white shadow-sm overflow-hidden">
+                {fotoPicker.loading && (
+                  <p className="text-2xs text-gray-400 text-center py-3">Caricamento…</p>
+                )}
+                {!fotoPicker.loading && fotoPicker.options.length === 0 && (
+                  <p className="text-2xs text-gray-400 text-center py-3">
+                    Nessuna foto da collegare trovata{watch('code') ? ` per cod. ${watch('code')}` : ''}
+                  </p>
+                )}
+                {!fotoPicker.loading && fotoPicker.options.length > 0 && (
+                  <div className="max-h-40 overflow-y-auto divide-y divide-border">
+                    {fotoPicker.options.map((opt) => (
+                      <button
+                        key={opt.url}
+                        type="button"
+                        onClick={() => {
+                          setValue(field, opt.url, { shouldDirty: true });
+                          setFotoPicker({ slot: null, options: [], loading: false });
+                        }}
+                        className="flex items-center gap-2 w-full text-left px-2 py-1.5 hover:bg-gray-50 transition-colors"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={opt.url} alt={opt.name} className="w-8 h-8 object-cover rounded flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        <span className="text-2xs text-gray-700 truncate">{opt.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <Input {...register(field)} placeholder="oppure incolla URL esterno…" />
           </div>
         </div>
