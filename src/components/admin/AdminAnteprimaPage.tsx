@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Eye, ChevronDown, Loader2, MonitorSmartphone, UserCheck, FlaskConical } from 'lucide-react';
 
 interface Operator {
@@ -19,7 +18,6 @@ interface Organization {
 }
 
 export default function AdminAnteprimaPage() {
-  const router = useRouter();
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(true);
   const [selectedOrgId, setSelectedOrgId] = useState('');
@@ -58,8 +56,7 @@ export default function AdminAnteprimaPage() {
         setError(json.error ?? 'Errore');
         return;
       }
-      router.push('/home');
-      router.refresh();
+      window.location.href = '/home';
     } catch {
       setError('Errore di rete');
     } finally {
@@ -93,7 +90,7 @@ export default function AdminAnteprimaPage() {
             Vedrai l'interfaccia ma senza dati specifici di un'organizzazione.
           </p>
           <button
-            onClick={() => router.push('/home')}
+            onClick={() => { window.location.href = '/home'; }}
             className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-border rounded-lg text-sm text-primary hover:bg-cream transition-colors font-medium"
           >
             <Eye size={14} />
@@ -189,7 +186,7 @@ export default function AdminAnteprimaPage() {
             Accessibile solo agli amministratori.
           </p>
           <button
-            onClick={() => router.push('/catalog')}
+            onClick={() => { window.location.href = '/catalog'; }}
             className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-amber-200 bg-amber-50 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-100 transition-colors"
           >
             <FlaskConical size={14} />

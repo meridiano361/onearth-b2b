@@ -23,8 +23,9 @@ const CATALOG_FONT_MAP: Record<string, string> = {
   lato: "'Lato', 'Helvetica Neue', Helvetica, Arial, sans-serif",
 };
 
-// Paths where the cart sidebar should not be shown
+// Paths where the cart sidebar should not be shown (exact match only for home routes)
 const SIDEBAR_HIDDEN_PATHS = ['/catalog/orders', '/orders', '/catalog/destinazioni'];
+const SIDEBAR_HIDDEN_EXACT = ['/catalog', '/home'];
 
 export default async function B2BLayout({
   children,
@@ -52,9 +53,9 @@ export default async function B2BLayout({
   const catalogFontFamily = CATALOG_FONT_MAP[catalogFontKey] ?? CATALOG_FONT_MAP.inter;
 
   const pathname = headers().get('x-pathname') ?? '';
-  const hideSidebar = SIDEBAR_HIDDEN_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(p + '/')
-  );
+  const hideSidebar =
+    SIDEBAR_HIDDEN_EXACT.includes(pathname) ||
+    SIDEBAR_HIDDEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
 
   const previewData = getPreviewFromSession(session);
   const previewInfo = previewData

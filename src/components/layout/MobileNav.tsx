@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Home, LayoutGrid, Package, ShoppingCart, FolderOpen, HelpCircle,
+  Home, LayoutGrid, ShoppingCart, Package, Heart, HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
@@ -18,46 +18,47 @@ type NavItem = {
   notifBadge?: boolean;
 };
 
-const NAV_ITEMS: NavItem[] = [
-  {
-    icon: Home,
-    label: 'Home',
-    href: '/catalog',
-    isActive: (p) => p === '/catalog' || p === '/home',
-    notifBadge: true,
-  },
-  {
-    icon: LayoutGrid,
-    label: 'Catalogo',
-    href: '/catalog/products',
-    isActive: (p) => p.startsWith('/catalog/products'),
-  },
-  {
-    icon: ShoppingCart,
-    label: 'Carrelli',
-    href: '/catalog/carts',
-    isActive: (p) => p.startsWith('/catalog/carts'),
-    badge: true,
-  },
-  {
-    icon: Package,
-    label: 'Ordini',
-    href: '/catalog/orders',
-    isActive: (p) => p.startsWith('/catalog/orders'),
-  },
-  {
-    icon: FolderOpen,
-    label: 'Risorse',
-    href: '/catalog/risorse',
-    isActive: (p) => p.startsWith('/catalog/risorse'),
-  },
-  {
-    icon: HelpCircle,
-    label: 'Aiuto',
-    href: '/catalog/assistenza',
-    isActive: (p) => p.startsWith('/catalog/assistenza'),
-  },
+const HOME_ITEM: NavItem = {
+  icon: Home,
+  label: 'Home',
+  href: '/catalog',
+  isActive: (p) => p === '/catalog' || p === '/home',
+  notifBadge: true,
+};
+
+const AIUTO_ITEM: NavItem = {
+  icon: HelpCircle,
+  label: 'Aiuto',
+  href: '/catalog/assistenza',
+  isActive: (p) => p.startsWith('/catalog/assistenza'),
+};
+
+const CASA_ITEMS: NavItem[] = [
+  HOME_ITEM,
+  { icon: LayoutGrid, label: 'Catalogo', href: '/catalog/products',  isActive: (p) => p.startsWith('/catalog/products') },
+  { icon: Heart,      label: 'Preferiti', href: '/catalog/preferiti', isActive: (p) => p.startsWith('/catalog/preferiti') },
+  { icon: ShoppingCart, label: 'Carrelli', href: '/catalog/carts',   isActive: (p) => p.startsWith('/catalog/carts'), badge: true },
+  { icon: Package,    label: 'Ordini',    href: '/catalog/orders',   isActive: (p) => p.startsWith('/catalog/orders') },
+  AIUTO_ITEM,
 ];
+
+const MODA_ITEMS: NavItem[] = [
+  HOME_ITEM,
+  { icon: LayoutGrid, label: 'Catalogo', href: '/moda/catalogo',  isActive: (p) => p.startsWith('/moda/catalogo') },
+  { icon: Heart,      label: 'Preferiti', href: '/moda/preferiti', isActive: (p) => p.startsWith('/moda/preferiti') },
+  { icon: ShoppingCart, label: 'Carrelli', href: '/moda/carrelli', isActive: (p) => p.startsWith('/moda/carrelli') },
+  { icon: Package,    label: 'Ordini',    href: '/moda/ordini',   isActive: (p) => p.startsWith('/moda/ordini') },
+  AIUTO_ITEM,
+];
+
+const HOME_ONLY_ITEMS: NavItem[] = [HOME_ITEM, AIUTO_ITEM];
+
+function getNavItems(pathname: string): NavItem[] {
+  if (pathname === '/catalog' || pathname === '/home') return HOME_ONLY_ITEMS;
+  if (pathname.startsWith('/moda')) return MODA_ITEMS;
+  if (pathname.startsWith('/catalog/') || pathname.startsWith('/casa')) return CASA_ITEMS;
+  return HOME_ONLY_ITEMS;
+}
 
 export default function MobileNav() {
   const pathname = usePathname();
@@ -75,13 +76,15 @@ export default function MobileNav() {
   });
   const unreadCount = notifications.filter((n) => !n.letta).length;
 
+  const navItems = getNavItems(pathname);
+
   return (
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-30"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-stretch h-[56px]">
-        {NAV_ITEMS.map(({ icon: Icon, label, href, isActive, badge, notifBadge }) => {
+        {navItems.map(({ icon: Icon, label, href, isActive, badge, notifBadge }) => {
           const active = isActive(pathname);
           return (
             <Link
@@ -92,7 +95,6 @@ export default function MobileNav() {
                 active ? 'text-gray-900' : 'text-[#9CA3AF]',
               )}
             >
-              {/* Active indicator — thin line at top */}
               {active && (
                 <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-gray-900" />
               )}

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
-import { LogOut, Heart, Settings } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -12,7 +12,7 @@ import LanguageSelector from '@/components/layout/LanguageSelector';
 import NotificationBell from '@/components/layout/NotificationBell';
 import { useSettings } from '@/contexts/SettingsContext';
 
-const NAV_CONFIG: Record<string, { href: string; isActive: (p: string) => boolean }> = {
+const CASA_NAV_CONFIG: Record<string, { href: string; isActive: (p: string) => boolean }> = {
   catalogo:     { href: '/catalog/products',    isActive: (p) => p.startsWith('/catalog/products') },
   preferiti:    { href: '/catalog/preferiti',   isActive: (p) => p.startsWith('/catalog/preferiti') },
   carrelli:     { href: '/catalog/carts',       isActive: (p) => p.startsWith('/catalog/carts') },
@@ -20,6 +20,14 @@ const NAV_CONFIG: Record<string, { href: string; isActive: (p: string) => boolea
   destinazioni: { href: '/catalog/destinazioni',isActive: (p) => p.startsWith('/catalog/destinazioni') },
   assistenza:   { href: '/catalog/assistenza',  isActive: (p) => p.startsWith('/catalog/assistenza') },
 };
+
+const MODA_NAV = [
+  { key: 'catalogo',  href: '/moda/catalogo',      label: 'Catalogo',  isActive: (p: string) => p.startsWith('/moda/catalogo') },
+  { key: 'preferiti', href: '/moda/preferiti',      label: 'Preferiti', isActive: (p: string) => p.startsWith('/moda/preferiti') },
+  { key: 'carrelli',  href: '/moda/carrelli',       label: 'Carrelli',  isActive: (p: string) => p.startsWith('/moda/carrelli') },
+  { key: 'ordini',    href: '/moda/ordini',         label: 'Ordini',    isActive: (p: string) => p.startsWith('/moda/ordini') },
+  { key: 'assistenza',href: '/catalog/assistenza',  label: 'Aiuto',     isActive: (p: string) => p.startsWith('/catalog/assistenza') },
+];
 
 interface HeaderProps {
   session: Session;
@@ -29,6 +37,9 @@ export default function Header({ session }: HeaderProps) {
   const pathname = usePathname();
   const t = useTranslations('nav');
   const { menu } = useSettings();
+
+  const isHome = pathname === '/catalog' || pathname === '/home';
+  const isInModa = pathname.startsWith('/moda');
 
   return (
     <header className="bg-white border-b border-border flex-shrink-0 z-10 pt-safe">
@@ -46,43 +57,44 @@ export default function Header({ session }: HeaderProps) {
       </Link>
 
       {/* Nav links — desktop */}
-      <nav className="hidden md:flex items-center gap-1">
-        {menu.ordine
-          .filter((key) => menu.items[key]?.visibile && NAV_CONFIG[key])
-          .map((key) => {
-            const config = NAV_CONFIG[key];
-            const label = menu.items[key]?.label ?? key;
-            return (
-              <Link
-                key={key}
-                href={config.href}
-                className={cn(
-                  'text-xs px-3 py-1.5 rounded transition-colors',
-                  config.isActive(pathname)
-                    ? 'text-primary font-semibold bg-cream'
-                    : 'text-gray-400 hover:text-primary hover:bg-cream'
-                )}
-              >
-                {label}
-              </Link>
-            );
-          })}
-      </nav>
+      {!isHome && (
+        <nav className="hidden md:flex items-center gap-1">
+          {isInModa
+            ? MODA_NAV.map(({ key, href, label, isActive }) => (
+                <Link
+                  key={key}
+                  href={href}
+                  className={cn(
+                    'text-xs px-3 py-1.5 rounded transition-colors',
+                    isActive(pathname) ? 'text-primary font-semibold bg-cream' : 'text-gray-400 hover:text-primary hover:bg-cream'
+                  )}
+                >
+                  {label}
+                </Link>
+              ))
+            : menu.ordine
+                .filter((key) => menu.items[key]?.visibile && CASA_NAV_CONFIG[key])
+                .map((key) => {
+                  const config = CASA_NAV_CONFIG[key];
+                  const label = menu.items[key]?.label ?? key;
+                  return (
+                    <Link
+                      key={key}
+                      href={config.href}
+                      className={cn(
+                        'text-xs px-3 py-1.5 rounded transition-colors',
+                        config.isActive(pathname) ? 'text-primary font-semibold bg-cream' : 'text-gray-400 hover:text-primary hover:bg-cream'
+                      )}
+                    >
+                      {label}
+                    </Link>
+                  );
+                })}
+        </nav>
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />
-
-      {/* Preferiti — mobile only, not in bottom bar */}
-      <Link
-        href="/catalog/preferiti"
-        className="md:hidden p-1.5 text-gray-400 hover:text-primary transition-colors"
-        aria-label="Preferiti"
-      >
-        <Heart
-          size={18}
-          className={pathname.startsWith('/catalog/preferiti') ? 'fill-gray-900 text-gray-900' : ''}
-        />
-      </Link>
 
       {/* Notification bell */}
       <NotificationBell />
