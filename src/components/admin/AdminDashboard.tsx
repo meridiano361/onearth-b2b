@@ -130,7 +130,7 @@ export default function AdminDashboard() {
       <div className="mb-7">
         <p className="label-luxury text-accent mb-1">Meridiano 361</p>
         <h1 className="font-display text-3xl text-primary font-light">Dashboard</h1>
-        <p className="text-sm text-gray-400 mt-1">Collezione CASA 2027 · aggiornamento automatico ogni 30 s</p>
+        <p className="text-sm text-gray-400 mt-1">Aggiornamento automatico ogni 30 s</p>
       </div>
 
       {/* KPI cards */}
