@@ -108,7 +108,7 @@ model Product {
   fantasia           String?
   lavorazione        String?
   dettaglio          String?
-  sizeVariants       Json?
+  sizeVariants       Json?    @map("size_variants")
   descrizioneEn      String?
   descrizioneDe      String?
   descrizioneFr      String?
