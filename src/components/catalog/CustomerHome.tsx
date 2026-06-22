@@ -32,7 +32,7 @@ const SOCIAL_SVGS: Record<string, ReactNode> = {
 };
 
 function formatDeadline(iso: string) {
-  return new Date(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.');
 }
 
 type NotificationItem = {
@@ -107,60 +107,52 @@ export default function CustomerHome() {
     if (popupNotification) sessionStorage.setItem(`notif-popup-${popupNotification.id}`, '1');
   }
 
-  const casaDeadline = collections.casa.bookingDeadline;
-  const modaDeadline = collections.moda.bookingDeadline;
+  const lista = collections.lista ?? [];
+  const casaInfo = lista.find((c) => c.id === 'casa');
+  const modaInfo = lista.find((c) => c.id === 'moda');
+
+  function CollectionCard({ info, href }: { info: typeof casaInfo; href: string }) {
+    if (!info) return null;
+    const deadline = info.dataScadenza;
+    const expired = deadline ? new Date(deadline) < new Date() : false;
+    return (
+      <Link
+        href={href}
+        className="block bg-white border border-border rounded-2xl overflow-hidden hover:border-primary/30 hover:shadow-sm transition-all duration-200 group"
+      >
+        {info.fotoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={info.fotoUrl} alt={info.titolo} className="w-full h-48 object-cover" />
+        )}
+        <div className="flex items-center justify-between gap-4 p-6">
+          <div>
+            <p className="text-2xs tracking-[0.2em] uppercase text-gray-400">Collezione</p>
+            <h2 className="font-display text-3xl font-light tracking-widest text-primary mt-0.5">{info.titolo}</h2>
+            {info.sottotitolo && <p className="text-xs text-gray-400 mt-0.5">{info.sottotitolo}</p>}
+            {deadline && (
+              <div className={`mt-2 flex items-center gap-1.5 text-2xs ${expired ? 'text-gray-400' : 'text-amber-600'}`}>
+                {expired ? <Lock size={10} /> : <Clock size={10} />}
+                {expired
+                  ? `Prenotazione chiusa il ${formatDeadline(deadline)}`
+                  : `Prenotazioni aperte fino al ${formatDeadline(deadline)}`}
+              </div>
+            )}
+          </div>
+          <ChevronRight size={20} className="text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" />
+        </div>
+      </Link>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-cream">
       <div className="max-w-lg mx-auto px-4 py-10 space-y-4">
 
         {/* CASA card */}
-        <Link
-          href={isAdmin ? '/casa' : '/catalog/products'}
-          className="block bg-white border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-sm transition-all duration-200 group"
-        >
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-2xs tracking-[0.2em] uppercase text-gray-400">Collezione</p>
-              <h2 className="font-display text-3xl font-light tracking-widest text-primary mt-0.5">Casa 2027</h2>
-              {casaDeadline && (() => {
-                const expired = new Date(casaDeadline) < new Date();
-                return (
-                  <div className={`mt-2 flex items-center gap-1.5 text-2xs ${expired ? 'text-gray-400' : 'text-amber-600'}`}>
-                    {expired ? <Lock size={10} /> : <Clock size={10} />}
-                    {expired ? `Chiuse il ${formatDeadline(casaDeadline)}` : `Chiudono il ${formatDeadline(casaDeadline)}`}
-                  </div>
-                );
-              })()}
-            </div>
-            <ChevronRight size={20} className="text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" />
-          </div>
-        </Link>
+        <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} />
 
         {/* MODA card — admin only */}
-        {isAdmin && (
-          <Link
-            href="/moda"
-            className="block bg-white border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-sm transition-all duration-200 group"
-          >
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-2xs tracking-[0.2em] uppercase text-gray-400">Collezione</p>
-                <h2 className="font-display text-3xl font-light tracking-widest text-primary mt-0.5">Moda PE27</h2>
-                {modaDeadline && (() => {
-                  const expired = new Date(modaDeadline) < new Date();
-                  return (
-                    <div className={`mt-2 flex items-center gap-1.5 text-2xs ${expired ? 'text-gray-400' : 'text-amber-600'}`}>
-                      {expired ? <Lock size={10} /> : <Clock size={10} />}
-                      {expired ? `Chiuse il ${formatDeadline(modaDeadline)}` : `Chiudono il ${formatDeadline(modaDeadline)}`}
-                    </div>
-                  );
-                })()}
-              </div>
-              <ChevronRight size={20} className="text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" />
-            </div>
-          </Link>
-        )}
+        {isAdmin && <CollectionCard info={modaInfo} href="/moda" />}
 
         {/* Social */}
         <div className="bg-white border border-border rounded-2xl px-5 py-4">

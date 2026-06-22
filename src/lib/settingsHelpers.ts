@@ -146,6 +146,16 @@ export interface AppSettingsData {
   collections: {
     moda: { bookingDeadline: string };
     casa: { bookingDeadline: string };
+    lista: Array<{
+      id: string;
+      titolo: string;
+      sottotitolo: string;
+      fotoUrl: string;
+      dataInizio: string;
+      dataScadenza: string;
+      dataFine: string;
+      scrollAttivo: boolean;
+    }>;
   };
 }
 
@@ -315,6 +325,10 @@ export const DEFAULT_APP_SETTINGS: AppSettingsData = {
   collections: {
     moda: { bookingDeadline: '' },
     casa: { bookingDeadline: '' },
+    lista: [
+      { id: 'casa', titolo: 'Casa 2027', sottotitolo: '', fotoUrl: '', dataInizio: '', dataScadenza: '', dataFine: '', scrollAttivo: true },
+      { id: 'moda', titolo: 'Moda PE27', sottotitolo: '', fotoUrl: '', dataInizio: '', dataScadenza: '', dataFine: '', scrollAttivo: true },
+    ],
   },
 };
 
@@ -474,10 +488,24 @@ export function parseSettingsFromDb(records: { chiave: string; valore: string }[
       soloUnaVolta:    bool('comunicazione.soloUnaVolta',    false),
       scadenza:        str('comunicazione.scadenza',         ''),
     },
-    collections: {
-      moda: { bookingDeadline: str('collection.moda.bookingDeadline', '') },
-      casa: { bookingDeadline: str('collection.casa.bookingDeadline', '') },
-    },
+    collections: (() => {
+      const defaultLista = [
+        { id: 'casa', titolo: 'Casa 2027', sottotitolo: '', fotoUrl: '', dataInizio: '', dataScadenza: str('collection.casa.bookingDeadline', ''), dataFine: '', scrollAttivo: true },
+        { id: 'moda', titolo: 'Moda PE27', sottotitolo: '', fotoUrl: '', dataInizio: '', dataScadenza: str('collection.moda.bookingDeadline', ''), dataFine: '', scrollAttivo: true },
+      ];
+      let lista = defaultLista;
+      try {
+        const raw = m['collections.lista'];
+        if (raw) lista = JSON.parse(raw);
+      } catch { /* keep default */ }
+      const casaItem = lista.find((c) => c.id === 'casa');
+      const modaItem = lista.find((c) => c.id === 'moda');
+      return {
+        moda: { bookingDeadline: modaItem?.dataScadenza ?? str('collection.moda.bookingDeadline', '') },
+        casa: { bookingDeadline: casaItem?.dataScadenza ?? str('collection.casa.bookingDeadline', '') },
+        lista,
+      };
+    })(),
     comunicazione2: {
       attivo:          bool('comunicazione2.attivo',          false),
       titolo:          str('comunicazione2.titolo',           ''),
