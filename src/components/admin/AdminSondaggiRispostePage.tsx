@@ -17,6 +17,7 @@ interface ResponseRow {
   respondentName: string;
   email: string;
   customerCode: string | null;
+  organizationName: string | null;
   answers: Record<string, unknown>;
 }
 interface ResponsesData { questions: Question[]; responses: ResponseRow[] }
@@ -167,6 +168,7 @@ export default function AdminSondaggiRispostePage({ surveyId }: { surveyId: stri
                       </td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-primary">{r.respondentName}</p>
+                        {r.organizationName && <p className="text-gray-500 text-2xs font-medium">{r.organizationName}</p>}
                         <p className="text-gray-400 text-2xs">{r.email}</p>
                       </td>
                       <td className="px-4 py-3">
@@ -200,6 +202,7 @@ export default function AdminSondaggiRispostePage({ surveyId }: { surveyId: stri
                         <td colSpan={4 + starQuestions.length + 2} className="px-6 py-4">
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-2xl">
                             <Detail label="Respondente" value={r.respondentName} />
+                            {r.organizationName && <Detail label="Organizzazione" value={r.organizationName} />}
                             <Detail label="Email" value={r.email} />
                             {r.customerCode && <Detail label="Cod. cliente" value={r.customerCode} />}
                             <Detail label="Canale" value={r.sourceChannel ?? '—'} />

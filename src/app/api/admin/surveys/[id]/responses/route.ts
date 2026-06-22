@@ -49,6 +49,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       respondentName: r.respondentName ?? r.customer?.companyName ?? r.email,
       email: r.email,
       customerCode: r.customer?.customerCode ?? null,
+      organizationName: r.customer?.companyName ?? null,
       answers: answersMap,
     };
   });
