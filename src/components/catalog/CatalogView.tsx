@@ -118,7 +118,15 @@ const CHIP_LABELS: { key: keyof Filters; label: string }[] = [
   { key: 'tranche',            label: 'Tranche' },
 ];
 
-export default function CatalogView({ lockedCollezione }: { lockedCollezione?: string } = {}) {
+export default function CatalogView({
+  lockedCollezione,
+  lockedGruppoMerceologico,
+  excludeGruppoMerceologico,
+}: {
+  lockedCollezione?: string;
+  lockedGruppoMerceologico?: string;
+  excludeGruppoMerceologico?: string;
+} = {}) {
   const { data: session } = useSession();
   const isCustomer = session?.user?.role === 'CUSTOMER';
   const router = useRouter();
@@ -275,6 +283,14 @@ export default function CatalogView({ lockedCollezione }: { lockedCollezione?: s
 
   const filteredProducts = useMemo(() => {
     let result = products;
+
+    // Branch-level locks applied before user filters
+    if (lockedGruppoMerceologico) {
+      result = result.filter((p) => p.gruppoMerceologico?.toLowerCase() === lockedGruppoMerceologico.toLowerCase());
+    }
+    if (excludeGruppoMerceologico) {
+      result = result.filter((p) => p.gruppoMerceologico?.toLowerCase() !== excludeGruppoMerceologico.toLowerCase());
+    }
 
     if (debouncedSearch.trim()) {
       const q = debouncedSearch.toLowerCase();

@@ -13,7 +13,7 @@ export default async function ModaCatalogoPage() {
   if (!session || !canAccessModa(session.user?.role)) redirect('/catalog');
   return (
     <Suspense fallback={null}>
-      <CatalogView lockedCollezione="PE27" />
+      <CatalogView lockedCollezione="PE27" lockedGruppoMerceologico="Moda" />
     </Suspense>
   );
 }

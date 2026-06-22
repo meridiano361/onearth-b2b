@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 export default function ProductsPage() {
   return (
     <Suspense fallback={null}>
-      <CatalogView />
+      <CatalogView excludeGruppoMerceologico="Moda" />
     </Suspense>
   );
 }
