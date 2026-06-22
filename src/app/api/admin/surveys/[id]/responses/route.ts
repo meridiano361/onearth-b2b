@@ -22,7 +22,20 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     prisma.surveyResponse.findMany({
       where: { surveyId, completed: true },
       include: {
-        customer: { select: { id: true, companyName: true, email: true, customerCode: true } },
+        customer: {
+          select: {
+            id: true,
+            companyName: true,
+            email: true,
+            customerCode: true,
+            orders: {
+              where: { organizationId: { not: null } },
+              select: { organization: { select: { nome: true } } },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            },
+          },
+        },
         answers: true,
       },
       orderBy: { submittedAt: 'desc' },
@@ -49,7 +62,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       respondentName: r.respondentName ?? r.customer?.companyName ?? r.email,
       email: r.email,
       customerCode: r.customer?.customerCode ?? null,
-      organizationName: r.customer?.companyName ?? null,
+      organizationName: r.customer?.orders?.[0]?.organization?.nome ?? null,
       answers: answersMap,
     };
   });
