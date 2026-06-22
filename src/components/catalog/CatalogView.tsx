@@ -186,7 +186,7 @@ export default function CatalogView({
   function setFilter(key: keyof Filters, value: string | null) {
     setFilters(prev => {
       const withNew = { ...prev, [key]: value };
-      const next = clearInvalidFilters(products, withNew, key);
+      const next = clearInvalidFilters(branchProducts, withNew, key);
       updateUrl(next, sortBy, search);
       return next;
     });
@@ -227,7 +227,7 @@ export default function CatalogView({
   function setPendingFilter(key: keyof Filters, value: string | null) {
     setPendingFilters(prev => {
       const withNew = { ...prev, [key]: value };
-      return clearInvalidFilters(products, withNew, key);
+      return clearInvalidFilters(branchProducts, withNew, key);
     });
   }
 
@@ -281,16 +281,20 @@ export default function CatalogView({
 
   const products = productsData ?? [];
 
-  const filteredProducts = useMemo(() => {
-    let result = products;
-
-    // Branch-level locks applied before user filters
+  // Base list scoped to the branch — used for filter option computation AND product display
+  const branchProducts = useMemo(() => {
+    let base = products;
     if (lockedGruppoMerceologico) {
-      result = result.filter((p) => p.gruppoMerceologico?.toLowerCase() === lockedGruppoMerceologico.toLowerCase());
+      base = base.filter((p) => p.gruppoMerceologico?.toLowerCase() === lockedGruppoMerceologico.toLowerCase());
     }
     if (excludeGruppoMerceologico) {
-      result = result.filter((p) => p.gruppoMerceologico?.toLowerCase() !== excludeGruppoMerceologico.toLowerCase());
+      base = base.filter((p) => p.gruppoMerceologico?.toLowerCase() !== excludeGruppoMerceologico.toLowerCase());
     }
+    return base;
+  }, [products, lockedGruppoMerceologico, excludeGruppoMerceologico]);
+
+  const filteredProducts = useMemo(() => {
+    let result = branchProducts;
 
     if (debouncedSearch.trim()) {
       const q = debouncedSearch.toLowerCase();
@@ -344,7 +348,7 @@ export default function CatalogView({
     });
 
     return result;
-  }, [products, debouncedSearch, filters, bloccoColoreFilter, onlyFavorites, favoriteIds, sortBy, novitaFilter]);
+  }, [branchProducts, debouncedSearch, filters, bloccoColoreFilter, onlyFavorites, favoriteIds, sortBy, novitaFilter]);
 
   const PAGE_SIZE = 60;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -359,7 +363,7 @@ export default function CatalogView({
     onBloccoColoreChange: (v: { id: number; name: string } | null) => void,
   ) {
     return {
-      products,
+      products: branchProducts,
       selectedGruppoMerceologico: currentFilters.gruppoMerceologico, onGruppoMerceologicoChange: (v: string | null) => onFilterChange('gruppoMerceologico', v),
       selectedFamiglia:           currentFilters.famiglia,           onFamigliaChange:           (v: string | null) => onFilterChange('famiglia', v),
       selectedClasse:             currentFilters.classe,             onClasseChange:             (v: string | null) => onFilterChange('classe', v),
