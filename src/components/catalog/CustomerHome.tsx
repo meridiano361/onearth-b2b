@@ -118,7 +118,7 @@ export default function CustomerHome() {
     return (
       <Link
         href={href}
-        className="block bg-white border border-border rounded-2xl overflow-hidden hover:border-primary/30 hover:shadow-sm transition-all duration-200 group"
+        className="block bg-black rounded-2xl overflow-hidden hover:opacity-90 transition-opacity duration-200 group"
       >
         {info.fotoUrl && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -126,11 +126,11 @@ export default function CustomerHome() {
         )}
         <div className="flex items-center justify-between gap-4 p-6">
           <div>
-            <p className="text-2xs tracking-[0.2em] uppercase text-gray-400">Collezione</p>
-            <h2 className="font-display text-3xl font-light tracking-widest text-primary mt-0.5">{info.titolo}</h2>
-            {info.sottotitolo && <p className="text-xs text-gray-400 mt-0.5">{info.sottotitolo}</p>}
+            <p className="text-2xs tracking-[0.2em] uppercase text-white/50">Collezione</p>
+            <h2 className="font-display text-3xl font-light tracking-widest text-white mt-0.5">{info.titolo}</h2>
+            {info.sottotitolo && <p className="text-xs text-white/60 mt-0.5">{info.sottotitolo}</p>}
             {deadline && (
-              <div className={`mt-2 flex items-center gap-1.5 text-2xs ${expired ? 'text-gray-400' : 'text-amber-600'}`}>
+              <div className={`mt-2 flex items-center gap-1.5 text-2xs ${expired ? 'text-white/40' : 'text-amber-300'}`}>
                 {expired ? <Lock size={10} /> : <Clock size={10} />}
                 {expired
                   ? `Prenotazione chiusa il ${formatDeadline(deadline)}`
@@ -138,7 +138,7 @@ export default function CustomerHome() {
               </div>
             )}
           </div>
-          <ChevronRight size={20} className="text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" />
+          <ChevronRight size={20} className="text-white/30 group-hover:text-white transition-colors flex-shrink-0" />
         </div>
       </Link>
     );
