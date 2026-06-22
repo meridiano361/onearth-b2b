@@ -22,25 +22,38 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     prisma.surveyResponse.findMany({
       where: { surveyId, completed: true },
       include: {
-        customer: {
-          select: {
-            id: true,
-            companyName: true,
-            email: true,
-            customerCode: true,
-            orders: {
-              where: { organizationId: { not: null } },
-              select: { organization: { select: { nome: true } } },
-              orderBy: { createdAt: 'desc' },
-              take: 1,
-            },
-          },
-        },
+        customer: { select: { id: true, companyName: true, email: true, customerCode: true } },
         answers: true,
       },
       orderBy: { submittedAt: 'desc' },
     }),
   ]);
+
+  // Build email→organization map via orders (by direct organizationId or canale→organization)
+  const emails = [...new Set(responses.map((r) => r.email))];
+  const customersWithOrgs = emails.length > 0
+    ? await prisma.customer.findMany({
+        where: { email: { in: emails } },
+        select: {
+          email: true,
+          orders: {
+            where: { OR: [{ organizationId: { not: null } }, { canaleId: { not: null } }] },
+            select: {
+              organization: { select: { nome: true } },
+              canale: { select: { organization: { select: { nome: true } } } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+        },
+      })
+    : [];
+  const orgByEmail = new Map(
+    customersWithOrgs.map((c) => [
+      c.email,
+      c.orders[0]?.organization?.nome ?? c.orders[0]?.canale?.organization?.nome ?? null,
+    ])
+  );
 
   function getAnswer(answers: typeof responses[0]['answers'], key: string) {
     const a = answers.find((x) => x.questionKey === key);
@@ -62,7 +75,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       respondentName: r.respondentName ?? r.customer?.companyName ?? r.email,
       email: r.email,
       customerCode: r.customer?.customerCode ?? null,
-      organizationName: r.customer?.orders?.[0]?.organization?.nome ?? null,
+      organizationName: orgByEmail.get(r.email) ?? null,
       answers: answersMap,
     };
   });
