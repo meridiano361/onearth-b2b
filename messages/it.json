@@ -153,7 +153,7 @@
         "errorGeneric": "Si è verificato un errore inatteso. Riprova."
     },
     "access": {
-        "requestLink": "Richiedi credenziali per accesso",
+        "requestLink": "Richiedi credenziali di accesso",
         "title": "Richiedi accesso",
         "subtitle": "Compila il form e ti contatteremo al più presto.",
         "orgLabel": "Organizzazione",

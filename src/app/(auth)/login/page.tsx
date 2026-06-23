@@ -75,7 +75,6 @@ export default async function LoginPage() {
               sizes="400px"
             />
           </Link>
-          <div className="mt-6 w-12 h-px bg-accent" />
         </div>
 
         <div className="relative z-10">
@@ -112,9 +111,12 @@ export default async function LoginPage() {
 
           <LoginForm />
 
-          <p className="mt-8 text-center text-xs text-gray-400">
+          <div className="mt-8 flex flex-col items-center gap-2.5 text-xs">
             <RequestAccessButton />
-          </p>
+            <Link href="/recupera-password" className="text-accent hover:underline transition-colors">
+              Ho dimenticato la password
+            </Link>
+          </div>
         </div>
       </div>
     </div>
