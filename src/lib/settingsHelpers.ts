@@ -72,6 +72,7 @@ export interface AppSettingsData {
   login: {
     sfondoUrl: string;
     caption: string;
+    claim: string;
   };
   ordine: {
     mostraBudget: boolean;
@@ -259,6 +260,7 @@ export const DEFAULT_APP_SETTINGS: AppSettingsData = {
   login: {
     sfondoUrl: '',
     caption: 'Collezione CASA 2027',
+    claim: 'C\'è un mondo da scoprire.',
   },
   comunicazione: {
     attivo: false,
@@ -448,6 +450,7 @@ export function parseSettingsFromDb(records: { chiave: string; valore: string }[
     login: {
       sfondoUrl: str('login.sfondoUrl', ''),
       caption: str('login.caption', 'Collezione CASA 2027'),
+      claim: str('login.claim', 'C\'è un mondo da scoprire.'),
     },
     ordine: {
       mostraBudget:   bool('ordine.mostraBudget',   true),

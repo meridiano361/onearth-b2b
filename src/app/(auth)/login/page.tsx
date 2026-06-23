@@ -105,7 +105,9 @@ export default async function LoginPage() {
           </div>
 
           <div className="mb-10">
-            <h2 className="text-2xl font-light text-primary tracking-tight">{t('claim')}</h2>
+            <h2 className="text-2xl font-light text-primary tracking-tight">
+              {ls.claim || t('claim')}
+            </h2>
           </div>
 
           <LoginForm />

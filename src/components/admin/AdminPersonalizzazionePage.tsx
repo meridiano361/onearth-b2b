@@ -60,6 +60,7 @@ function settingsToFlat(s: AppSettingsData): SettingsFlat {
   f['home.editorialCaption'] = s.home.editorialCaption;
   f['login.sfondoUrl'] = s.login.sfondoUrl;
   f['login.caption'] = s.login.caption;
+  f['login.claim'] = s.login.claim;
   f['social.ordine'] = JSON.stringify(s.social.ordine);
   for (const [k, v] of Object.entries(s.social.items)) {
     f[`social.${k}.visibile`] = String(v.visibile);
@@ -666,7 +667,7 @@ export default function AdminPersonalizzazionePage() {
 
   // Save key arrays
   const homeKeys = ['home.titolo1','home.titolo1.maiuscolo','home.titolo1.colore','home.titolo1.size','home.titolo1.font','home.titolo1.weight','home.titolo1.lineHeight','home.titolo1.letterSpacing','home.titolo1.transform','home.titolo2','home.titolo2.colore','home.titolo2.size','home.titolo2.font','home.titolo2.weight','home.titolo2.lineHeight','home.titolo2.letterSpacing','home.titolo2.transform','home.cta','home.scrollAttivo','home.scrollNumero','home.scrollCollezione','home.editorialAttivo','home.editorialUrl','home.editorialCaption'];
-  const loginKeys = ['login.sfondoUrl', 'login.caption'];
+  const loginKeys = ['login.sfondoUrl', 'login.caption', 'login.claim'];
   const coloriKeys = ['colori.sfondo', 'colori.pulsanti', 'colori.testoPulsanti', 'colori.testo'];
   const socialKeys = ['social.ordine', ...SOCIAL_KEYS.flatMap(k => [`social.${k}.visibile`, `social.${k}.url`])];
   const comunicazioneKeys = ['comunicazione.attivo','comunicazione.titolo','comunicazione.testo','comunicazione.colore','comunicazione.posizione','comunicazione.font','comunicazione.fontSizeTitolo','comunicazione.fontSizeTesto','comunicazione.pesoTitolo','comunicazione.pesoTesto','comunicazione.allineamento','comunicazione.trasformazione','comunicazione.corsivoTitolo','comunicazione.corsivoTesto','comunicazione.sfondo','comunicazione.coloreTesto','comunicazione.coloreTitolo','comunicazione.bordo','comunicazione.coloreBordo','comunicazione.raggio','comunicazione.ombra','comunicazione.padding','comunicazione.larghezza','comunicazione.mostraIcona','comunicazione.icona','comunicazione.posizioneIcona','comunicazione.chiudibile','comunicazione.soloUnaVolta','comunicazione.scadenza'];
@@ -691,11 +692,17 @@ export default function AdminPersonalizzazionePage() {
 
           {/* Pagina di accesso */}
           <SectionCard title="Pagina di accesso">
-            <p className="text-xs text-gray-400">Personalizza il pannello visivo della pagina di login (lato sinistro su desktop).</p>
+            <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-1">Colonna sinistra (desktop)</p>
             <ImageUploadInput label="Immagine di sfondo" value={settings.login.sfondoUrl} onChange={url => update('login', { sfondoUrl: url })} />
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Didascalia</label>
-              <input type="text" value={settings.login.caption} onChange={e => update('login', { caption: e.target.value })} className={inp} />
+              <label className="text-xs text-gray-500 mb-1 block">Didascalia in basso</label>
+              <input type="text" value={settings.login.caption} onChange={e => update('login', { caption: e.target.value })} className={inp} placeholder="Collezione CASA 2027" />
+            </div>
+            <div className="h-px bg-border my-2" />
+            <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-1">Colonna destra</p>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Titolo sopra il form di accesso</label>
+              <input type="text" value={settings.login.claim} onChange={e => update('login', { claim: e.target.value })} className={inp} placeholder="C'è un mondo da scoprire." />
             </div>
             <SaveButton onClick={() => saveSection(loginKeys, 'Login')} loading={saving === 'Login'} />
           </SectionCard>
