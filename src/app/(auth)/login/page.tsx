@@ -12,7 +12,7 @@ import RequestAccessButton from '@/components/auth/RequestAccessButton';
 import Image from 'next/image';
 
 export const metadata: Metadata = {
-  title: 'Accedi',
+  title: { absolute: 'Accedi | OE B2B' },
   description: 'Accedi alla piattaforma ordini B2B ON EARTH',
 };
 
