@@ -6,7 +6,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, Search, Download, Star, ChevronDown, ChevronUp,
-  Loader2, Trash2,
+  Loader2, Trash2, MessageSquare, List,
 } from 'lucide-react';
 
 interface Question { key: string; text: string; type: string }
@@ -31,7 +31,9 @@ function formatAnswer(value: unknown, type: string): string {
 
 export default function AdminSondaggiRispostePage({ surveyId }: { surveyId: string }) {
   const [search, setSearch] = useState('');
-  const [filterLowRating, setFilterLowRating] = useState(false);
+  const [ratingFilter, setRatingFilter] = useState<'low' | 'mid' | 'high' | null>(null);
+  const [filterHasComment, setFilterHasComment] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'comments'>('table');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const qc = useQueryClient();
@@ -53,16 +55,28 @@ export default function AdminSondaggiRispostePage({ surveyId }: { surveyId: stri
 
   const questions = data?.questions ?? [];
   const starQuestions = questions.filter((q) => q.type === 'stars').slice(0, 3);
+  const textQuestions = questions.filter((q) => q.type === 'text');
+
+  const hasComment = (r: ResponseRow) =>
+    textQuestions.some((q) => typeof r.answers[q.key] === 'string' && (r.answers[q.key] as string).trim().length > 0);
 
   let responses = data?.responses ?? [];
-  if (filterLowRating) {
+  if (ratingFilter) {
     responses = responses.filter((r) =>
       starQuestions.some((q) => {
         const v = r.answers[q.key];
-        return typeof v === 'number' && v <= 2;
+        if (typeof v !== 'number') return false;
+        if (ratingFilter === 'low') return v <= 2;
+        if (ratingFilter === 'mid') return v === 3 || v === 4;
+        return v === 5;
       })
     );
   }
+  if (filterHasComment) {
+    responses = responses.filter(hasComment);
+  }
+
+  const allComments = (data?.responses ?? []).filter(hasComment);
 
   async function handleDelete(responseId: string, name: string) {
     if (!confirm(`Eliminare la risposta di "${name}"? L'operazione non è reversibile.`)) return;
@@ -112,14 +126,52 @@ export default function AdminSondaggiRispostePage({ surveyId }: { surveyId: stri
           />
         </div>
         {starQuestions.length > 0 && (
+          <>
+            <button
+              onClick={() => setRatingFilter(ratingFilter === 'low' ? null : 'low')}
+              className={`h-8 px-3 text-xs rounded border transition-colors ${ratingFilter === 'low' ? 'border-red-400 bg-red-50 text-red-700 font-medium' : 'border-border text-gray-600 hover:bg-cream'}`}
+            >
+              ★ Bassi (1–2)
+            </button>
+            <button
+              onClick={() => setRatingFilter(ratingFilter === 'mid' ? null : 'mid')}
+              className={`h-8 px-3 text-xs rounded border transition-colors ${ratingFilter === 'mid' ? 'border-amber-400 bg-amber-50 text-amber-700 font-medium' : 'border-border text-gray-600 hover:bg-cream'}`}
+            >
+              ★ Medi (3–4)
+            </button>
+            <button
+              onClick={() => setRatingFilter(ratingFilter === 'high' ? null : 'high')}
+              className={`h-8 px-3 text-xs rounded border transition-colors ${ratingFilter === 'high' ? 'border-emerald-500 bg-emerald-50 text-emerald-700 font-medium' : 'border-border text-gray-600 hover:bg-cream'}`}
+            >
+              ★ Alti (5)
+            </button>
+          </>
+        )}
+        {textQuestions.length > 0 && (
           <button
-            onClick={() => setFilterLowRating(!filterLowRating)}
-            className={`h-8 px-3 text-xs rounded border transition-colors ${filterLowRating ? 'border-amber-400 bg-amber-50 text-amber-700 font-medium' : 'border-border text-gray-600 hover:bg-cream'}`}
+            onClick={() => setFilterHasComment(!filterHasComment)}
+            className={`h-8 px-3 text-xs rounded border transition-colors flex items-center gap-1.5 ${filterHasComment ? 'border-blue-400 bg-blue-50 text-blue-700 font-medium' : 'border-border text-gray-600 hover:bg-cream'}`}
           >
-            ★ Voti bassi (1–2)
+            <MessageSquare size={11} /> Con commento
           </button>
         )}
-        <span className="text-xs text-gray-400 ml-auto">{responses.length} risposte</span>
+        <span className="text-xs text-gray-400 ml-auto">{viewMode === 'comments' ? allComments.length : responses.length} risposte</span>
+        {textQuestions.length > 0 && (
+          <div className="flex border border-border rounded overflow-hidden">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`h-8 px-3 text-xs flex items-center gap-1.5 transition-colors ${viewMode === 'table' ? 'bg-primary text-white' : 'bg-white text-gray-500 hover:bg-cream'}`}
+            >
+              <List size={11} /> Risposte
+            </button>
+            <button
+              onClick={() => setViewMode('comments')}
+              className={`h-8 px-3 text-xs flex items-center gap-1.5 transition-colors border-l border-border ${viewMode === 'comments' ? 'bg-primary text-white' : 'bg-white text-gray-500 hover:bg-cream'}`}
+            >
+              <MessageSquare size={11} /> Commenti ({allComments.length})
+            </button>
+          </div>
+        )}
       </div>
 
       {isLoading && (
@@ -128,7 +180,44 @@ export default function AdminSondaggiRispostePage({ surveyId }: { surveyId: stri
         </div>
       )}
 
-      {!isLoading && (
+      {/* Comments view */}
+      {!isLoading && viewMode === 'comments' && (
+        <div className="space-y-3">
+          {allComments.length === 0 ? (
+            <p className="py-12 text-center text-gray-400 text-xs">Nessun commento</p>
+          ) : (
+            allComments.map((r) => (
+              <div key={r.id} className="bg-white border border-border rounded p-4">
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div>
+                    <p className="font-medium text-primary text-xs">{r.respondentName}</p>
+                    {r.organizationName && <p className="text-gray-500 text-2xs">{r.organizationName}</p>}
+                    <p className="text-gray-400 text-2xs">{new Date(r.submittedAt).toLocaleDateString('it-IT')}</p>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    {starQuestions.map((q) => {
+                      const v = r.answers[q.key];
+                      return typeof v === 'number' ? <StarBadge key={q.key} value={v} /> : null;
+                    })}
+                  </div>
+                </div>
+                {textQuestions.map((q) => {
+                  const v = r.answers[q.key];
+                  if (typeof v !== 'string' || !v.trim()) return null;
+                  return (
+                    <div key={q.key}>
+                      <p className="text-2xs text-gray-400 uppercase tracking-widest mb-1">{q.text}</p>
+                      <p className="text-sm text-gray-700 leading-relaxed italic">"{v.trim()}"</p>
+                    </div>
+                  );
+                })}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {!isLoading && viewMode === 'table' && (
         <div className="bg-white border border-border rounded overflow-hidden overflow-x-auto">
           <table className="w-full min-w-[600px] text-xs">
             <thead className="bg-gray-50 border-b border-border">
