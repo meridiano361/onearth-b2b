@@ -117,6 +117,12 @@ export default function AdminProductsPage() {
   // CSV export
   const [showExportMenu, setShowExportMenu] = useState(false);
 
+  // MODA Excel import
+  const [showModaImport, setShowModaImport] = useState(false);
+  const [isModaExporting, setIsModaExporting] = useState(false);
+  const [isModaImporting, setIsModaImporting] = useState(false);
+  const [modaImportResult, setModaImportResult] = useState<{ created: number; updated: number; errors: { row: number; code: string; error: string }[] } | null>(null);
+
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkEdit, setShowBulkEdit] = useState(false);
@@ -533,6 +539,43 @@ export default function AdminProductsPage() {
     setShowExportMenu(false);
   }
 
+  async function handleModaExport() {
+    setIsModaExporting(true);
+    try {
+      const res = await fetch('/api/admin/moda/export-template');
+      if (!res.ok) throw new Error('Export fallito');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `moda-prodotti-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Errore durante l\'esportazione');
+    } finally {
+      setIsModaExporting(false);
+    }
+  }
+
+  async function handleModaImport(file: File) {
+    setIsModaImporting(true);
+    setModaImportResult(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/admin/moda/import', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Errore import');
+      setModaImportResult(data);
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    } catch (err: any) {
+      toast.error(err.message ?? 'Errore durante l\'importazione');
+    } finally {
+      setIsModaImporting(false);
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
@@ -577,6 +620,12 @@ export default function AdminProductsPage() {
           </div>
           <Button variant="secondary" icon={<Upload size={13} />} onClick={() => setShowImport(true)}>
             <span className="hidden sm:inline">Importa da Excel</span>
+          </Button>
+          <Button variant="secondary" icon={isModaExporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} onClick={handleModaExport} disabled={isModaExporting}>
+            <span className="hidden sm:inline">Template MODA</span>
+          </Button>
+          <Button variant="secondary" icon={<Upload size={13} />} onClick={() => { setModaImportResult(null); setShowModaImport(true); }}>
+            <span className="hidden sm:inline">Importa MODA</span>
           </Button>
           <Button variant="secondary" icon={<ImagePlus size={13} />} onClick={() => setShowBulkImages(true)}>
             <span className="hidden sm:inline">Carica foto in blocco</span>
@@ -1119,6 +1168,52 @@ export default function AdminProductsPage() {
               Elimina {selectedIds.size} prodott{selectedIds.size === 1 ? 'o' : 'i'}
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* MODA Excel Import Modal */}
+      <Modal isOpen={showModaImport} onClose={() => !isModaImporting && setShowModaImport(false)} title="Importa prodotti MODA da Excel" size="sm">
+        <div className="space-y-4">
+          {!modaImportResult ? (
+            <>
+              <p className="text-sm text-gray-600">
+                Carica il file Excel compilato (template scaricabile con <strong>Template MODA</strong>).
+                I prodotti esistenti (per codice) verranno aggiornati; quelli nuovi verranno creati.
+              </p>
+              <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ${isModaImporting ? 'opacity-50 pointer-events-none' : 'hover:bg-cream border-border'}`}>
+                {isModaImporting ? (
+                  <><Loader2 size={24} className="animate-spin text-accent mb-2" /><span className="text-sm text-gray-500">Importazione in corso...</span></>
+                ) : (
+                  <><Upload size={24} className="text-gray-400 mb-2" /><span className="text-sm text-gray-500">Clicca per selezionare il file .xlsx</span></>
+                )}
+                <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleModaImport(f); }} disabled={isModaImporting} />
+              </label>
+              <div className="flex justify-end">
+                <Button variant="ghost" onClick={() => setShowModaImport(false)} disabled={isModaImporting}>Chiudi</Button>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex gap-4 text-sm">
+                <span className="text-green-700 font-medium">✓ {modaImportResult.created} creati</span>
+                <span className="text-blue-700 font-medium">↺ {modaImportResult.updated} aggiornati</span>
+                {modaImportResult.errors.length > 0 && (
+                  <span className="text-red-600 font-medium">✕ {modaImportResult.errors.length} errori</span>
+                )}
+              </div>
+              {modaImportResult.errors.length > 0 && (
+                <div className="bg-red-50 rounded p-3 max-h-48 overflow-y-auto">
+                  {modaImportResult.errors.map((e, i) => (
+                    <p key={i} className="text-xs text-red-700">Riga {e.row} — {e.code || '(vuoto)'}: {e.error}</p>
+                  ))}
+                </div>
+              )}
+              <div className="flex justify-end gap-3">
+                <Button variant="ghost" onClick={() => setModaImportResult(null)}>Importa un altro file</Button>
+                <Button onClick={() => setShowModaImport(false)}>Chiudi</Button>
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
 
