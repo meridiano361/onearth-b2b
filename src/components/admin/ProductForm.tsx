@@ -758,45 +758,25 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
         <Input label="Misure" {...register('misura')} placeholder="es. 30×40 cm" />
       )}
 
-      {/* Produttore + Paese */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Combobox label="Produttore" field="produttore" value={watch('produttore') || ''} onChange={(v) => setValue('produttore', v)} />
-        <PaeseSelect label="Paese" value={watch('paese') || ''} onChange={(v) => setValue('paese', v)} />
-      </div>
+      {/* Produttore + Paese — solo Casa (Moda lo posiziona dopo lavorazione) */}
+      {!isModa && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Combobox label="Produttore" field="produttore" value={watch('produttore') || ''} onChange={(v) => setValue('produttore', v)} />
+          <PaeseSelect label="Paese" value={watch('paese') || ''} onChange={(v) => setValue('paese', v)} />
+        </div>
+      )}
 
       {/* ── Moda: campi specifici in Anagrafica ── */}
       {isModa && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Combobox label="Colore 1 *" field="colore" value={watch('colore') || ''} placeholder="es. rosso"
-              onChange={(v) => {
-                if (hasColorSeparator(v)) {
-                  const [c1, c2, c3] = splitColori(v);
-                  setValue('colore', c1); setValue('colore2', c2); setValue('colore3', c3);
-                } else { setValue('colore', v); }
-              }} />
-            <Combobox label="Colore 2"   field="colore"  value={watch('colore2') || ''} onChange={(v) => setValue('colore2', v)} placeholder="es. blu" />
-            <Combobox label="Colore 3"   field="colore"  value={watch('colore3') || ''} onChange={(v) => setValue('colore3', v)} placeholder="es. bianco" />
-          </div>
-          <p className="text-2xs text-gray-400 -mt-2">Al maschile: rosso, blu, nero, bianco, beige…</p>
-          <div>
-            <Combobox label="Lavorazione" field="lavorazione" value={watch('lavorazione') || ''} onChange={(v) => setValue('lavorazione', v)} />
-          </div>
-
-          <div>
-            <label className={lbl}>Pantone FHI-TCX <span className="text-red-400 ml-0.5">*</span></label>
-            <ProductPantoneForm
-              value={selectedPantones}
-              onChange={(v) => { setSelectedPantones(v); if (v.length > 0) setPantoneError(null); }}
-            />
-            {pantoneError && <p className="mt-1 text-xs text-red-500">{pantoneError}</p>}
-          </div>
-
+          {/* Materiali */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <MaterialFieldWithPct label="Materiale 1 *" value={watch('materiale1') || ''} onChange={(v) => setValue('materiale1', v)} />
             <MaterialFieldWithPct label="Materiale 2"   value={watch('materiale2') || ''} onChange={(v) => setValue('materiale2', v)} />
             <MaterialFieldWithPct label="Materiale 3"   value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
           </div>
+
+          <Input label="Composizione" {...register('composizione')} />
 
           {(() => {
             const tot = extractPct(watchedMat1 || '') + extractPct(watchedMat2 || '') + extractPct(watchedMat3 || '');
@@ -807,9 +787,39 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
             ) : null;
           })()}
 
-          <Input label="Composizione" {...register('composizione')} />
+          {/* Colori */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Combobox label="Colore 1 *" field="colore" value={watch('colore') || ''} placeholder="es. rosso"
+              onChange={(v) => {
+                if (hasColorSeparator(v)) {
+                  const [c1, c2, c3] = splitColori(v);
+                  setValue('colore', c1); setValue('colore2', c2); setValue('colore3', c3);
+                } else { setValue('colore', v); }
+              }} />
+            <Combobox label="Colore 2" field="colore" value={watch('colore2') || ''} onChange={(v) => setValue('colore2', v)} placeholder="es. blu" />
+            <Combobox label="Colore 3" field="colore" value={watch('colore3') || ''} onChange={(v) => setValue('colore3', v)} placeholder="es. bianco" />
+          </div>
+          <p className="text-2xs text-gray-400 -mt-2">Al maschile: rosso, blu, nero, bianco, beige…</p>
+
+          {/* Pantone */}
+          <div>
+            <label className={lbl}>Pantone FHI-TCX <span className="text-red-400 ml-0.5">*</span></label>
+            <ProductPantoneForm
+              value={selectedPantones}
+              onChange={(v) => { setSelectedPantones(v); if (v.length > 0) setPantoneError(null); }}
+            />
+            {pantoneError && <p className="mt-1 text-xs text-red-500">{pantoneError}</p>}
+          </div>
 
           <Combobox label="Fantasia" field="fantasia" value={watch('fantasia') || ''} onChange={(v) => setValue('fantasia', v)} />
+
+          <Combobox label="Lavorazione" field="lavorazione" value={watch('lavorazione') || ''} onChange={(v) => setValue('lavorazione', v)} />
+
+          {/* Produttore + Paese */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Combobox label="Produttore" field="produttore" value={watch('produttore') || ''} onChange={(v) => setValue('produttore', v)} />
+            <PaeseSelect label="Paese" value={watch('paese') || ''} onChange={(v) => setValue('paese', v)} />
+          </div>
 
           <div>
             <label className={lbl}>Note</label>
