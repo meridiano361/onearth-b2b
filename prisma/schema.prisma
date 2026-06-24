@@ -808,6 +808,8 @@ model SurveyResponse {
   sourceChannel String?   // push | email | in_app
   completed     Boolean   @default(false)
   createdAt     DateTime  @default(now())
+  adminNote     String?
+  adminNoteAt   DateTime?
 
   survey   Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   customer Customer?      @relation(fields: [customerId], references: [id], onDelete: Cascade)

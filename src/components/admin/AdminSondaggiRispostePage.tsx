@@ -6,7 +6,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, Search, Download, Star, ChevronDown, ChevronUp,
-  Loader2, Trash2, MessageSquare, List,
+  Loader2, Trash2, MessageSquare, List, PenLine,
 } from 'lucide-react';
 
 interface Question { key: string; text: string; type: string }
@@ -18,6 +18,8 @@ interface ResponseRow {
   email: string;
   customerCode: string | null;
   organizationName: string | null;
+  adminNote: string | null;
+  adminNoteAt: string | null;
   answers: Record<string, unknown>;
 }
 interface ResponsesData { questions: Question[]; responses: ResponseRow[] }
@@ -77,6 +79,23 @@ export default function AdminSondaggiRispostePage({ surveyId }: { surveyId: stri
   }
 
   const allComments = (data?.responses ?? []).filter(hasComment);
+
+  function handleSaveNote(responseId: string, note: string | null) {
+    qc.setQueryData(
+      ['admin-survey-responses', surveyId, search],
+      (old: ResponsesData | undefined) => {
+        if (!old) return old;
+        return {
+          ...old,
+          responses: old.responses.map((r) =>
+            r.id === responseId
+              ? { ...r, adminNote: note, adminNoteAt: new Date().toISOString() }
+              : r
+          ),
+        };
+      }
+    );
+  }
 
   async function handleDelete(responseId: string, name: string) {
     if (!confirm(`Eliminare la risposta di "${name}"? L'operazione non è reversibile.`)) return;
@@ -211,6 +230,12 @@ export default function AdminSondaggiRispostePage({ surveyId }: { surveyId: stri
                     </div>
                   );
                 })}
+                <AdminNoteInline
+                  responseId={r.id}
+                  surveyId={surveyId}
+                  initialNote={r.adminNote}
+                  onSaved={(note) => handleSaveNote(r.id, note)}
+                />
               </div>
             ))
           )}
@@ -310,6 +335,14 @@ export default function AdminSondaggiRispostePage({ surveyId }: { surveyId: stri
                               return <Detail key={q.key} label={q.text} value={formatted} />;
                             })}
                           </div>
+                          <div className="max-w-2xl mt-2">
+                            <AdminNoteInline
+                              responseId={r.id}
+                              surveyId={surveyId}
+                              initialNote={r.adminNote}
+                              onSaved={(note) => handleSaveNote(r.id, note)}
+                            />
+                          </div>
                         </td>
                       </tr>
                     )}
@@ -320,6 +353,100 @@ export default function AdminSondaggiRispostePage({ surveyId }: { surveyId: stri
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function AdminNoteInline({
+  responseId,
+  surveyId,
+  initialNote,
+  onSaved,
+}: {
+  responseId: string;
+  surveyId: string;
+  initialNote: string | null;
+  onSaved: (note: string | null) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(initialNote ?? '');
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/surveys/${surveyId}/responses/${responseId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminNote: value.trim() || null }),
+      });
+      if (!res.ok) throw new Error();
+      onSaved(value.trim() || null);
+      setEditing(false);
+    } catch {
+      toast.error('Errore nel salvataggio della nota');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const currentNote = initialNote;
+
+  if (!editing) {
+    return (
+      <div className="mt-3 border-t border-border pt-3">
+        {currentNote ? (
+          <div className="flex items-start gap-2">
+            <div className="flex-1">
+              <p className="text-2xs text-gray-400 uppercase tracking-widest mb-1">Nota interna</p>
+              <p className="text-xs text-gray-700 leading-relaxed">{currentNote}</p>
+            </div>
+            <button
+              onClick={() => { setValue(currentNote); setEditing(true); }}
+              className="p-1 text-gray-300 hover:text-accent transition-colors flex-shrink-0"
+              title="Modifica nota"
+            >
+              <PenLine size={12} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => { setValue(''); setEditing(true); }}
+            className="flex items-center gap-1.5 text-2xs text-gray-400 hover:text-accent transition-colors"
+          >
+            <PenLine size={12} /> Aggiungi nota interna
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 border-t border-border pt-3">
+      <p className="text-2xs text-gray-400 uppercase tracking-widest mb-1.5">Nota interna</p>
+      <textarea
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        rows={2}
+        className="w-full text-xs border border-border rounded px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-accent resize-none text-gray-700 bg-white"
+        placeholder="Scrivi una nota interna..."
+      />
+      <div className="flex gap-2 mt-1.5">
+        <button
+          onClick={save}
+          disabled={saving}
+          className="px-3 py-1 bg-primary text-white text-2xs rounded hover:bg-primary/90 disabled:opacity-50 transition-colors"
+        >
+          {saving ? 'Salvataggio…' : 'Salva'}
+        </button>
+        <button
+          onClick={() => setEditing(false)}
+          className="px-3 py-1 text-gray-500 text-2xs rounded hover:bg-gray-100 transition-colors"
+        >
+          Annulla
+        </button>
+      </div>
     </div>
   );
 }

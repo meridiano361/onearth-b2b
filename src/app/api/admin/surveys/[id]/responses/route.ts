@@ -60,6 +60,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       email: r.email,
       customerCode: r.customer?.customerCode ?? null,
       organizationName: orgByEmail.get(r.email) ?? null,
+      adminNote: r.adminNote ?? null,
+      adminNoteAt: r.adminNoteAt ?? null,
       answers: answersMap,
     };
   });

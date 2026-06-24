@@ -4,6 +4,33 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 
+export async function PATCH(
+  req: Request,
+  { params }: { params: { id: string; responseId: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || !isAdminRole(session.user.role)) {
+    return NextResponse.json({ error: 'Non autorizzato' }, { status: 403 });
+  }
+
+  const { adminNote } = await req.json();
+
+  const response = await prisma.surveyResponse.findUnique({ where: { id: params.responseId } });
+  if (!response || response.surveyId !== params.id) {
+    return NextResponse.json({ error: 'Non trovata' }, { status: 404 });
+  }
+
+  await prisma.surveyResponse.update({
+    where: { id: params.responseId },
+    data: {
+      adminNote: typeof adminNote === 'string' && adminNote.trim() ? adminNote.trim() : null,
+      adminNoteAt: new Date(),
+    },
+  });
+
+  return NextResponse.json({ ok: true });
+}
+
 export async function DELETE(
   _req: Request,
   { params }: { params: { id: string; responseId: string } }
