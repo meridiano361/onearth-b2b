@@ -438,6 +438,15 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     setValue('composizione', buildComposizione(watchedMat1 || '', watchedMat2 || '', watchedMat3 || ''), { shouldDirty: true });
   }, [watchedMat1, watchedMat2, watchedMat3]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // In multi-taglia mode, il campo `code` si sincronizza dal codice della prima variante
+  const svCodeMountRef = useRef(true);
+  useEffect(() => {
+    if (svCodeMountRef.current) { svCodeMountRef.current = false; return; }
+    if (!isModa || sizeVariants.length === 0) return;
+    const firstCode = sizeVariants[0]?.codice;
+    if (firstCode) setValue('code', firstCode, { shouldDirty: true });
+  }, [sizeVariants]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!watchedProduttore?.trim()) return;
     const timer = setTimeout(async () => {
@@ -678,21 +687,25 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       ════════════════════════════════════════════════════════════ */}
       <SectionLabel>Anagrafica</SectionLabel>
 
-      {/* Codice + Nome */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className={lbl}>Codice *</label>
-          <input
-            {...register('code')}
-            placeholder="OE-CAT-001"
-            className="w-full h-9 border border-border rounded px-3 text-sm text-primary bg-white font-mono focus:outline-none focus:ring-1 focus:ring-accent"
-          />
-          {errors.code && <p className="mt-1 text-xs text-red-500">{errors.code.message}</p>}
+      {/* Codice + Nome — in Moda con taglia/varianti il codice si sposta accanto alla taglia */}
+      {isModa && (watchedTaglia || sizeVariants.length > 0) ? (
+        <Input label="Nome *" {...register('name')} error={errors.name?.message} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={lbl}>Codice *</label>
+            <input
+              {...register('code')}
+              placeholder="OE-CAT-001"
+              className="w-full h-9 border border-border rounded px-3 text-sm text-primary bg-white font-mono focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+            {errors.code && <p className="mt-1 text-xs text-red-500">{errors.code.message}</p>}
+          </div>
+          <Input label="Nome *" {...register('name')} error={errors.name?.message} placeholder={isModa ? '' : 'es. Copritavolo GEOMETRIC 140×240'} />
         </div>
-        <Input label="Nome *" {...register('name')} error={errors.name?.message} placeholder={isModa ? '' : 'es. Copritavolo GEOMETRIC 140×240'} />
-      </div>
+      )}
 
-      {codeChanged && (
+      {codeChanged && (!isModa || (sizeVariants.length === 0 && !watchedTaglia)) && (
         <div className="flex gap-2.5 rounded border border-amber-200 bg-amber-50 px-3 py-2.5">
           <AlertTriangle size={14} className="flex-shrink-0 text-amber-500 mt-px" />
           <div className="text-xs text-amber-800 space-y-1">
@@ -723,7 +736,18 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
               <p className={lbl}>Taglie e codici</p>
               <button
                 type="button"
-                onClick={() => setSizeVariants((prev) => [...prev, { taglia: '', codice: '' }])}
+                onClick={() => {
+                  if (sizeVariants.length === 0 && watchedTaglia) {
+                    // Promuovi a multi-taglia: prima riga con taglia+codice correnti
+                    setSizeVariants([
+                      { taglia: watchedTaglia, codice: watchedCode || '' },
+                      { taglia: '', codice: '' },
+                    ]);
+                    setValue('taglia', '');
+                  } else {
+                    setSizeVariants((prev) => [...prev, { taglia: '', codice: '' }]);
+                  }
+                }}
                 className="flex items-center gap-1 text-xs text-accent hover:text-primary transition-colors"
               >
                 <Plus size={11} /> Aggiungi
@@ -738,6 +762,17 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
                     {TAGLIA_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
+                {watchedTaglia && (
+                  <div>
+                    <label className={lbl}>Codice *</label>
+                    <input
+                      {...register('code')}
+                      placeholder="es. OE-001"
+                      className="w-full h-9 border border-border rounded px-3 text-sm text-primary bg-white font-mono focus:outline-none focus:ring-1 focus:ring-accent"
+                    />
+                    {errors.code && <p className="mt-1 text-xs text-red-500">{errors.code.message}</p>}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-1.5">
