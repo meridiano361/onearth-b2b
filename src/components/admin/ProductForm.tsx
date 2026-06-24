@@ -220,7 +220,7 @@ function extractPct(raw: string): number {
 }
 
 function buildComposizione(mat1: string, mat2: string, mat3: string): string {
-  return [mat1, mat2, mat3].filter(Boolean).map((m) => m.toLowerCase()).join(' ');
+  return [mat1, mat2, mat3].filter(Boolean).join(', ');
 }
 
 function buildModaName(
@@ -834,7 +834,8 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
             <MaterialFieldWithPct label="Materiale 3"   value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
           </div>
 
-          <Input label="Composizione" {...register('composizione')} />
+          <input type="hidden" {...register('composizione')} />
+          <ReadOnlyField label="Composizione" value={watch('composizione') || '—'} />
 
           {(() => {
             const tot = extractPct(watchedMat1 || '') + extractPct(watchedMat2 || '') + extractPct(watchedMat3 || '');
