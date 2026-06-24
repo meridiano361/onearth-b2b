@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -96,42 +96,35 @@ export default function Header({ session }: HeaderProps) {
       {/* Spacer */}
       <div className="flex-1" />
 
+      {/* Language selector — prima della campanella */}
+      <LanguageSelector />
+
       {/* Notification bell */}
       <NotificationBell />
 
-      {/* Impostazioni */}
+      {/* Profilo — cliccabile, apre le impostazioni */}
       <Link
         href="/catalog/impostazioni"
-        className="p-1.5 text-gray-400 hover:text-primary transition-colors"
-        aria-label="Impostazioni"
-        title="Impostazioni"
+        className="hidden sm:flex flex-col items-end leading-tight hover:opacity-70 transition-opacity"
+        title="Profilo"
       >
-        <Settings size={17} className={pathname.startsWith('/catalog/impostazioni') ? 'text-primary' : ''} />
+        <p className="text-xs font-medium text-primary truncate max-w-[160px]">
+          {session.user.companyName}
+        </p>
+        <p className="text-2xs text-gray-400 truncate max-w-[160px]">
+          {session.user.email}
+        </p>
       </Link>
 
-      {/* Language selector */}
-      <LanguageSelector />
-
-      {/* User info */}
-      <div className="flex items-center gap-3">
-        <div className="text-right hidden sm:block">
-          <p className="text-xs font-medium text-primary truncate max-w-[160px]">
-            {session.user.companyName}
-          </p>
-          <p className="text-2xs text-gray-400 truncate max-w-[160px]">
-            {session.user.email}
-          </p>
-        </div>
-
-        <button
-          onClick={() => signOut({ callbackUrl: '/login' })}
-          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary transition-colors px-2 py-2 rounded hover:bg-cream"
-          title={t('logout')}
-        >
-          <LogOut size={14} />
-          <span className="hidden sm:inline">{t('logout')}</span>
-        </button>
-      </div>
+      {/* Esci */}
+      <button
+        onClick={() => signOut({ callbackUrl: '/login' })}
+        className="p-1.5 text-gray-400 hover:text-primary transition-colors"
+        title={t('logout')}
+        aria-label={t('logout')}
+      >
+        <LogOut size={17} />
+      </button>
       </div>
     </header>
   );
