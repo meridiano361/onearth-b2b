@@ -872,6 +872,12 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
 
           <Combobox label="Lavorazione" field="lavorazione" value={watch('lavorazione') || ''} onChange={(v) => setValue('lavorazione', v)} />
 
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input label="Certificazione 1" {...register('certificazione1')} placeholder="es. GOTS" />
+            <Input label="Certificazione 2" {...register('certificazione2')} placeholder="es. Fair Trade" />
+            <Input label="Certificazione 3" {...register('certificazione3')} placeholder="es. Oeko-Tex" />
+          </div>
+
           {/* Produttore + Paese */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Combobox label="Produttore" field="produttore" value={watch('produttore') || ''} onChange={(v) => setValue('produttore', v)} />
