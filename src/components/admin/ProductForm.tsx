@@ -3,9 +3,9 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Languages, Loader2, AlertTriangle, X, Plus, Link } from 'lucide-react';
+import { Languages, Loader2, AlertTriangle, X, Plus, Link, Search } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import PaeseSelect from '@/components/ui/PaeseSelect';
@@ -29,6 +29,14 @@ import { splitColori, hasColorSeparator } from '@/lib/coloriUtils';
 import ProductPantoneForm from './ProductPantoneForm';
 
 const IVA_OPTIONS = [0, 4, 5, 10, 22];
+
+interface PantoneColor {
+  id: number;
+  code: string;
+  name: string;
+  hex_code: string;
+  system_type: string;
+}
 
 // ── Style tokens ──────────────────────────────────────────────────────────────
 const lbl = 'block text-xs font-medium text-gray-600 mb-1';
@@ -237,6 +245,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
   const p = product as any;
   const dup = duplicateSource as any;
   const src = p ?? dup; // source for pre-filling (edit or duplicate)
+  const isModaInit = (src?.gruppoMerceologico ?? initialValues?.gruppoMerceologico ?? '') === MODA_GRUPPO_MERCEOLOGICO;
 
   const fileInputRef  = useRef<HTMLInputElement>(null);
   const fileInputRef2 = useRef<HTMLInputElement>(null);
@@ -253,10 +262,21 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
   const [selectedColorBlocks, setSelectedColorBlocks] = useState<Set<number>>(
     () => new Set<number>(src?.colorBlockIds ?? [])
   );
+  // Casa: flat array managed by ProductPantoneForm
   const [selectedPantones, setSelectedPantones] = useState<ProductPantoneEntry[]>(
-    () => src?.pantoneColors ?? []
+    () => isModaInit ? [] : (src?.pantoneColors ?? [])
   );
+  // Moda: 3 fixed slots, one per colore
+  const [pantoneSlots, setPantoneSlots] = useState<(ProductPantoneEntry | null)[]>(() => {
+    const existing = isModaInit ? ((src?.pantoneColors ?? []) as ProductPantoneEntry[]) : [];
+    return [existing[0] ?? null, existing[1] ?? null, existing[2] ?? null];
+  });
   const [pantoneError, setPantoneError] = useState<string | null>(null);
+
+  function setPantoneSlot(i: number, entry: ProductPantoneEntry | null) {
+    setPantoneSlots((prev) => { const n = [...prev] as (ProductPantoneEntry | null)[]; n[i] = entry; return n; });
+    if (entry) setPantoneError(null);
+  }
   const [fotoPicker, setFotoPicker] = useState<{
     slot: 'imageUrl' | 'imageUrl2' | 'imageUrl3' | 'imageUrl4' | 'imageUrl5' | null;
     options: { url: string; name: string }[];
@@ -549,7 +569,10 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     const v = values as unknown as z.output<typeof schema>;
 
     const isModaProduct = (v.gruppoMerceologico ?? '').toLowerCase() === 'moda';
-    if (isModaProduct && selectedPantones.length === 0) {
+    const finalPantones: ProductPantoneEntry[] = isModaProduct
+      ? (pantoneSlots.filter(Boolean) as ProductPantoneEntry[]).map((p, i) => ({ ...p, sortOrder: i, isPrimary: i === 0 }))
+      : selectedPantones;
+    if (isModaProduct && finalPantones.length === 0) {
       setPantoneError('Il Pantone è obbligatorio per i prodotti MODA');
       return;
     }
@@ -625,7 +648,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
           imageUrl4:      v.imageUrl4      || null,
           imageUrl5:      v.imageUrl5      || null,
           colorBlockIds:   [...selectedColorBlocks],
-          pantoneColorIds: selectedPantones.map((p) => p.pantoneColorId),
+          pantoneColorIds: finalPantones.map((p) => p.pantoneColorId),
           sizeVariants:    sizeVariants.filter((sv) => sv.taglia && sv.codice),
         }),
       });
@@ -787,29 +810,28 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
             ) : null;
           })()}
 
-          {/* Colori */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Combobox label="Colore 1 *" field="colore" value={watch('colore') || ''} placeholder="es. rosso"
-              onChange={(v) => {
-                if (hasColorSeparator(v)) {
-                  const [c1, c2, c3] = splitColori(v);
-                  setValue('colore', c1); setValue('colore2', c2); setValue('colore3', c3);
-                } else { setValue('colore', v); }
-              }} />
-            <Combobox label="Colore 2" field="colore" value={watch('colore2') || ''} onChange={(v) => setValue('colore2', v)} placeholder="es. blu" />
-            <Combobox label="Colore 3" field="colore" value={watch('colore3') || ''} onChange={(v) => setValue('colore3', v)} placeholder="es. bianco" />
+          {/* Colori + Pantone per colore */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <Combobox label="Colore 1 *" field="colore" value={watch('colore') || ''} placeholder="es. rosso"
+                onChange={(v) => {
+                  if (hasColorSeparator(v)) {
+                    const [c1, c2, c3] = splitColori(v);
+                    setValue('colore', c1); setValue('colore2', c2); setValue('colore3', c3);
+                  } else { setValue('colore', v); }
+                }} />
+              <SinglePantoneField label="Pantone 1 *" value={pantoneSlots[0]} onChange={(v) => setPantoneSlot(0, v)} />
+            </div>
+            <div className="space-y-2">
+              <Combobox label="Colore 2" field="colore" value={watch('colore2') || ''} onChange={(v) => setValue('colore2', v)} placeholder="es. blu" />
+              <SinglePantoneField label="Pantone 2" value={pantoneSlots[1]} onChange={(v) => setPantoneSlot(1, v)} />
+            </div>
+            <div className="space-y-2">
+              <Combobox label="Colore 3" field="colore" value={watch('colore3') || ''} onChange={(v) => setValue('colore3', v)} placeholder="es. bianco" />
+              <SinglePantoneField label="Pantone 3" value={pantoneSlots[2]} onChange={(v) => setPantoneSlot(2, v)} />
+            </div>
           </div>
-          <p className="text-2xs text-gray-400 -mt-2">Al maschile: rosso, blu, nero, bianco, beige…</p>
-
-          {/* Pantone */}
-          <div>
-            <label className={lbl}>Pantone FHI-TCX <span className="text-red-400 ml-0.5">*</span></label>
-            <ProductPantoneForm
-              value={selectedPantones}
-              onChange={(v) => { setSelectedPantones(v); if (v.length > 0) setPantoneError(null); }}
-            />
-            {pantoneError && <p className="mt-1 text-xs text-red-500">{pantoneError}</p>}
-          </div>
+          {pantoneError && <p className="text-xs text-red-500">{pantoneError}</p>}
 
           <Combobox label="Fantasia" field="fantasia" value={watch('fantasia') || ''} onChange={(v) => setValue('fantasia', v)} />
 
@@ -1254,5 +1276,99 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       </div>
 
     </form>
+  );
+}
+
+// ── Single-slot Pantone picker (one per colore in Moda) ──────────────────────
+function SinglePantoneField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: ProductPantoneEntry | null;
+  onChange: (v: ProductPantoneEntry | null) => void;
+}) {
+  const { data: colors = [] } = useQuery<PantoneColor[]>({
+    queryKey: ['pantone-colors-fhi-tcx'],
+    queryFn: async () => {
+      const res = await fetch('/api/pantone-colors');
+      return (await res.json()).data ?? [];
+    },
+    staleTime: 600_000,
+  });
+
+  const [search, setSearch] = useState('');
+  const [open, setOpen]     = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = q ? colors.filter((c) => c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)) : colors;
+    return list.slice(0, 50);
+  }, [colors, search]);
+
+  useEffect(() => {
+    function outside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', outside);
+    return () => document.removeEventListener('mousedown', outside);
+  }, []);
+
+  function select(c: PantoneColor) {
+    onChange({ pantoneColorId: c.id, code: c.code, name: c.name, hex_code: c.hex_code, system_type: c.system_type, sortOrder: 0, isPrimary: false });
+    setSearch('');
+    setOpen(false);
+  }
+
+  if (value) {
+    return (
+      <div>
+        <p className="block text-xs font-medium text-gray-600 mb-1">{label}</p>
+        <div className="flex items-center gap-1.5 h-9 bg-gray-50 border border-border rounded px-2.5">
+          <div className="w-3.5 h-3.5 rounded-full flex-shrink-0 border border-border/60" style={{ backgroundColor: value.hex_code }} />
+          <span className="text-xs font-medium text-primary">{value.code}</span>
+          <span className="text-xs text-gray-500 truncate flex-1">{value.name}</span>
+          <button type="button" onClick={() => onChange(null)} className="text-gray-300 hover:text-red-400 transition-colors ml-auto flex-shrink-0">
+            <X size={11} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <p className="block text-xs font-medium text-gray-600 mb-1">{label}</p>
+      <div className="relative">
+        <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          placeholder="Cerca Pantone…"
+          onFocus={() => setOpen(true)}
+          onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
+          className="w-full h-9 border border-border rounded pl-7 pr-3 text-xs text-primary placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent"
+        />
+      </div>
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-border rounded shadow-lg max-h-48 overflow-y-auto">
+          {filtered.map((c: PantoneColor) => (
+            <button
+              key={c.code}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => select(c)}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-cream transition-colors"
+            >
+              <div className="w-4 h-4 rounded flex-shrink-0 border border-border/60" style={{ backgroundColor: c.hex_code }} />
+              <span className="text-xs font-medium text-primary">{c.code}</span>
+              <span className="text-xs text-gray-500 truncate">{c.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
