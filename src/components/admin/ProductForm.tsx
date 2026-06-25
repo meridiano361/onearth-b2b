@@ -399,6 +399,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
   const watchedModello   = watch('modello');
   const watchedColore    = watch('colore');
   const watchedTaglia    = watch('taglia');
+  const watchedCollezione = watch('collezione');
   const watchedMat1      = watch('materiale1');
   const watchedMat2      = watch('materiale2');
   const watchedMat3      = watch('materiale3');
@@ -437,6 +438,13 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     if (!isModa) return;
     setValue('composizione', buildComposizione(watchedMat1 || '', watchedMat2 || '', watchedMat3 || ''), { shouldDirty: true });
   }, [watchedMat1, watchedMat2, watchedMat3]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Deduce la stagione dal prefisso della collezione (pe → PE, ai → AI)
+  useEffect(() => {
+    const prefix = (watchedCollezione || '').trim().slice(0, 2).toLowerCase();
+    if (prefix === 'pe') setValue('stagione', 'PE', { shouldDirty: true });
+    else if (prefix === 'ai') setValue('stagione', 'AI', { shouldDirty: true });
+  }, [watchedCollezione]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // In multi-taglia mode, il campo `code` si sincronizza dal codice della prima variante
   const svCodeMountRef = useRef(true);
