@@ -206,7 +206,7 @@ export default function CustomerHome() {
       {isAdminUser && (
         <Link
           href="/admin"
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-primary text-white text-sm font-medium px-4 py-2.5 rounded-full shadow-lg hover:bg-warm-darker transition-colors"
+          className="hidden md:flex fixed bottom-6 right-6 z-40 items-center gap-2 bg-primary text-white text-sm font-medium px-4 py-2.5 rounded-full shadow-lg hover:bg-warm-darker transition-colors"
         >
           <Settings size={15} />
           Admin

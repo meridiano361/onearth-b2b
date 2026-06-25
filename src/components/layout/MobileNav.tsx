@@ -3,11 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Home, LayoutGrid, ShoppingCart, Package, Heart, HelpCircle,
+  Home, LayoutGrid, ShoppingCart, Package, Heart, HelpCircle, Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import { useQuery } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
+import { isAdminRole } from '@/lib/roles';
 
 type NavItem = {
   icon: React.ElementType;
@@ -31,6 +33,13 @@ const AIUTO_ITEM: NavItem = {
   label: 'Aiuto',
   href: '/catalog/assistenza',
   isActive: (p) => p.startsWith('/catalog/assistenza'),
+};
+
+const ADMIN_ITEM: NavItem = {
+  icon: Settings,
+  label: 'Admin',
+  href: '/admin',
+  isActive: (p) => p.startsWith('/admin'),
 };
 
 const CASA_ITEMS: NavItem[] = [
@@ -62,6 +71,7 @@ function getNavItems(pathname: string): NavItem[] {
 
 export default function MobileNav() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const { getTotalItems } = useCartStore();
   const totalItems = getTotalItems();
 
@@ -76,7 +86,9 @@ export default function MobileNav() {
   });
   const unreadCount = notifications.filter((n) => !n.letta).length;
 
-  const navItems = getNavItems(pathname);
+  const isAdmin = isAdminRole(session?.user?.role);
+  const baseItems = getNavItems(pathname);
+  const navItems = isAdmin ? [...baseItems, ADMIN_ITEM] : baseItems;
 
   return (
     <nav

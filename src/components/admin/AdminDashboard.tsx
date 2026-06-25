@@ -29,7 +29,7 @@ export default function AdminDashboard() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
       <div className="mb-8">
         <p className="label-luxury text-accent mb-1">Meridiano 361</p>
-        <h1 className="font-display text-3xl text-primary font-light">Home</h1>
+        <h1 className="font-display text-3xl text-primary font-light">Dashboard</h1>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
