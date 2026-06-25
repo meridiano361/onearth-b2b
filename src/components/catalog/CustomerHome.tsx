@@ -111,8 +111,9 @@ export default function CustomerHome() {
 
   const lista = collections.lista ?? [];
   const casaInfo = lista.find((c) => c.id === 'casa');
+  const modaInfo = lista.find((c) => c.id === 'moda');
 
-  function CollectionCard({ info, href }: { info: typeof casaInfo; href: string }) {
+  function CollectionCard({ info, href, compact = false }: { info: typeof casaInfo; href: string; compact?: boolean }) {
     if (!info) return null;
     const deadline = info.dataScadenza;
     const expired = deadline ? new Date(deadline) < new Date() : false;
@@ -123,7 +124,7 @@ export default function CustomerHome() {
       >
         {info.fotoUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={info.fotoUrl} alt={info.titolo} className="w-full h-[58vh] object-cover" />
+          <img src={info.fotoUrl} alt={info.titolo} className={`w-full object-cover ${compact ? 'h-[40vh]' : 'h-[58vh]'}`} />
         )}
         <div className="flex items-center justify-between gap-4 p-6">
           <div>
@@ -149,8 +150,11 @@ export default function CustomerHome() {
     <div className="min-h-screen bg-cream">
       <div className="w-full px-4 sm:px-6 lg:px-8 py-10 space-y-4">
 
-        {/* CASA card */}
-        <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} />
+        {/* Collection cards */}
+        <div className={isAdmin ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
+          <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} compact={isAdmin} />
+          {isAdmin && <CollectionCard info={modaInfo} href="/moda" compact />}
+        </div>
 
         {/* Social */}
         <div className="bg-white border border-border rounded-2xl px-5 py-4">
