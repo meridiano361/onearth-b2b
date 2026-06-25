@@ -101,7 +101,7 @@ export default function MobileNav() {
               href={href}
               className={cn(
                 'flex-1 flex flex-col items-center justify-center gap-1 py-1 transition-colors relative',
-                active ? 'text-white' : 'text-white/40',
+                active ? 'text-white/40' : 'text-white',
               )}
             >
               {active && (
