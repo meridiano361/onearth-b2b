@@ -42,31 +42,29 @@ const ADMIN_ITEM: NavItem = {
   isActive: (p) => p.startsWith('/admin'),
 };
 
-const CASA_ITEMS: NavItem[] = [
+const CASA_BASE: NavItem[] = [
   HOME_ITEM,
-  { icon: LayoutGrid, label: 'Catalogo', href: '/catalog/products',  isActive: (p) => p.startsWith('/catalog/products') },
-  { icon: Heart,      label: 'Preferiti', href: '/catalog/preferiti', isActive: (p) => p.startsWith('/catalog/preferiti') },
-  { icon: ShoppingCart, label: 'Carrelli', href: '/catalog/carts',   isActive: (p) => p.startsWith('/catalog/carts'), badge: true },
-  { icon: Package,    label: 'Ordini',    href: '/catalog/orders',   isActive: (p) => p.startsWith('/catalog/orders') },
-  AIUTO_ITEM,
+  { icon: LayoutGrid,   label: 'Catalogo',  href: '/catalog/products',  isActive: (p) => p.startsWith('/catalog/products') },
+  { icon: Heart,        label: 'Preferiti', href: '/catalog/preferiti', isActive: (p) => p.startsWith('/catalog/preferiti') },
+  { icon: ShoppingCart, label: 'Carrelli',  href: '/catalog/carts',     isActive: (p) => p.startsWith('/catalog/carts'), badge: true },
+  { icon: Package,      label: 'Ordini',    href: '/catalog/orders',    isActive: (p) => p.startsWith('/catalog/orders') },
 ];
 
-const MODA_ITEMS: NavItem[] = [
+const MODA_BASE: NavItem[] = [
   HOME_ITEM,
-  { icon: LayoutGrid, label: 'Catalogo', href: '/moda/catalogo',  isActive: (p) => p.startsWith('/moda/catalogo') },
-  { icon: Heart,      label: 'Preferiti', href: '/moda/preferiti', isActive: (p) => p.startsWith('/moda/preferiti') },
-  { icon: ShoppingCart, label: 'Carrelli', href: '/moda/carrelli', isActive: (p) => p.startsWith('/moda/carrelli') },
-  { icon: Package,    label: 'Ordini',    href: '/moda/ordini',   isActive: (p) => p.startsWith('/moda/ordini') },
-  AIUTO_ITEM,
+  { icon: LayoutGrid,   label: 'Catalogo',  href: '/moda/catalogo',  isActive: (p) => p.startsWith('/moda/catalogo') },
+  { icon: Heart,        label: 'Preferiti', href: '/moda/preferiti', isActive: (p) => p.startsWith('/moda/preferiti') },
+  { icon: ShoppingCart, label: 'Carrelli',  href: '/moda/carrelli',  isActive: (p) => p.startsWith('/moda/carrelli') },
+  { icon: Package,      label: 'Ordini',    href: '/moda/ordini',    isActive: (p) => p.startsWith('/moda/ordini') },
 ];
 
-const HOME_ONLY_ITEMS: NavItem[] = [HOME_ITEM, AIUTO_ITEM];
+function getNavItems(pathname: string, isAdmin: boolean): NavItem[] {
+  const tail = isAdmin ? ADMIN_ITEM : AIUTO_ITEM;
 
-function getNavItems(pathname: string): NavItem[] {
-  if (pathname === '/home') return HOME_ONLY_ITEMS;
-  if (pathname.startsWith('/moda')) return MODA_ITEMS;
-  if (pathname.startsWith('/catalog/') || pathname.startsWith('/casa')) return CASA_ITEMS;
-  return HOME_ONLY_ITEMS;
+  if (pathname === '/home') return [HOME_ITEM, tail];
+  if (pathname.startsWith('/moda')) return [...MODA_BASE, tail];
+  if (pathname.startsWith('/catalog/') || pathname.startsWith('/casa')) return [...CASA_BASE, tail];
+  return [HOME_ITEM, tail];
 }
 
 export default function MobileNav() {
@@ -86,13 +84,12 @@ export default function MobileNav() {
   });
   const unreadCount = notifications.filter((n) => !n.letta).length;
 
-  const isAdmin = isAdminRole(session?.user?.role);
-  const baseItems = getNavItems(pathname);
-  const navItems = isAdmin ? [...baseItems, ADMIN_ITEM] : baseItems;
+  const adminUser = isAdminRole(session?.user?.role);
+  const navItems = getNavItems(pathname, adminUser);
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-30"
+      className="fixed bottom-0 left-0 right-0 bg-black z-30"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-stretch h-[56px]">
@@ -104,11 +101,11 @@ export default function MobileNav() {
               href={href}
               className={cn(
                 'flex-1 flex flex-col items-center justify-center gap-1 py-1 transition-colors relative',
-                active ? 'text-gray-900' : 'text-[#9CA3AF]',
+                active ? 'text-white' : 'text-white/40',
               )}
             >
               {active && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-gray-900" />
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-white" />
               )}
               <div className="relative">
                 <Icon size={20} />

@@ -2,12 +2,11 @@
 
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Globe, Mic, ChevronRight, Clock, Lock, X, Settings } from 'lucide-react';
+import { Globe, Mic, ChevronRight, Clock, Lock, X } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import { canAccessModa } from '@/lib/modaAccess';
-import { isAdminRole } from '@/lib/roles';
 
 const SOCIAL_SVGS: Record<string, ReactNode> = {
   instagram: (
@@ -83,7 +82,6 @@ export default function CustomerHome() {
   const { social: ss, collections } = useSettings();
   const { data: session } = useSession();
   const isAdmin = canAccessModa(session?.user?.role);
-  const isAdminUser = isAdminRole(session?.user?.role);
 
   const [popupDismissed, setPopupDismissed] = useState(false);
 
@@ -151,10 +149,7 @@ export default function CustomerHome() {
       <div className="w-full px-4 sm:px-6 lg:px-8 py-10 space-y-4">
 
         {/* Collection cards */}
-        <div className={isAdmin ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
-          <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} compact={isAdmin} />
-          {isAdmin && <CollectionCard info={modaInfo} href="/moda" compact />}
-        </div>
+        <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} />
 
         {/* Social */}
         <div className="bg-white border border-border rounded-2xl px-5 py-4">
@@ -197,17 +192,6 @@ export default function CustomerHome() {
 
       {popupNotification && (
         <NotificationPopup notification={popupNotification} onClose={handlePopupClose} />
-      )}
-
-      {/* Pulsante Admin flottante — visibile solo ad admin/superadmin */}
-      {isAdminUser && (
-        <Link
-          href="/admin"
-          className="hidden md:flex fixed bottom-6 right-6 z-40 items-center gap-2 bg-primary text-white text-sm font-medium px-4 py-2.5 rounded-full shadow-lg hover:bg-warm-darker transition-colors"
-        >
-          <Settings size={15} />
-          Admin
-        </Link>
       )}
     </div>
   );
