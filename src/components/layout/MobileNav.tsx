@@ -61,7 +61,7 @@ const MODA_BASE: NavItem[] = [
 function getNavItems(pathname: string, isAdmin: boolean): NavItem[] {
   const tail = isAdmin ? ADMIN_ITEM : AIUTO_ITEM;
 
-  if (pathname === '/home') return [HOME_ITEM, tail];
+  if (pathname === '/home') return [tail];
   if (pathname.startsWith('/moda')) return [...MODA_BASE, tail];
   if (pathname.startsWith('/catalog/') || pathname.startsWith('/casa')) return [...CASA_BASE, tail];
   return [HOME_ITEM, tail];
