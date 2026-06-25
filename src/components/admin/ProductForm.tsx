@@ -376,7 +376,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       imageUrl2: product ? (product.imageUrl2 || '') : '',
       imageUrl3: product ? (product.imageUrl3 || '') : '',
       imageUrl4: product ? (product.imageUrl4 || '') : '',
-      imageUrl5: product ? (p.imageUrl5 || '') : '',
+      imageUrl5: product ? (product.imageUrl5 || '') : '',
       isActive: src.isActive ?? true,
     } : { isActive: true, lotSize: '1', iva: '22', gruppoMerceologico: initialValues?.gruppoMerceologico ?? '' },
   });

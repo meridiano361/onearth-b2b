@@ -45,6 +45,7 @@ export interface Product {
   imageUrl2: string | null;
   imageUrl3: string | null;
   imageUrl4: string | null;
+  imageUrl5: string | null;
   notes: string | null;
   categoryId: string | null;
   collectionId: string | null;

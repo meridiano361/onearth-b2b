@@ -74,6 +74,8 @@ const productSchema = z.object({
   dettaglio: z.string().optional().nullable(),
   pantoneColorIds: z.array(z.coerce.number().int()).optional(),
   sizeVariants: z.array(z.object({ taglia: z.string(), codice: z.string() })).optional().nullable(),
+  costoIeSenzaReso: z.coerce.number().positive().optional().nullable(),
+  costoIeConReso:   z.coerce.number().positive().optional().nullable(),
 });
 
 export async function GET(req: NextRequest) {
@@ -245,99 +247,105 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const parsed = productSchema.parse(body);
-    const { colorBlockIds, pantoneColorIds, sizeVariants, ...rest } = parsed;
+    const { colorBlockIds, pantoneColorIds, sizeVariants, costoIeSenzaReso, costoIeConReso, ...rest } = parsed;
     const data = normalizeProductClassificationFields(rest);
 
     if (data.gruppoMerceologico?.toLowerCase() === 'moda' && (!pantoneColorIds || pantoneColorIds.length === 0)) {
       return NextResponse.json({ error: 'Il Pantone è obbligatorio per i prodotti MODA' }, { status: 400 });
     }
 
-    const product = await prisma.product.create({
-      data: {
-        code: data.code.toUpperCase().trim(),
-        name: normalizeProductName(data.name, data.nomLinea),
-        description: data.description || null,
-        costPrice: data.costPrice,
-        retailPrice: data.retailPrice,
-        lotSize: data.lotSize,
-        imageUrl: data.imageUrl || null,
-        imageUrl2: data.imageUrl2 || null,
-        imageUrl3: data.imageUrl3 || null,
-        imageUrl4: data.imageUrl4 || null,
-        imageUrl5: data.imageUrl5 || null,
-        notes: data.notes || null,
-        categoryId: data.categoryId || null,
-        collectionId: data.collectionId || null,
-        isActive: data.isActive,
-        stock: data.stock || null,
-        famiglia: data.famiglia || null,
-        sottofamiglia: data.sottofamiglia || null,
-        colore: data.colore || null,
-        colore2: data.colore2 || null,
-        colore3: data.colore3 || null,
-        nomLinea: data.nomLinea || null,
-        misura: data.misura || null,
-        produttore: data.produttore || null,
-        gruppoMerceologico: data.gruppoMerceologico || null,
-        classe: data.classe || null,
-        classe2: data.classe2 || null,
-        sottoclasse: data.sottoclasse || null,
-        sottoclasse2: data.sottoclasse2 || null,
-        gruppoOmogeneo: data.gruppoOmogeneo || null,
-        gruppoOmogeneo2: data.gruppoOmogeneo2 || null,
-        stagione: data.stagione || null,
-        temaColore:   data.temaColore   || null,
-        temaColore2:  data.temaColore2  || null,
-        temaColore3:  data.temaColore3  || null,
-        temaColore4:  data.temaColore4  || null,
-        temaColore5:  data.temaColore5  || null,
-        temaColore6:  data.temaColore6  || null,
-        temaColore7:  data.temaColore7  || null,
-        temaColore8:  data.temaColore8  || null,
-        temaColore9:  data.temaColore9  || null,
-        temaColore10: data.temaColore10 || null,
-        fasciaRicarico: data.fasciaRicarico || null,
-        fasciaSconto: data.fasciaSconto ?? null,
-        collezione: data.collezione || null,
-        tranche: data.tranche || null,
-        paese: data.paese || null,
-        iva: data.iva ?? 22,
-        conferente: data.conferente || null,
-        materiale1: data.materiale1 || null,
-        materiale2: data.materiale2 || null,
-        materiale3: data.materiale3 || null,
-        composizione: data.composizione || null,
-        certificazione1: data.certificazione1 || null,
-        certificazione2: data.certificazione2 || null,
-        certificazione3: data.certificazione3 || null,
-        fantasia: data.fantasia || null,
-        lavorazione: data.lavorazione || null,
-        dettaglio: data.dettaglio || null,
-        sizeVariants: sizeVariants?.length ? (sizeVariants as any) : undefined,
-      },
-      include: { category: true },
-    });
+    // Use costoIeSenzaReso as costPrice for MODA products
+    const effectiveCostPrice = costoIeSenzaReso ?? data.costPrice;
 
-    // Sync color blocks many-to-many
-    if (colorBlockIds && colorBlockIds.length > 0) {
-      for (const cbId of colorBlockIds) {
-        await prisma.$executeRaw`
+    // Wrap in transaction: if pantone/colorblock insertion fails, product is rolled back
+    const product = await prisma.$transaction(async (tx) => {
+      const created = await tx.product.create({
+        data: {
+          code: data.code.toUpperCase().trim(),
+          name: normalizeProductName(data.name, data.nomLinea),
+          description: data.description || null,
+          costPrice: effectiveCostPrice,
+          retailPrice: data.retailPrice,
+          costoIeSenzaReso: costoIeSenzaReso ?? null,
+          costoIeConReso:   costoIeConReso   ?? null,
+          lotSize: data.lotSize,
+          imageUrl: data.imageUrl || null,
+          imageUrl2: data.imageUrl2 || null,
+          imageUrl3: data.imageUrl3 || null,
+          imageUrl4: data.imageUrl4 || null,
+          imageUrl5: data.imageUrl5 || null,
+          notes: data.notes || null,
+          categoryId: data.categoryId || null,
+          collectionId: data.collectionId || null,
+          isActive: data.isActive,
+          stock: data.stock || null,
+          famiglia: data.famiglia || null,
+          sottofamiglia: data.sottofamiglia || null,
+          colore: data.colore || null,
+          colore2: data.colore2 || null,
+          colore3: data.colore3 || null,
+          nomLinea: data.nomLinea || null,
+          misura: data.misura || null,
+          produttore: data.produttore || null,
+          gruppoMerceologico: data.gruppoMerceologico || null,
+          classe: data.classe || null,
+          classe2: data.classe2 || null,
+          sottoclasse: data.sottoclasse || null,
+          sottoclasse2: data.sottoclasse2 || null,
+          gruppoOmogeneo: data.gruppoOmogeneo || null,
+          gruppoOmogeneo2: data.gruppoOmogeneo2 || null,
+          stagione: data.stagione || null,
+          temaColore:   data.temaColore   || null,
+          temaColore2:  data.temaColore2  || null,
+          temaColore3:  data.temaColore3  || null,
+          temaColore4:  data.temaColore4  || null,
+          temaColore5:  data.temaColore5  || null,
+          temaColore6:  data.temaColore6  || null,
+          temaColore7:  data.temaColore7  || null,
+          temaColore8:  data.temaColore8  || null,
+          temaColore9:  data.temaColore9  || null,
+          temaColore10: data.temaColore10 || null,
+          fasciaRicarico: data.fasciaRicarico || null,
+          fasciaSconto: data.fasciaSconto ?? null,
+          collezione: data.collezione || null,
+          tranche: data.tranche || null,
+          paese: data.paese || null,
+          iva: data.iva ?? 22,
+          conferente: data.conferente || null,
+          materiale1: data.materiale1 || null,
+          materiale2: data.materiale2 || null,
+          materiale3: data.materiale3 || null,
+          composizione: data.composizione || null,
+          certificazione1: data.certificazione1 || null,
+          certificazione2: data.certificazione2 || null,
+          certificazione3: data.certificazione3 || null,
+          fantasia: data.fantasia || null,
+          lavorazione: data.lavorazione || null,
+          dettaglio: data.dettaglio || null,
+          sizeVariants: sizeVariants?.length ? (sizeVariants as any) : undefined,
+        },
+        include: { category: true },
+      });
+
+      // Sync color blocks many-to-many
+      for (const cbId of colorBlockIds ?? []) {
+        await tx.$executeRaw`
           INSERT INTO product_color_blocks (product_id, color_block_id)
-          VALUES (${product.id}, ${BigInt(cbId)})
+          VALUES (${created.id}, ${BigInt(cbId)})
         `;
       }
-    }
 
-    // Sync pantone many-to-many
-    if (pantoneColorIds && pantoneColorIds.length > 0) {
-      for (let i = 0; i < pantoneColorIds.length; i++) {
-        await prisma.$executeRaw`
+      // Sync pantone many-to-many
+      for (let i = 0; i < (pantoneColorIds?.length ?? 0); i++) {
+        await tx.$executeRaw`
           INSERT INTO product_pantones (product_id, pantone_color_id, sort_order, is_primary)
-          VALUES (${product.id}, ${BigInt(pantoneColorIds[i])}, ${i}, ${i === 0})
+          VALUES (${created.id}, ${BigInt(pantoneColorIds![i])}, ${i}, ${i === 0})
           ON CONFLICT (product_id, pantone_color_id) DO NOTHING
         `;
       }
-    }
+
+      return created;
+    });
 
     void syncProductClassification(data);
 
