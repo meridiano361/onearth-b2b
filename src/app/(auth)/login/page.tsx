@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { authOptions } from '@/lib/auth';
-import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { parseSettingsFromDb, DEFAULT_APP_SETTINGS } from '@/lib/settingsHelpers';
 import LoginForm from '@/components/auth/LoginForm';
@@ -20,7 +19,7 @@ export default async function LoginPage() {
   const session = await getServerSession(authOptions);
 
   if (session) {
-    redirect(isAdminRole(session.user.role) ? '/admin' : '/home');
+    redirect('/home');
   }
 
   const [t, settingsRecords] = await Promise.all([
