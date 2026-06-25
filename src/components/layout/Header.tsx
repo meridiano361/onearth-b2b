@@ -8,7 +8,6 @@ import { LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import LanguageSelector from '@/components/layout/LanguageSelector';
 import NotificationBell from '@/components/layout/NotificationBell';
 import { useSettings } from '@/contexts/SettingsContext';
 
@@ -95,9 +94,6 @@ export default function Header({ session }: HeaderProps) {
 
       {/* Spacer */}
       <div className="flex-1" />
-
-      {/* Language selector — prima della campanella */}
-      <LanguageSelector />
 
       {/* Notification bell */}
       <NotificationBell />
