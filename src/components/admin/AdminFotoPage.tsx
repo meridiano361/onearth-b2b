@@ -446,7 +446,7 @@ export default function AdminFotoPage() {
   const allPhotos = data?.data ?? [];
 
   // ── Filters & sort ────────────────────────────────────────────────────────
-  const [filterMode, setFilterMode] = useState<'all' | 'orphan' | 'in-use'>('all');
+  const [filterMode, setFilterMode] = useState<'all' | 'orphan' | 'in-use' | 'da-collegare'>('all');
   const [search, setSearch]           = useState('');
   const [sortBy, setSortBy]           = useState<'date' | 'name' | 'size'>('date');
 
@@ -508,19 +508,21 @@ export default function AdminFotoPage() {
 
   // ── Computed stats ────────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    const total      = allPhotos.length;
-    const inUse      = allPhotos.filter((p) => p.status === 'in-uso').length;
-    const orphan     = allPhotos.filter((p) => p.status === 'orfana').length;
-    const heavy      = allPhotos.filter((p) => p.size > 200 * 1024).length;
-    const totalBytes = allPhotos.reduce((s, p) => s + p.size, 0);
-    return { total, inUse, orphan, heavy, totalBytes };
+    const total       = allPhotos.length;
+    const inUse       = allPhotos.filter((p) => p.status === 'in-uso').length;
+    const orphan      = allPhotos.filter((p) => p.status === 'orfana').length;
+    const daCollegare = allPhotos.filter((p) => p.status === 'da-collegare').length;
+    const heavy       = allPhotos.filter((p) => p.size > 200 * 1024).length;
+    const totalBytes  = allPhotos.reduce((s, p) => s + p.size, 0);
+    return { total, inUse, orphan, daCollegare, heavy, totalBytes };
   }, [allPhotos]);
 
   // ── Filtered + sorted list ────────────────────────────────────────────────
   const photos = useMemo(() => {
     let list = allPhotos;
-    if (filterMode === 'orphan')  list = list.filter((p) => p.status === 'orfana');
-    if (filterMode === 'in-use')  list = list.filter((p) => p.status === 'in-uso');
+    if (filterMode === 'orphan')       list = list.filter((p) => p.status === 'orfana');
+    if (filterMode === 'in-use')       list = list.filter((p) => p.status === 'in-uso');
+    if (filterMode === 'da-collegare') list = list.filter((p) => p.status === 'da-collegare');
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -635,12 +637,13 @@ export default function AdminFotoPage() {
       </div>
 
       {/* ── Stats ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-5">
         {[
           { label: 'Totale foto',     value: String(stats.total) },
-          { label: 'In uso',          value: String(stats.inUse),  color: 'text-green-600' },
-          { label: 'Orfane',          value: String(stats.orphan), color: stats.orphan > 0 ? 'text-red-500' : undefined },
-          { label: 'Da ottimizzare',  value: String(stats.heavy),  color: stats.heavy > 0 ? 'text-amber-500' : 'text-green-600' },
+          { label: 'In uso',          value: String(stats.inUse),        color: 'text-green-600' },
+          { label: 'Da collegare',    value: String(stats.daCollegare),  color: stats.daCollegare > 0 ? 'text-amber-500' : undefined },
+          { label: 'Orfane',          value: String(stats.orphan),       color: stats.orphan > 0 ? 'text-red-500' : undefined },
+          { label: 'Da ottimizzare',  value: String(stats.heavy),        color: stats.heavy > 0 ? 'text-amber-500' : 'text-green-600' },
           { label: 'Spazio occupato', value: fmtSize(stats.totalBytes) },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-white border border-border rounded-lg px-4 py-3">
@@ -654,7 +657,12 @@ export default function AdminFotoPage() {
       <div className="flex flex-wrap items-center gap-2 mb-4">
         {/* Mode tabs */}
         <div className="flex border border-border rounded overflow-hidden">
-          {(['all', 'in-use', 'orphan'] as const).map((mode) => (
+          {([
+            ['all',          'Tutte'],
+            ['in-use',       'In uso'],
+            ['da-collegare', 'Da collegare'],
+            ['orphan',       'Orfane'],
+          ] as const).map(([mode, label]) => (
             <button
               key={mode}
               onClick={() => setFilterMode(mode)}
@@ -664,7 +672,7 @@ export default function AdminFotoPage() {
                   : 'text-gray-500 hover:bg-cream'
               }`}
             >
-              {mode === 'all' ? 'Tutte' : mode === 'in-use' ? 'In uso' : 'Orfane'}
+              {label}
             </button>
           ))}
         </div>
