@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power, Sparkles, Home, Copy, Download } from 'lucide-react';
+import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power, Shirt, Home, Copy, Download } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -1002,7 +1002,7 @@ export default function AdminProductsPage() {
         <p className="text-sm text-gray-500 mb-4">Scegli la collezione del nuovo prodotto.</p>
         <div className="grid grid-cols-2 gap-3">
           {([
-            { hint: 'moda' as const, icon: Sparkles, label: 'Moda' },
+            { hint: 'moda' as const, icon: Shirt,    label: 'Moda' },
             { hint: 'casa' as const, icon: Home,     label: 'Casa'  },
           ]).map(({ hint, icon: Icon, label }) => (
             <button
