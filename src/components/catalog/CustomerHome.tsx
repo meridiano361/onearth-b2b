@@ -122,7 +122,7 @@ export default function CustomerHome() {
       >
         {info.fotoUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={info.fotoUrl} alt={info.titolo} className="w-full h-48 object-cover" />
+          <img src={info.fotoUrl} alt={info.titolo} className="w-full h-[58vh] object-cover" />
         )}
         <div className="flex items-center justify-between gap-4 p-6">
           <div>
