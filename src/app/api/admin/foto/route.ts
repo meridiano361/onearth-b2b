@@ -45,33 +45,40 @@ export async function GET() {
       urlMap.set(path, data.publicUrl);
     }
 
-    // Fetch all products that have ANY image slot set
+    // Load ALL products — needed to check sizeVariant codes too
     const products = await prisma.product.findMany({
-      where: {
-        OR: [
-          { imageUrl: { not: null } },
-          { imageUrl2: { not: null } },
-          { imageUrl3: { not: null } },
-          { imageUrl4: { not: null } },
-          { imageUrl5: { not: null } },
-        ],
+      select: {
+        id: true, code: true, name: true, gruppoMerceologico: true, sizeVariants: true,
+        imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true, imageUrl5: true,
       },
-      select: { id: true, code: true, name: true, imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true, imageUrl5: true },
     });
 
-    // Build URL → {product, slot} map for all 5 image slots
+    // Build URL → {product, slot} map and code lookup maps
     const urlToProduct = new Map<string, { id: string; code: string; name: string; slot: number }>();
+    const codeToProduct = new Map<string, { id: string; code: string; name: string }>();
+    const variantCodeToProduct = new Map<string, { id: string; code: string; name: string }>();
+
     for (const p of products) {
+      codeToProduct.set(p.code.toUpperCase(), p);
+
       const slots: [string | null, number][] = [
-        [p.imageUrl, 1],
-        [p.imageUrl2, 2],
-        [p.imageUrl3, 3],
-        [p.imageUrl4, 4],
-        [(p as any).imageUrl5, 5],
+        [p.imageUrl, 1], [p.imageUrl2, 2], [p.imageUrl3, 3],
+        [p.imageUrl4, 4], [p.imageUrl5, 5],
       ];
       for (const [url, slot] of slots) {
         if (url && !urlToProduct.has(url)) {
           urlToProduct.set(url, { id: p.id, code: p.code, name: p.name, slot });
+        }
+      }
+
+      // Index sizeVariant codes for MODA products
+      if (
+        p.gruppoMerceologico?.toUpperCase() === 'MODA' &&
+        Array.isArray(p.sizeVariants)
+      ) {
+        for (const sv of p.sizeVariants as { taglia: string; codice: string }[]) {
+          const cod = sv.codice?.trim();
+          if (cod) variantCodeToProduct.set(cod.toUpperCase(), p);
         }
       }
     }
@@ -81,12 +88,18 @@ export async function GET() {
       const match = urlToProduct.get(url) ?? null;
       const parsed = parseImageFilename(name);
 
-      // in-uso: URL trovata in qualsiasi slot di un prodotto
-      // da-collegare: filename conforme {code}_{N}.ext ma prodotto non trovato
-      // orfana: non in nessun prodotto e filename non conforme
+      // da-collegare se: filename valido E (codice diretto O codice taglia MODA)
+      const parsedCode = parsed.valid ? parsed.productCode : null;
+      const isLinkable = parsedCode
+        ? (codeToProduct.has(parsedCode) || variantCodeToProduct.has(parsedCode))
+        : false;
+
+      // in-uso: URL presente in uno slot prodotto
+      // da-collegare: filename valido il cui codice corrisponde a un prodotto o a una taglia MODA
+      // orfana: filename non valido o codice non riconosciuto
       const status: 'in-uso' | 'da-collegare' | 'orfana' = match
         ? 'in-uso'
-        : parsed.valid
+        : isLinkable
         ? 'da-collegare'
         : 'orfana';
 
@@ -97,7 +110,7 @@ export async function GET() {
         createdAt: created_at ?? new Date().toISOString(),
         url,
         status,
-        parsedCode: parsed.valid ? parsed.productCode : null,
+        parsedCode,
         parsedSlot: parsed.valid ? parsed.imageIndex : null,
         product: match
           ? { id: match.id, code: match.code, name: match.name, slot: match.slot }

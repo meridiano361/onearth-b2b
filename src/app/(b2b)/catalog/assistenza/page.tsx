@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-25
+// AGGIORNATO: 2026-06-25 (no change visible to customers — internal foto feature)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
