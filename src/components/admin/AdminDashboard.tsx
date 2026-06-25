@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {
   ShoppingCart, Users, Package, MessageSquare, BarChart2, BookOpen,
   Layers, FileText, Image as ImageIcon, Bell, Paintbrush, Eye,
-  UserPlus, Settings, ArrowRight,
+  UserPlus, Settings, ArrowRight, Shirt,
 } from 'lucide-react';
 
 const NAV_CARDS = [
@@ -22,6 +22,7 @@ const NAV_CARDS = [
   { href: '/admin/products',         label: 'Prodotti',           description: 'Catalogo, prezzi, foto e importazione',           icon: Package,       color: 'bg-amber-50 text-amber-600'     },
   { href: '/admin/access-requests',  label: 'Richieste accesso',  description: 'Approva o rifiuta nuove registrazioni',           icon: UserPlus,      color: 'bg-orange-50 text-orange-600'   },
   { href: '/admin/sondaggi',         label: 'Sondaggi',           description: 'Crea sondaggi e raccogli risposte',               icon: MessageSquare, color: 'bg-purple-50 text-purple-600'   },
+  { href: '/moda',                   label: 'Moda (preview)',     description: 'Anteprima sezione MODA PE27 in via di sviluppo',  icon: Shirt,         color: 'bg-fuchsia-50 text-fuchsia-600' },
 ] as const;
 
 export default function AdminDashboard() {
