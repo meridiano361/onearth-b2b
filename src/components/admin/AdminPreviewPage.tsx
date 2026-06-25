@@ -60,7 +60,7 @@ export default function AdminPreviewPage() {
         setError(json.error ?? 'Errore');
         return;
       }
-      router.push('/catalog');
+      router.push('/home');
       router.refresh();
     } catch {
       setError('Errore di rete');
@@ -152,7 +152,7 @@ export default function AdminPreviewPage() {
           <div className="pt-4 border-t border-border">
             <p className="text-xs font-medium text-gray-700 mb-2">Oppure:</p>
             <button
-              onClick={() => router.push('/catalog')}
+              onClick={() => router.push('/home')}
               className="flex items-center gap-2 px-4 py-2.5 border border-border text-primary text-sm font-medium rounded hover:bg-cream transition-colors w-full"
             >
               <Eye size={15} />

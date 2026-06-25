@@ -87,7 +87,7 @@ export default function SurveyWizard({ slug, token }: { slug: string; token?: st
 
   function handleLater() {
     setDismissed(true);
-    window.location.href = '/catalog';
+    window.location.href = '/home';
   }
 
   const canProceed = useCallback(() => {
@@ -158,7 +158,7 @@ export default function SurveyWizard({ slug, token }: { slug: string; token?: st
         <p className="text-gray-500 text-sm leading-relaxed max-w-xs mb-8">
           Il tuo feedback è prezioso. Continueremo a migliorare l'app sulla base delle vostre risposte.
         </p>
-        <a href="/catalog" className="px-6 py-3 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition-colors">
+        <a href="/home" className="px-6 py-3 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition-colors">
           Torna all'app
         </a>
       </div>
@@ -423,7 +423,7 @@ function StatusScreen({ icon, title, body }: { icon: string; title: string; body
       <div className="text-4xl mb-6">{icon}</div>
       <h1 className="font-display text-2xl font-light tracking-wide text-gray-900 mb-3">{title}</h1>
       <p className="text-gray-500 text-sm leading-relaxed max-w-xs mb-8">{body}</p>
-      <a href="/catalog" className="px-6 py-3 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition-colors">
+      <a href="/home" className="px-6 py-3 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition-colors">
         Torna all'app
       </a>
     </div>

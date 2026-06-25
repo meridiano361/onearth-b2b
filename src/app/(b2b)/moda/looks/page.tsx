@@ -9,6 +9,6 @@ export const metadata: Metadata = { title: 'Total Look — Moda PE27' };
 
 export default async function ModaLooksPage() {
   const session = await getServerSession(authOptions);
-  if (!session || !canAccessModa(session.user?.role)) redirect('/catalog');
+  if (!session || !canAccessModa(session.user?.role)) redirect('/home');
   return <ModaLooks />;
 }

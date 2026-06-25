@@ -1,10 +1,5 @@
-import { Metadata } from 'next';
-import CustomerHome from '@/components/catalog/CustomerHome';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Home — ON EARTH B2B',
-};
-
-export default function CatalogHomePage() {
-  return <CustomerHome />;
+export default function CatalogRedirect() {
+  redirect('/home');
 }

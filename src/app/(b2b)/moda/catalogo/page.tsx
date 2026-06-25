@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: 'Catalogo Moda PE27 — ON EARTH' };
 
 export default async function ModaCatalogoPage() {
   const session = await getServerSession(authOptions);
-  if (!session || !canAccessModa(session.user?.role)) redirect('/catalog');
+  if (!session || !canAccessModa(session.user?.role)) redirect('/home');
   return (
     <Suspense fallback={null}>
       <CatalogView lockedGruppoMerceologico="Moda" />

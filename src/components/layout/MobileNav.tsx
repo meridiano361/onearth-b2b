@@ -21,8 +21,8 @@ type NavItem = {
 const HOME_ITEM: NavItem = {
   icon: Home,
   label: 'Home',
-  href: '/catalog',
-  isActive: (p) => p === '/catalog' || p === '/home',
+  href: '/home',
+  isActive: (p) => p === '/home',
   notifBadge: true,
 };
 
@@ -54,7 +54,7 @@ const MODA_ITEMS: NavItem[] = [
 const HOME_ONLY_ITEMS: NavItem[] = [HOME_ITEM, AIUTO_ITEM];
 
 function getNavItems(pathname: string): NavItem[] {
-  if (pathname === '/catalog' || pathname === '/home') return HOME_ONLY_ITEMS;
+  if (pathname === '/home') return HOME_ONLY_ITEMS;
   if (pathname.startsWith('/moda')) return MODA_ITEMS;
   if (pathname.startsWith('/catalog/') || pathname.startsWith('/casa')) return CASA_ITEMS;
   return HOME_ONLY_ITEMS;

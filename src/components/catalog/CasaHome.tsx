@@ -25,7 +25,7 @@ export default function CasaHome() {
     <div className="min-h-screen bg-[#faf8f5] text-primary">
       {/* Header */}
       <div className="px-5 pt-8 pb-6">
-        <Link href="/catalog" className="flex items-center gap-1.5 text-gray-400 hover:text-gray-600 transition-colors text-xs mb-8">
+        <Link href="/home" className="flex items-center gap-1.5 text-gray-400 hover:text-gray-600 transition-colors text-xs mb-8">
           <ArrowLeft size={13} /> Home
         </Link>
         <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">Collezione</p>

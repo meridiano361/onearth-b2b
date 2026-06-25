@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'On Earth B2B — CASA 2027',
     short_name: 'ON EARTH',
     description: 'Piattaforma ordini B2B On Earth Collezione CASA 2027',
-    start_url: '/catalog',
+    start_url: '/home',
     display: 'standalone',
     background_color: '#FFFFFF',
     theme_color: '#000000',

@@ -12,7 +12,7 @@ export default withAuth(
     // Admin area guards
     if (pathname.startsWith('/admin')) {
       if (!isAdminRole(role)) {
-        return NextResponse.redirect(new URL('/catalog', req.url));
+        return NextResponse.redirect(new URL('/home', req.url));
       }
       if (!canVisit(role, pathname)) {
         return NextResponse.redirect(new URL('/admin', req.url));
@@ -22,7 +22,7 @@ export default withAuth(
     // Moda PE27 and Casa hub — exclusive access while experimental
     if (pathname.startsWith('/moda') || pathname.startsWith('/casa')) {
       if (!canAccessModa(role)) {
-        return NextResponse.redirect(new URL('/catalog', req.url));
+        return NextResponse.redirect(new URL('/home', req.url));
       }
     }
 
@@ -32,7 +32,7 @@ export default withAuth(
         return NextResponse.redirect(new URL('/admin', req.url));
       }
       if (role === 'OPERATOR' && token?.destinazioneId) {
-        return NextResponse.redirect(new URL('/catalog', req.url));
+        return NextResponse.redirect(new URL('/home', req.url));
       }
     }
 
@@ -52,6 +52,8 @@ export default withAuth(
 
 export const config = {
   matcher: [
+    '/home',
+    '/home/:path*',
     '/catalog/:path*',
     '/orders/:path*',
     '/admin',

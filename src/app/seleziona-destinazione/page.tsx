@@ -46,11 +46,11 @@ export default function SelezionaDestinazione() {
     }
     if (status !== 'authenticated') return;
     if (session?.user.role !== 'OPERATOR') {
-      router.push('/catalog');
+      router.push('/home');
       return;
     }
     if (session?.user.destinazioneId) {
-      router.push('/catalog');
+      router.push('/home');
       return;
     }
     fetchDestinazioni();
@@ -75,7 +75,7 @@ export default function SelezionaDestinazione() {
   async function selectDestinazione(destinazione: Destinazione) {
     setSelecting(destinazione.id);
     await update({ destinazioneId: destinazione.id, destinazioneName: destinazione.nome });
-    router.push('/catalog');
+    router.push('/home');
   }
 
   if (status === 'loading' || loading) {

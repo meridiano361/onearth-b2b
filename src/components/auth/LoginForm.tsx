@@ -54,7 +54,7 @@ export default function LoginForm() {
       const role = session?.user?.role ?? '';
       const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE', 'MAGAZZINO'];
 
-      window.location.href = adminRoles.includes(role) ? '/admin' : '/catalog';
+      window.location.href = adminRoles.includes(role) ? '/admin' : '/home';
     } catch {
       toast.error(t('errorGeneric'));
     } finally {

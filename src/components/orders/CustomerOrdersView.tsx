@@ -404,7 +404,7 @@ export default function CustomerOrdersView() {
         {list.length === 0 && (
           <div className="text-center py-20">
             <p className="text-sm text-gray-400">{t('noOrders')}</p>
-            <Link href="/catalog" className="mt-3 inline-block text-sm text-accent hover:underline">
+            <Link href="/home" className="mt-3 inline-block text-sm text-accent hover:underline">
               {t('goCatalog')}
             </Link>
           </div>

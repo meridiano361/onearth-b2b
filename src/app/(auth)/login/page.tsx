@@ -20,7 +20,7 @@ export default async function LoginPage() {
   const session = await getServerSession(authOptions);
 
   if (session) {
-    redirect(isAdminRole(session.user.role) ? '/admin' : '/catalog');
+    redirect(isAdminRole(session.user.role) ? '/admin' : '/home');
   }
 
   const [t, settingsRecords] = await Promise.all([

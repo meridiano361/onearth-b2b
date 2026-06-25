@@ -38,14 +38,14 @@ export default function Header({ session }: HeaderProps) {
   const t = useTranslations('nav');
   const { menu } = useSettings();
 
-  const isHome = pathname === '/catalog' || pathname === '/home';
+  const isHome = pathname === '/home';
   const isInModa = pathname.startsWith('/moda');
 
   return (
     <header className="bg-white border-b border-border flex-shrink-0 z-10 pt-safe">
       <div className="h-14 flex items-center px-3 sm:px-6 gap-2 sm:gap-4 md:gap-6">
       {/* Logo */}
-      <Link href="/catalog" className="flex items-center flex-shrink-0">
+      <Link href="/home" className="flex items-center flex-shrink-0">
         <Image
           src="/logo-on-earth/onearth_solo.png"
           alt="On Earth"

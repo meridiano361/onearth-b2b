@@ -46,7 +46,7 @@ export async function sendNotificationToCustomers(notification: {
   const payload = {
     title: notification.titolo,
     body: notification.testo,
-    url: notification.linkUrl ?? '/catalog',
+    url: notification.linkUrl ?? '/home',
   };
 
   // All push subscriptions (customers + operators)

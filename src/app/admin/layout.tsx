@@ -12,7 +12,7 @@ export default async function AdminLayout({
 
   if (!session) redirect('/login');
   const { isAdminRole } = await import('@/lib/roles');
-  if (!isAdminRole(session.user.role)) redirect('/catalog');
+  if (!isAdminRole(session.user.role)) redirect('/home');
 
   return <AdminLayoutWrapper>{children}</AdminLayoutWrapper>;
 }
