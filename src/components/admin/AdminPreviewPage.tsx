@@ -186,13 +186,13 @@ export default function AdminPreviewPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => router.push('/moda')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-fuchsia-600 text-white text-sm font-medium rounded hover:bg-fuchsia-700 transition-colors"
+        <a
+          href="/moda"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-fuchsia-600 text-white text-sm font-medium rounded hover:bg-fuchsia-700 transition-colors"
         >
           <Shirt size={14} />
           Apri anteprima MODA PE27
-        </button>
+        </a>
       </section>
     </div>
   );

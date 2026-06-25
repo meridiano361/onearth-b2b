@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 export default function WhatsAppWidget() {
+  const pathname = usePathname();
   const [initialized, setInitialized] = useState(false);
   const [disabled, setDisabled] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    // Pulizia chiave vecchia lasciata da versioni precedenti
     localStorage.removeItem('whatsapp_widget_hidden');
 
     const update = () => {
@@ -20,14 +21,22 @@ export default function WhatsAppWidget() {
     return () => window.removeEventListener('storage', update);
   }, []);
 
+  // Reset dismissed state when entering the aiuto section
+  useEffect(() => {
+    if (pathname?.startsWith('/catalog/assistenza')) {
+      setDismissed(false);
+    }
+  }, [pathname]);
+
   const handleClose = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Solo React state: torna visibile al prossimo login/refresh
     setDismissed(true);
   };
 
-  if (!initialized || disabled || dismissed) return null;
+  const onAiuto = pathname?.startsWith('/catalog/assistenza') ?? false;
+
+  if (!initialized || disabled || dismissed || !onAiuto) return null;
 
   return (
     <div className="fixed above-mobile-nav right-4 md:bottom-6 md:right-5 z-[9999] flex flex-col items-end gap-1">
