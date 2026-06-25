@@ -29,7 +29,7 @@ export default withAuth(
     // Destination selection page: only operators need it
     if (pathname === '/seleziona-destinazione') {
       if (isAdminRole(role)) {
-        return NextResponse.redirect(new URL('/admin', req.url));
+        return NextResponse.redirect(new URL('/home', req.url));
       }
       if (role === 'OPERATOR' && token?.destinazioneId) {
         return NextResponse.redirect(new URL('/home', req.url));
