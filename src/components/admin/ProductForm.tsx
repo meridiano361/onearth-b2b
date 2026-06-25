@@ -458,7 +458,6 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
   useEffect(() => {
     if (!watchedProduttore?.trim()) return;
     const timer = setTimeout(async () => {
-      if (getValues('paese')) return;
       try {
         const res = await fetch(`/api/admin/produttori/paese?nome=${encodeURIComponent(watchedProduttore.trim())}`);
         const { paese } = await res.json();
@@ -467,6 +466,11 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     }, 400);
     return () => clearTimeout(timer);
   }, [watchedProduttore]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function normalizeProduttore(v: string) {
+    const t = v.trim();
+    return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+  }
 
   // ── Computed price values ─────────────────────────────────────────────────
   const costNum         = parseFloat(String(watchedCost || 0)) || 0;
@@ -827,7 +831,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       {/* Produttore + Paese — solo Casa (Moda lo posiziona dopo lavorazione) */}
       {!isModa && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Combobox label="Produttore" field="produttore" value={watch('produttore') || ''} onChange={(v) => setValue('produttore', v)} />
+          <Combobox label="Produttore" field="produttore" value={watch('produttore') || ''} onChange={(v) => setValue('produttore', normalizeProduttore(v), { shouldDirty: true })} />
           <PaeseSelect label="Paese" value={watch('paese') || ''} onChange={(v) => setValue('paese', v)} />
         </div>
       )}
@@ -889,7 +893,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
 
           {/* Produttore + Paese */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Combobox label="Produttore" field="produttore" value={watch('produttore') || ''} onChange={(v) => setValue('produttore', v)} />
+            <Combobox label="Produttore" field="produttore" value={watch('produttore') || ''} onChange={(v) => setValue('produttore', normalizeProduttore(v), { shouldDirty: true })} />
             <PaeseSelect label="Paese" value={watch('paese') || ''} onChange={(v) => setValue('paese', v)} />
           </div>
 

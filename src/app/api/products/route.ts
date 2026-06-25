@@ -347,6 +347,15 @@ export async function POST(req: NextRequest) {
 
     void syncProductClassification(data);
 
+    // Memorizza produttore → paese nella lookup table
+    if (data.produttore?.trim()) {
+      void prisma.produttore.upsert({
+        where: { nome: data.produttore.trim() },
+        update: data.paese ? { paese: data.paese } : {},
+        create: { nome: data.produttore.trim(), paese: data.paese || null },
+      }).catch(() => {});
+    }
+
     // Auto-link orphan bucket photos matching this product code
     void autoLinkPhotosForProduct(product.id, product.code).catch(() => {});
 

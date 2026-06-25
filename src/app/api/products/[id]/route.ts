@@ -193,6 +193,17 @@ export async function PATCH(
 
     void syncProductClassification(data);
 
+    // Memorizza produttore → paese nella lookup table
+    const produttoreVal = data.produttore?.trim() ?? product.produttore?.trim();
+    const paeseVal = data.paese ?? product.paese;
+    if (produttoreVal) {
+      void prisma.produttore.upsert({
+        where: { nome: produttoreVal },
+        update: paeseVal ? { paese: paeseVal } : {},
+        create: { nome: produttoreVal, paese: paeseVal || null },
+      }).catch(() => {});
+    }
+
     // Auto-translate se la descrizione è stata aggiornata
     if (data.description !== undefined) {
       const testo = data.description || product.name;
