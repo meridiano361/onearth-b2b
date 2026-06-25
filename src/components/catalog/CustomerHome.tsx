@@ -146,13 +146,16 @@ export default function CustomerHome() {
 
   return (
     <div className="min-h-screen bg-cream">
-      <div className="max-w-lg mx-auto px-4 py-10 space-y-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-10 space-y-4">
 
-        {/* CASA card */}
-        <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} />
+        {/* Collection cards — grid affiancato su schermi larghi */}
+        <div className={isAdmin ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
+          {/* CASA card */}
+          <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} />
 
-        {/* MODA card — admin only */}
-        {isAdmin && <CollectionCard info={modaInfo} href="/moda" />}
+          {/* MODA card — admin only */}
+          {isAdmin && <CollectionCard info={modaInfo} href="/moda" />}
+        </div>
 
         {/* Social */}
         <div className="bg-white border border-border rounded-2xl px-5 py-4">
