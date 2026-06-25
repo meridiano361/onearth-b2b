@@ -102,7 +102,7 @@ export async function sendCredenziali(params: {
   const html = `<!DOCTYPE html>
 <html lang="it">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet"></head>
-<body style="margin:0;padding:0;background:#F9F6F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Nunito,Helvetica,Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#F9F6F1;font-family:'Nunito',Helvetica,Arial,sans-serif;">
   <div style="max-width:560px;margin:32px auto;background:#FFFFFF;border-radius:8px;overflow:hidden;border:1px solid #DEDAD7;">
     <div style="background:#000000;padding:32px 40px;text-align:center;">
       <h1 style="color:#F5F4F2;font-size:22px;font-weight:300;letter-spacing:5px;margin:0;">ON EARTH</h1>
@@ -160,8 +160,8 @@ export async function sendCustomerNotificationEmail(
 
   const html = `<!DOCTYPE html>
 <html lang="it">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#F9F6F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet"></head>
+<body style="margin:0;padding:0;background:#F9F6F1;font-family:'Nunito',Helvetica,Arial,sans-serif;">
   <div style="max-width:560px;margin:32px auto;background:#FFFFFF;border-radius:8px;overflow:hidden;border:1px solid #DEDAD7;">
     <div style="background:#000000;padding:28px 40px;text-align:center;">
       <h1 style="color:#F5F4F2;font-size:20px;font-weight:300;letter-spacing:5px;margin:0;">ON EARTH</h1>
@@ -199,7 +199,7 @@ export async function sendReminder(params: {
   const html = `<!DOCTYPE html>
 <html lang="it">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet"></head>
-<body style="margin:0;padding:0;background:#F9F6F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Nunito,Helvetica,Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#F9F6F1;font-family:'Nunito',Helvetica,Arial,sans-serif;">
   <div style="max-width:560px;margin:32px auto;background:#FFFFFF;border-radius:8px;overflow:hidden;border:1px solid #DEDAD7;">
     <div style="background:#000000;padding:32px 40px;text-align:center;">
       <h1 style="color:#F5F4F2;font-size:22px;font-weight:300;letter-spacing:5px;margin:0;">ON EARTH</h1>
