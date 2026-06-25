@@ -118,39 +118,25 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    if (directProduct) {
-      // Use the parsed slot (existing behaviour)
-      const field = imageIndexToField(parsed.imageIndex);
-      if (directProduct[field as keyof ProductRow]) {
-        slotTaken++;
-        continue;
-      }
-      await prisma.product.update({
-        where: { id: directProduct.id },
-        data: { [field]: publicUrl },
-      });
-      (directProduct as any)[field] = publicUrl;
-      linkedUrls.add(publicUrl);
-      linked++;
-    } else {
-      // SizeVariant match: park the photo in the next free slot so all taglia
-      // photos for the same product can coexist; admin reorders afterwards.
-      const p = variantProduct!;
-      const slot = firstFreeSlot(p);
-      if (slot === null) {
-        slotTaken++;
-        continue;
-      }
-      const field = imageIndexToField(slot);
-      await prisma.product.update({
-        where: { id: p.id },
-        data: { [field]: publicUrl },
-      });
-      (p as any)[field] = publicUrl;
-      linkedUrls.add(publicUrl);
-      linked++;
-      linkedByVariant++;
+    // For both direct and sizeVariant matches, use the first free slot.
+    // The _N suffix in the filename is a relative ordering hint among multiple
+    // photos of the same product, not an absolute slot number — so a lone
+    // 123_2.jpg should land on slot 1 rather than leaving slot 1 empty.
+    const targetProduct = directProduct ?? variantProduct!;
+    const slot = firstFreeSlot(targetProduct);
+    if (slot === null) {
+      slotTaken++;
+      continue;
     }
+    const field = imageIndexToField(slot);
+    await prisma.product.update({
+      where: { id: targetProduct.id },
+      data: { [field]: publicUrl },
+    });
+    (targetProduct as any)[field] = publicUrl;
+    linkedUrls.add(publicUrl);
+    linked++;
+    if (variantProduct) linkedByVariant++;
   }
 
   return NextResponse.json({ linked, linkedByVariant, alreadyLinked, notFound, slotTaken });
