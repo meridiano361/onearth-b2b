@@ -1,5 +1,4 @@
 import { getRequestConfig } from 'next-intl/server';
-import { cookies } from 'next/headers';
 
 const VALID_LOCALES = ['it', 'en', 'de', 'fr', 'es'] as const;
 type Locale = (typeof VALID_LOCALES)[number];
@@ -12,15 +11,12 @@ const messagesMap: Record<Locale, () => Promise<{ default: Record<string, unknow
   es: () => import('../../messages/es.json'),
 };
 
+// Language selector removed — app is always Italian.
+// The cookie 'locale' is ignored to avoid users being stuck in a foreign
+// language after the selector was removed from the UI.
 export default getRequestConfig(async () => {
-  const cookieStore = cookies();
-  const raw = (cookieStore as ReturnType<typeof cookies>).get('locale')?.value ?? 'it';
-  const locale: Locale = (VALID_LOCALES as readonly string[]).includes(raw)
-    ? (raw as Locale)
-    : 'it';
-
   return {
-    locale,
-    messages: (await messagesMap[locale]()).default,
+    locale: 'it',
+    messages: (await messagesMap['it']()).default,
   };
 });
