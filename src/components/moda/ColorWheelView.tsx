@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2, X, ArrowLeft, Sparkles, Star } from 'lucide-react';
 import { HUE_FAMILIES, type HueFamily } from '@/lib/colorHarmony';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 interface PrimaryPantone {
   pantoneColorId: number;
@@ -50,64 +50,98 @@ interface DisplayGroup {
   score: number;
 }
 
-// ── SVG color wheel ───────────────────────────────────────────────────────────
+// ── SVG wheel constants ────────────────────────────────────────────────────────
 
-const CX = 200, CY = 200, R_OUT = 175, R_IN = 75, R_NEUTRAL = 55;
+const CX = 200, CY = 200;
+const R_OUT  = 175; // outer edge
+const R_LGHT = 148; // light / medium boundary
+const R_MDDK = 116; // medium / dark boundary
+const R_IN   = 84;  // inner edge of chromatic rings (also white fill radius)
+const R_NEU  = 58;  // neutral circle
 
-function polar(cx: number, cy: number, r: number, angleDeg: number) {
-  const a = (angleDeg - 90) * (Math.PI / 180);
+// Dot-center radii (midpoints of rings)
+const R_D_LGHT = (R_OUT + R_LGHT) / 2;  // 161.5
+const R_D_MED  = (R_LGHT + R_MDDK) / 2; // 132
+const R_D_DARK = (R_MDDK + R_IN) / 2;   // 100
+
+const N_SEG   = 24;
+const SEG_DEG = 360 / N_SEG; // 15° per segment
+const SEG_GAP = 0.8;          // gap between segments (degrees)
+
+// ── SVG helpers ────────────────────────────────────────────────────────────────
+
+function polar(cx: number, cy: number, r: number, deg: number) {
+  const a = (deg - 90) * (Math.PI / 180);
   return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
 }
 
-function arcPath(startDeg: number, endDeg: number, rOuter: number, rInner: number): string {
-  const s1 = polar(CX, CY, rOuter, startDeg);
-  const e1 = polar(CX, CY, rOuter, endDeg);
-  const s2 = polar(CX, CY, rInner, endDeg);
-  const e2 = polar(CX, CY, rInner, startDeg);
-  const large = endDeg - startDeg > 180 ? 1 : 0;
-  return [
-    `M ${s1.x.toFixed(2)} ${s1.y.toFixed(2)}`,
-    `A ${rOuter} ${rOuter} 0 ${large} 1 ${e1.x.toFixed(2)} ${e1.y.toFixed(2)}`,
-    `L ${s2.x.toFixed(2)} ${s2.y.toFixed(2)}`,
-    `A ${rInner} ${rInner} 0 ${large} 0 ${e2.x.toFixed(2)} ${e2.y.toFixed(2)}`,
-    'Z',
-  ].join(' ');
+function arcPath(startDeg: number, endDeg: number, rOut: number, rIn: number): string {
+  const p1 = polar(CX, CY, rOut, startDeg);
+  const p2 = polar(CX, CY, rOut, endDeg);
+  const p3 = polar(CX, CY, rIn,  endDeg);
+  const p4 = polar(CX, CY, rIn,  startDeg);
+  const lg = endDeg - startDeg > 180 ? 1 : 0;
+  return (
+    `M${p1.x.toFixed(2)} ${p1.y.toFixed(2)} ` +
+    `A${rOut} ${rOut} 0 ${lg} 1 ${p2.x.toFixed(2)} ${p2.y.toFixed(2)} ` +
+    `L${p3.x.toFixed(2)} ${p3.y.toFixed(2)} ` +
+    `A${rIn} ${rIn} 0 ${lg} 0 ${p4.x.toFixed(2)} ${p4.y.toFixed(2)}Z`
+  );
 }
 
+function segColor(segIdx: number, ring: 'light' | 'med' | 'dark'): string {
+  const h = segIdx * SEG_DEG;
+  if (ring === 'light') return `hsl(${h},55%,84%)`;
+  if (ring === 'med')   return `hsl(${h},80%,52%)`;
+  return                       `hsl(${h},68%,28%)`;
+}
+
+function dotRadius(lightness: number): number {
+  if (lightness > 65) return R_D_LGHT;
+  if (lightness > 35) return R_D_MED;
+  return R_D_DARK;
+}
+
+// Deterministic pseudo-random [0,1] from string seed
+function hash01(seed: string): number {
+  let h = 5381;
+  for (const c of seed) h = ((h << 5) + h + c.charCodeAt(0)) | 0;
+  return (h >>> 0) % 10000 / 9999;
+}
+
+// ── Harmony labels / colors ────────────────────────────────────────────────────
+
 const HARMONY_LABELS: Record<string, string> = {
-  identical:           'Identici',
-  analogous:           'Analoghi',
+  identical:             'Identici',
+  analogous:             'Analoghi',
   'split-complementary': 'Semi-complementari',
-  complementary:       'Complementari',
-  triadic:             'Triadici',
-  neutral:             'Neutri compatibili',
-  discordant:          'Discordanti',
+  complementary:         'Complementari',
+  triadic:               'Triadici',
+  neutral:               'Neutri compatibili',
+  discordant:            'Discordanti',
 };
 
 const HARMONY_COLORS: Record<string, string> = {
-  identical:           'bg-emerald-100 text-emerald-800',
-  analogous:           'bg-blue-100 text-blue-800',
+  identical:             'bg-emerald-100 text-emerald-800',
+  analogous:             'bg-blue-100 text-blue-800',
   'split-complementary': 'bg-violet-100 text-violet-800',
-  complementary:       'bg-orange-100 text-orange-800',
-  triadic:             'bg-pink-100 text-pink-800',
-  neutral:             'bg-gray-100 text-gray-700',
+  complementary:         'bg-orange-100 text-orange-800',
+  triadic:               'bg-pink-100 text-pink-800',
+  neutral:               'bg-gray-100 text-gray-700',
 };
 
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function ColorWheelView() {
-  const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null);
+  const [selectedFamilyId, setSelectedFamilyId]   = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [hoveredProductId, setHoveredProductId]   = useState<string | null>(null);
 
-  // ── Data fetching ─────────────────────────────────────────────────────────
   const { data: wheelData, isLoading: wheelLoading, isError, error, refetch } = useQuery<{ families: WheelFamily[] }>({
     queryKey: ['moda-color-wheel'],
     queryFn: async () => {
       const res = await fetch('/api/moda/color-wheel');
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`${res.status}: ${text}`);
-      }
+      if (!res.ok) { const t = await res.text(); throw new Error(`${res.status}: ${t}`); }
       return res.json();
     },
     staleTime: 60_000,
@@ -129,16 +163,14 @@ export default function ColorWheelView() {
     staleTime: 120_000,
   });
 
-  // ── Derived data ──────────────────────────────────────────────────────────
-  const families = wheelData?.families ?? [];
+  const families    = wheelData?.families ?? [];
+  const chromatic   = HUE_FAMILIES.filter((f) => f.id !== 'neutral');
+  const neutralFam  = families.find((f) => f.id === 'neutral');
 
   const totalProducts = useMemo(
     () => families.reduce((s, f) => s + f.products.length, 0),
     [families]
   );
-
-  const selectedFamily = families.find((f) => f.id === selectedFamilyId) ?? null;
-  const visibleProducts = selectedFamily ? selectedFamily.products : families.flatMap((f) => f.products);
 
   const productMap = useMemo(() => {
     const map = new Map<string, WheelProduct>();
@@ -147,8 +179,14 @@ export default function ColorWheelView() {
   }, [families]);
 
   const selectedProduct = selectedProductId ? productMap.get(selectedProductId) : null;
+  const hoveredProduct  = hoveredProductId  ? productMap.get(hoveredProductId)  : null;
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  const visibleProducts = selectedFamilyId
+    ? (families.find((f) => f.id === selectedFamilyId)?.products ?? [])
+    : families.flatMap((f) => f.products);
+
+  const allDots = families.flatMap((f) => f.products);
+
   function handleFamilyClick(familyId: string) {
     setSelectedFamilyId((prev) => (prev === familyId ? null : familyId));
     setSelectedProductId(null);
@@ -158,7 +196,6 @@ export default function ColorWheelView() {
     setSelectedProductId((prev) => (prev === productId ? null : productId));
   }
 
-  // ── Render helpers ────────────────────────────────────────────────────────
   if (wheelLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -172,15 +209,10 @@ export default function ColorWheelView() {
       <div className="flex flex-col items-center justify-center h-64 gap-3 px-6 text-center">
         <p className="text-sm text-red-600 font-medium">Errore nel caricamento della ruota cromatica</p>
         <p className="text-xs text-gray-500 font-mono max-w-md break-all">{String(error)}</p>
-        <button onClick={() => refetch()} className="text-xs underline text-gray-500 hover:text-primary">
-          Riprova
-        </button>
+        <button onClick={() => refetch()} className="text-xs underline text-gray-500 hover:text-primary">Riprova</button>
       </div>
     );
   }
-
-  const chromatic = HUE_FAMILIES.filter((f) => f.id !== 'neutral');
-  const neutralFamily = families.find((f) => f.id === 'neutral');
 
   return (
     <div className="flex flex-col min-h-full">
@@ -194,80 +226,153 @@ export default function ColorWheelView() {
       </div>
 
       <div className="flex flex-col xl:flex-row flex-1 overflow-hidden">
-        {/* ── Left: Wheel + legend ─────────────────────────────────── */}
-        <div className="xl:w-[420px] flex-shrink-0 border-b xl:border-b-0 xl:border-r border-border/50 p-4 sm:p-6 flex flex-col items-center gap-4">
+        {/* ── Left: Wheel + legends ───────────────────────────────── */}
+        <div className="xl:w-[460px] flex-shrink-0 border-b xl:border-b-0 xl:border-r border-border/50 p-4 sm:p-6 flex flex-col items-center gap-4">
 
           {/* SVG Color Wheel */}
-          <svg
-            viewBox="0 0 400 400"
-            className="w-full max-w-[360px]"
-            style={{ overflow: 'visible' }}
-          >
-            {/* Chromatic segments */}
-            {chromatic.map((family, i) => {
-              const startAngle = i * 30;
-              const endAngle = startAngle + 30;
-              const midAngle = startAngle + 15;
-              const isSelected = selectedFamilyId === family.id;
-              const count = families.find((f) => f.id === family.id)?.products.length ?? 0;
-              const midPt = polar(CX, CY, (R_OUT + R_IN) / 2, midAngle);
-              const labelPt = polar(CX, CY, R_OUT + 22, midAngle);
+          <svg viewBox="0 0 400 400" className="w-full max-w-[380px]" style={{ overflow: 'visible' }}>
+
+            {/* 24 segments × 3 rings */}
+            {Array.from({ length: N_SEG }).map((_, si) => {
+              const startDeg  = si * SEG_DEG;
+              const endDeg    = startDeg + SEG_DEG - SEG_GAP;
+              const familyIdx = Math.floor(si / 2);
+              const familyId  = chromatic[familyIdx]?.id ?? '';
+              const isSelected = selectedFamilyId === familyId;
+              const dimmed    = !!selectedFamilyId && !isSelected;
+              const opacity   = dimmed ? 0.2 : 1;
 
               return (
-                <g key={family.id} onClick={() => handleFamilyClick(family.id)} className="cursor-pointer">
-                  <path
-                    d={arcPath(startAngle, endAngle - 2, R_OUT, R_IN)}
-                    fill={family.hexColor}
-                    opacity={isSelected ? 1 : selectedFamilyId ? 0.35 : 0.75}
-                    className="transition-opacity duration-200"
-                  />
-                  {isSelected && (
+                <g key={si} onClick={() => handleFamilyClick(familyId)} className="cursor-pointer">
+                  <path d={arcPath(startDeg, endDeg, R_OUT,  R_LGHT)} fill={segColor(si, 'light')} opacity={opacity} />
+                  <path d={arcPath(startDeg, endDeg, R_LGHT, R_MDDK)} fill={segColor(si, 'med')}   opacity={opacity} />
+                  <path d={arcPath(startDeg, endDeg, R_MDDK, R_IN)}   fill={segColor(si, 'dark')}  opacity={opacity} />
+                  {/* Selection outline — drawn once per family (even si only) */}
+                  {isSelected && si % 2 === 0 && (
                     <path
-                      d={arcPath(startAngle - 1, endAngle - 1, R_OUT + 10, R_IN - 6)}
+                      d={arcPath(startDeg - 0.5, startDeg + SEG_DEG * 2 - SEG_GAP + 0.5, R_OUT + 8, R_IN - 6)}
                       fill="none"
                       stroke="white"
-                      strokeWidth="3"
+                      strokeWidth="2.5"
                       opacity={0.9}
+                      className="pointer-events-none"
                     />
-                  )}
-                  {/* Product count dot */}
-                  {count > 0 && (
-                    <g>
-                      <circle cx={midPt.x} cy={midPt.y} r={12} fill="white" fillOpacity={0.85} />
-                      <text x={midPt.x} y={midPt.y + 4} textAnchor="middle" fontSize={10} fontWeight="600" fill="#111">
-                        {count}
-                      </text>
-                    </g>
                   )}
                 </g>
               );
             })}
 
-            {/* Center circle — Neutrals */}
+            {/* Subtle ring separators */}
+            <circle cx={CX} cy={CY} r={R_LGHT} fill="none" stroke="white" strokeWidth="1"   opacity={0.2} className="pointer-events-none" />
+            <circle cx={CX} cy={CY} r={R_MDDK} fill="none" stroke="white" strokeWidth="1"   opacity={0.2} className="pointer-events-none" />
+
+            {/* White gap — covers 0..R_IN */}
+            <circle cx={CX} cy={CY} r={R_IN} fill="white" className="pointer-events-none" />
+
+            {/* Neutral circle */}
             <g onClick={() => handleFamilyClick('neutral')} className="cursor-pointer">
               <circle
-                cx={CX} cy={CY} r={R_NEUTRAL}
+                cx={CX} cy={CY} r={R_NEU}
                 fill="#B0BEC5"
-                opacity={selectedFamilyId === 'neutral' ? 1 : selectedFamilyId ? 0.4 : 0.8}
-                className="transition-opacity duration-200"
+                opacity={selectedFamilyId === 'neutral' ? 1 : selectedFamilyId ? 0.4 : 0.85}
               />
               {selectedFamilyId === 'neutral' && (
-                <circle cx={CX} cy={CY} r={R_NEUTRAL + 4} fill="none" stroke="white" strokeWidth="3" />
+                <circle cx={CX} cy={CY} r={R_NEU + 5} fill="none" stroke="white" strokeWidth="2.5" className="pointer-events-none" />
               )}
-              <text x={CX} y={CY - 6} textAnchor="middle" fontSize={11} fontWeight="600" fill="white">Neutri</text>
-              <text x={CX} y={CY + 8} textAnchor="middle" fontSize={10} fill="white" opacity={0.85}>
-                {neutralFamily?.products.length ?? 0}
+              <text x={CX} y={CY - 5} textAnchor="middle" fontSize={9} fontWeight="600" fill="white" className="pointer-events-none">Neutri</text>
+              <text x={CX} y={CY + 8} textAnchor="middle" fontSize={9} fill="white" opacity={0.85} className="pointer-events-none">
+                {neutralFam?.products.length ?? 0}
               </text>
             </g>
 
-            {/* White gap ring */}
-            <circle cx={CX} cy={CY} r={R_IN} fill="white" className="pointer-events-none" />
+            {/* Product dots */}
+            {allDots.map((product) => {
+              let dotX: number, dotY: number;
+
+              if (product.isNeutral) {
+                const angle = hash01(product.id + 'a') * 360;
+                const r     = hash01(product.id + 'r') * (R_NEU - 12);
+                const pt    = polar(CX, CY, r, angle);
+                dotX = pt.x; dotY = pt.y;
+              } else {
+                const angJitter = (hash01(product.id + 'j') - 0.5) * 10;
+                const radJitter = (hash01(product.id + 'k') - 0.5) * 14;
+                const pt = polar(CX, CY, dotRadius(product.lightness) + radJitter, product.hue + angJitter);
+                dotX = pt.x; dotY = pt.y;
+              }
+
+              const hex      = product.primaryPantone?.hex_code ?? '#9E9E9E';
+              const isHov    = hoveredProductId  === product.id;
+              const isSel    = selectedProductId === product.id;
+              const inFamily = !selectedFamilyId || selectedFamilyId === product.hueFamilyId;
+              const r        = isSel ? 5.5 : isHov ? 4.5 : 3.5;
+
+              return (
+                <g
+                  key={product.id}
+                  onMouseEnter={() => setHoveredProductId(product.id)}
+                  onMouseLeave={() => setHoveredProductId(null)}
+                  onClick={() => handleProductClick(product.id)}
+                  className="cursor-pointer"
+                >
+                  {/* Wider invisible hit area */}
+                  <circle cx={dotX} cy={dotY} r={9} fill="transparent" />
+                  <circle
+                    cx={dotX}
+                    cy={dotY}
+                    r={r}
+                    fill={hex}
+                    stroke={isSel ? '#111' : 'white'}
+                    strokeWidth={isSel ? 1.5 : 0.8}
+                    opacity={inFamily ? 1 : 0.12}
+                  />
+                </g>
+              );
+            })}
           </svg>
 
-          {/* Legend */}
-          <div className="w-full grid grid-cols-2 gap-1.5">
+          {/* Hover info bar */}
+          <div className="w-full min-h-[40px]">
+            {hoveredProduct && (
+              <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 rounded-lg border border-border text-xs">
+                {hoveredProduct.primaryPantone && (
+                  <span
+                    className="w-5 h-5 rounded-full flex-shrink-0 border border-border/50"
+                    style={{ backgroundColor: hoveredProduct.primaryPantone.hex_code }}
+                  />
+                )}
+                <span className="font-mono font-semibold text-primary">{hoveredProduct.code}</span>
+                <span className="text-gray-400 truncate flex-1">{hoveredProduct.name}</span>
+                {hoveredProduct.primaryPantone && (
+                  <span className="text-gray-400 flex-shrink-0 text-2xs">{hoveredProduct.primaryPantone.code}</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Tonal rings legend */}
+          <div className="w-full">
+            <p className="text-2xs text-gray-400 uppercase tracking-widest mb-1.5">Fasce tonali</p>
+            <div className="flex gap-4">
+              {(
+                [
+                  { ring: 'light', label: 'Chiaro', bg: 'hsl(220,50%,82%)' },
+                  { ring: 'med',   label: 'Medio',  bg: 'hsl(220,75%,50%)' },
+                  { ring: 'dark',  label: 'Scuro',  bg: 'hsl(220,62%,28%)' },
+                ] as const
+              ).map(({ ring, label, bg }) => (
+                <div key={ring} className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-sm" style={{ backgroundColor: bg }} />
+                  <span className="text-2xs text-gray-500">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Hue family legend */}
+          <div className="w-full grid grid-cols-2 gap-1">
             {HUE_FAMILIES.map((f) => {
-              const count = families.find((ff) => ff.id === f.id)?.products.length ?? 0;
+              const count    = families.find((ff) => ff.id === f.id)?.products.length ?? 0;
               const isActive = selectedFamilyId === f.id;
               return (
                 <button
@@ -277,10 +382,7 @@ export default function ColorWheelView() {
                     isActive ? 'bg-primary/10 font-semibold' : 'hover:bg-gray-50'
                   }`}
                 >
-                  <span
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: f.hexColor }}
-                  />
+                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: f.hexColor }} />
                   <span className="text-gray-700 truncate">{f.label}</span>
                   {count > 0 && <span className="ml-auto text-gray-400 text-2xs">{count}</span>}
                 </button>
@@ -298,15 +400,21 @@ export default function ColorWheelView() {
           )}
         </div>
 
-        {/* ── Right: Products + Suggestions ────────────────────────── */}
+        {/* ── Right: Products + Suggestions ───────────────────────── */}
         <div className="flex-1 flex flex-col overflow-y-auto">
-          {/* Products grid */}
           <div className="p-4 sm:p-6">
-            {selectedFamily && (
+            {selectedFamilyId && (
               <div className="flex items-center gap-2 mb-4">
-                <span className="w-4 h-4 rounded-full" style={{ backgroundColor: selectedFamily.hexColor }} />
-                <h2 className="text-sm font-semibold text-primary">{selectedFamily.label}</h2>
-                <span className="text-xs text-gray-400">— {selectedFamily.products.length} prodotti</span>
+                {(() => {
+                  const fam = HUE_FAMILIES.find((f) => f.id === selectedFamilyId);
+                  return fam ? (
+                    <>
+                      <span className="w-4 h-4 rounded-full" style={{ backgroundColor: fam.hexColor }} />
+                      <h2 className="text-sm font-semibold text-primary">{fam.label}</h2>
+                      <span className="text-xs text-gray-400">— {visibleProducts.length} prodotti</span>
+                    </>
+                  ) : null;
+                })()}
               </div>
             )}
 
@@ -365,7 +473,6 @@ export default function ColorWheelView() {
                 </div>
               ) : suggestionsData ? (
                 <div className="space-y-5">
-                  {/* Display groups */}
                   {suggestionsData.groups.length > 0 && (
                     <div>
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
@@ -391,15 +498,12 @@ export default function ColorWheelView() {
                                       // eslint-disable-next-line @next/next/no-img-element
                                       <img src={p.imageUrl} alt={p.code} className="w-full h-full object-cover" />
                                     ) : (
-                                      <span
-                                        className="w-full h-full block"
-                                        style={{ backgroundColor: p.primaryPantone?.hex_code ?? '#ccc' }}
-                                      />
+                                      <span className="w-full h-full block" style={{ backgroundColor: p.primaryPantone?.hex_code ?? '#ccc' }} />
                                     )}
                                   </div>
                                 ))}
                                 <span className="text-2xs text-gray-400 self-center ml-1">
-                                  {groupProducts.length} pz — score {group.score}
+                                  {groupProducts.length} pz
                                 </span>
                               </div>
                             </div>
@@ -409,7 +513,6 @@ export default function ColorWheelView() {
                     </div>
                   )}
 
-                  {/* Harmony suggestions by type */}
                   {suggestionsData.suggestions.map(({ harmonyType, products }) => (
                     <div key={harmonyType}>
                       <div className="flex items-center gap-2 mb-2">
@@ -478,7 +581,6 @@ function ProductCard({
           : 'border-border hover:border-accent/40'
       }`}
     >
-      {/* Image / pantone swatch */}
       <div className="aspect-square bg-gray-50 relative overflow-hidden">
         {product.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -488,16 +590,10 @@ function ProductCard({
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : product.primaryPantone ? (
-          <div
-            className="w-full h-full"
-            style={{ backgroundColor: product.primaryPantone.hex_code }}
-          />
+          <div className="w-full h-full" style={{ backgroundColor: product.primaryPantone.hex_code }} />
         ) : (
-          <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300 text-xs">
-            —
-          </div>
+          <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300 text-xs">—</div>
         )}
-        {/* Pantone swatch overlay */}
         {product.primaryPantone && (
           <div className="absolute bottom-1 right-1 flex items-center gap-1">
             <div
@@ -509,8 +605,6 @@ function ProductCard({
           </div>
         )}
       </div>
-
-      {/* Info */}
       <div className="p-2 bg-white">
         <p className="text-2xs font-mono font-semibold text-primary leading-none">{product.code}</p>
         <p className="text-2xs text-gray-500 truncate mt-0.5 leading-tight">{product.name}</p>
