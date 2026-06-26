@@ -129,6 +129,7 @@ export default function CatalogView({
 } = {}) {
   const { data: session } = useSession();
   const isCustomer = session?.user?.role === 'CUSTOMER';
+  const isModa = lockedCollezione === 'PE27' || lockedGruppoMerceologico?.toLowerCase() === 'moda';
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -443,9 +444,11 @@ export default function CatalogView({
 
         {/* ── Catalog PDF download ─────────────────────────────────── */}
         <div className="hidden sm:flex border-b border-border bg-cream/30 px-4 sm:px-6 py-2.5 items-center justify-between gap-3">
-          <span className="text-2xs uppercase tracking-widest text-gray-400 font-medium hidden sm:block">CASA 2027</span>
+          <span className="text-2xs uppercase tracking-widest text-gray-400 font-medium hidden sm:block">
+            {isModa ? 'MODA PE27' : 'CASA 2027'}
+          </span>
           <div className="flex items-center gap-4 ml-auto">
-            {catalogoDoc && (
+            {catalogoDoc && !isModa && (
               <a
                 href={catalogoDoc.url}
                 target="_blank"
@@ -612,7 +615,7 @@ export default function CatalogView({
         <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-border/50">
           <p className="label-luxury text-accent">Collezione</p>
           <h1 className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide">
-            {lockedCollezione === 'PE27' ? 'MODA PE27' : 'CASA 2027'}
+            {isModa ? 'MODA PE27' : 'CASA 2027'}
           </h1>
         </div>
 
