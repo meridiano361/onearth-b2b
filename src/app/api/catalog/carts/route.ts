@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 
 function userWhere(session: { user: { id: string; role: string } }) {
-  if (session.user.role === 'CUSTOMER') return { customerId: session.user.id };
+  if (session.user.role === 'CUSTOMER' || isAdminRole(session.user.role)) return { customerId: session.user.id };
   if (session.user.role === 'OPERATOR') return { operatorId: session.user.id };
   return null;
 }

@@ -96,8 +96,12 @@ export async function GET(req: NextRequest) {
 
     if (status) where.status = status;
     if (!preview && isAdminRole(session.user.role)) {
-      if (customerId) where.customerId = customerId;
-      if (organizationId) where.organizationId = organizationId;
+      if (myOrders) {
+        where.customerId = session.user.id;
+      } else {
+        if (customerId) where.customerId = customerId;
+        if (organizationId) where.organizationId = organizationId;
+      }
     }
 
     const [orders, total] = await Promise.all([

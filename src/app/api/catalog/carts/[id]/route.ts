@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 
 function ownsCart(cart: { customerId: string | null; operatorId: string | null }, session: { user: { id: string; role: string } }) {
-  if (session.user.role === 'CUSTOMER') return cart.customerId === session.user.id;
+  if (session.user.role === 'CUSTOMER' || isAdminRole(session.user.role)) return cart.customerId === session.user.id;
   if (session.user.role === 'OPERATOR') return cart.operatorId === session.user.id;
   return false;
 }

@@ -38,7 +38,13 @@ const config: Config = {
         display: ['Nunito', 'system-ui', 'sans-serif'],
       },
       fontSize: {
-        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
+        '2xs':  ['0.6875rem', { lineHeight: '1rem' }],
+        'xs':   ['0.875rem',  { lineHeight: '1.25rem' }],
+        'sm':   ['1rem',      { lineHeight: '1.5rem' }],
+        'base': ['1.125rem',  { lineHeight: '1.75rem' }],
+        'lg':   ['1.25rem',   { lineHeight: '2rem' }],
+        'xl':   ['1.375rem',  { lineHeight: '2rem' }],
+        '2xl':  ['1.625rem',  { lineHeight: '2.25rem' }],
       },
       letterSpacing: {
         brand: '0.1em',

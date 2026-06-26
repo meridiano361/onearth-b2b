@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, X, ArrowLeft, Sparkles, Star } from 'lucide-react';
+import { Loader2, X, ArrowLeft, Sparkles, Star, Search, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { HUE_FAMILIES, type HueFamily } from '@/lib/colorHarmony';
 
@@ -135,10 +135,14 @@ const HARMONY_COLORS: Record<string, string> = {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+type SortKey = 'code' | 'name' | 'colore' | 'price';
+
 export default function ColorWheelView() {
   const [selectedFamilyId, setSelectedFamilyId]   = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [hoveredProductId, setHoveredProductId]   = useState<string | null>(null);
+  const [searchQuery, setSearchQuery]             = useState('');
+  const [sortBy, setSortBy]                       = useState<SortKey>('code');
 
   const { data: wheelData, isLoading: wheelLoading, isError, error, refetch } = useQuery<{ families: WheelFamily[] }>({
     queryKey: ['moda-color-wheel'],
@@ -187,6 +191,25 @@ export default function ColorWheelView() {
   const visibleProducts = selectedFamilyId
     ? (families.find((f) => f.id === selectedFamilyId)?.products ?? [])
     : families.flatMap((f) => f.products);
+
+  const filteredProducts = useMemo(() => {
+    let list = visibleProducts;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((p) =>
+        p.code.toLowerCase().includes(q) ||
+        p.name.toLowerCase().includes(q) ||
+        (p.colore && p.colore.toLowerCase().includes(q)) ||
+        (p.primaryPantone?.name && p.primaryPantone.name.toLowerCase().includes(q))
+      );
+    }
+    return [...list].sort((a, b) => {
+      if (sortBy === 'name')   return a.name.localeCompare(b.name, 'it');
+      if (sortBy === 'colore') return (a.colore ?? '').localeCompare(b.colore ?? '', 'it');
+      if (sortBy === 'price')  return a.costPrice - b.costPrice;
+      return a.code.localeCompare(b.code);
+    });
+  }, [visibleProducts, searchQuery, sortBy]);
 
   const allDots = families.flatMap((f) => f.products);
 
@@ -449,29 +472,66 @@ export default function ColorWheelView() {
 
         {/* ── Right: Products + Suggestions ───────────────────────── */}
         <div className="flex-1 flex flex-col overflow-y-auto">
-          <div className="p-4 sm:p-6">
-            {selectedFamilyId && (
-              <div className="flex items-center gap-2 mb-4">
-                {(() => {
-                  const fam = HUE_FAMILIES.find((f) => f.id === selectedFamilyId);
-                  return fam ? (
-                    <>
-                      <span className="w-4 h-4 rounded-full" style={{ backgroundColor: fam.hexColor }} />
-                      <h2 className="text-sm font-semibold text-primary">{fam.label}</h2>
-                      <span className="text-xs text-gray-400">— {visibleProducts.length} prodotti</span>
-                    </>
-                  ) : null;
-                })()}
-              </div>
-            )}
 
-            {visibleProducts.length === 0 ? (
+          {/* Search + Sort toolbar */}
+          <div className="sticky top-0 z-10 bg-white border-b border-border/50 px-4 sm:px-6 py-3 flex flex-wrap items-center gap-3">
+            {/* Family label */}
+            {selectedFamilyId && (() => {
+              const fam = HUE_FAMILIES.find((f) => f.id === selectedFamilyId);
+              return fam ? (
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: fam.hexColor }} />
+                  <span className="text-sm font-semibold text-primary">{fam.label}</span>
+                </div>
+              ) : null;
+            })()}
+
+            {/* Search */}
+            <div className="relative flex-1 min-w-[160px]">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Cerca per codice, nome, colore…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-7 pr-7 py-1.5 text-xs border border-border rounded focus:outline-none focus:border-accent bg-white"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            {/* Sort */}
+            <div className="relative flex-shrink-0">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortKey)}
+                className="appearance-none pl-3 pr-7 py-1.5 text-xs border border-border rounded bg-white focus:outline-none focus:border-accent"
+              >
+                <option value="code">Codice</option>
+                <option value="name">Nome</option>
+                <option value="colore">Colore</option>
+                <option value="price">Prezzo</option>
+              </select>
+              <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
+
+            {/* Count */}
+            <span className="text-2xs text-gray-400 flex-shrink-0 tabular-nums">
+              {filteredProducts.length}{visibleProducts.length !== filteredProducts.length ? `/${visibleProducts.length}` : ''} prodotti
+            </span>
+          </div>
+
+          <div className="p-4 sm:p-6">
+            {filteredProducts.length === 0 ? (
               <p className="text-sm text-gray-400 py-8 text-center">
-                Nessun prodotto in questa famiglia colore
+                {searchQuery ? 'Nessun prodotto trovato per questa ricerca' : 'Nessun prodotto in questa famiglia colore'}
               </p>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {visibleProducts.map((product) => (
+                {filteredProducts.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}
@@ -486,7 +546,7 @@ export default function ColorWheelView() {
           {/* Suggestions panel */}
           {selectedProduct && (
             <div className="border-t border-border/50 p-4 sm:p-6 bg-gray-50/50">
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-5">
                 <div className="flex items-center gap-2">
                   <Sparkles size={15} className="text-accent flex-shrink-0" />
                   <div>
@@ -495,9 +555,9 @@ export default function ColorWheelView() {
                     </p>
                     <p className="text-xs font-mono text-gray-400 leading-none mt-0.5">{selectedProduct.code}</p>
                     {selectedProduct.primaryPantone && (
-                      <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="flex items-center gap-1.5 mt-1">
                         <span
-                          className="w-3 h-3 rounded-full border border-border/40"
+                          className="w-3.5 h-3.5 rounded-full border border-border/40"
                           style={{ backgroundColor: selectedProduct.primaryPantone.hex_code }}
                         />
                         <span className="text-xs text-gray-500">
@@ -520,39 +580,67 @@ export default function ColorWheelView() {
                   <Loader2 size={12} className="animate-spin" /> Calcolo abbinamenti…
                 </div>
               ) : suggestionsData ? (
-                <div className="space-y-5">
+                <div className="space-y-6">
+
+                  {/* ── Set per esposizione (enlarged) ── */}
                   {suggestionsData.groups.length > 0 && (
                     <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                        Set per esposizione
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Star size={14} className="text-accent" />
+                        <p className="text-sm font-semibold text-primary">Set per esposizione</p>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {suggestionsData.groups.slice(0, 4).map((group) => {
                           const groupProducts = group.productIds
                             .map((id) => productMap.get(id))
                             .filter(Boolean) as WheelProduct[];
                           return (
-                            <div key={group.type} className="bg-white rounded-lg border border-border p-3">
-                              <p className="text-xs font-semibold text-primary mb-0.5">{group.label}</p>
-                              <p className="text-2xs text-gray-400 mb-2 leading-snug">{group.description}</p>
-                              <div className="flex gap-1 flex-wrap">
-                                {groupProducts.slice(0, 5).map((p) => (
-                                  <div
-                                    key={p.id}
-                                    className="w-6 h-6 rounded border border-border/50 overflow-hidden bg-gray-50"
-                                    title={p.code}
-                                  >
-                                    {p.imageUrl ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img src={p.imageUrl} alt={p.code} className="w-full h-full object-cover" />
-                                    ) : (
-                                      <span className="w-full h-full block" style={{ backgroundColor: p.primaryPantone?.hex_code ?? '#ccc' }} />
-                                    )}
+                            <div key={group.type} className="bg-white rounded-xl border border-border shadow-luxury overflow-hidden">
+                              <div className="px-4 pt-4 pb-2 border-b border-border/40">
+                                <p className="text-sm font-semibold text-primary leading-tight">{group.label}</p>
+                                <p className="text-xs text-gray-400 leading-snug mt-0.5">{group.description}</p>
+                              </div>
+                              <div className="p-3">
+                                <div className="grid grid-cols-4 gap-2">
+                                  {groupProducts.slice(0, 8).map((p) => (
+                                    <button
+                                      key={p.id}
+                                      onClick={() => handleProductClick(p.id)}
+                                      className={`group rounded-lg overflow-hidden border transition-all ${
+                                        selectedProductId === p.id ? 'border-accent ring-1 ring-accent/20' : 'border-border hover:border-accent/40'
+                                      }`}
+                                      title={`${p.code} — ${p.name}`}
+                                    >
+                                      <div className="aspect-square bg-gray-50">
+                                        {p.imageUrl ? (
+                                          // eslint-disable-next-line @next/next/no-img-element
+                                          <img src={p.imageUrl} alt={p.code} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                        ) : (
+                                          <div className="w-full h-full" style={{ backgroundColor: p.primaryPantone?.hex_code ?? '#e5e5e5' }} />
+                                        )}
+                                      </div>
+                                      <div className="px-1 py-0.5 bg-white">
+                                        <p className="text-2xs font-mono font-semibold text-primary leading-none truncate">{p.code}</p>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                                {groupProducts.length > 8 && (
+                                  <p className="text-2xs text-gray-400 mt-2 text-right">+{groupProducts.length - 8} altri</p>
+                                )}
+                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/30">
+                                  <div className="flex gap-1">
+                                    {groupProducts.slice(0, 6).map((p) => (
+                                      <span
+                                        key={p.id}
+                                        className="w-3.5 h-3.5 rounded-full border border-white shadow-sm"
+                                        style={{ backgroundColor: p.primaryPantone?.hex_code ?? '#ccc' }}
+                                        title={p.primaryPantone?.code}
+                                      />
+                                    ))}
                                   </div>
-                                ))}
-                                <span className="text-2xs text-gray-400 self-center ml-1">
-                                  {groupProducts.length} pz
-                                </span>
+                                  <span className="text-2xs text-gray-400 tabular-nums">{groupProducts.length} pz</span>
+                                </div>
                               </div>
                             </div>
                           );
@@ -561,6 +649,7 @@ export default function ColorWheelView() {
                     </div>
                   )}
 
+                  {/* ── Armonie cromatiche ── */}
                   {suggestionsData.suggestions.map(({ harmonyType, products }) => (
                     <div key={harmonyType}>
                       <div className="flex items-center gap-2 mb-2">
@@ -594,7 +683,7 @@ export default function ColorWheelView() {
                     </div>
                   ))}
 
-                  {suggestionsData.suggestions.length === 0 && (
+                  {suggestionsData.suggestions.length === 0 && suggestionsData.groups.length === 0 && (
                     <p className="text-xs text-gray-400">
                       Nessun abbinamento trovato — aggiungi Pantone agli altri prodotti Moda.
                     </p>

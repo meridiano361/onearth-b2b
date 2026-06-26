@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { MODA_COLLEZIONE, MODA_BRANCH_ID, CASA_BRANCH_ID } from '@/lib/modaAccess';
 
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!cart) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const owns =
-    (session.user.role === 'CUSTOMER' && cart.customerId === session.user.id) ||
+    ((session.user.role === 'CUSTOMER' || isAdminRole(session.user.role)) && cart.customerId === session.user.id) ||
     (session.user.role === 'OPERATOR' && cart.operatorId === session.user.id);
   if (!owns) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   if (cart.status !== 'DRAFT') return NextResponse.json({ error: 'Carrello già convertito' }, { status: 409 });
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     items: { create: orderItems },
   };
 
-  if (session.user.role === 'CUSTOMER') {
+  if (session.user.role === 'CUSTOMER' || isAdminRole(session.user.role)) {
     orderData.customerId = session.user.id;
   } else if (session.user.role === 'OPERATOR') {
     const op = await prisma.operator.findUnique({ where: { id: session.user.id }, select: { organizationId: true } });
