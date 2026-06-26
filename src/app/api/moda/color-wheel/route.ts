@@ -18,48 +18,43 @@ export async function GET() {
   const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // Diagnostic: see real collezione values in DB via Prisma groupBy
-  let diagError: string | null = null;
+  // Diagnostic: what collezione values actually exist?
   let diagTotal = -1;
   let diagCollezioni: { collezione: string | null; cnt: number }[] = [];
-
+  let diagError: string | null = null;
   try {
     diagTotal = await prisma.product.count();
-    const colGroups = await prisma.product.groupBy({
-      by: ['collezione'],
-      _count: { id: true },
-      orderBy: { _count: { id: 'desc' } },
-      take: 15,
-    });
-    diagCollezioni = colGroups.map((g) => ({ collezione: g.collezione, cnt: g._count.id }));
+    const groups = await prisma.product.groupBy({ by: ['collezione'], _count: { _all: true } });
+    diagCollezioni = groups
+      .map((g) => ({ collezione: g.collezione, cnt: g._count._all }))
+      .sort((a, b) => b.cnt - a.cnt)
+      .slice(0, 15);
   } catch (e) {
     diagError = String(e);
   }
 
-  // Fetch all active Moda products
-  let products: { id: string; code: string; name: string; imageUrl: string | null; colore: string | null; famiglia: string | null; sottofamiglia: string | null; classe: string | null; gruppoOmogeneo: string | null; costPrice: any; retailPrice: any }[] = [];
-  let productsError: string | null = null;
-  try {
-    products = await prisma.product.findMany({
-      where: { isActive: true, collezione: MODA_COLLEZIONE },
-      select: { id: true, code: true, name: true, imageUrl: true, colore: true, famiglia: true, sottofamiglia: true, classe: true, gruppoOmogeneo: true, costPrice: true, retailPrice: true },
-      orderBy: { code: 'asc' },
-    });
-  } catch (e) {
-    productsError = String(e);
-  }
+  const products = await prisma.product.findMany({
+    where: { isActive: true, collezione: MODA_COLLEZIONE },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      imageUrl: true,
+      colore: true,
+      famiglia: true,
+      sottofamiglia: true,
+      classe: true,
+      gruppoOmogeneo: true,
+      costPrice: true,
+      retailPrice: true,
+    },
+    orderBy: { code: 'asc' },
+  });
 
   if (products.length === 0) {
     return NextResponse.json({
       families: HUE_FAMILIES.map((f) => ({ ...f, products: [] })),
-      _debug: {
-        productCount: 0,
-        filter: { isActive: true, collezione: MODA_COLLEZIONE },
-        diagTotal,
-        diagCollezioni,
-        diagError,
-        productsError,
-      },
+      _debug: { productCount: 0, MODA_COLLEZIONE, diagTotal, diagCollezioni, diagError },
     });
   }
 
@@ -81,7 +76,6 @@ export async function GET() {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 
-  // Build primary pantone map per product
   const primaryByProduct = new Map<string, PantoneRow>();
   for (const row of pantoneRows) {
     const existing = primaryByProduct.get(row.product_id);
@@ -90,8 +84,7 @@ export async function GET() {
     }
   }
 
-  // Assign each product to a hue family
-  const familyMap = new Map<string, typeof products[0][]>();
+  const familyMap = new Map<string, (typeof products)[0][]>();
   for (const f of HUE_FAMILIES) familyMap.set(f.id, []);
 
   const productPantoneInfo: {
@@ -153,8 +146,5 @@ export async function GET() {
     }),
   }));
 
-  return NextResponse.json({
-    families,
-    _debug: { productCount: products.length, pantoneMappedCount: primaryByProduct.size, collezione: MODA_COLLEZIONE },
-  });
+  return NextResponse.json({ families });
 }
