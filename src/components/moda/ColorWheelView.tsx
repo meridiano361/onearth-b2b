@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, X, ArrowLeft, Sparkles, Star } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { HUE_FAMILIES, type HueFamily } from '@/lib/colorHarmony';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -21,7 +22,7 @@ interface WheelProduct {
   id: string;
   code: string;
   name: string;
-  imageUrl: string | null;
+  imageUrl: string | null;  // already resolved to first available url by API
   colore: string | null;
   famiglia: string | null;
   costPrice: number;
@@ -56,10 +57,12 @@ const CX = 200, CY = 200;
 const R_OUT  = 175; // outer edge
 const R_LGHT = 148; // light / medium boundary
 const R_MDDK = 116; // medium / dark boundary
-const R_IN   = 84;  // inner edge of chromatic rings (also white fill radius)
-const R_NEU  = 58;  // neutral circle
+const R_IN    = 84;  // inner edge of chromatic rings (white fill up to here)
+const R_NEU_3 = 52;  // outer edge of neutral area
+const R_NEU_2 = 36;  // light / medium neutral boundary
+const R_NEU_1 = 20;  // medium / dark neutral boundary (innermost circle)
 
-// Dot-center radii (midpoints of rings)
+// Dot-center radii (midpoints of chromatic rings)
 const R_D_LGHT = (R_OUT + R_LGHT) / 2;  // 161.5
 const R_D_MED  = (R_LGHT + R_MDDK) / 2; // 132
 const R_D_DARK = (R_MDDK + R_IN) / 2;   // 100
@@ -269,18 +272,27 @@ export default function ColorWheelView() {
             {/* White gap — covers 0..R_IN */}
             <circle cx={CX} cy={CY} r={R_IN} fill="white" className="pointer-events-none" />
 
-            {/* Neutral circle */}
-            <g onClick={() => handleFamilyClick('neutral')} className="cursor-pointer">
-              <circle
-                cx={CX} cy={CY} r={R_NEU}
-                fill="#B0BEC5"
-                opacity={selectedFamilyId === 'neutral' ? 1 : selectedFamilyId ? 0.4 : 0.85}
-              />
+            {/* Neutral area — 3 concentric rings (chiaro / medio / scuro) */}
+            <g
+              onClick={() => handleFamilyClick('neutral')}
+              className="cursor-pointer"
+              opacity={selectedFamilyId === 'neutral' ? 1 : selectedFamilyId ? 0.3 : 0.88}
+            >
+              {/* Outer ring: light neutrals */}
+              <circle cx={CX} cy={CY} r={R_NEU_3} fill="#D4D4D4" />
+              {/* Middle ring: medium neutrals */}
+              <circle cx={CX} cy={CY} r={R_NEU_2} fill="#9E9E9E" />
+              {/* Inner circle: dark neutrals */}
+              <circle cx={CX} cy={CY} r={R_NEU_1} fill="#5A5A5A" />
+              {/* Ring separator lines */}
+              <circle cx={CX} cy={CY} r={R_NEU_2} fill="none" stroke="white" strokeWidth="1.2" opacity={0.5} className="pointer-events-none" />
+              <circle cx={CX} cy={CY} r={R_NEU_1} fill="none" stroke="white" strokeWidth="1.2" opacity={0.5} className="pointer-events-none" />
+              {/* Selection outline */}
               {selectedFamilyId === 'neutral' && (
-                <circle cx={CX} cy={CY} r={R_NEU + 5} fill="none" stroke="white" strokeWidth="2.5" className="pointer-events-none" />
+                <circle cx={CX} cy={CY} r={R_NEU_3 + 5} fill="none" stroke="white" strokeWidth="2.5" className="pointer-events-none" />
               )}
-              <text x={CX} y={CY - 5} textAnchor="middle" fontSize={9} fontWeight="600" fill="white" className="pointer-events-none">Neutri</text>
-              <text x={CX} y={CY + 8} textAnchor="middle" fontSize={9} fill="white" opacity={0.85} className="pointer-events-none">
+              {/* Count label in center */}
+              <text x={CX} y={CY + 3} textAnchor="middle" fontSize={8} fontWeight="700" fill="white" opacity={0.9} className="pointer-events-none">
                 {neutralFam?.products.length ?? 0}
               </text>
             </g>
@@ -291,8 +303,13 @@ export default function ColorWheelView() {
 
               if (product.isNeutral) {
                 const angle = hash01(product.id + 'a') * 360;
-                const r     = hash01(product.id + 'r') * (R_NEU - 12);
-                const pt    = polar(CX, CY, r, angle);
+                const [rOut, rIn] = product.lightness > 65
+                  ? [R_NEU_3 - 3, R_NEU_2 + 3]
+                  : product.lightness > 35
+                    ? [R_NEU_2 - 3, R_NEU_1 + 3]
+                    : [R_NEU_1 - 3, 4];
+                const r  = rIn + hash01(product.id + 'r') * (rOut - rIn);
+                const pt = polar(CX, CY, r, angle);
                 dotX = pt.x; dotY = pt.y;
               } else {
                 const angJitter = (hash01(product.id + 'j') - 0.5) * 10;
@@ -375,16 +392,18 @@ export default function ColorWheelView() {
             <div className="space-y-1.5">
               {(
                 [
-                  { label: 'Chiaro', position: 'anello esterno',   bg: 'hsl(220,50%,82%)', range: 'L > 65%' },
-                  { label: 'Medio',  position: 'anello centrale',  bg: 'hsl(220,75%,50%)', range: '35–65%'  },
-                  { label: 'Scuro',  position: 'anello interno',   bg: 'hsl(220,62%,28%)', range: 'L < 35%' },
-                  { label: 'Neutri', position: 'cerchio centrale', bg: '#B0BEC5',           range: 'desaturato' },
+                  { label: 'Chiaro',         position: 'anello esterno',          bg: 'hsl(220,50%,82%)', range: 'L > 65%'    },
+                  { label: 'Medio',          position: 'anello centrale',         bg: 'hsl(220,75%,50%)', range: '35–65%'     },
+                  { label: 'Scuro',          position: 'anello interno',          bg: 'hsl(220,62%,28%)', range: 'L < 35%'    },
+                  { label: 'Neutro chiaro',  position: 'cerchio — fascia esterna', bg: '#D4D4D4',          range: 'L > 65%'    },
+                  { label: 'Neutro medio',   position: 'cerchio — fascia centrale', bg: '#9E9E9E',         range: '35–65%'     },
+                  { label: 'Neutro scuro',   position: 'cerchio — fascia interna', bg: '#5A5A5A',          range: 'L < 35%'    },
                 ] as const
-              ).map(({ label, position, bg, range }) => (
-                <div key={label} className="flex items-center gap-2.5 text-xs">
+              ).map(({ label, position, bg, range }, i) => (
+                <div key={label} className={`flex items-center gap-2.5 text-xs ${i === 3 ? 'mt-1 pt-1 border-t border-border/40' : ''}`}>
                   <span className="w-7 h-3.5 rounded-sm flex-shrink-0" style={{ backgroundColor: bg }} />
-                  <span className="font-medium text-gray-700 w-12 flex-shrink-0">{label}</span>
-                  <span className="text-gray-400 flex-1">{position}</span>
+                  <span className="font-medium text-gray-700 w-24 flex-shrink-0 leading-tight">{label}</span>
+                  <span className="text-gray-400 flex-1 leading-tight">{position}</span>
                   <span className="text-gray-400 text-2xs tabular-nums">{range}</span>
                 </div>
               ))}
@@ -471,9 +490,10 @@ export default function ColorWheelView() {
                 <div className="flex items-center gap-2">
                   <Sparkles size={15} className="text-accent flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-semibold text-primary">
-                      Abbinamenti per {selectedProduct.code}
+                    <p className="text-sm font-semibold text-primary leading-snug">
+                      Abbinamenti per {selectedProduct.name}
                     </p>
+                    <p className="text-xs font-mono text-gray-400 leading-none mt-0.5">{selectedProduct.code}</p>
                     {selectedProduct.primaryPantone && (
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span
@@ -600,9 +620,12 @@ function ProductCard({
   isSelected: boolean;
   onClick: () => void;
 }) {
+  const router = useRouter();
+
   return (
     <button
       onClick={onClick}
+      onDoubleClick={() => router.push(`/catalog/${product.id}`)}
       className={`group text-left rounded-lg overflow-hidden border transition-all ${
         isSelected
           ? 'border-accent ring-2 ring-accent/20 shadow-sm'
@@ -625,7 +648,7 @@ function ProductCard({
         {product.primaryPantone && (
           <div className="absolute bottom-1 right-1 flex items-center gap-1">
             <div
-              className="w-4 h-4 rounded border border-white/70 shadow-sm"
+              className="w-4 h-4 rounded border border-[#3a3a3a]/60 shadow-sm"
               style={{ backgroundColor: product.primaryPantone.hex_code }}
               title={`${product.primaryPantone.code} — ${product.primaryPantone.name}`}
             />
