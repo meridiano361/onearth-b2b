@@ -350,44 +350,72 @@ export default function ColorWheelView() {
             )}
           </div>
 
-          {/* Tonal rings legend */}
+          {/* ── Come si legge ─────────────────────────────────────── */}
+          <div className="w-full rounded-lg border border-border bg-gray-50/60 px-3 py-2.5 space-y-1.5 text-xs text-gray-600">
+            <p className="text-2xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Come si legge</p>
+            <div className="flex items-start gap-2">
+              <span className="mt-0.5 w-2 h-2 rounded-full bg-gray-400 flex-shrink-0" />
+              <span>Ogni <strong className="text-gray-700">punto</strong> è un prodotto, posizionato per tinta e luminosità Pantone</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="mt-0.5 w-2 h-2 rounded flex-shrink-0" style={{ backgroundColor: 'hsl(200,70%,55%)' }} />
+              <span>Clicca un <strong className="text-gray-700">settore</strong> per filtrare quella famiglia cromatica</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="mt-0.5 w-2 h-2 rounded-full border border-gray-400 flex-shrink-0" />
+              <span>Clicca un <strong className="text-gray-700">punto</strong> per scoprire gli abbinamenti armonici</span>
+            </div>
+          </div>
+
+          {/* ── Anelli tonali ─────────────────────────────────────── */}
           <div className="w-full">
-            <p className="text-2xs text-gray-400 uppercase tracking-widest mb-1.5">Fasce tonali</p>
-            <div className="flex gap-4">
+            <p className="text-2xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
+              Anelli tonali <span className="font-normal text-gray-300 ml-1">— luminosità Pantone</span>
+            </p>
+            <div className="space-y-1.5">
               {(
                 [
-                  { ring: 'light', label: 'Chiaro', bg: 'hsl(220,50%,82%)' },
-                  { ring: 'med',   label: 'Medio',  bg: 'hsl(220,75%,50%)' },
-                  { ring: 'dark',  label: 'Scuro',  bg: 'hsl(220,62%,28%)' },
+                  { label: 'Chiaro', position: 'anello esterno',   bg: 'hsl(220,50%,82%)', range: 'L > 65%' },
+                  { label: 'Medio',  position: 'anello centrale',  bg: 'hsl(220,75%,50%)', range: '35–65%'  },
+                  { label: 'Scuro',  position: 'anello interno',   bg: 'hsl(220,62%,28%)', range: 'L < 35%' },
+                  { label: 'Neutri', position: 'cerchio centrale', bg: '#B0BEC5',           range: 'desaturato' },
                 ] as const
-              ).map(({ ring, label, bg }) => (
-                <div key={ring} className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded-sm" style={{ backgroundColor: bg }} />
-                  <span className="text-2xs text-gray-500">{label}</span>
+              ).map(({ label, position, bg, range }) => (
+                <div key={label} className="flex items-center gap-2.5 text-xs">
+                  <span className="w-7 h-3.5 rounded-sm flex-shrink-0" style={{ backgroundColor: bg }} />
+                  <span className="font-medium text-gray-700 w-12 flex-shrink-0">{label}</span>
+                  <span className="text-gray-400 flex-1">{position}</span>
+                  <span className="text-gray-400 text-2xs tabular-nums">{range}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Hue family legend */}
-          <div className="w-full grid grid-cols-2 gap-1">
-            {HUE_FAMILIES.map((f) => {
-              const count    = families.find((ff) => ff.id === f.id)?.products.length ?? 0;
-              const isActive = selectedFamilyId === f.id;
-              return (
-                <button
-                  key={f.id}
-                  onClick={() => handleFamilyClick(f.id)}
-                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-left transition-colors ${
-                    isActive ? 'bg-primary/10 font-semibold' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: f.hexColor }} />
-                  <span className="text-gray-700 truncate">{f.label}</span>
-                  {count > 0 && <span className="ml-auto text-gray-400 text-2xs">{count}</span>}
-                </button>
-              );
-            })}
+          {/* ── Famiglie cromatiche ───────────────────────────────── */}
+          <div className="w-full">
+            <p className="text-2xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
+              Famiglie cromatiche
+              <span className="font-normal text-gray-300 ml-1">— clicca per filtrare</span>
+            </p>
+            <div className="grid grid-cols-2 gap-0.5">
+              {HUE_FAMILIES.map((f) => {
+                const count    = families.find((ff) => ff.id === f.id)?.products.length ?? 0;
+                const isActive = selectedFamilyId === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => handleFamilyClick(f.id)}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs text-left transition-colors ${
+                      isActive ? 'bg-primary/10 font-semibold' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: f.hexColor }} />
+                    <span className="text-gray-700 truncate">{f.label}</span>
+                    {count > 0 && <span className="ml-auto text-gray-400 text-2xs pl-1">{count}</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {selectedFamilyId && (
