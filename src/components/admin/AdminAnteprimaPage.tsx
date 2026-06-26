@@ -186,7 +186,7 @@ export default function AdminAnteprimaPage() {
             Accessibile solo agli amministratori.
           </p>
           <button
-            onClick={() => { window.location.href = '/moda'; }}
+            onClick={() => { window.location.href = '/home?devPreview=1'; }}
             className="flex items-center justify-center gap-2 w-full px-4 py-2.5 border border-amber-200 bg-amber-50 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-100 transition-colors"
           >
             <FlaskConical size={14} />

@@ -2,10 +2,11 @@
 
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Globe, Mic, ChevronRight, Clock, Lock, X } from 'lucide-react';
+import { Globe, Mic, ChevronRight, Clock, Lock, X, FlaskConical } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import { canAccessModa } from '@/lib/modaAccess';
 
 const SOCIAL_SVGS: Record<string, ReactNode> = {
@@ -82,6 +83,8 @@ export default function CustomerHome() {
   const { social: ss, collections } = useSettings();
   const { data: session } = useSession();
   const isAdmin = canAccessModa(session?.user?.role);
+  const searchParams = useSearchParams();
+  const devPreview = searchParams.get('devPreview') === '1';
 
   const [popupDismissed, setPopupDismissed] = useState(false);
 
@@ -148,8 +151,23 @@ export default function CustomerHome() {
     <div className="min-h-screen bg-cream">
       <div className="w-full px-4 sm:px-6 lg:px-8 py-10 space-y-4">
 
+        {/* Dev preview banner */}
+        {devPreview && (
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-xs font-medium">
+            <FlaskConical size={13} />
+            Anteprima in sviluppo — così apparirà la home quando MODA sarà pubblica
+          </div>
+        )}
+
         {/* Collection cards */}
-        <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} />
+        {devPreview ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CollectionCard info={casaInfo} href="/catalog/products" compact />
+            <CollectionCard info={modaInfo} href="/moda" compact />
+          </div>
+        ) : (
+          <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} />
+        )}
 
         {/* Social */}
         <div className="bg-white border border-border rounded-2xl px-5 py-4">
