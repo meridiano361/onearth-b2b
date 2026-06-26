@@ -595,40 +595,6 @@ export default function AdminProductsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* CSV Export dropdown */}
-          <div className="relative">
-            <Button variant="secondary" icon={<Download size={13} />} onClick={() => setShowExportMenu((v) => !v)}>
-              <span className="hidden sm:inline">Esporta CSV</span>
-            </Button>
-            {showExportMenu && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-border rounded-lg shadow-lg py-1 min-w-[200px]">
-                  <button onClick={() => downloadCsv(products, 'none')}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-cream transition-colors">
-                    Lista corrente ({products.length})
-                  </button>
-                  <button onClick={() => downloadCsv(allProducts, 'tranche')}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-cream transition-colors">
-                    Tutti · raggruppati per tranche
-                  </button>
-                  <button onClick={() => downloadCsv(allProducts, 'conferente')}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-cream transition-colors">
-                    Tutti · raggruppati per conferente
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-          <Button variant="secondary" icon={<Upload size={13} />} onClick={() => setShowImport(true)}>
-            <span className="hidden sm:inline">Importa da Excel</span>
-          </Button>
-          <Button variant="secondary" icon={isModaExporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} onClick={handleModaExport} disabled={isModaExporting}>
-            <span className="hidden sm:inline">Template MODA</span>
-          </Button>
-          <Button variant="secondary" icon={<Upload size={13} />} onClick={() => { setModaImportResult(null); setShowModaImport(true); }}>
-            <span className="hidden sm:inline">Importa MODA</span>
-          </Button>
           <Button variant="secondary" icon={<ImagePlus size={13} />} onClick={() => setShowBulkImages(true)}>
             <span className="hidden sm:inline">Carica foto in blocco</span>
           </Button>
