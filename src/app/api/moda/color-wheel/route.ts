@@ -46,15 +46,21 @@ export async function GET() {
 
   const productIds = products.map((p) => p.id);
 
-  const pantoneRows = await prisma.$queryRaw<PantoneRow[]>`
-    SELECT pp.product_id, pp.pantone_color_id,
-           pc.code, pc.name, pc.hex_code,
-           pp.sort_order, pp.is_primary
-    FROM   product_pantones pp
-    JOIN   pantone_colors pc ON pc.id = pp.pantone_color_id
-    WHERE  pp.product_id = ANY(${productIds}::text[])
-    ORDER  BY pp.product_id, pp.sort_order ASC
-  `;
+  let pantoneRows: PantoneRow[];
+  try {
+    pantoneRows = await prisma.$queryRaw<PantoneRow[]>`
+      SELECT pp.product_id, pp.pantone_color_id,
+             pc.code, pc.name, pc.hex_code,
+             pp.sort_order, pp.is_primary
+      FROM   product_pantones pp
+      JOIN   pantone_colors pc ON pc.id = pp.pantone_color_id
+      WHERE  pp.product_id = ANY(${productIds}::text[])
+      ORDER  BY pp.product_id, pp.sort_order ASC
+    `;
+  } catch (e) {
+    console.error('[color-wheel] pantone query failed:', e);
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
 
   // Build primary pantone map per product
   const primaryByProduct = new Map<string, PantoneRow>();

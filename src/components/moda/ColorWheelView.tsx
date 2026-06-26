@@ -100,14 +100,18 @@ export default function ColorWheelView() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
   // ── Data fetching ─────────────────────────────────────────────────────────
-  const { data: wheelData, isLoading: wheelLoading } = useQuery<{ families: WheelFamily[] }>({
+  const { data: wheelData, isLoading: wheelLoading, isError, error, refetch } = useQuery<{ families: WheelFamily[] }>({
     queryKey: ['moda-color-wheel'],
     queryFn: async () => {
       const res = await fetch('/api/moda/color-wheel');
-      if (!res.ok) throw new Error('Failed to load color wheel');
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`${res.status}: ${text}`);
+      }
       return res.json();
     },
-    staleTime: 300_000,
+    staleTime: 60_000,
+    retry: 1,
   });
 
   const { data: suggestionsData, isLoading: suggestionsLoading } = useQuery<{
@@ -159,6 +163,18 @@ export default function ColorWheelView() {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 size={24} className="animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3 px-6 text-center">
+        <p className="text-sm text-red-600 font-medium">Errore nel caricamento della ruota cromatica</p>
+        <p className="text-xs text-gray-500 font-mono max-w-md break-all">{String(error)}</p>
+        <button onClick={() => refetch()} className="text-xs underline text-gray-500 hover:text-primary">
+          Riprova
+        </button>
       </div>
     );
   }
