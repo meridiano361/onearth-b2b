@@ -18,47 +18,35 @@ export async function GET() {
   const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // Diagnostic: count products by filter combination
-  const diagRows = await prisma.$queryRaw<{ total: bigint; active: bigint; pe27: bigint; both: bigint }[]>`
-    SELECT
-      COUNT(*)                                                            AS total,
-      COUNT(*) FILTER (WHERE "isActive" = true)                         AS active,
-      COUNT(*) FILTER (WHERE "collezione" = ${MODA_COLLEZIONE})         AS pe27,
-      COUNT(*) FILTER (WHERE "isActive" = true AND "collezione" = ${MODA_COLLEZIONE}) AS both
-    FROM "Product"
-  `;
-  const diag = diagRows[0];
+  // Diagnostic queries to understand DB state
+  let diagError: string | null = null;
+  let diagTotal = -1;
+  let diagCollezioni: { collezione: string | null; cnt: number }[] = [];
 
-  const collezioniRows = await prisma.$queryRaw<{ collezione: string | null; cnt: bigint }[]>`
-    SELECT "collezione", COUNT(*) AS cnt
-    FROM "Product"
-    WHERE "isActive" = true
-    GROUP BY "collezione"
-    ORDER BY cnt DESC
-    LIMIT 10
-  `;
+  try {
+    const totalRows = await prisma.$queryRaw<{ n: bigint }[]>`SELECT COUNT(*) AS n FROM "Product"`;
+    diagTotal = Number(totalRows[0]?.n ?? 0);
 
-  // Fetch all active Moda products with their primary pantone
-  const products = await prisma.product.findMany({
-    where: {
-      isActive: true,
-      collezione: MODA_COLLEZIONE,
-    },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      imageUrl: true,
-      colore: true,
-      famiglia: true,
-      sottofamiglia: true,
-      classe: true,
-      gruppoOmogeneo: true,
-      costPrice: true,
-      retailPrice: true,
-    },
-    orderBy: { code: 'asc' },
-  });
+    const colRows = await prisma.$queryRaw<{ collezione: string | null; cnt: bigint }[]>`
+      SELECT "collezione", COUNT(*) AS cnt FROM "Product" GROUP BY "collezione" ORDER BY cnt DESC LIMIT 15
+    `;
+    diagCollezioni = colRows.map((r) => ({ collezione: r.collezione, cnt: Number(r.cnt) }));
+  } catch (e) {
+    diagError = String(e);
+  }
+
+  // Fetch all active Moda products
+  let products: { id: string; code: string; name: string; imageUrl: string | null; colore: string | null; famiglia: string | null; sottofamiglia: string | null; classe: string | null; gruppoOmogeneo: string | null; costPrice: any; retailPrice: any }[] = [];
+  let productsError: string | null = null;
+  try {
+    products = await prisma.product.findMany({
+      where: { isActive: true, collezione: MODA_COLLEZIONE },
+      select: { id: true, code: true, name: true, imageUrl: true, colore: true, famiglia: true, sottofamiglia: true, classe: true, gruppoOmogeneo: true, costPrice: true, retailPrice: true },
+      orderBy: { code: 'asc' },
+    });
+  } catch (e) {
+    productsError = String(e);
+  }
 
   if (products.length === 0) {
     return NextResponse.json({
@@ -66,8 +54,10 @@ export async function GET() {
       _debug: {
         productCount: 0,
         filter: { isActive: true, collezione: MODA_COLLEZIONE },
-        diag: { total: Number(diag.total), active: Number(diag.active), pe27: Number(diag.pe27), both: Number(diag.both) },
-        activeCollezioni: collezioniRows.map((r) => ({ collezione: r.collezione, count: Number(r.cnt) })),
+        diagTotal,
+        diagCollezioni,
+        diagError,
+        productsError,
       },
     });
   }
