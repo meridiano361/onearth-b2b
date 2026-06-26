@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireModaSession } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 import { hexToHsl, getHueFamilyId, HUE_FAMILIES } from '@/lib/colorHarmony';
-import { MODA_COLLEZIONE } from '@/lib/modaAccess';
+
 
 type PantoneRow = {
   product_id: string;
@@ -18,23 +18,8 @@ export async function GET() {
   const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // Diagnostic: what collezione values actually exist?
-  let diagTotal = -1;
-  let diagCollezioni: { collezione: string | null; cnt: number }[] = [];
-  let diagError: string | null = null;
-  try {
-    diagTotal = await prisma.product.count();
-    const groups = await prisma.product.groupBy({ by: ['collezione'], _count: { _all: true } });
-    diagCollezioni = groups
-      .map((g) => ({ collezione: g.collezione, cnt: g._count._all }))
-      .sort((a, b) => b.cnt - a.cnt)
-      .slice(0, 15);
-  } catch (e) {
-    diagError = String(e);
-  }
-
   const products = await prisma.product.findMany({
-    where: { isActive: true, collezione: MODA_COLLEZIONE },
+    where: { isActive: true, gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' } },
     select: {
       id: true,
       code: true,
@@ -52,10 +37,7 @@ export async function GET() {
   });
 
   if (products.length === 0) {
-    return NextResponse.json({
-      families: HUE_FAMILIES.map((f) => ({ ...f, products: [] })),
-      _debug: { productCount: 0, MODA_COLLEZIONE, diagTotal, diagCollezioni, diagError },
-    });
+    return NextResponse.json({ families: HUE_FAMILIES.map((f) => ({ ...f, products: [] })) });
   }
 
   const productIds = products.map((p) => p.id);
