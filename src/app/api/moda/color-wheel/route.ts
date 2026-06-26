@@ -18,19 +18,20 @@ export async function GET() {
   const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // Diagnostic queries to understand DB state
+  // Diagnostic: see real collezione values in DB via Prisma groupBy
   let diagError: string | null = null;
   let diagTotal = -1;
   let diagCollezioni: { collezione: string | null; cnt: number }[] = [];
 
   try {
-    const totalRows = await prisma.$queryRaw<{ n: bigint }[]>`SELECT COUNT(*) AS n FROM "Product"`;
-    diagTotal = Number(totalRows[0]?.n ?? 0);
-
-    const colRows = await prisma.$queryRaw<{ collezione: string | null; cnt: bigint }[]>`
-      SELECT "collezione", COUNT(*) AS cnt FROM "Product" GROUP BY "collezione" ORDER BY cnt DESC LIMIT 15
-    `;
-    diagCollezioni = colRows.map((r) => ({ collezione: r.collezione, cnt: Number(r.cnt) }));
+    diagTotal = await prisma.product.count();
+    const colGroups = await prisma.product.groupBy({
+      by: ['collezione'],
+      _count: { id: true },
+      orderBy: { _count: { id: 'desc' } },
+      take: 15,
+    });
+    diagCollezioni = colGroups.map((g) => ({ collezione: g.collezione, cnt: g._count.id }));
   } catch (e) {
     diagError = String(e);
   }
