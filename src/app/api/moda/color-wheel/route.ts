@@ -18,6 +18,26 @@ export async function GET() {
   const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+  // Diagnostic: count products by filter combination
+  const diagRows = await prisma.$queryRaw<{ total: bigint; active: bigint; pe27: bigint; both: bigint }[]>`
+    SELECT
+      COUNT(*)                                                            AS total,
+      COUNT(*) FILTER (WHERE "isActive" = true)                         AS active,
+      COUNT(*) FILTER (WHERE "collezione" = ${MODA_COLLEZIONE})         AS pe27,
+      COUNT(*) FILTER (WHERE "isActive" = true AND "collezione" = ${MODA_COLLEZIONE}) AS both
+    FROM "Product"
+  `;
+  const diag = diagRows[0];
+
+  const collezioniRows = await prisma.$queryRaw<{ collezione: string | null; cnt: bigint }[]>`
+    SELECT "collezione", COUNT(*) AS cnt
+    FROM "Product"
+    WHERE "isActive" = true
+    GROUP BY "collezione"
+    ORDER BY cnt DESC
+    LIMIT 10
+  `;
+
   // Fetch all active Moda products with their primary pantone
   const products = await prisma.product.findMany({
     where: {
@@ -43,7 +63,12 @@ export async function GET() {
   if (products.length === 0) {
     return NextResponse.json({
       families: HUE_FAMILIES.map((f) => ({ ...f, products: [] })),
-      _debug: { productCount: 0, filter: { isActive: true, collezione: MODA_COLLEZIONE } },
+      _debug: {
+        productCount: 0,
+        filter: { isActive: true, collezione: MODA_COLLEZIONE },
+        diag: { total: Number(diag.total), active: Number(diag.active), pe27: Number(diag.pe27), both: Number(diag.both) },
+        activeCollezioni: collezioniRows.map((r) => ({ collezione: r.collezione, count: Number(r.cnt) })),
+      },
     });
   }
 
