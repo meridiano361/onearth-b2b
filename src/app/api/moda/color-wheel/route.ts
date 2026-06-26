@@ -10,9 +10,6 @@ type PantoneRow = {
   code: string;
   name: string;
   hex_code: string;
-  hue_angle: number | null;
-  lightness: number | null;
-  is_neutral: boolean;
   sort_order: number;
   is_primary: boolean;
 };
@@ -52,7 +49,7 @@ export async function GET() {
 
   const pantoneRows = await prisma.$queryRaw<PantoneRow[]>`
     SELECT pp.product_id, pp.pantone_color_id,
-           pc.code, pc.name, pc.hex_code, pc.hue_angle, pc.lightness, pc.is_neutral,
+           pc.code, pc.name, pc.hex_code,
            pp.sort_order, pp.is_primary
     FROM   product_pantones pp
     JOIN   pantone_colors pc ON pc.id = pp.pantone_color_id
@@ -88,11 +85,10 @@ export async function GET() {
 
     if (pantone) {
       hex = pantone.hex_code;
-      isNeutral = pantone.is_neutral;
-      // Use stored hue_angle if available, otherwise compute
       const hsl = hexToHsl(hex);
-      hue = pantone.hue_angle != null ? pantone.hue_angle : hsl.h;
-      lum = pantone.lightness != null ? pantone.lightness : hsl.l;
+      hue = hsl.h;
+      lum = hsl.l;
+      isNeutral = hsl.s < 15;
       hueFamilyId = getHueFamilyId(hex, isNeutral);
     }
 
@@ -122,7 +118,7 @@ export async function GET() {
               hex_code: pantone.hex_code,
               hue_angle: info?.hue ?? 0,
               lightness: info?.lightness ?? 50,
-              is_neutral: pantone.is_neutral,
+              is_neutral: info?.isNeutral ?? true,
             }
           : null,
         hueFamilyId: info?.hueFamilyId ?? 'neutral',
