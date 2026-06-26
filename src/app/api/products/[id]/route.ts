@@ -252,6 +252,12 @@ export async function DELETE(
     if (err.code === 'P2025') {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
+    if (err.code === 'P2003') {
+      return NextResponse.json(
+        { error: 'Il prodotto è presente in uno o più ordini o carrelli e non può essere eliminato. Disattivalo dal campo "Attivo" oppure eliminalo dagli ordini prima di procedere.' },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

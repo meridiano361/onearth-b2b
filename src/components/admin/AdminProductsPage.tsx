@@ -316,12 +316,15 @@ export default function AdminProductsPage() {
     if (!confirm(`Eliminare ${product.name}? Questa azione non può essere annullata.`)) return;
     try {
       const res = await fetch(`/api/products/${product.id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Impossibile eliminare il prodotto');
+      }
       setSelectedIds((prev) => { const n = new Set(prev); n.delete(product.id); return n; });
       await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success('Prodotto eliminato');
-    } catch {
-      toast.error('Impossibile eliminare il prodotto');
+    } catch (err: any) {
+      toast.error(err.message || 'Impossibile eliminare il prodotto');
     }
   }
 
@@ -334,14 +337,17 @@ export default function AdminProductsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
       });
-      if (!res.ok) throw new Error('Failed');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Impossibile eliminare i prodotti');
+      }
       const { deleted } = await res.json();
       setSelectedIds(new Set());
       setShowBulkDeleteConfirm(false);
       await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success(`${deleted} prodott${deleted === 1 ? 'o eliminato' : 'i eliminati'}`);
-    } catch {
-      toast.error('Impossibile eliminare i prodotti');
+    } catch (err: any) {
+      toast.error(err.message || 'Impossibile eliminare i prodotti');
     } finally {
       setIsBulkDeleting(false);
     }

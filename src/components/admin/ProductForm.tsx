@@ -245,7 +245,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
   const p = product as any;
   const dup = duplicateSource as any;
   const src = p ?? dup; // source for pre-filling (edit or duplicate)
-  const isModaInit = (src?.gruppoMerceologico ?? initialValues?.gruppoMerceologico ?? '') === MODA_GRUPPO_MERCEOLOGICO;
+  const isModaInit = (src?.gruppoMerceologico ?? initialValues?.gruppoMerceologico ?? '').toLowerCase() === MODA_GRUPPO_MERCEOLOGICO.toLowerCase();
 
   const fileInputRef  = useRef<HTMLInputElement>(null);
   const fileInputRef2 = useRef<HTMLInputElement>(null);
@@ -404,7 +404,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
   const watchedMat2      = watch('materiale2');
   const watchedMat3      = watch('materiale3');
 
-  const isModa = (isEdit ? (watchedGm ?? product?.gruppoMerceologico) : watchedGm) === MODA_GRUPPO_MERCEOLOGICO;
+  const isModa = ((isEdit ? (watchedGm ?? product?.gruppoMerceologico) : watchedGm) ?? '').toLowerCase() === MODA_GRUPPO_MERCEOLOGICO.toLowerCase();
   const codeChanged = isEdit && !!product && watchedCode !== product.code;
 
   const modaClassi         = isModa ? getModaClassi(watchedFamiglia || '') : [];
