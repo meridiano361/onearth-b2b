@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireModaSession } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
-import { hexToHsl, getHueFamilyId, getHarmonyType, harmonyScore, generateDisplayGroups } from '@/lib/colorHarmony';
+import { hexToHsl, getHueFamilyId, isColorNeutral, getHarmonyType, harmonyScore, generateDisplayGroups } from '@/lib/colorHarmony';
 import type { PantoneInfo } from '@/lib/colorHarmony';
 
 
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   const heroHsl = hexToHsl(heroPrimary.hex_code);
   const heroHue = heroHsl.h;
   const heroL = heroHsl.l;
-  const heroNeutral = heroHsl.s < 15;
+  const heroNeutral = isColorNeutral(heroHsl);
 
   // Load all other Moda products with their primary pantone
   const allProducts = await prisma.product.findMany({
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
     const hsl = hexToHsl(pantone.hex_code);
     const hue = hsl.h;
     const lum = hsl.l;
-    const neutral = hsl.s < 15;
+    const neutral = isColorNeutral(hsl);
 
     const type = getHarmonyType(heroHue, hue, heroNeutral, neutral);
     const score = harmonyScore(heroHue, hue, heroNeutral, neutral, heroL, lum);

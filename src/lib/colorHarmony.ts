@@ -57,13 +57,22 @@ export const HUE_FAMILIES: HueFamily[] = [
   { id: 'neutral',      label: 'Neutri',         hueCenter: -1,  hexColor: '#9E9E9E' },
 ];
 
+/**
+ * Near-white and near-black colors report artificially high HSL saturation
+ * because the denominator in the saturation formula approaches zero at l≈0 or l≈1.
+ * Treat them as neutral regardless of the computed saturation value.
+ */
+export function isColorNeutral({ s, l }: HSL): boolean {
+  return s < 15 || l > 90 || l < 8;
+}
+
 /** Assign a product/pantone to a hue family based on hex color. */
 export function getHueFamilyId(hex: string, isNeutral = false): string {
   if (isNeutral) return 'neutral';
-  const { h, s } = hexToHsl(hex);
-  if (s < 15) return 'neutral'; // too desaturated → neutral
+  const hsl = hexToHsl(hex);
+  if (isColorNeutral(hsl)) return 'neutral';
   // 12 chromatic families × 30° each; shift by 15° so boundaries fall between families
-  const idx = Math.floor(((h + 15) % 360) / 30);
+  const idx = Math.floor(((hsl.h + 15) % 360) / 30);
   return HUE_FAMILIES[idx]?.id ?? 'neutral';
 }
 
