@@ -41,7 +41,10 @@ export async function GET() {
   });
 
   if (products.length === 0) {
-    return NextResponse.json({ families: HUE_FAMILIES.map((f) => ({ ...f, products: [] })) });
+    return NextResponse.json({
+      families: HUE_FAMILIES.map((f) => ({ ...f, products: [] })),
+      _debug: { productCount: 0, filter: { isActive: true, collezione: MODA_COLLEZIONE } },
+    });
   }
 
   const productIds = products.map((p) => p.id);
@@ -134,5 +137,8 @@ export async function GET() {
     }),
   }));
 
-  return NextResponse.json({ families });
+  return NextResponse.json({
+    families,
+    _debug: { productCount: products.length, pantoneMappedCount: primaryByProduct.size, collezione: MODA_COLLEZIONE },
+  });
 }
