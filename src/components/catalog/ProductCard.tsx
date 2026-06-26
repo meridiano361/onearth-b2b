@@ -56,7 +56,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Image */}
         <div className="aspect-square relative bg-cream overflow-hidden rounded-t">
           <ProductImage
-            src={product.imageUrl}
+            src={product.imageUrl ?? product.imageUrl2 ?? product.imageUrl3 ?? product.imageUrl4 ?? product.imageUrl5}
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />

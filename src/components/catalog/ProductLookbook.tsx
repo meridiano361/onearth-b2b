@@ -32,7 +32,7 @@ function LookbookCard({ product }: { product: Product }) {
       {/* Image */}
       <Link href={`/catalog/${product.id}`} className="block w-full h-full">
         <ProductImage
-          src={product.imageUrl}
+          src={product.imageUrl ?? product.imageUrl2 ?? product.imageUrl3 ?? product.imageUrl4 ?? product.imageUrl5}
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />

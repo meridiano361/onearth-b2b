@@ -39,7 +39,7 @@ function ProductRow({ product }: { product: Product }) {
       {/* Thumbnail + heart */}
       <div className="relative flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded overflow-hidden bg-cream">
         <Link href={`/catalog/${product.id}`} className="block w-full h-full">
-          <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+          <ProductImage src={product.imageUrl ?? product.imageUrl2 ?? product.imageUrl3 ?? product.imageUrl4 ?? product.imageUrl5} alt={product.name} className="w-full h-full object-cover" />
         </Link>
         <button
           onClick={(e) => {

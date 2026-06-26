@@ -24,7 +24,7 @@ function ModaProductCard({ product }: { product: Product }) {
     <Link href={`/catalog/${product.id}`} className="group block">
       <div className="relative aspect-[3/4] bg-[#111] rounded-xl overflow-hidden mb-2">
         <ProductImage
-          src={product.imageUrl}
+          src={product.imageUrl ?? product.imageUrl2 ?? product.imageUrl3 ?? product.imageUrl4 ?? product.imageUrl5}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />

@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRef, useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Languages, Loader2, AlertTriangle, X, Plus, Link, Search } from 'lucide-react';
+import { Languages, Loader2, AlertTriangle, X, Plus, Link, Search, ChevronUp, ChevronDown } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import PaeseSelect from '@/components/ui/PaeseSelect';
@@ -565,6 +565,15 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
   const handleFile3 = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) uploadFile(f, 'imageUrl3', setIsUploading3, fileInputRef3); };
   const handleFile4 = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) uploadFile(f, 'imageUrl4', setIsUploading4, fileInputRef4); };
   const handleFile5 = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) uploadFile(f, 'imageUrl5', setIsUploading5, fileInputRef5); };
+
+  // ── Foto swap ────────────────────────────────────────────────────────────
+  const PHOTO_FIELDS = ['imageUrl', 'imageUrl2', 'imageUrl3', 'imageUrl4', 'imageUrl5'] as const;
+  function swapPhotos(i: number, j: number) {
+    const urlA = watch(PHOTO_FIELDS[i]) || '';
+    const urlB = watch(PHOTO_FIELDS[j]) || '';
+    setValue(PHOTO_FIELDS[i], urlB, { shouldDirty: true });
+    setValue(PHOTO_FIELDS[j], urlA, { shouldDirty: true });
+  }
 
   // ── Foto picker ──────────────────────────────────────────────────────────
   async function openFotoPicker(field: 'imageUrl' | 'imageUrl2' | 'imageUrl3' | 'imageUrl4' | 'imageUrl5') {
@@ -1220,7 +1229,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
           { label: 'Foto 4',              field: 'imageUrl4' as const, ref: fileInputRef4, onChange: handleFile4, loading: isUploading4, preview: watch('imageUrl4') || '' },
           { label: 'Foto 5',              field: 'imageUrl5' as const, ref: fileInputRef5, onChange: handleFile5, loading: isUploading5, preview: watch('imageUrl5') || '' },
         ] as const
-      ).map(({ label, field, ref, onChange, loading, preview }) => (
+      ).map(({ label, field, ref, onChange, loading, preview }, idx) => (
         <div key={field} className="flex gap-3 items-start">
           <div className="w-14 h-14 flex-shrink-0 border border-border rounded bg-gray-50 overflow-hidden flex items-center justify-center">
             {preview ? (
@@ -1283,6 +1292,26 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
               </div>
             )}
             <Input {...register(field)} placeholder="oppure incolla URL esterno…" />
+          </div>
+          <div className="flex flex-col gap-0.5 flex-shrink-0 pt-6">
+            <button
+              type="button"
+              disabled={idx === 0}
+              onClick={() => swapPhotos(idx - 1, idx)}
+              className="p-1 rounded text-gray-400 hover:text-primary hover:bg-gray-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+              title="Sposta su"
+            >
+              <ChevronUp size={14} />
+            </button>
+            <button
+              type="button"
+              disabled={idx === 4}
+              onClick={() => swapPhotos(idx, idx + 1)}
+              className="p-1 rounded text-gray-400 hover:text-primary hover:bg-gray-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+              title="Sposta giù"
+            >
+              <ChevronDown size={14} />
+            </button>
           </div>
         </div>
       ))}
