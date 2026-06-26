@@ -113,7 +113,7 @@ function DetailModal({
               </div>
               <div className="flex items-center gap-2">
                 <a
-                  href={`/admin/products?id=${photo.product.id}`}
+                  href={`/admin/products?search=${encodeURIComponent(photo.product.code)}`}
                   className="text-xs text-accent hover:underline flex-shrink-0"
                 >
                   Vedi prodotto
@@ -334,7 +334,7 @@ function PhotoCard({
   onDelete: (path: string) => void;
   onCollega: (photo: Photo) => void;
 }) {
-  const isOrphan = photo.status === 'orfana';
+  const canCollega = photo.status === 'orfana' || photo.status === 'da-collegare';
 
   return (
     <div
@@ -413,7 +413,7 @@ function PhotoCard({
 
       {/* Actions */}
       <div className="px-2.5 pb-2.5 flex items-center gap-1.5">
-        {isOrphan && (
+        {canCollega && (
           <button
             onClick={() => onCollega(photo)}
             className="flex items-center gap-1 text-2xs text-accent hover:text-primary border border-accent/30 hover:border-accent rounded px-2 py-1 transition-colors flex-1 justify-center"

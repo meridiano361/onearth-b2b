@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power, Shirt, Home, Copy, Download } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
@@ -76,6 +77,7 @@ function uniqueSorted(products: Product[], key: keyof Product): string[] {
 
 export default function AdminProductsPage() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
 
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
   const [showImport, setShowImport] = useState(false);
@@ -90,7 +92,7 @@ export default function AdminProductsPage() {
   const [translateProgress, setTranslateProgress] = useState<{ done: number; total: number } | null>(null);
 
   // Filters
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('search') ?? '');
   const [filterGruppo, setFilterGruppo] = useState('');
   const [filterFamiglia, setFilterFamiglia] = useState('');
   const [filterClasse, setFilterClasse] = useState('');
