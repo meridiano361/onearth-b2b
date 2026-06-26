@@ -8,9 +8,6 @@ import { MODA_COLLEZIONE } from '@/lib/modaAccess';
 type PantoneRow = {
   product_id: string;
   hex_code: string;
-  hue_angle: number | null;
-  lightness: number | null;
-  is_neutral: boolean;
   is_primary: boolean;
   code: string;
   name: string;
@@ -26,7 +23,7 @@ export async function GET(req: NextRequest) {
 
   // Load hero product primary pantone
   const heroPantoneRows = await prisma.$queryRaw<PantoneRow[]>`
-    SELECT pp.product_id, pc.hex_code, pc.hue_angle, pc.lightness, pc.is_neutral,
+    SELECT pp.product_id, pc.hex_code,
            pp.is_primary, pc.code, pc.name, pp.sort_order
     FROM   product_pantones pp
     JOIN   pantone_colors pc ON pc.id = pp.pantone_color_id
@@ -40,16 +37,15 @@ export async function GET(req: NextRequest) {
   }
 
   const heroHsl = hexToHsl(heroPrimary.hex_code);
-  const heroHue = heroPrimary.hue_angle ?? heroHsl.h;
-  const heroL = heroPrimary.lightness ?? heroHsl.l;
-  const heroNeutral = heroPrimary.is_neutral;
+  const heroHue = heroHsl.h;
+  const heroL = heroHsl.l;
+  const heroNeutral = heroHsl.s < 15;
 
   // Load all other Moda products with their primary pantone
   const allProducts = await prisma.product.findMany({
     where: {
       isActive: true,
       collezione: MODA_COLLEZIONE,
-      gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' },
       id: { not: productId },
     },
     select: { id: true, code: true, name: true, imageUrl: true, colore: true, famiglia: true, costPrice: true, retailPrice: true },
@@ -59,7 +55,7 @@ export async function GET(req: NextRequest) {
   if (otherIds.length === 0) return NextResponse.json({ suggestions: [], groups: [] });
 
   const allPantones = await prisma.$queryRaw<PantoneRow[]>`
-    SELECT pp.product_id, pc.hex_code, pc.hue_angle, pc.lightness, pc.is_neutral,
+    SELECT pp.product_id, pc.hex_code,
            pp.is_primary, pc.code, pc.name, pp.sort_order
     FROM   product_pantones pp
     JOIN   pantone_colors pc ON pc.id = pp.pantone_color_id
@@ -91,9 +87,9 @@ export async function GET(req: NextRequest) {
     if (!pantone) continue;
 
     const hsl = hexToHsl(pantone.hex_code);
-    const hue = pantone.hue_angle ?? hsl.h;
-    const lum = pantone.lightness ?? hsl.l;
-    const neutral = pantone.is_neutral;
+    const hue = hsl.h;
+    const lum = hsl.l;
+    const neutral = hsl.s < 15;
 
     const type = getHarmonyType(heroHue, hue, heroNeutral, neutral);
     const score = harmonyScore(heroHue, hue, heroNeutral, neutral, heroL, lum);

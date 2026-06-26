@@ -23,7 +23,6 @@ export async function GET() {
     where: {
       isActive: true,
       collezione: MODA_COLLEZIONE,
-      gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' },
     },
     select: {
       id: true,
