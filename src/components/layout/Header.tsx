@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
-import { LogOut } from 'lucide-react';
+import { LogOut, UserCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -98,7 +98,16 @@ export default function Header({ session }: HeaderProps) {
       {/* Notification bell */}
       <NotificationBell />
 
-      {/* Profilo — cliccabile, apre le impostazioni */}
+      {/* Profilo mobile — icona */}
+      <Link
+        href="/catalog/impostazioni"
+        className="sm:hidden p-1 text-gray-400 hover:text-primary transition-colors"
+        title="Profilo"
+      >
+        <UserCircle size={22} />
+      </Link>
+
+      {/* Profilo desktop — nome + email */}
       <Link
         href="/catalog/impostazioni"
         className="hidden sm:flex flex-col items-end leading-tight hover:opacity-70 transition-opacity"

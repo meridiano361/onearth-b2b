@@ -236,14 +236,13 @@ export default function CatalogFilters({
           <FilterSelect
             label={t('bloccoColore')}
             allLabel={t('all')}
-            value={selectedBloccoColore ? `Blocco ${selectedBloccoColore.name}` : null}
+            value={selectedBloccoColore?.name ?? null}
             options={colorBlocks.map((cb) => ({
-              value: `Blocco ${cb.name}`,
+              value: cb.name,
               count: products.filter((p) => (p.colorBlockIds ?? []).includes(cb.id)).length,
             }))}
-            onChange={(label) => {
-              if (!label) { onBloccoColoreChange(null); return; }
-              const name = label.replace(/^Blocco /, '');
+            onChange={(name) => {
+              if (!name) { onBloccoColoreChange(null); return; }
               const cb = colorBlocks.find((c) => c.name === name);
               if (cb) onBloccoColoreChange({ id: cb.id, name: cb.name });
             }}
