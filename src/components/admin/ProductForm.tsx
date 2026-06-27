@@ -1093,7 +1093,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
                     active ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-border hover:border-gray-400'
                   }`}
                 >
-                  {cb.name}
+                  Blocco {cb.name}
                 </button>
               );
             })}
