@@ -100,6 +100,7 @@ export interface Product {
   lavorazione: string | null;
   dettaglio: string | null;
   pantoneColors: ProductPantoneEntry[];
+  sizeVariants: Array<{ taglia: string; codice: string }> | null;
   createdAt: string;
   category?: Category | null;
 }
@@ -277,6 +278,7 @@ export interface CartItem {
   productId: string;
   product: Product;
   quantity: number;
+  taglia?: string;
 }
 
 export type CartStatus = 'DRAFT' | 'CONVERTED';

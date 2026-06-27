@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-25 (no change visible to customers — internal foto feature)
+// AGGIORNATO: 2026-06-27
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -201,6 +201,7 @@ export default function AssistenzaPage() {
           <SectionHeader n={6} icon={ShoppingBag} label="Creare un Ordine" />
           <ul className="space-y-2">
             <Bullet>Seleziona un carrello attivo dalla sezione <a href="#carrelli" className="text-accent hover:underline">Carrelli</a>, poi vai al catalogo e aggiungi prodotti con i pulsanti <span className="font-medium">+</span> e <span className="font-medium">−</span>.</Bullet>
+            <Bullet>Per i prodotti MODA con più taglie (es. S, M, L) clicca <span className="font-medium">Aggiungi</span>: si apre un pannello dove puoi scegliere quanti pezzi per ciascuna taglia aggiungere al carrello in una sola operazione. Ogni taglia compare come riga separata nel carrello.</Bullet>
             <Bullet>Nella barra a destra vedi il carrello corrente con: costo totale, vendite potenziali, margine medio.</Bullet>
             <Bullet>Clicca <span className="font-medium">Crea Ordine</span> nella barra laterale per convertire il carrello in un ordine.</Bullet>
             <Bullet>Se hai più destinazioni ti verrà chiesto di selezionarne una.</Bullet>

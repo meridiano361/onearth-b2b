@@ -11,7 +11,7 @@ import type { Cart } from '@/types';
 /** Loads the active cart from server on login, and shows the select-cart modal when needed. */
 export default function CartSetup() {
   const { status } = useSession();
-  const { cartId, items, setCart, clearCart, pendingProduct, setPendingProduct, addItem } = useCartStore();
+  const { cartId, items, setCart, clearCart, pendingProduct, setPendingProduct, addItem, pendingVariants, setPendingVariants, addVariants } = useCartStore();
   const queryClient = useQueryClient();
 
   // Invalidate my-carts whenever local items change so CartsView always shows fresh data
@@ -102,13 +102,28 @@ export default function CartSetup() {
   const { data: carts = [] } = useQuery<Cart[]>({
     queryKey: ['my-carts'],
     queryFn: () => fetch('/api/catalog/carts').then((r) => r.json()).then((d) => d.data as Cart[]),
-    enabled: !!pendingProduct,
+    enabled: !!pendingProduct || !!pendingVariants,
   });
 
-  if (!pendingProduct) return null;
+  if (!pendingProduct && !pendingVariants) return null;
+
+  const pendingName = pendingProduct?.product.name ?? pendingVariants?.product.name;
+
+  function closePending() {
+    setPendingProduct(null);
+    setPendingVariants(null);
+  }
 
   async function handleSelectCart(cart: Cart) {
     setCart(cart);
+    if (pendingVariants) {
+      const { product, variants } = pendingVariants;
+      setPendingVariants(null);
+      addVariants(product, variants);
+      const totalPz = variants.reduce((s, v) => s + v.quantity, 0);
+      toast.success(`Aggiunte ${totalPz} pz a "${cart.name}"`);
+      return;
+    }
     setPendingProduct(null);
     // Execute the pending add
     const effectiveQty = pendingProduct!.quantity;
@@ -118,7 +133,6 @@ export default function CartSetup() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ productId: product.id, quantity: effectiveQty }),
     }).catch(() => {});
-    // Also update local store items
     setCart({ ...cart, items: [...(cart.items ?? []), { productId: product.id, product, quantity: effectiveQty }] });
     toast.success(`Aggiunto a "${cart.name}"`);
   }
@@ -145,14 +159,14 @@ export default function CartSetup() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setPendingProduct(null)} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closePending} />
       <div className="relative z-10 bg-white w-full sm:max-w-sm sm:rounded-lg shadow-xl max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             <ShoppingCart size={14} className="text-gray-500" />
             <p className="text-sm font-semibold text-primary">In quale carrello?</p>
           </div>
-          <button onClick={() => setPendingProduct(null)} className="text-gray-400 hover:text-primary p-1">
+          <button onClick={closePending} className="text-gray-400 hover:text-primary p-1">
             <X size={16} />
           </button>
         </div>
@@ -160,7 +174,7 @@ export default function CartSetup() {
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
           <p className="text-xs text-gray-500">
             Scegli un carrello esistente o creane uno nuovo per aggiungere{' '}
-            <span className="font-medium text-primary">{pendingProduct.product.name}</span>.
+            <span className="font-medium text-primary">{pendingName}</span>.
           </p>
 
           {/* Existing carts */}

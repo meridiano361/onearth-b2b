@@ -31,6 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const orderItems = cart.items.map((item) => ({
     productId: item.productId,
+    taglia: (item as any).taglia ?? '',
     quantity: item.quantity,
     unitPrice: item.product.costPrice,
     subtotal: Number(item.product.costPrice) * item.quantity,

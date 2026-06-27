@@ -3,40 +3,48 @@ import { persist } from 'zustand/middleware';
 import type { Cart, CartItem, Product } from '@/types';
 import { roundToLot } from '@/lib/utils';
 
+export interface SizeVariantQty { taglia: string; codice: string; quantity: number }
+
 interface CartStore {
-  // Active cart metadata (not persisted — loaded from server on mount)
   cartId: string | null;
   cartName: string | null;
   items: CartItem[];
   notes: string;
 
-  // Triggered when user tries to add a product without an active cart
-  pendingProduct: { product: Product; quantity: number } | null;
+  pendingProduct: { product: Product; quantity: number; taglia?: string } | null;
+  pendingVariants: { product: Product; variants: SizeVariantQty[] } | null;
 
-  // Actions
   setCart: (cart: Cart) => void;
   clearCart: () => void;
-  setPendingProduct: (p: { product: Product; quantity: number } | null) => void;
+  setPendingProduct: (p: { product: Product; quantity: number; taglia?: string } | null) => void;
+  setPendingVariants: (v: { product: Product; variants: SizeVariantQty[] } | null) => void;
   setNotes: (notes: string) => void;
 
-  // Item mutations — optimistic update + fire-and-forget API call
-  addItem: (product: Product, quantity?: number) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addItem: (product: Product, quantity?: number, taglia?: string) => void;
+  addVariants: (product: Product, variants: SizeVariantQty[]) => void;
+  removeItem: (productId: string, taglia?: string) => void;
+  updateQuantity: (productId: string, quantity: number, taglia?: string) => void;
 
-  // Computed
-  getItemQuantity: (productId: string) => number;
+  getItemQuantity: (productId: string, taglia?: string) => number;
   getTotalItems: () => number;
   getTotalValue: () => number;
   getTotalLines: () => number;
   hasLotWarnings: () => boolean;
 }
 
-function patchCartItem(cartId: string, productId: string, quantity: number) {
+function itemKey(productId: string, taglia?: string) {
+  return `${productId}||${taglia ?? ''}`;
+}
+
+function matchItem(item: CartItem, productId: string, taglia?: string) {
+  return item.productId === productId && (item.taglia ?? '') === (taglia ?? '');
+}
+
+function patchCartItem(cartId: string, productId: string, quantity: number, taglia = '') {
   fetch(`/api/catalog/carts/${cartId}/items`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ productId, quantity }),
+    body: JSON.stringify({ productId, quantity, taglia }),
   }).catch(() => {});
 }
 
@@ -48,6 +56,7 @@ export const useCartStore = create<CartStore>()(
       items: [],
       notes: '',
       pendingProduct: null,
+      pendingVariants: null,
 
       setCart: (cart) =>
         set({
@@ -58,9 +67,10 @@ export const useCartStore = create<CartStore>()(
         }),
 
       clearCart: () =>
-        set({ cartId: null, cartName: null, items: [], notes: '', pendingProduct: null }),
+        set({ cartId: null, cartName: null, items: [], notes: '', pendingProduct: null, pendingVariants: null }),
 
       setPendingProduct: (p) => set({ pendingProduct: p }),
+      setPendingVariants: (v) => set({ pendingVariants: v }),
 
       setNotes: (notes) => {
         const { cartId } = get();
@@ -74,38 +84,71 @@ export const useCartStore = create<CartStore>()(
         }
       },
 
-      addItem: (product, quantity = 1) => {
+      addItem: (product, quantity = 1, taglia = '') => {
         const { cartId, items } = get();
         if (!cartId) {
-          set({ pendingProduct: { product, quantity } });
+          set({ pendingProduct: { product, quantity, taglia } });
           return;
         }
         const effectiveQty = roundToLot(quantity, product.lotSize || 1);
-        const existing = items.find((i) => i.productId === product.id);
+        const existing = items.find((i) => matchItem(i, product.id, taglia));
         const newQty = existing ? existing.quantity + effectiveQty : effectiveQty;
         if (existing) {
-          set({ items: items.map((i) => i.productId === product.id ? { ...i, quantity: newQty } : i) });
+          set({ items: items.map((i) => matchItem(i, product.id, taglia) ? { ...i, quantity: newQty } : i) });
         } else {
-          set({ items: [...items, { productId: product.id, product, quantity: newQty }] });
+          set({ items: [...items, { productId: product.id, product, quantity: newQty, taglia }] });
         }
-        patchCartItem(cartId, product.id, newQty);
+        patchCartItem(cartId, product.id, newQty, taglia);
       },
 
-      removeItem: (productId) => {
+      addVariants: (product, variants) => {
+        const { cartId } = get();
+        if (!cartId) {
+          set({ pendingVariants: { product, variants } });
+          return;
+        }
+        const { items } = get();
+        let newItems = [...items];
+        for (const v of variants) {
+          if (v.quantity <= 0) continue;
+          const effectiveQty = roundToLot(v.quantity, product.lotSize || 1);
+          const existing = newItems.find((i) => matchItem(i, product.id, v.taglia));
+          if (existing) {
+            newItems = newItems.map((i) =>
+              matchItem(i, product.id, v.taglia) ? { ...i, quantity: i.quantity + effectiveQty } : i
+            );
+          } else {
+            newItems.push({ productId: product.id, product, quantity: effectiveQty, taglia: v.taglia });
+          }
+          patchCartItem(cartId, product.id,
+            (newItems.find((i) => matchItem(i, product.id, v.taglia))?.quantity ?? effectiveQty),
+            v.taglia
+          );
+        }
+        set({ items: newItems });
+      },
+
+      removeItem: (productId, taglia) => {
         const { cartId, items } = get();
-        set({ items: items.filter((i) => i.productId !== productId) });
-        if (cartId) patchCartItem(cartId, productId, 0);
+        set({ items: items.filter((i) => !matchItem(i, productId, taglia)) });
+        if (cartId) patchCartItem(cartId, productId, 0, taglia ?? '');
       },
 
-      updateQuantity: (productId, quantity) => {
-        if (quantity <= 0) { get().removeItem(productId); return; }
+      updateQuantity: (productId, quantity, taglia) => {
+        if (quantity <= 0) { get().removeItem(productId, taglia); return; }
         const { cartId, items } = get();
-        set({ items: items.map((i) => i.productId === productId ? { ...i, quantity } : i) });
-        if (cartId) patchCartItem(cartId, productId, quantity);
+        set({ items: items.map((i) => matchItem(i, productId, taglia) ? { ...i, quantity } : i) });
+        if (cartId) patchCartItem(cartId, productId, quantity, taglia ?? '');
       },
 
-      getItemQuantity: (productId) =>
-        get().items.find((i) => i.productId === productId)?.quantity || 0,
+      getItemQuantity: (productId, taglia) => {
+        const items = get().items;
+        if (taglia !== undefined) {
+          return items.find((i) => matchItem(i, productId, taglia))?.quantity || 0;
+        }
+        // Sum across all taglie for this product
+        return items.filter((i) => i.productId === productId).reduce((s, i) => s + i.quantity, 0);
+      },
 
       getTotalItems: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
 
@@ -122,7 +165,6 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: 'onearth-cart-v2',
-      // Only persist cartId — items are loaded from server on mount
       partialize: (state) => ({ cartId: state.cartId }),
     }
   )

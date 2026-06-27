@@ -20,19 +20,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!owns) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   if (cart.status !== 'DRAFT') return NextResponse.json({ error: 'Carrello già convertito' }, { status: 409 });
 
-  const { productId, quantity } = await req.json();
+  const body = await req.json();
+  const { productId, quantity, taglia = '' } = body as { productId: string; quantity: number; taglia?: string };
   if (!productId) return NextResponse.json({ error: 'productId obbligatorio' }, { status: 400 });
 
   if (quantity <= 0) {
-    await prisma.cartItem.deleteMany({ where: { cartId: params.id, productId } });
-    // touch updatedAt
+    await prisma.cartItem.deleteMany({ where: { cartId: params.id, productId, taglia } });
     await prisma.cart.update({ where: { id: params.id }, data: {} });
     return NextResponse.json({ ok: true });
   }
 
   await prisma.cartItem.upsert({
-    where: { cartId_productId: { cartId: params.id, productId } },
-    create: { cartId: params.id, productId, quantity },
+    where: { cartId_productId_taglia: { cartId: params.id, productId, taglia } },
+    create: { cartId: params.id, productId, taglia, quantity },
     update: { quantity },
   });
   await prisma.cart.update({ where: { id: params.id }, data: {} });

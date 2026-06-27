@@ -29,6 +29,9 @@ export default function CartItem({ item }: CartItemProps) {
             <p className="text-2xs font-medium tracking-wide uppercase text-gray-400 leading-none">
               {item.product.code}
             </p>
+            {item.taglia && (
+              <span className="text-2xs font-mono font-semibold text-accent leading-none">{item.taglia}</span>
+            )}
             {item.product.collezione === 'CA27' && (
               <span className="bg-black text-white text-[8px] font-bold px-1 py-px rounded-sm leading-none flex-shrink-0">NUOVO</span>
             )}
@@ -39,7 +42,7 @@ export default function CartItem({ item }: CartItemProps) {
           <div className="flex items-center gap-2">
             <QuantitySelector
               value={item.quantity}
-              onChange={(qty) => updateQuantity(item.productId, qty)}
+              onChange={(qty) => updateQuantity(item.productId, qty, item.taglia)}
               lotSize={item.product.lotSize}
               min={0}
               compact
@@ -60,7 +63,7 @@ export default function CartItem({ item }: CartItemProps) {
         </div>
 
         <button
-          onClick={() => removeItem(item.productId)}
+          onClick={() => removeItem(item.productId, item.taglia)}
           className="text-gray-300 hover:text-gray-600 md:opacity-0 md:group-hover:opacity-100 transition-all flex-shrink-0 mt-0.5"
           title="Remove"
         >

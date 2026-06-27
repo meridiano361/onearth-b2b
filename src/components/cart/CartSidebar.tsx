@@ -177,7 +177,7 @@ export default function CartSidebar() {
                 </div>
               )}
               {items.map((item) => (
-                <CartItem key={item.productId} item={item} />
+                <CartItem key={item.productId + '||' + (item.taglia ?? '')} item={item} />
               ))}
             </div>
           )}

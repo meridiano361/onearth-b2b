@@ -10,6 +10,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import QuantitySelector from './QuantitySelector';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useSettings } from '@/contexts/SettingsContext';
+import SizePickerModal from '@/components/cart/SizePickerModal';
 import type { Product } from '@/types';
 
 interface ProductCardProps {
@@ -17,7 +18,7 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { getItemQuantity, updateQuantity, addItem } = useCartStore();
+  const { getItemQuantity, updateQuantity, addItem, addVariants } = useCartStore();
   const { isFavorited, toggle: toggleFavorite } = useFavorites();
   const t = useTranslations('product');
   const { card: cs } = useSettings();
@@ -28,6 +29,8 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const inCart = cartQty > 0;
   const hasLotWarning = cartQty > 0 && !isValidLotQuantity(cartQty, product.lotSize);
+  const hasSizeVariants = (product.sizeVariants?.length ?? 0) > 0;
+  const [showSizePicker, setShowSizePicker] = useState(false);
 
   function handleQuantityChange(qty: number) {
     updateQuantity(product.id, qty);
@@ -36,6 +39,10 @@ export default function ProductCard({ product }: ProductCardProps) {
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    if (hasSizeVariants) {
+      setShowSizePicker(true);
+      return;
+    }
     const qty = localQty > 0 ? localQty : product.lotSize || 1;
     addItem(product, qty);
     setLocalQty(0);
@@ -44,6 +51,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   }
 
   return (
+    <>
     <div
       className={cn(
         'group bg-white border rounded transition-all duration-200 hover:shadow-luxury-lg flex flex-col h-full',
@@ -170,7 +178,28 @@ export default function ProductCard({ product }: ProductCardProps) {
         )}
 
         {/* Cart controls */}
-        {cs.aggiungi && (inCart ? (
+        {cs.aggiungi && (hasSizeVariants ? (
+          <button
+            onClick={handleAddToCart}
+            className={cn(
+              'w-full py-2 text-xs font-medium rounded transition-all duration-200',
+              justAdded
+                ? 'bg-accent/20 text-accent border border-accent/30'
+                : 'bg-primary text-background hover:bg-warm-darker active:scale-95'
+            )}
+          >
+            {justAdded ? (
+              <span className="flex items-center justify-center gap-1.5">
+                <Check size={12} /> {t('added')}
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-1.5">
+                <ShoppingBag size={12} />
+                {inCart ? `${cartQty} pz · ${t('add')}` : t('add')}
+              </span>
+            )}
+          </button>
+        ) : inCart ? (
           <QuantitySelector
             value={cartQty}
             onChange={handleQuantityChange}
@@ -201,5 +230,18 @@ export default function ProductCard({ product }: ProductCardProps) {
         ))}
       </div>
     </div>
+
+    {showSizePicker && (
+      <SizePickerModal
+        product={product}
+        onClose={() => setShowSizePicker(false)}
+        onConfirm={(variants) => {
+          addVariants(product, variants);
+          setJustAdded(true);
+          setTimeout(() => setJustAdded(false), 1500);
+        }}
+      />
+    )}
+  </>
   );
 }
