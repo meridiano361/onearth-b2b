@@ -6,6 +6,26 @@ import { prisma } from '@/lib/prisma';
 import { getSupabaseClient } from '@/lib/supabase';
 import { parseImageFilename, imageIndexToField, invalidReason } from '@/lib/parseImageFilename';
 
+type ProductRow = {
+  id: string;
+  code: string;
+  gruppoMerceologico: string | null;
+  sizeVariants: unknown;
+  imageUrl: string | null;
+  imageUrl2: string | null;
+  imageUrl3: string | null;
+  imageUrl4: string | null;
+  imageUrl5: string | null;
+};
+
+function firstFreeSlot(p: ProductRow): number | null {
+  for (let i = 1; i <= 5; i++) {
+    const field = imageIndexToField(i);
+    if (!p[field as keyof ProductRow]) return i;
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -41,14 +61,34 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Lookup prodotti ───────────────────────────────────────────────────────
-    const uniqueCodes = [...new Set(validEntries.map((e) => e.productCode))];
-    const products = await prisma.product.findMany({
-      where: { code: { in: uniqueCodes } },
-      select: { id: true, code: true },
+    // Load ALL products so we can resolve MODA sizeVariant codes to their parent product
+    const allProducts = await prisma.product.findMany({
+      select: {
+        id: true, code: true, gruppoMerceologico: true, sizeVariants: true,
+        imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true, imageUrl5: true,
+      },
     });
-    const productByCode = new Map(products.map((p) => [p.code, p.id]));
 
-    const notFound: string[] = uniqueCodes.filter((c) => !productByCode.has(c));
+    const productByCode = new Map<string, ProductRow>();
+    const variantCodeToProduct = new Map<string, ProductRow>();
+
+    for (const p of allProducts) {
+      productByCode.set(p.code.toUpperCase(), p);
+      if (
+        p.gruppoMerceologico?.toUpperCase() === 'MODA' &&
+        Array.isArray(p.sizeVariants)
+      ) {
+        for (const sv of p.sizeVariants as { taglia: string; codice: string }[]) {
+          const cod = sv.codice?.trim();
+          if (cod) variantCodeToProduct.set(cod.toUpperCase(), p);
+        }
+      }
+    }
+
+    const uniqueCodes = [...new Set(validEntries.map((e) => e.productCode))];
+    const notFound: string[] = uniqueCodes.filter(
+      (c) => !productByCode.has(c) && !variantCodeToProduct.has(c)
+    );
 
     // ── Upload e aggiornamento per slot ───────────────────────────────────────
     const supabase = getSupabaseClient();
@@ -67,18 +107,39 @@ export async function POST(req: NextRequest) {
 
         if (uploadError) throw new Error(uploadError.message);
 
-        const productId = productByCode.get(productCode);
-        if (productId) {
-          const { data: urlData } = supabase.storage.from('products').getPublicUrl(storagePath);
+        const { data: urlData } = supabase.storage.from('products').getPublicUrl(storagePath);
+        const directProduct = productByCode.get(productCode);
+
+        if (directProduct) {
+          // Direct match: honour the _N slot from the filename
           const field = imageIndexToField(imageIndex);
           await prisma.product.update({
-            where: { id: productId },
+            where: { id: directProduct.id },
             data: { [field]: urlData.publicUrl },
           });
+          (directProduct as any)[field] = urlData.publicUrl;
           uploadedLinked++;
         } else {
-          // Uploaded to bucket but no product yet — visible as "da-collegare" in /admin/foto
-          uploadedOrphan++;
+          // Try sizeVariant match (MODA): multiple taglia photos → first free slot on parent
+          const variantProduct = variantCodeToProduct.get(productCode);
+          if (variantProduct) {
+            const slot = firstFreeSlot(variantProduct);
+            if (slot !== null) {
+              const field = imageIndexToField(slot);
+              await prisma.product.update({
+                where: { id: variantProduct.id },
+                data: { [field]: urlData.publicUrl },
+              });
+              (variantProduct as any)[field] = urlData.publicUrl;
+              uploadedLinked++;
+            } else {
+              // Parent product already has 5 images — upload only
+              uploadedOrphan++;
+            }
+          } else {
+            // No product found — visible as "da-collegare" in /admin/foto
+            uploadedOrphan++;
+          }
         }
       } catch (err: any) {
         errors.push({ file: file.name, message: err.message || 'Upload fallito' });
