@@ -72,7 +72,7 @@ export default function LoginForm() {
           {...register('email')}
           type="email"
           autoComplete="email"
-          placeholder="tu@azienda.com"
+          placeholder=""
           className="w-full px-4 py-3 bg-white border border-border rounded text-sm text-primary placeholder-gray-400 transition-all duration-150 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
         />
         {errors.email && (
@@ -89,7 +89,7 @@ export default function LoginForm() {
             {...register('password')}
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
-            placeholder="••••••••"
+            placeholder=""
             className="w-full px-4 py-3 bg-white border border-border rounded text-sm text-primary placeholder-gray-400 transition-all duration-150 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 pr-12"
           />
           <button
