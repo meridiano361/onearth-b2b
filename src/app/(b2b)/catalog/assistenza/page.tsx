@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-06-27
+// AGGIORNATO: 2026-06-30
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -238,7 +238,7 @@ export default function AssistenzaPage() {
           <SectionHeader n={9} icon={Package} label="I miei Ordini" />
           <ul className="space-y-2">
             <Bullet>Visualizza tutti i tuoi ordini dalla voce <span className="font-medium">Ordini</span> nel menu.</Bullet>
-            <Bullet>Usa la barra di ricerca per cercare per numero ordine o destinazione, e i chip <span className="font-medium">Tutti / In lavorazione / Esportati</span> per filtrare per stato.</Bullet>
+            <Bullet>Usa la barra di ricerca per cercare per numero ordine o destinazione, i chip <span className="font-medium">Tutti / In lavorazione / Esportati</span> per filtrare per stato, e il menu a tendina <span className="font-medium">Tutti i negozi</span> per filtrare per negozio di destinazione (appare solo se hai più negozi).</Bullet>
             <Bullet>Gli stati possibili sono: <span className="font-medium">Da esportare</span> | <span className="font-medium">Esportato</span>.</Bullet>
             <Bullet>Per ogni ordine puoi:
               <ul className="mt-1.5 ml-2 space-y-1">

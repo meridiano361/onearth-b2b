@@ -210,13 +210,26 @@ export default function CustomerOrdersView() {
 
   const [orderSearch, setOrderSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'exported'>('all');
+  const [negozioFilter, setNegozioFilter] = useState<string | null>(null);
 
   const list = orders ?? [];
+
+  const negozioOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const o of list) {
+      if (o.destinazione?.id && !seen.has(o.destinazione.id)) {
+        const label = o.destinazione.nome + (o.destinazione.citta ? ` · ${o.destinazione.citta}` : '');
+        seen.set(o.destinazione.id, label);
+      }
+    }
+    return Array.from(seen.entries()).sort(([, a], [, b]) => a.localeCompare(b));
+  }, [list]);
 
   const filteredList = useMemo(() => {
     let result = list;
     if (statusFilter === 'active') result = result.filter(o => o.status !== 'ESPORTATO');
     if (statusFilter === 'exported') result = result.filter(o => o.status === 'ESPORTATO');
+    if (negozioFilter) result = result.filter(o => o.destinazione?.id === negozioFilter);
     if (orderSearch.trim()) {
       const q = orderSearch.toLowerCase();
       result = result.filter(o =>
@@ -226,7 +239,7 @@ export default function CustomerOrdersView() {
       );
     }
     return result;
-  }, [list, statusFilter, orderSearch]);
+  }, [list, statusFilter, negozioFilter, orderSearch]);
 
   if (isLoading) return <LoadingSpinner fullPage text={t('loading')} />;
 
@@ -383,7 +396,7 @@ export default function CustomerOrdersView() {
                 </button>
               )}
             </div>
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap gap-1.5 items-center">
               {(['all', 'active', 'exported'] as const).map(f => (
                 <button
                   key={f}
@@ -397,6 +410,18 @@ export default function CustomerOrdersView() {
                   {f === 'all' ? 'Tutti' : f === 'active' ? 'In lavorazione' : 'Esportati'}
                 </button>
               ))}
+              {negozioOptions.length > 1 && (
+                <select
+                  value={negozioFilter ?? ''}
+                  onChange={e => setNegozioFilter(e.target.value || null)}
+                  className="text-xs border border-border rounded-full px-3 py-1.5 bg-white text-gray-500 focus:outline-none focus:border-accent transition-colors cursor-pointer"
+                >
+                  <option value="">Tutti i negozi</option>
+                  {negozioOptions.map(([id, label]) => (
+                    <option key={id} value={id}>{label}</option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
         )}
