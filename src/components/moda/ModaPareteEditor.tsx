@@ -42,10 +42,20 @@ const BARRA_MAX_PZ: Record<DimensioneBarra, number> = { piccola: 24, media: 32, 
 const BARRA_DIMS: DimensioneBarra[] = ['piccola', 'media', 'grande'];
 const MENSOLA_DIMS: DimensioneMensola[] = ['piccola', 'media', 'lunga'];
 
+// Visual proportions: 1 frontale = 1 mensola piccola = UNIT px; 5 capi di costa = 1 UNIT
+const UNIT = 60;
+const COSTA_W = 12;
+const FRONTALE_H = 90;
+const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: UNIT, media: UNIT * 2, lunga: UNIT * 3 };
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function totalePezzi(items: ItemParete[]): number {
   return items.reduce((acc, it) => acc + it.pezzi.length, 0);
+}
+
+function hexFromProduct(p: Product): string | undefined {
+  return p.pantoneColors?.find((pc) => pc.isPrimary)?.hex_code ?? p.pantoneColors?.[0]?.hex_code;
 }
 
 function tipoFromProduct(p: Product, elementoTipo: TipoElementoParete): TipoCapo {
@@ -104,7 +114,9 @@ function CatalogPickerModal({
       id: nanoid(8),
       tipo: tipoFromProduct(p, elementoTipo),
       productId: p.id, productCode: p.code, productName: p.name,
-      imageUrl: p.imageUrl ?? undefined, pezzi: [],
+      imageUrl: p.imageUrl ?? undefined,
+      coloreHex: hexFromProduct(p),
+      pezzi: [],
     }));
     onAdd(items);
     onClose();
@@ -297,7 +309,7 @@ function ItemCard({
       </div>
       {showPicker && (
         <ProductPickerModal
-          onSelect={(p) => onChange({ ...item, productId: p.id, productCode: p.code, productName: p.name, imageUrl: p.imageUrl ?? undefined })}
+          onSelect={(p) => onChange({ ...item, productId: p.id, productCode: p.code, productName: p.name, imageUrl: p.imageUrl ?? undefined, coloreHex: hexFromProduct(p) ?? item.coloreHex })}
           onClose={() => setShowPicker(false)}
         />
       )}
@@ -382,7 +394,7 @@ function FrontaleInlineEditor({
       {item.productCode && <p className="text-2xs text-gray-400 font-mono truncate">{item.productCode}</p>}
       {showPicker && (
         <ProductPickerModal
-          onSelect={(p) => onChange({ ...item, productId: p.id, productCode: p.code, productName: p.name, imageUrl: p.imageUrl ?? undefined })}
+          onSelect={(p) => onChange({ ...item, productId: p.id, productCode: p.code, productName: p.name, imageUrl: p.imageUrl ?? undefined, coloreHex: hexFromProduct(p) ?? item.coloreHex })}
           onClose={() => setShowPicker(false)}
         />
       )}
@@ -624,8 +636,8 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
         {/* Frontali + hanging items */}
         <div className="flex items-end gap-2">
           {el.frontaleLeft && <FrontaleSmall item={el.frontaleLeft} />}
-          <div className="flex-1 min-w-0">
-            <div className="flex gap-1 flex-wrap min-h-[32px] items-end">
+          <div className="flex-1 min-w-0 overflow-x-auto">
+            <div className="flex items-end min-h-[48px]" style={{ gap: 1 }}>
               {el.items.length === 0
                 ? <p className="text-2xs text-gray-300 italic">barra vuota</p>
                 : el.items.map((it, i) => <CapoOnBarra key={it.id ?? i} item={it} />)}
@@ -651,9 +663,9 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
       <div className="space-y-1">
         {el.mensolaTop && <MensolaRenderer config={el.mensolaTop} />}
         <div className="flex gap-3 items-start">
-          <div className="w-14 h-20 rounded border border-gray-200 flex-shrink-0 flex items-end justify-center pb-1"
-            style={{ backgroundColor: it?.coloreHex ?? '#e5e7eb' }}>
-            {it && <span className="text-2xs text-white font-mono drop-shadow-sm">{TIPO_LABELS[it.tipo]?.[0] ?? '?'}</span>}
+          <div className="rounded border border-gray-200 flex-shrink-0 flex items-end justify-center pb-1"
+            style={{ backgroundColor: it?.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_H }}>
+            {it && it.pezzi.length > 0 && <span className="text-2xs text-white font-bold drop-shadow-sm">{it.pezzi.length}pz</span>}
           </div>
           <div>
             <p className="text-xs text-gray-700 font-medium">{it?.productCode ?? '—'}</p>
@@ -673,52 +685,52 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
 }
 
 function MensolaRenderer({ config }: { config: MensolaInlineConfig }) {
-  const w = config.dimensione === 'piccola' ? 'w-1/3' : config.dimensione === 'media' ? 'w-2/3' : 'w-full';
+  const w = MENSOLA_W[config.dimensione];
   return (
     <div className="space-y-0.5">
-      <div className="flex items-end gap-1.5 flex-wrap min-h-[24px]">
+      <div className="flex items-end gap-1 min-h-[28px]" style={{ width: w }}>
         {config.items.length === 0
-          ? <p className="text-2xs text-gray-300 italic">mensola vuota</p>
+          ? <p className="text-2xs text-gray-300 italic">vuota</p>
           : config.items.map((it, i) => <CapoOnMensola key={it.id ?? i} item={it} />)}
       </div>
-      <div className={`h-0.5 bg-gray-400 rounded ${w}`} />
+      <div className="h-0.5 bg-gray-400 rounded" style={{ width: w }} />
       <p className="text-2xs text-gray-400 font-mono">mensola {config.dimensione}</p>
     </div>
   );
 }
 
 function FrontaleSmall({ item }: { item: ItemParete }) {
+  const color = item.coloreHex ?? colorForTipo(item.tipo);
   return (
     <div className="flex flex-col items-center gap-0.5 flex-shrink-0" title={`Frontale — ${TIPO_LABELS[item.tipo]}`}>
-      <div className="w-10 h-16 rounded border border-gray-200 flex items-end justify-center pb-0.5"
-        style={{ backgroundColor: item.coloreHex ?? colorForTipo(item.tipo) }}>
-        <span className="text-white font-bold" style={{ fontSize: 8 }}>{TIPO_LABELS[item.tipo][0]}</span>
+      <div className="rounded border border-gray-200 flex items-end justify-center pb-1"
+        style={{ backgroundColor: color, width: UNIT, height: FRONTALE_H }}>
+        {item.pezzi.length > 0 && <span className="text-white font-bold drop-shadow-sm" style={{ fontSize: 8 }}>{item.pezzi.length}pz</span>}
       </div>
-      {item.pezzi.length > 0 && <span className="text-gray-400" style={{ fontSize: 8 }}>{item.pezzi.length}pz</span>}
     </div>
   );
 }
 
 function CapoOnBarra({ item }: { item: ItemParete }) {
+  const color = item.coloreHex ?? colorForTipo(item.tipo);
+  const h = item.tipo === 'abito' ? 72 : item.tipo === 'capospalla' ? 60 : 48;
   return (
-    <div className="flex flex-col items-center gap-0.5" title={`${TIPO_LABELS[item.tipo]}${item.productCode ? ` — ${item.productCode}` : ''}`}>
-      <div className="w-1 h-1 bg-gray-500 rounded-full" />
-      <div className="rounded-sm flex items-center justify-center"
-        style={{ backgroundColor: item.coloreHex ?? colorForTipo(item.tipo), width: item.tipo === 'capospalla' ? 26 : item.tipo === 'abito' ? 16 : 18, height: item.tipo === 'abito' ? 40 : item.tipo === 'capospalla' ? 30 : 26 }}>
-        <span className="font-bold text-white select-none" style={{ fontSize: 8 }}>{TIPO_LABELS[item.tipo][0]}</span>
-      </div>
-      {item.pezzi.length > 0 && <span className="text-gray-500 select-none" style={{ fontSize: 8 }}>{item.pezzi.length}pz</span>}
+    <div className="flex flex-col items-center flex-shrink-0" style={{ width: COSTA_W }}
+      title={`${TIPO_LABELS[item.tipo]}${item.productCode ? ` — ${item.productCode}` : ''} (${item.pezzi.length}pz)`}>
+      <div className="w-1 h-1.5 bg-gray-500 rounded-full" />
+      <div className="rounded-sm" style={{ backgroundColor: color, width: COSTA_W - 2, height: h }} />
     </div>
   );
 }
 
 function CapoOnMensola({ item }: { item: ItemParete }) {
+  const color = item.coloreHex ?? colorForTipo(item.tipo);
+  const w = item.tipo === 'borsa' ? 26 : 18;
+  const h = item.tipo === 'borsa' ? 24 : 18;
   return (
-    <div className="rounded-sm flex items-center justify-center flex-shrink-0"
-      style={{ backgroundColor: item.coloreHex ?? colorForTipo(item.tipo), width: item.tipo === 'borsa' ? 30 : 22, height: item.tipo === 'borsa' ? 26 : 18 }}
-      title={`${TIPO_LABELS[item.tipo]} (${item.pezzi.length}pz)`}>
-      <span className="font-bold text-white select-none" style={{ fontSize: 8 }}>{TIPO_LABELS[item.tipo][0]}</span>
-    </div>
+    <div className="rounded-sm flex-shrink-0"
+      style={{ backgroundColor: color, width: w, height: h }}
+      title={`${TIPO_LABELS[item.tipo]} (${item.pezzi.length}pz)`} />
   );
 }
 
