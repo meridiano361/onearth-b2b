@@ -38,9 +38,16 @@ const TIPO_OPTIONS_FRONTALE: TipoCapo[] = ['abito', 'capospalla', 'top', 'bottom
 const TAGLIE_ABBIGLIAMENTO = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'TU'];
 const TAGLIE_BORSE = ['TU', 'SMALL', 'MEDIUM', 'LARGE'];
 
-const BARRA_MAX_PZ: Record<DimensioneBarra, number> = { piccola: 24, media: 32, grande: 48 };
+const BARRA_MAX_PZ: Record<DimensioneBarra, number> = { piccola: 24, media: 36, grande: 48 };
 const BARRA_DIMS: DimensioneBarra[] = ['piccola', 'media', 'grande'];
 const MENSOLA_DIMS: DimensioneMensola[] = ['piccola', 'media', 'lunga'];
+
+// Composition suggestion patterns: each entry = [tipo, numPezzi]
+const BARRA_PATTERN: Record<DimensioneBarra, TipoCapo[]> = {
+  piccola: ['top', 'bottom', 'top', 'bottom', 'top', 'bottom'],
+  media:   ['top', 'top', 'bottom', 'top', 'top', 'bottom', 'top', 'top', 'bottom'],
+  grande:  ['top', 'top', 'bottom', 'top', 'top', 'bottom', 'top', 'top', 'bottom', 'top', 'top', 'bottom'],
+};
 
 const UNIT = 80;
 const COSTA_W = 16;
@@ -481,8 +488,8 @@ function MensolaInlineEditor({
       {config.items.map((it, idx) => (
         <ItemCard key={it.id} item={it} tipoOptions={TIPO_OPTIONS_MENSOLA}
           onChange={(u) => updateItem(idx, u)} onDelete={() => removeItem(idx)}
-          onMoveLeft={() => { const a = [...config.items]; const [m] = a.splice(idx, 1); a.splice(idx - 1, 0, m); onChange({ ...config, items: a }); }}
-          onMoveRight={() => { const a = [...config.items]; const [m] = a.splice(idx, 1); a.splice(idx + 1, 0, m); onChange({ ...config, items: a }); }}
+          onMoveLeft={() => { const a = [...config.items]; [a[idx], a[idx - 1]] = [a[idx - 1], a[idx]]; onChange({ ...config, items: a }); }}
+          onMoveRight={() => { const a = [...config.items]; [a[idx], a[idx + 1]] = [a[idx + 1], a[idx]]; onChange({ ...config, items: a }); }}
           canMoveLeft={idx > 0} canMoveRight={idx < config.items.length - 1} />
       ))}
       <button type="button" onClick={() => setShowCatalog(true)}
@@ -521,14 +528,21 @@ function ElementoCard({
   const pzCount = isBarra ? totalePezzi(el.items) : null;
   const pzOver = maxPz !== null && pzCount !== null && pzCount > maxPz;
 
-  function addBlankItem() {
-    const defaultTipo: TipoCapo = isMensola ? 'borsa' : isFrontale ? 'abito' : 'top';
-    onChange({ ...el, items: [...el.items, { id: nanoid(8), tipo: defaultTipo, pezzi: [] }] });
-  }
   function addFromCatalog(items: ItemParete[]) { onChange({ ...el, items: [...el.items, ...items] }); }
   function updateItem(idx: number, updated: ItemParete) { const a = [...el.items]; a[idx] = updated; onChange({ ...el, items: a }); }
   function removeItem(idx: number) { onChange({ ...el, items: el.items.filter((_, i) => i !== idx) }); }
-  function moveItem(from: number, to: number) { const a = [...el.items]; const [m] = a.splice(from, 1); a.splice(to, 0, m); onChange({ ...el, items: a }); }
+  function moveItem(from: number, to: number) {
+    if (to < 0 || to >= el.items.length) return;
+    const a = [...el.items];
+    [a[from], a[to]] = [a[to], a[from]];
+    onChange({ ...el, items: a });
+  }
+  function applySuggerimento() {
+    const pezziDefault = [{ taglia: 'S' }, { taglia: 'M' }, { taglia: 'L' }, { taglia: 'XL' }];
+    const pattern = BARRA_PATTERN[barraDim];
+    const newItems: ItemParete[] = pattern.map((tipo) => ({ id: nanoid(8), tipo, pezzi: pezziDefault }));
+    onChange({ ...el, items: newItems });
+  }
 
   const elLabel = isBarra ? 'Barra' : isMensola ? 'Mensola' : 'Frontale';
   const totalPz = totalePezzi(el.items);
@@ -605,6 +619,13 @@ function ElementoCard({
                 {isFrontale && el.items.length === 1 ? 'Aggiungi secondo capo' : 'Importa dal catalogo'}
               </button>
             )}
+            {isBarra && (
+              <button type="button" onClick={applySuggerimento}
+                className="w-full py-1.5 border border-dashed border-gray-200 rounded-xl text-2xs text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors flex items-center justify-center gap-1">
+                <span className="font-mono">{BARRA_PATTERN[barraDim].map((t) => t === 'top' ? 'T' : 'B').join('·')}</span>
+                <span className="ml-1">— Riempi pattern suggerito ({BARRA_PATTERN[barraDim].length}×4pz)</span>
+              </button>
+            )}
           </div>
 
           {/* Horizontal offset */}
@@ -637,8 +658,14 @@ function ElementoCard({
 
 // ─── Wall renderer ────────────────────────────────────────────────────────────
 
-function getElementPhotos(el: ElementoParete): Array<{ id: string; imageUrl: string }> {
-  return [...el.items, ...(el.mensolaTop?.items ?? [])]
+function getMensolaPhotos(el: ElementoParete): Array<{ id: string; imageUrl: string }> {
+  return (el.mensolaTop?.items ?? [])
+    .filter((it) => !!it.imageUrl)
+    .map((it) => ({ id: it.id, imageUrl: it.imageUrl! }));
+}
+
+function getMainPhotos(el: ElementoParete): Array<{ id: string; imageUrl: string }> {
+  return el.items
     .filter((it) => !!it.imageUrl)
     .map((it) => ({ id: it.id, imageUrl: it.imageUrl! }));
 }
@@ -653,6 +680,8 @@ function WallRenderer({
   onSelect?: (id: string) => void;
   zoom?: number;
 }) {
+  // Use ref so onDragOver can read the current dragging ID without waiting for React re-render
+  const draggingIdRef = useRef<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
 
@@ -671,10 +700,10 @@ function WallRenderer({
     const srcIdx = config.findIndex((x) => x.id === srcId);
     if (srcIdx !== -1 && srcIdx !== targetIdx) {
       const next = [...config];
-      const [moved] = next.splice(srcIdx, 1);
-      next.splice(targetIdx, 0, moved);
+      [next[srcIdx], next[targetIdx]] = [next[targetIdx], next[srcIdx]];
       onReorder(next);
     }
+    draggingIdRef.current = null;
     setDraggingId(null);
     setOverIdx(null);
   }
@@ -683,23 +712,26 @@ function WallRenderer({
     <div className="px-4 py-3 h-full">
       <div className="flex gap-4 h-full" style={zoom !== undefined ? { zoom } : undefined}>
         {config.map((el, idx) => {
-          const photos = getElementPhotos(el);
+          const mensolaPhotos = getMensolaPhotos(el);
+          const mainPhotos = getMainPhotos(el);
           return (
             <div
               key={el.id}
               draggable
               onClick={(e) => { e.stopPropagation(); onSelect?.(el.id); }}
               onDragStart={(e) => {
+                draggingIdRef.current = el.id;
                 setDraggingId(el.id);
                 e.dataTransfer.setData('text/plain', el.id);
                 e.dataTransfer.effectAllowed = 'move';
               }}
               onDragOver={(e) => {
                 e.preventDefault();
-                if (draggingId && draggingId !== el.id) setOverIdx(idx);
+                const did = draggingIdRef.current;
+                if (did && did !== el.id) setOverIdx(idx);
               }}
               onDrop={(e) => handleDrop(e, idx)}
-              onDragEnd={() => { setDraggingId(null); setOverIdx(null); }}
+              onDragEnd={() => { draggingIdRef.current = null; setDraggingId(null); setOverIdx(null); }}
               style={{ height: '100%' }}
               className={[
                 'cursor-grab active:cursor-grabbing select-none flex-shrink-0 flex flex-col transition-opacity',
@@ -707,22 +739,30 @@ function WallRenderer({
                 overIdx === idx && draggingId !== el.id ? 'outline outline-2 outline-primary outline-offset-2 rounded' : '',
               ].join(' ')}
             >
-              {/* Wall element — fills available height, bottom-aligned */}
+              {/* Mensola photos — top strip */}
+              {mensolaPhotos.length > 0 ? (
+                <div className="flex-shrink-0 flex gap-0.5 border-b border-gray-100 pb-1" style={{ height: PHOTO_STRIP_H }}>
+                  {mensolaPhotos.slice(0, 8).map((ph) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={ph.id} src={ph.imageUrl} alt="" className="w-7 h-7 object-cover rounded-sm flex-shrink-0" />
+                  ))}
+                </div>
+              ) : <div className="flex-shrink-0" style={{ height: PHOTO_STRIP_H }} />}
+
+              {/* Wall element — bottom-aligned in remaining space */}
               <div className="flex-1 flex items-end pb-2 min-h-0">
                 <WallElementRenderer el={el} />
               </div>
-              {/* Photo strip */}
-              <div
-                className="flex-shrink-0 flex gap-0.5 border-t border-gray-100 pt-1"
-                style={{ height: PHOTO_STRIP_H }}
-              >
-                {photos.length > 0
-                  ? photos.slice(0, 8).map((ph) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img key={ph.id} src={ph.imageUrl} alt="" className="w-7 h-7 object-cover rounded-sm flex-shrink-0" />
-                    ))
-                  : <div style={{ width: 1 }} />}
-              </div>
+
+              {/* Main item photos — bottom strip */}
+              {mainPhotos.length > 0 ? (
+                <div className="flex-shrink-0 flex gap-0.5 border-t border-gray-100 pt-1" style={{ height: PHOTO_STRIP_H }}>
+                  {mainPhotos.slice(0, 8).map((ph) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={ph.id} src={ph.imageUrl} alt="" className="w-7 h-7 object-cover rounded-sm flex-shrink-0" />
+                  ))}
+                </div>
+              ) : <div className="flex-shrink-0" style={{ height: PHOTO_STRIP_H }} />}
             </div>
           );
         })}
@@ -966,7 +1006,10 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   }
   function deleteElemento(idx: number) { handleConfigChange(config.filter((_, i) => i !== idx)); }
   function moveElemento(from: number, to: number) {
-    const next = [...config]; const [m] = next.splice(from, 1); next.splice(to, 0, m); handleConfigChange(next);
+    if (to < 0 || to >= config.length) return;
+    const next = [...config];
+    [next[from], next[to]] = [next[to], next[from]];
+    handleConfigChange(next);
   }
 
   function handleSelectElement(id: string) {
