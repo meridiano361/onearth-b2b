@@ -499,7 +499,7 @@ function ElementoCard({
   function removeItem(idx: number) { onChange({ ...el, items: el.items.filter((_, i) => i !== idx) }); }
   function moveItem(from: number, to: number) { const a = [...el.items]; const [m] = a.splice(from, 1); a.splice(to, 0, m); onChange({ ...el, items: a }); }
 
-  const elLabel = isBarra ? 'Barra appenderia' : isMensola ? `Mensola ${el.dimensione ?? ''}` : 'Esposizione frontale';
+  const elLabel = isBarra ? 'Barra' : isMensola ? 'Mensola' : 'Frontale';
   const totalPz = totalePezzi(el.items);
 
   return (
@@ -850,15 +850,15 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
           <div className="flex flex-wrap gap-2 pt-2">
             <button type="button" onClick={() => addElemento('barra')}
               className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-600 hover:bg-blue-100 transition-colors">
-              <Plus size={13} /> Barra appenderia
+              <Plus size={13} /> Barra
             </button>
             <button type="button" onClick={() => addElemento('mensola')}
               className="flex items-center gap-1.5 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 hover:bg-amber-100 transition-colors">
-              <Plus size={13} /> Mensola (standalone)
+              <Plus size={13} /> Mensola
             </button>
             <button type="button" onClick={() => addElemento('frontale')}
               className="flex items-center gap-1.5 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 hover:bg-emerald-100 transition-colors">
-              <Plus size={13} /> Frontale (standalone)
+              <Plus size={13} /> Frontale
             </button>
           </div>
 
