@@ -48,6 +48,7 @@ const COSTA_W = 12;
 const FRONTALE_H = 90;
 const FRONTALE_TOP_H = 36;
 const FRONTALE_BOT_H = 54;
+const STRATO_H = 5;   // height of one folded garment layer on mensola
 const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: UNIT, media: UNIT * 2, lunga: UNIT * 3 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -693,14 +694,36 @@ function MensolaRenderer({ config }: { config: MensolaInlineConfig }) {
   const w = MENSOLA_W[config.dimensione];
   return (
     <div>
-      <div className="flex flex-col-reverse" style={{ width: w }}>
+      <div className="flex items-end gap-0.5" style={{ minWidth: w }}>
         {config.items.length === 0
-          ? <div style={{ height: COSTA_W }} />
-          : config.items.map((it, i) => (
-              <div key={it.id ?? i} className="flex-shrink-0"
-                style={{ backgroundColor: it.coloreHex ?? colorForTipo(it.tipo), width: w, height: COSTA_W - 2 }}
-                title={`${TIPO_LABELS[it.tipo]} (${it.pezzi.length}pz)`} />
-            ))}
+          ? <div style={{ width: w, height: STRATO_H }} />
+          : config.items.map((it, i) => {
+              const color = it.coloreHex ?? colorForTipo(it.tipo);
+              if (it.tipo === 'borsa') {
+                return (
+                  <div key={it.id ?? i} className="flex-shrink-0 rounded-sm"
+                    style={{ backgroundColor: color, width: 36, height: 32 }}
+                    title={`Borsa (${it.pezzi.length}pz)`} />
+                );
+              }
+              if (it.tipo === 'accessorio') {
+                return (
+                  <div key={it.id ?? i} className="flex-shrink-0 rounded-sm"
+                    style={{ backgroundColor: color, width: 22, height: 20 }}
+                    title={`Accessorio (${it.pezzi.length}pz)`} />
+                );
+              }
+              // Abbigliamento di costa: 1 strato per taglia
+              const n = Math.max(1, it.pezzi.length);
+              return (
+                <div key={it.id ?? i} className="flex flex-col-reverse flex-shrink-0" style={{ width: 48 }}
+                  title={`${TIPO_LABELS[it.tipo]} · ${n} strat${n === 1 ? 'o' : 'i'}`}>
+                  {Array.from({ length: n }).map((_, j) => (
+                    <div key={j} style={{ backgroundColor: color, height: STRATO_H, width: '100%' }} />
+                  ))}
+                </div>
+              );
+            })}
       </div>
       <div className="h-0.5 bg-gray-400 rounded" style={{ width: w }} />
     </div>
