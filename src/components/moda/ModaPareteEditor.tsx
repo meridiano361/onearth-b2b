@@ -868,7 +868,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
           <div className="flex flex-wrap gap-2 pt-2">
             {(['barra', 'mensola', 'frontale'] as const).map((tipo) => (
               <button key={tipo} type="button" onClick={() => addElemento(tipo)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-700 transition-colors capitalize">
+                className="flex items-center gap-1.5 px-4 py-2 bg-cream text-primary border border-border rounded-xl text-xs font-medium hover:bg-accent/10 active:bg-accent/20 transition-colors">
                 <Plus size={13} /> {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
               </button>
             ))}
