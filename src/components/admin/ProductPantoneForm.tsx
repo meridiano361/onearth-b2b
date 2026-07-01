@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { X, Star, Search, Loader2, AlertCircle, Plus, Check } from 'lucide-react';
+import { X, Star, Search, Loader2, AlertCircle, Plus, Check, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { ProductPantoneEntry } from '@/types';
 
@@ -28,6 +28,11 @@ export default function ProductPantoneForm({ value, onChange }: Props) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Lookup state: null = idle, 'loading' = fetching, 'found' | 'notfound' = result
+  type LookupState = null | 'loading' | 'found' | 'notfound';
+  const [lookupState, setLookupState] = useState<LookupState>(null);
+  const [lookupResult, setLookupResult] = useState<PantoneColor | null>(null);
 
   const [createMode, setCreateMode] = useState(false);
   const [newCode, setNewCode] = useState('');
@@ -63,6 +68,8 @@ export default function ProductPantoneForm({ value, onChange }: Props) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
         setCreateMode(false);
+        setLookupState(null);
+        setLookupResult(null);
       }
     }
     document.addEventListener('mousedown', handleOutside);
@@ -100,6 +107,25 @@ export default function ProductPantoneForm({ value, onChange }: Props) {
     setNewName('');
     setNewHex('#808080');
     setCreateMode(true);
+  }
+
+  async function handleLookup() {
+    const code = search.trim();
+    if (!code) return;
+    setLookupState('loading');
+    setLookupResult(null);
+    try {
+      const res = await fetch(`/api/pantone-lookup?code=${encodeURIComponent(code)}`);
+      const json = await res.json();
+      if (json.found && json.color) {
+        setLookupState('found');
+        setLookupResult(json.color);
+      } else {
+        setLookupState('notfound');
+      }
+    } catch {
+      setLookupState('notfound');
+    }
   }
 
   async function handleCreate() {
@@ -202,7 +228,7 @@ export default function ProductPantoneForm({ value, onChange }: Props) {
             'Aggiungi colore Pantone…'
           }
           onFocus={() => setOpen(true)}
-          onChange={(e) => { setSearch(e.target.value); setOpen(true); setCreateMode(false); }}
+          onChange={(e) => { setSearch(e.target.value); setOpen(true); setCreateMode(false); setLookupState(null); setLookupResult(null); }}
           className="w-full h-9 border border-border rounded pl-8 pr-3 text-sm text-primary placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent"
         />
       </div>
@@ -234,20 +260,66 @@ export default function ProductPantoneForm({ value, onChange }: Props) {
           )}
 
           {!createMode && noResults && (
-            <div className="px-3 py-3 text-center">
-              <p className="text-xs text-gray-400 mb-2">
-                {search ? `Nessun risultato per "${search}"` : 'Nessun colore disponibile'}
+            <div className="px-3 py-3 space-y-2.5">
+              <p className="text-xs text-gray-400 text-center">
+                {search ? `"${search}" non trovato nel catalogo locale` : 'Nessun colore disponibile'}
               </p>
-              {search && (
+              {search && lookupState === null && (
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={openCreateMode}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent/80 transition-colors"
+                  onClick={handleLookup}
+                  className="w-full flex items-center justify-center gap-1.5 text-xs font-medium bg-cream border border-border rounded py-1.5 text-primary hover:bg-cream/80 transition-colors"
                 >
-                  <Plus size={12} />
-                  Crea nuovo Pantone "{search}"
+                  <Search size={11} />
+                  Verifica nel catalogo Pantone FHI-TCX
                 </button>
+              )}
+              {search && lookupState === 'loading' && (
+                <div className="flex items-center justify-center gap-2 py-1">
+                  <Loader2 size={12} className="animate-spin text-accent" />
+                  <span className="text-xs text-gray-400">Ricerca in corso…</span>
+                </div>
+              )}
+              {lookupState === 'found' && lookupResult && (
+                <div className="space-y-1.5">
+                  <p className="text-2xs text-emerald-600 font-medium text-center">✓ Trovato nel catalogo FHI-TCX</p>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => { addPantone(lookupResult); setLookupState(null); setLookupResult(null); setOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded text-left hover:bg-emerald-100 transition-colors"
+                  >
+                    <div className="w-5 h-5 rounded flex-shrink-0 border border-border/60" style={{ backgroundColor: lookupResult.hex_code }} />
+                    <span className="text-xs font-medium text-primary">{lookupResult.code}</span>
+                    <span className="text-xs text-gray-500 truncate">{lookupResult.name}</span>
+                    <span className="text-2xs text-gray-400 font-mono ml-auto">{lookupResult.hex_code}</span>
+                    <Plus size={12} className="text-emerald-600 flex-shrink-0" />
+                  </button>
+                </div>
+              )}
+              {lookupState === 'notfound' && (
+                <div className="space-y-2">
+                  <p className="text-xs text-red-500 text-center">Codice non trovato nel catalogo Pantone FHI-TCX.</p>
+                  <a
+                    href={`https://www.pantone.com/color-finder/${encodeURIComponent(search.replace(/\s+/g, '-'))}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="w-full flex items-center justify-center gap-1.5 text-xs text-accent hover:text-accent/80 border border-border rounded py-1.5 transition-colors"
+                  >
+                    <ExternalLink size={11} />
+                    Cerca su pantone.com
+                  </a>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={openCreateMode}
+                    className="w-full text-xs text-gray-400 hover:text-gray-600 py-1 transition-colors"
+                  >
+                    Aggiungi manualmente (codice non ancora in catalogo)
+                  </button>
+                </div>
               )}
             </div>
           )}
