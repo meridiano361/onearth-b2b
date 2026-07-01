@@ -620,18 +620,51 @@ function ElementoCard({
 
 // ─── Wall renderer ────────────────────────────────────────────────────────────
 
-function WallRenderer({ config }: { config: ElementoParete[] }) {
+function WallRenderer({ config, onReorder }: { config: ElementoParete[]; onReorder: (c: ElementoParete[]) => void }) {
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+
   if (config.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-gray-300 p-4">
-        <p className="text-xs text-center">Aggiungi barre appenderia, mensole o frontali</p>
+        <p className="text-xs text-center">Aggiungi barre, mensole o frontali</p>
       </div>
     );
   }
+
+  function handleDrop(e: React.DragEvent, targetIdx: number) {
+    e.preventDefault();
+    const srcIdx = config.findIndex((x) => x.id === draggingId);
+    if (srcIdx !== -1 && srcIdx !== targetIdx) {
+      const next = [...config];
+      const [moved] = next.splice(srcIdx, 1);
+      next.splice(targetIdx, 0, moved);
+      onReorder(next);
+    }
+    setDraggingId(null);
+    setOverIdx(null);
+  }
+
   return (
-    <div className="overflow-x-auto p-4">
+    <div className="overflow-x-auto p-4 h-full">
       <div className="flex items-end gap-3" style={{ minHeight: 200 }}>
-        {config.map((el) => <WallElementRenderer key={el.id} el={el} />)}
+        {config.map((el, idx) => (
+          <div
+            key={el.id}
+            draggable
+            onDragStart={(e) => { setDraggingId(el.id); e.dataTransfer.effectAllowed = 'move'; }}
+            onDragOver={(e) => { e.preventDefault(); setOverIdx(idx); }}
+            onDrop={(e) => handleDrop(e, idx)}
+            onDragEnd={() => { setDraggingId(null); setOverIdx(null); }}
+            className={[
+              'cursor-grab active:cursor-grabbing select-none transition-opacity',
+              draggingId === el.id ? 'opacity-30' : 'opacity-100',
+              overIdx === idx && draggingId !== el.id ? 'outline outline-2 outline-primary outline-offset-2 rounded' : '',
+            ].join(' ')}
+          >
+            <WallElementRenderer el={el} />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -956,12 +989,13 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
           )}
         </div>
 
-        {/* Right: preview — sticky, full viewport height */}
-        <div className="lg:w-80 xl:w-96 flex-shrink-0">
-          <div className="sticky top-14 flex flex-col" style={{ maxHeight: 'calc(100vh - 60px)' }}>
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-3 font-medium flex-shrink-0">Anteprima parete</p>
-            <div className="bg-white border border-gray-200 rounded-2xl flex-1 overflow-auto shadow-sm min-h-64">
-              <WallRenderer config={config} />
+        {/* Right: preview — sticky full height, draggable reorder */}
+        <div className="hidden lg:block lg:w-80 xl:w-96 flex-shrink-0">
+          <div className="sticky top-[60px] flex flex-col" style={{ height: 'calc(100vh - 60px)' }}>
+            <p className="text-xs text-gray-400 uppercase tracking-widest mb-2 font-medium flex-shrink-0">Anteprima parete</p>
+            <p className="text-2xs text-gray-300 mb-3 flex-shrink-0">Trascina gli elementi per riordinarli</p>
+            <div className="bg-white border border-gray-200 rounded-2xl flex-1 overflow-auto shadow-sm min-h-0">
+              <WallRenderer config={config} onReorder={handleConfigChange} />
             </div>
           </div>
         </div>
