@@ -117,6 +117,7 @@ export interface ProductPantoneEntry {
 
 export type TipoElementoParete = 'barra' | 'mensola' | 'frontale';
 export type DimensioneMensola = 'piccola' | 'media' | 'lunga';
+export type DimensioneBarra = 'piccola' | 'media' | 'grande';
 export type TipoCapo = 'top' | 'bottom' | 'abito' | 'capospalla' | 'borsa' | 'accessorio' | 'altro';
 
 export interface PezzoParete {
@@ -134,11 +135,19 @@ export interface ItemParete {
   pezzi: PezzoParete[];
 }
 
+export interface MensolaInlineConfig {
+  dimensione: DimensioneMensola;
+  items: ItemParete[];
+}
+
 export interface ElementoParete {
   id: string;
   tipo: TipoElementoParete;
-  dimensione?: DimensioneMensola;
+  dimensione?: DimensioneMensola | DimensioneBarra;
   items: ItemParete[];
+  mensolaTop?: MensolaInlineConfig;
+  frontaleLeft?: ItemParete;
+  frontaleRight?: ItemParete;
 }
 
 export interface PareteAttrezzata {
