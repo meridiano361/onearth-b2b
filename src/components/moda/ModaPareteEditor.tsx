@@ -34,7 +34,9 @@ const TIPO_LABELS: Record<TipoCapo, string> = {
 
 const TIPO_OPTIONS_BARRA: TipoCapo[] = ['capospalla', 'top', 'bottom', 'abito'];
 const TIPO_OPTIONS_MENSOLA: TipoCapo[] = ['borsa', 'accessorio', 'top', 'bottom', 'abito', 'altro'];
-const TIPO_OPTIONS_FRONTALE: TipoCapo[] = ['abito', 'capospalla', 'top', 'bottom', 'borsa', 'accessorio', 'altro'];
+// Frontale: slot 1 = abito | top | capospalla; slot 2 (solo se slot1 è top/capospalla) = bottom
+const TIPO_OPTIONS_FRONTALE_SLOT1: TipoCapo[] = ['abito', 'top', 'capospalla'];
+const TIPO_OPTIONS_FRONTALE_SLOT2: TipoCapo[] = ['bottom'];
 
 const TAGLIE_FULL = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'TU'];
 
@@ -701,7 +703,7 @@ function FrontaleInlineEditor({
           <div>
             <p className="text-2xs font-medium text-gray-600">{label}</p>
             <div className="flex gap-0.5 flex-wrap mt-0.5">
-              {TIPO_OPTIONS_FRONTALE.slice(0, 4).map((t) => (
+              {TIPO_OPTIONS_FRONTALE_SLOT1.map((t) => (
                 <button key={t} type="button" onClick={() => onChange({ ...item, tipo: t })}
                   className={`px-1.5 py-0 rounded-full text-2xs transition-colors ${item.tipo === t ? 'bg-primary text-white' : 'text-gray-400 border border-gray-200 hover:border-gray-400'}`}
                   style={{ fontSize: 9 }}>
@@ -839,14 +841,35 @@ function ElementoCard({
   const isBarra = el.tipo === 'barra';
   const isMensola = el.tipo === 'mensola';
   const isFrontale = el.tipo === 'frontale';
-  const tipoOptions = isBarra ? TIPO_OPTIONS_BARRA : isMensola ? TIPO_OPTIONS_MENSOLA : TIPO_OPTIONS_FRONTALE;
   const barraDim = (el.dimensione ?? 'media') as DimensioneBarra;
   const maxPz = isBarra ? BARRA_MAX_PZ[barraDim] : null;
   const pzCount = isBarra ? totalePezzi(el.items) : null;
   const pzOver = maxPz !== null && pzCount !== null && pzCount > maxPz;
 
-  function addFromCatalog(items: ItemParete[]) { onChange({ ...el, items: [...el.items, ...items] }); }
-  function updateItem(idx: number, updated: ItemParete) { const a = [...el.items]; a[idx] = updated; onChange({ ...el, items: a }); }
+  // Frontale: slot 1 may have a second slot only when tipo is top or capospalla
+  const frontaleCanAddBottom = isFrontale && el.items.length === 1
+    && (el.items[0].tipo === 'top' || el.items[0].tipo === 'capospalla');
+  const canAddItem = !isFrontale || (el.items.length === 0) || frontaleCanAddBottom;
+
+  function addFromCatalog(items: ItemParete[]) {
+    if (isFrontale && el.items.length === 1) {
+      // Second slot must always be bottom
+      const it = items[0];
+      if (it) onChange({ ...el, items: [...el.items, { ...it, tipo: 'bottom' }] });
+    } else {
+      onChange({ ...el, items: [...el.items, ...items] });
+    }
+  }
+  function updateItem(idx: number, updated: ItemParete) {
+    const a = [...el.items];
+    a[idx] = updated;
+    // If frontale slot 1 changes to abito, remove slot 2 (incompatible combination)
+    if (isFrontale && idx === 0 && updated.tipo === 'abito' && a.length > 1) {
+      onChange({ ...el, items: [a[0]] });
+    } else {
+      onChange({ ...el, items: a });
+    }
+  }
   function removeItem(idx: number) { onChange({ ...el, items: el.items.filter((_, i) => i !== idx) }); }
   function moveItem(from: number, to: number) {
     if (to < 0 || to >= el.items.length) return;
@@ -907,18 +930,23 @@ function ElementoCard({
             />
           )}
           <div className="space-y-2">
-            {el.items.map((item, idx) => (
-              <ItemCard key={item.id} item={item} tipoOptions={tipoOptions}
-                onChange={(u) => updateItem(idx, u)} onDelete={() => removeItem(idx)}
-                onMoveLeft={!isFrontale ? () => moveItem(idx, idx - 1) : undefined}
-                onMoveRight={!isFrontale ? () => moveItem(idx, idx + 1) : undefined}
-                canMoveLeft={idx > 0} canMoveRight={idx < el.items.length - 1} />
-            ))}
-            {(!isFrontale ? true : el.items.length < 2) && (
+            {el.items.map((item, idx) => {
+              const itemTipoOptions = isFrontale
+                ? (idx === 0 ? TIPO_OPTIONS_FRONTALE_SLOT1 : TIPO_OPTIONS_FRONTALE_SLOT2)
+                : isBarra ? TIPO_OPTIONS_BARRA : TIPO_OPTIONS_MENSOLA;
+              return (
+                <ItemCard key={item.id} item={item} tipoOptions={itemTipoOptions}
+                  onChange={(u) => updateItem(idx, u)} onDelete={() => removeItem(idx)}
+                  onMoveLeft={!isFrontale ? () => moveItem(idx, idx - 1) : undefined}
+                  onMoveRight={!isFrontale ? () => moveItem(idx, idx + 1) : undefined}
+                  canMoveLeft={idx > 0} canMoveRight={idx < el.items.length - 1} />
+              );
+            })}
+            {canAddItem && (
               <button type="button" onClick={() => setShowCatalogPicker(true)}
                 className="w-full py-2 bg-primary/5 border border-primary/20 rounded-xl text-xs text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5 font-medium">
                 <PackagePlus size={13} />
-                {isFrontale && el.items.length === 1 ? 'Aggiungi secondo capo' : 'Aggiungi prodotto'}
+                {frontaleCanAddBottom ? 'Aggiungi bottom' : 'Aggiungi prodotto'}
               </button>
             )}
             {isBarra && (
