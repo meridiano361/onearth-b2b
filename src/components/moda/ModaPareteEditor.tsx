@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Plus, X, Search, Loader2, ChevronUp, ChevronDown,
-  Trash2, Edit2, Check, Tag,
+  Trash2, Edit2, Check, Tag, PackagePlus,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { PareteAttrezzata, ElementoParete, ItemParete, TipoCapo, TipoElementoParete, DimensioneMensola } from '@/types';
@@ -34,6 +34,144 @@ const TIPO_OPTIONS_FRONTALE: TipoCapo[] = ['abito', 'capospalla', 'top', 'bottom
 
 const TAGLIE_ABBIGLIAMENTO = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'TU'];
 const TAGLIE_BORSE = ['TU', 'SMALL', 'MEDIUM', 'LARGE'];
+
+function tipoFromProduct(p: Product, elementoTipo: TipoElementoParete): TipoCapo {
+  const fam = (p.famiglia ?? '').toLowerCase();
+  const sf = (p.sottofamiglia ?? '').toLowerCase();
+  const name = p.name.toLowerCase();
+  if (/borsa|bag|clutch|tote|shopper/.test(fam + sf + name)) return 'borsa';
+  if (/accessori|sciarpa|stola|cintura|cappello|belt|hat/.test(fam + sf + name)) return 'accessorio';
+  if (/abito|vestito|dress/.test(sf + name)) return 'abito';
+  if (/giaccone|cappotto|giubbott|parka|blazer|coat|jacket/.test(sf + name)) return 'capospalla';
+  if (/pantal|gonna|skirt|short|trouser/.test(sf + name)) return 'bottom';
+  if (/top|shirt|blusa|camicia|maglia|felpa|maglione|pull|sweat/.test(sf + name)) return 'top';
+  if (elementoTipo === 'mensola') return 'borsa';
+  if (elementoTipo === 'frontale') return 'abito';
+  return 'top';
+}
+
+// ─── Catalog picker modal (multi-select, import from MODA collection) ────────
+
+function CatalogPickerModal({
+  elementoTipo,
+  onAdd,
+  onClose,
+}: {
+  elementoTipo: TipoElementoParete;
+  onAdd: (items: ItemParete[]) => void;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const { data, isLoading } = useQuery<{ data: Product[] }>({
+    queryKey: ['moda-products-panel'],
+    queryFn: () => fetch(`/api/products?active=true&collezione=${MODA_COLLEZIONE}&limit=500`).then((r) => r.json()),
+    staleTime: 60_000,
+  });
+
+  const products = data?.data ?? [];
+  const filtered = useMemo(() => {
+    if (!search.trim()) return products.slice(0, 100);
+    const q = search.toLowerCase();
+    return products.filter((p) => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q));
+  }, [products, search]);
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function handleConfirm() {
+    const sel = products.filter((p) => selected.has(p.id));
+    const items: ItemParete[] = sel.map((p) => ({
+      id: nanoid(8),
+      tipo: tipoFromProduct(p, elementoTipo),
+      productId: p.id,
+      productCode: p.code,
+      productName: p.name,
+      imageUrl: p.imageUrl ?? undefined,
+      pezzi: [],
+    }));
+    onAdd(items);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="w-full max-w-lg bg-white border border-gray-200 rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[85vh] shadow-xl">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+          <PackagePlus size={16} className="text-gray-400 flex-shrink-0" />
+          <p className="flex-1 text-sm font-medium text-gray-900">Importa dal catalogo PE27</p>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cerca per nome o codice…"
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-400"
+            />
+          </div>
+        </div>
+        <div className="overflow-y-auto flex-1">
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+          ) : filtered.length === 0 ? (
+            <p className="text-center py-8 text-xs text-gray-400">Nessun risultato</p>
+          ) : (
+            filtered.map((p) => {
+              const isChecked = selected.has(p.id);
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => toggle(p.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left ${isChecked ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                >
+                  <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${isChecked ? 'bg-primary border-primary' : 'border-gray-300'}`}>
+                    {isChecked && <Check size={10} className="text-white" />}
+                  </div>
+                  {p.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.imageUrl} alt={p.name} className="w-9 h-9 object-cover rounded flex-shrink-0" />
+                  ) : (
+                    <div className="w-9 h-9 bg-gray-100 rounded flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-gray-900 truncate">{p.name}</p>
+                    <p className="text-2xs text-gray-400 font-mono">{p.code}{p.famiglia ? ` · ${p.famiglia}` : ''}</p>
+                  </div>
+                  <span className="text-2xs text-gray-400 flex-shrink-0 font-medium">{TIPO_LABELS[tipoFromProduct(p, elementoTipo)]}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+        <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-3">
+          <p className="flex-1 text-xs text-gray-400">
+            {selected.size === 0 ? 'Nessun prodotto selezionato' : `${selected.size} prodott${selected.size === 1 ? 'o' : 'i'} selezionat${selected.size === 1 ? 'o' : 'i'}`}
+          </p>
+          <button onClick={onClose} className="px-3 py-2 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            Annulla
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={selected.size === 0}
+            className="px-4 py-2 bg-primary text-white text-xs font-medium rounded-lg disabled:opacity-40 transition-colors hover:bg-primary/90"
+          >
+            Aggiungi {selected.size > 0 ? `(${selected.size})` : ''}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Product picker modal ────────────────────────────────────────────────────
 
@@ -310,20 +448,21 @@ function ElementoCard({
   onMoveDown: () => void;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const [showCatalogPicker, setShowCatalogPicker] = useState(false);
 
   const tipoOptions =
     el.tipo === 'barra' ? TIPO_OPTIONS_BARRA :
     el.tipo === 'mensola' ? TIPO_OPTIONS_MENSOLA :
     TIPO_OPTIONS_FRONTALE;
 
-  function addItem() {
+  function addBlankItem() {
     const defaultTipo: TipoCapo = el.tipo === 'mensola' ? 'borsa' : el.tipo === 'frontale' ? 'abito' : 'top';
-    const newItem: ItemParete = {
-      id: nanoid(8),
-      tipo: defaultTipo,
-      pezzi: [],
-    };
+    const newItem: ItemParete = { id: nanoid(8), tipo: defaultTipo, pezzi: [] };
     onChange({ ...el, items: [...el.items, newItem] });
+  }
+
+  function addFromCatalog(items: ItemParete[]) {
+    onChange({ ...el, items: [...el.items, ...items] });
   }
 
   function updateItem(idx: number, updated: ItemParete) {
@@ -416,18 +555,32 @@ function ElementoCard({
             />
           ))}
           {(el.tipo !== 'frontale' || el.items.length === 0) && (
-            <button
-              type="button"
-              onClick={addItem}
-              className="w-full py-2 border border-dashed border-gray-200 rounded-xl text-xs text-gray-400 hover:border-gray-400 hover:text-gray-600 transition-colors flex items-center justify-center gap-1.5"
-            >
-              <Plus size={13} />
-              {el.tipo === 'barra' ? 'Aggiungi capo alla barra' :
-               el.tipo === 'mensola' ? 'Aggiungi elemento alla mensola' :
-               'Seleziona capo frontale'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowCatalogPicker(true)}
+                className="flex-1 py-2 bg-primary/5 border border-primary/20 rounded-xl text-xs text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5 font-medium"
+              >
+                <PackagePlus size={13} /> Importa dal catalogo
+              </button>
+              <button
+                type="button"
+                onClick={addBlankItem}
+                className="py-2 px-3 border border-dashed border-gray-200 rounded-xl text-xs text-gray-400 hover:border-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1.5"
+              >
+                <Plus size={13} /> Manuale
+              </button>
+            </div>
           )}
         </div>
+      )}
+
+      {showCatalogPicker && (
+        <CatalogPickerModal
+          elementoTipo={el.tipo}
+          onAdd={addFromCatalog}
+          onClose={() => setShowCatalogPicker(false)}
+        />
       )}
     </div>
   );
