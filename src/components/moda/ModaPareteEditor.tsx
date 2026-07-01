@@ -126,14 +126,27 @@ function productImageUrl(p: Product): string | undefined {
   return p.imageUrl ?? p.imageUrl2 ?? undefined;
 }
 
+// Returns true if the product is a clothing item (valid for barra appenderia)
+const ACCESSORY_REGEX = /bijou|bigiotteria|gioiell|collana|bracciale|orecchino|anello|spilla|pendente|charm|borsa|bag|clutch|tote|shopper|zaino|backpack|bauletto|pochette|marsupio|foulard|sciarpa|stola|cintura|cappello|guanti|occhiali|belt|hat|scarf|portafoglio|wallet/;
+function isAbbigliamento(p: Product): boolean {
+  const all = [(p.famiglia ?? ''), (p.sottofamiglia ?? ''), p.name].join(' ').toLowerCase();
+  return !ACCESSORY_REGEX.test(all);
+}
+
 function tipoFromProduct(p: Product, elementoTipo: TipoElementoParete): TipoCapo {
   const fam = (p.famiglia ?? '').toLowerCase();
   const sf = (p.sottofamiglia ?? '').toLowerCase();
   const name = p.name.toLowerCase();
   const all = fam + ' ' + sf + ' ' + name;
-  if (/bijou|bigiotteria|gioiell|collana|bracciale|orecchino|anello|spilla|pendente|charm/.test(all)) return 'accessorio';
-  if (/borsa|bag|clutch|tote|shopper|zaino|backpack|bauletto|pochette|marsupio/.test(all)) return 'borsa';
-  if (/foulard|sciarpa|stola|cintura|cappello|guanti|occhiali|belt|hat|scarf|accessori|portafoglio|wallet/.test(all)) return 'accessorio';
+  if (/bijou|bigiotteria|gioiell|collana|bracciale|orecchino|anello|spilla|pendente|charm/.test(all)) {
+    return elementoTipo === 'barra' ? 'top' : 'accessorio';
+  }
+  if (/borsa|bag|clutch|tote|shopper|zaino|backpack|bauletto|pochette|marsupio/.test(all)) {
+    return elementoTipo === 'barra' ? 'top' : 'borsa';
+  }
+  if (/foulard|sciarpa|stola|cintura|cappello|guanti|occhiali|belt|hat|scarf|accessori|portafoglio|wallet/.test(all)) {
+    return elementoTipo === 'barra' ? 'top' : 'accessorio';
+  }
   if (/abito|vestito|dress|tuta|jumpsuit/.test(all)) return 'abito';
   if (/giaccone|cappotto|giubbott|parka|blazer|trench|coat|jacket|mantella/.test(all)) return 'capospalla';
   if (/pantal|gonna|skirt|short|legging|trouser|culotte/.test(all)) return 'bottom';
@@ -275,10 +288,13 @@ function AddProductModal({
   }, [orders, selectedOrderId]);
 
   const sourceProducts = useMemo(() => {
-    if (sourceTab === 'carrello' && cartProductIds) return allProducts.filter((p) => cartProductIds.has(p.id));
-    if (sourceTab === 'ordine' && orderProductIds) return allProducts.filter((p) => orderProductIds.has(p.id));
-    return allProducts;
-  }, [allProducts, sourceTab, cartProductIds, orderProductIds]);
+    let base = allProducts;
+    // Barra appenderia: only clothing — no bags, accessories, bijou
+    if (elementoTipo === 'barra') base = base.filter(isAbbigliamento);
+    if (sourceTab === 'carrello' && cartProductIds) return base.filter((p) => cartProductIds.has(p.id));
+    if (sourceTab === 'ordine' && orderProductIds) return base.filter((p) => orderProductIds.has(p.id));
+    return base;
+  }, [allProducts, elementoTipo, sourceTab, cartProductIds, orderProductIds]);
 
   const filterOptions = useMemo(() => ({
     famiglie: [...new Set(allProducts.map((p) => p.famiglia).filter(Boolean) as string[])].sort(),
