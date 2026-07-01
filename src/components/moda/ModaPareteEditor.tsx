@@ -43,12 +43,12 @@ const BARRA_DIMS: DimensioneBarra[] = ['piccola', 'media', 'grande'];
 const MENSOLA_DIMS: DimensioneMensola[] = ['piccola', 'media', 'lunga'];
 
 // Visual proportions: 1 frontale = 1 mensola piccola = UNIT px; 5 capi di costa = 1 UNIT
-const UNIT = 60;
-const COSTA_W = 12;
-const FRONTALE_H = 90;
-const FRONTALE_TOP_H = 36;
-const FRONTALE_BOT_H = 54;
-const STRATO_H = 5;   // height of one folded garment layer on mensola
+const UNIT = 80;
+const COSTA_W = 16;
+const FRONTALE_H = 120;
+const FRONTALE_TOP_H = 48;
+const FRONTALE_BOT_H = 72;
+const STRATO_H = 7;
 const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: UNIT, media: UNIT * 2, lunga: UNIT * 3 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -281,7 +281,10 @@ function ItemCard({
           </div>
           <button type="button" onClick={() => setShowPicker(true)}
             className="flex items-center gap-1.5 text-2xs text-gray-400 hover:text-gray-600 transition-colors">
-            <Tag size={10} />
+            {item.imageUrl
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={item.imageUrl} alt="" className="w-6 h-6 object-cover rounded flex-shrink-0" />
+              : <Tag size={10} />}
             {item.productCode
               ? <span className="font-mono text-gray-600">{item.productCode} — {item.productName}</span>
               : <span>Collega prodotto</span>}
@@ -394,7 +397,15 @@ function FrontaleInlineEditor({
           );
         })}
       </div>
-      {item.productCode && <p className="text-2xs text-gray-400 font-mono truncate">{item.productCode}</p>}
+      {item.productCode && (
+        <div className="flex items-center gap-1">
+          {item.imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={item.imageUrl} alt="" className="w-5 h-5 object-cover rounded flex-shrink-0" />
+          )}
+          <p className="text-2xs text-gray-400 font-mono truncate">{item.productCode}</p>
+        </div>
+      )}
       {showPicker && (
         <ProductPickerModal
           onSelect={(p) => onChange({ ...item, productId: p.id, productCode: p.code, productName: p.name, imageUrl: p.imageUrl ?? undefined, coloreHex: hexFromProduct(p) ?? item.coloreHex })}
@@ -491,7 +502,7 @@ function ElementoCard({
   onChange: (u: ElementoParete) => void; onDelete: () => void;
   onMoveUp: () => void; onMoveDown: () => void;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [showCatalogPicker, setShowCatalogPicker] = useState(false);
 
   const tipoOptions = el.tipo === 'barra' ? TIPO_OPTIONS_BARRA : el.tipo === 'mensola' ? TIPO_OPTIONS_MENSOLA : TIPO_OPTIONS_FRONTALE;
@@ -620,6 +631,14 @@ function ElementoCard({
 
 // ─── Wall renderer ────────────────────────────────────────────────────────────
 
+function getElementPhotos(el: ElementoParete): Array<{ id: string; imageUrl: string }> {
+  return [...el.items, ...(el.mensolaTop?.items ?? [])]
+    .filter((it) => !!it.imageUrl)
+    .map((it) => ({ id: it.id, imageUrl: it.imageUrl! }));
+}
+
+const PHOTO_STRIP_H = 34;
+
 function WallRenderer({ config, onReorder }: { config: ElementoParete[]; onReorder: (c: ElementoParete[]) => void }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
@@ -648,30 +667,51 @@ function WallRenderer({ config, onReorder }: { config: ElementoParete[]; onReord
   }
 
   return (
-    <div className="p-4 h-full">
-      <div className="flex items-end gap-4 h-full">
-        {config.map((el, idx) => (
-          <div
-            key={el.id}
-            draggable
-            onDragStart={(e) => {
-              setDraggingId(el.id);
-              e.dataTransfer.setData('text/plain', el.id);
-              e.dataTransfer.effectAllowed = 'move';
-            }}
-            onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); if (draggingId && draggingId !== el.id) setOverIdx(idx); }}
-            onDragOver={(e) => { e.preventDefault(); }}
-            onDrop={(e) => handleDrop(e, idx)}
-            onDragEnd={() => { setDraggingId(null); setOverIdx(null); }}
-            className={[
-              'cursor-grab active:cursor-grabbing select-none transition-opacity flex-shrink-0',
-              draggingId === el.id ? 'opacity-30' : 'opacity-100',
-              overIdx === idx && draggingId !== el.id ? 'outline outline-2 outline-primary outline-offset-2 rounded' : '',
-            ].join(' ')}
-          >
-            <WallElementRenderer el={el} />
-          </div>
-        ))}
+    <div className="px-4 py-3 h-full">
+      <div className="flex gap-4 h-full">
+        {config.map((el, idx) => {
+          const photos = getElementPhotos(el);
+          return (
+            <div
+              key={el.id}
+              draggable
+              onDragStart={(e) => {
+                setDraggingId(el.id);
+                e.dataTransfer.setData('text/plain', el.id);
+                e.dataTransfer.effectAllowed = 'move';
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (draggingId && draggingId !== el.id) setOverIdx(idx);
+              }}
+              onDrop={(e) => handleDrop(e, idx)}
+              onDragEnd={() => { setDraggingId(null); setOverIdx(null); }}
+              style={{ height: '100%' }}
+              className={[
+                'cursor-grab active:cursor-grabbing select-none flex-shrink-0 flex flex-col transition-opacity',
+                draggingId === el.id ? 'opacity-30' : 'opacity-100',
+                overIdx === idx && draggingId !== el.id ? 'outline outline-2 outline-primary outline-offset-2 rounded' : '',
+              ].join(' ')}
+            >
+              {/* Wall element — fills available height, bottom-aligned */}
+              <div className="flex-1 flex items-end pb-2 min-h-0">
+                <WallElementRenderer el={el} />
+              </div>
+              {/* Photo strip — fixed height, scrolls with element */}
+              <div
+                className="flex-shrink-0 flex gap-0.5 border-t border-gray-100 pt-1"
+                style={{ height: PHOTO_STRIP_H }}
+              >
+                {photos.length > 0
+                  ? photos.slice(0, 8).map((ph) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={ph.id} src={ph.imageUrl} alt="" className="w-7 h-7 object-cover rounded-sm flex-shrink-0" />
+                    ))
+                  : <div style={{ width: 1 }} />}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -793,14 +833,14 @@ function MensolaRenderer({ config }: { config: MensolaInlineConfig }) {
               if (it.tipo === 'borsa') {
                 return (
                   <div key={it.id ?? i} className="flex-shrink-0 rounded-sm"
-                    style={{ backgroundColor: color, width: 36, height: 32 }}
+                    style={{ backgroundColor: color, width: 48, height: 42 }}
                     title={`Borsa (${it.pezzi.length}pz)`} />
                 );
               }
               if (it.tipo === 'accessorio') {
                 return (
                   <div key={it.id ?? i} className="flex-shrink-0 rounded-sm"
-                    style={{ backgroundColor: color, width: 22, height: 20 }}
+                    style={{ backgroundColor: color, width: 29, height: 26 }}
                     title={`Accessorio (${it.pezzi.length}pz)`} />
                 );
               }
@@ -835,7 +875,7 @@ function FrontaleSmall({ item }: { item: ItemParete }) {
 
 function CapoOnBarra({ item }: { item: ItemParete }) {
   const color = item.coloreHex ?? colorForTipo(item.tipo);
-  const h = item.tipo === 'abito' ? 72 : item.tipo === 'capospalla' ? 60 : 48;
+  const h = item.tipo === 'abito' ? 96 : item.tipo === 'capospalla' ? 80 : 64;
   const count = Math.max(1, item.pezzi.length);
   return (
     <div className="flex flex-shrink-0" style={{ gap: 1 }}
@@ -939,21 +979,6 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   const totalCapi = config.reduce((acc, el) => acc + el.items.length, 0);
   const totalPz = config.reduce((acc, el) => acc + totalePezzi(el.items), 0);
 
-  const allProductImages = useMemo(() => {
-    const seen = new Set<string>();
-    const result: Array<{ imageUrl: string; productCode?: string; productName?: string }> = [];
-    for (const el of config) {
-      for (const it of [...el.items, ...(el.mensolaTop?.items ?? [])]) {
-        const key = it.productId ?? it.id;
-        if (it.imageUrl && !seen.has(key)) {
-          seen.add(key);
-          result.push({ imageUrl: it.imageUrl, productCode: it.productCode, productName: it.productName });
-        }
-      }
-    }
-    return result;
-  }, [config]);
-
   if (isLoading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Loader2 size={24} className="animate-spin text-gray-300" /></div>;
   if (isError || !parete) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-sm text-gray-400">Layout non trovato</p></div>;
 
@@ -984,26 +1009,22 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
         </div>
       </div>
 
-      {/* Preview panel — sticky below header, 50 vh, landscape */}
+      {/* Preview panel — sticky below header, 40 vh, landscape */}
       <div className="sticky z-10 bg-white border-b border-gray-200 shadow-sm" style={{ top: 60 }}>
-        <div className="max-w-6xl mx-auto flex flex-col" style={{ height: '50vh' }}>
-          <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
-            <p className="text-xs text-gray-400 uppercase tracking-widest font-medium">Anteprima parete</p>
-            <p className="text-2xs text-gray-300">Trascina per riordinare</p>
+        <div className="w-full flex flex-col" style={{ height: '40vh' }}>
+          <div className="flex items-center gap-3 px-4 py-2 flex-shrink-0">
+            <p className="text-xs text-gray-400 uppercase tracking-widest font-medium flex-1">Anteprima parete</p>
+            <p className="text-2xs text-gray-300 hidden sm:block">Trascina per riordinare ·</p>
+            {(['barra', 'mensola', 'frontale'] as const).map((tipo) => (
+              <button key={tipo} type="button" onClick={() => addElemento(tipo)}
+                className="flex items-center gap-1 px-2.5 py-1 bg-cream text-primary border border-border rounded-lg text-2xs font-medium hover:bg-accent/10 transition-colors">
+                <Plus size={11} /> {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+              </button>
+            ))}
           </div>
           <div className="flex-1 min-h-0 border-t border-gray-100 overflow-x-auto overflow-y-hidden">
             <WallRenderer config={config} onReorder={handleConfigChange} />
           </div>
-          {allProductImages.length > 0 && (
-            <div className="flex-shrink-0 border-t border-gray-100 flex gap-2 px-4 py-2 overflow-x-auto" style={{ height: 52 }}>
-              {allProductImages.map((img, i) => (
-                <div key={i} className="flex-shrink-0" title={img.productCode ?? img.productName ?? ''}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.imageUrl} alt={img.productName ?? ''} className="w-8 h-8 object-cover rounded" />
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
@@ -1015,19 +1036,10 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
             onMoveUp={() => moveElemento(idx, idx - 1)} onMoveDown={() => moveElemento(idx, idx + 1)} />
         ))}
 
-        <div className="flex flex-wrap gap-2 pt-2">
-          {(['barra', 'mensola', 'frontale'] as const).map((tipo) => (
-            <button key={tipo} type="button" onClick={() => addElemento(tipo)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-cream text-primary border border-border rounded-xl text-xs font-medium hover:bg-accent/10 active:bg-accent/20 transition-colors">
-              <Plus size={13} /> {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
-            </button>
-          ))}
-        </div>
-
         {config.length === 0 && (
           <div className="py-10 text-center">
             <p className="text-sm text-gray-400">Costruisci il tuo layout</p>
-            <p className="text-xs mt-1 text-gray-300">Aggiungi barre appenderia, mensole ed esposizioni frontali</p>
+            <p className="text-xs mt-1 text-gray-300">Aggiungi barre appenderia, mensole ed esposizioni frontali usando i pulsanti in cima</p>
           </div>
         )}
       </div>
