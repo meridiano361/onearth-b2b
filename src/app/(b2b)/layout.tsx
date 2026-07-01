@@ -24,6 +24,8 @@ const CATALOG_FONT_MAP: Record<string, string> = {
 // Paths where the cart sidebar should not be shown (exact match only for home routes)
 const SIDEBAR_HIDDEN_PATHS = ['/catalog/orders', '/orders', '/catalog/destinazioni', '/moda/pareti'];
 const SIDEBAR_HIDDEN_EXACT = ['/catalog', '/home'];
+// Paths where <main> must be overflow-hidden (child manages its own scroll)
+const MAIN_CONTAINED_PATHS = ['/moda/pareti'];
 
 export default async function B2BLayout({
   children,
@@ -54,6 +56,7 @@ export default async function B2BLayout({
   const hideSidebar =
     SIDEBAR_HIDDEN_EXACT.includes(pathname) ||
     SIDEBAR_HIDDEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
+  const mainContained = MAIN_CONTAINED_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
 
   const previewData = getPreviewFromSession(session);
   const previewInfo = previewData
@@ -71,7 +74,7 @@ export default async function B2BLayout({
     <PreviewProvider value={previewInfo}>
       <SettingsProvider value={appSettings}>
         <div
-          className="min-h-screen bg-background flex flex-col"
+          className="h-dvh bg-background flex flex-col"
           style={{
             fontFamily: catalogFontFamily,
             '--color-bg': colori.sfondo,
@@ -86,7 +89,7 @@ export default async function B2BLayout({
           <Header session={session} />
 
           <div className="flex flex-1 overflow-hidden">
-            <main className="flex-1 overflow-y-auto pb-20">
+            <main className={`flex-1 ${mainContained ? 'overflow-hidden' : 'overflow-y-auto pb-20'}`}>
               {children}
             </main>
 

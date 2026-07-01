@@ -57,7 +57,7 @@ const FRONTALE_H = 120;
 const FRONTALE_TOP_H = 48;
 const FRONTALE_BOT_H = 72;
 const STRATO_H = 7;
-const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: UNIT, media: UNIT * 2, lunga: UNIT * 3 };
+const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: FRONTALE_W, media: UNIT * 2, lunga: UNIT * 3 };
 
 // ─── Color harmony (ruota cromatica integration) ─────────────────────────────
 
@@ -597,8 +597,8 @@ function ItemCard({
             </div>
             {/* action buttons */}
             <div className="flex gap-0.5 flex-shrink-0">
-              {onMoveLeft && <button type="button" onClick={onMoveLeft} disabled={!canMoveLeft} className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronLeft size={12} /></button>}
-              {onMoveRight && <button type="button" onClick={onMoveRight} disabled={!canMoveRight} className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronRight size={12} /></button>}
+              {onMoveLeft && <button type="button" onClick={onMoveLeft} disabled={!canMoveLeft} title="Sposta a sinistra" className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-25 transition-colors"><ChevronLeft size={13} /></button>}
+              {onMoveRight && <button type="button" onClick={onMoveRight} disabled={!canMoveRight} title="Sposta a destra" className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-25 transition-colors"><ChevronRight size={13} /></button>}
               <button type="button" onClick={onDelete} className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors"><X size={12} /></button>
             </div>
           </div>
