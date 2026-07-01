@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-01 (Visual: aggiungi prodotto con tab Tutti/Carrello/Ordine, filtri, scheda anagrafica, no codici)
+// AGGIORNATO: 2026-07-01 (Visual: blocchi colore in anteprima, foto allineate sotto barra, preview fissa definitiva)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
