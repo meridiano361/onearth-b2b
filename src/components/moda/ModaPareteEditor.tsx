@@ -6,12 +6,13 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Plus, X, Search, Loader2, ChevronLeft, ChevronRight,
   Trash2, Edit2, Check, Tag, PackagePlus, AlertTriangle, ZoomIn, ZoomOut,
+  SlidersHorizontal, ChevronDown,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type {
   PareteAttrezzata, ElementoParete, ItemParete,
   TipoCapo, TipoElementoParete, DimensioneMensola, DimensioneBarra,
-  MensolaInlineConfig, PosizioneMensola,
+  MensolaInlineConfig, PosizioneMensola, Cart, Order,
 } from '@/types';
 import type { Product } from '@/types';
 import { nanoid } from 'nanoid';
@@ -35,7 +36,6 @@ const TIPO_OPTIONS_BARRA: TipoCapo[] = ['capospalla', 'top', 'bottom', 'abito'];
 const TIPO_OPTIONS_MENSOLA: TipoCapo[] = ['borsa', 'accessorio', 'top', 'bottom', 'abito', 'altro'];
 const TIPO_OPTIONS_FRONTALE: TipoCapo[] = ['abito', 'capospalla', 'top', 'bottom', 'borsa', 'accessorio', 'altro'];
 
-// Full size range shown in ItemCard
 const TAGLIE_FULL = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'TU'];
 
 const BARRA_MAX_PZ: Record<DimensioneBarra, number> = { piccola: 24, media: 36, grande: 48 };
@@ -94,7 +94,6 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
-// Returns [complementare, analogo+30°, analogo-30°]
 function getColorHarmony(hex: string): string[] | null {
   if (!hex || !hex.startsWith('#') || hex.length < 7) return null;
   try {
@@ -111,6 +110,18 @@ function totalePezzi(items: ItemParete[]): number {
 
 function hexFromProduct(p: Product): string | undefined {
   return p.pantoneColors?.find((pc) => pc.isPrimary)?.hex_code ?? p.pantoneColors?.[0]?.hex_code;
+}
+
+// Uppercase the model name portion within the display name
+function formatProductName(p: Product): string {
+  if (!p.modello) return p.name;
+  const escaped = p.modello.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return p.name.replace(new RegExp(escaped, 'i'), p.modello.toUpperCase());
+}
+
+// Use imageUrl with imageUrl2 as fallback
+function productImageUrl(p: Product): string | undefined {
+  return p.imageUrl ?? p.imageUrl2 ?? undefined;
 }
 
 function tipoFromProduct(p: Product, elementoTipo: TipoElementoParete): TipoCapo {
@@ -135,40 +146,173 @@ function availableTaglieFromProduct(p: Product): string[] | undefined {
   return p.sizeVariants.map((sv) => sv.taglia.toUpperCase());
 }
 
-// ─── Catalog picker modal (multi-select) ─────────────────────────────────────
+// ─── Product sheet modal ──────────────────────────────────────────────────────
 
-function CatalogPickerModal({
+function ProductSheetModal({ item, onClose }: { item: ItemParete; onClose: () => void }) {
+  const { data, isLoading } = useQuery<{ data: Product }>({
+    queryKey: ['product-detail', item.productId],
+    queryFn: () => fetch(`/api/products/${item.productId}`).then((r) => r.json()),
+    enabled: !!item.productId,
+    staleTime: 120_000,
+  });
+
+  const product = data?.data;
+  const displayName = product ? formatProductName(product) : (item.productName ?? '—');
+  const img = product ? productImageUrl(product) : item.imageUrl;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="w-full max-w-sm bg-white border border-gray-200 rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[80vh] shadow-xl">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+          <p className="flex-1 text-sm font-semibold text-gray-900 truncate">{displayName}</p>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X size={18} /></button>
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+        ) : (
+          <div className="overflow-y-auto flex-1 p-4 space-y-4">
+            {img && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={img} alt={displayName} className="w-full max-h-48 object-contain rounded-lg border border-gray-100 bg-gray-50" />
+            )}
+            {product?.famiglia && (
+              <p className="text-xs text-gray-500">{[product.famiglia, product.sottofamiglia, product.colore].filter(Boolean).join(' · ')}</p>
+            )}
+
+            {product?.sizeVariants?.length ? (
+              <div>
+                <p className="text-xs font-medium text-gray-700 mb-2">Taglie e codici</p>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left py-1 text-gray-400 font-normal">Taglia</th>
+                      <th className="text-left py-1 text-gray-400 font-normal font-mono">Codice</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {product.sizeVariants.map((sv) => (
+                      <tr key={sv.codice} className="border-b border-gray-50">
+                        <td className="py-1.5 text-gray-700 font-medium">{sv.taglia.toUpperCase()}</td>
+                        <td className="py-1.5 text-gray-500 font-mono">{sv.codice}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : product?.code ? (
+              <div>
+                <p className="text-xs font-medium text-gray-700 mb-1">Codice</p>
+                <p className="text-sm font-mono text-gray-600">{product.code}</p>
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        <div className="px-4 py-3 border-t border-gray-100">
+          <button onClick={onClose} className="w-full py-2 text-xs text-gray-500 hover:text-gray-700 transition-colors">Chiudi</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Add product modal (multi-select, with source tabs + filters) ─────────────
+
+type SourceTab = 'tutti' | 'carrello' | 'ordine';
+
+function AddProductModal({
   elementoTipo, onAdd, onClose,
 }: {
   elementoTipo: TipoElementoParete; onAdd: (items: ItemParete[]) => void; onClose: () => void;
 }) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sourceTab, setSourceTab] = useState<SourceTab>('tutti');
+  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterFamiglia, setFilterFamiglia] = useState('');
+  const [filterClasse, setFilterClasse] = useState('');
+  const [filterSottoclasse, setFilterSottoclasse] = useState('');
+  const [filterColore, setFilterColore] = useState('');
 
-  const { data, isLoading } = useQuery<{ data: Product[] }>({
+  const { data: productsData, isLoading: productsLoading } = useQuery<{ data: Product[] }>({
     queryKey: ['moda-products-visual'],
     queryFn: () => fetch(`/api/products?active=true&gruppoMerceologico=Moda&limit=500`).then((r) => r.json()),
     staleTime: 60_000,
   });
 
-  const products = data?.data ?? [];
+  const { data: cartsData, isLoading: cartsLoading } = useQuery<{ data: Cart[] }>({
+    queryKey: ['catalog-carts-visual'],
+    queryFn: () => fetch('/api/catalog/carts').then((r) => r.json()),
+    staleTime: 30_000,
+    enabled: sourceTab === 'carrello',
+  });
+
+  const { data: ordersData, isLoading: ordersLoading } = useQuery<{ data: Order[]; total: number }>({
+    queryKey: ['orders-for-visual'],
+    queryFn: () => fetch('/api/orders?my=true&limit=30').then((r) => r.json()),
+    staleTime: 30_000,
+    enabled: sourceTab === 'ordine',
+  });
+
+  const allProducts = productsData?.data ?? [];
+  const orders = ordersData?.data ?? [];
+
+  const cartProductIds = useMemo<Set<string> | null>(() => {
+    const cart = cartsData?.data?.[0];
+    if (!cart) return null;
+    return new Set(cart.items.map((i) => i.productId));
+  }, [cartsData]);
+
+  const orderProductIds = useMemo<Set<string> | null>(() => {
+    if (!selectedOrderId) return null;
+    const order = orders.find((o) => o.id === selectedOrderId);
+    if (!order?.items?.length) return null;
+    return new Set(order.items.map((i) => i.productId));
+  }, [orders, selectedOrderId]);
+
+  const sourceProducts = useMemo(() => {
+    if (sourceTab === 'carrello' && cartProductIds) return allProducts.filter((p) => cartProductIds.has(p.id));
+    if (sourceTab === 'ordine' && orderProductIds) return allProducts.filter((p) => orderProductIds.has(p.id));
+    return allProducts;
+  }, [allProducts, sourceTab, cartProductIds, orderProductIds]);
+
+  const filterOptions = useMemo(() => ({
+    famiglie: [...new Set(allProducts.map((p) => p.famiglia).filter(Boolean) as string[])].sort(),
+    classi: [...new Set(allProducts.map((p) => p.classe).filter(Boolean) as string[])].sort(),
+    sottoclassi: [...new Set(allProducts.map((p) => p.sottoclasse).filter(Boolean) as string[])].sort(),
+    colori: [...new Set(allProducts.map((p) => p.colore).filter(Boolean) as string[])].sort(),
+  }), [allProducts]);
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return products.slice(0, 100);
-    const q = search.toLowerCase();
-    return products.filter((p) => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q));
-  }, [products, search]);
+    let list = sourceProducts;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((p) => formatProductName(p).toLowerCase().includes(q));
+    }
+    if (filterFamiglia) list = list.filter((p) => p.famiglia === filterFamiglia);
+    if (filterClasse) list = list.filter((p) => p.classe === filterClasse);
+    if (filterSottoclasse) list = list.filter((p) => p.sottoclasse === filterSottoclasse);
+    if (filterColore) list = list.filter((p) => p.colore === filterColore);
+    return list.slice(0, 200);
+  }, [sourceProducts, search, filterFamiglia, filterClasse, filterSottoclasse, filterColore]);
+
+  const activeFilters = [filterFamiglia, filterClasse, filterSottoclasse, filterColore].filter(Boolean).length;
 
   function toggle(id: string) {
     setSelected((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }
 
   function handleConfirm() {
-    const sel = products.filter((p) => selected.has(p.id));
+    const sel = allProducts.filter((p) => selected.has(p.id));
     const items: ItemParete[] = sel.map((p) => ({
       id: nanoid(8),
       tipo: tipoFromProduct(p, elementoTipo),
-      productId: p.id, productCode: p.code, productName: p.name,
-      imageUrl: p.imageUrl ?? undefined,
+      productId: p.id,
+      productCode: p.code,
+      productName: formatProductName(p),
+      imageUrl: productImageUrl(p),
       coloreHex: hexFromProduct(p),
       availableTaglie: availableTaglieFromProduct(p),
       pezzi: [],
@@ -177,48 +321,120 @@ function CatalogPickerModal({
     onClose();
   }
 
+  const isLoading = productsLoading || (sourceTab === 'carrello' && cartsLoading) || (sourceTab === 'ordine' && ordersLoading);
+
+  const tabLabel = (t: SourceTab) => ({ tutti: 'Tutti', carrello: 'Carrello', ordine: 'Ordine' }[t]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-lg bg-white border border-gray-200 rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[85vh] shadow-xl">
+      <div className="w-full max-w-lg bg-white border border-gray-200 rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[90vh] shadow-xl">
+        {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
           <PackagePlus size={16} className="text-gray-400 flex-shrink-0" />
-          <p className="flex-1 text-sm font-medium text-gray-900">Importa dal catalogo PE27</p>
+          <p className="flex-1 text-sm font-medium text-gray-900">Aggiungi prodotto</p>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
-        <div className="px-4 py-3 border-b border-gray-100">
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cerca per nome o codice…"
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-400" />
-          </div>
+
+        {/* Source tabs */}
+        <div className="flex px-4 pt-3 gap-1 flex-shrink-0">
+          {(['tutti', 'carrello', 'ordine'] as SourceTab[]).map((t) => (
+            <button key={t} type="button" onClick={() => setSourceTab(t)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${sourceTab === t ? 'bg-primary text-white' : 'text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
+              {tabLabel(t)}
+            </button>
+          ))}
         </div>
-        <div className="overflow-y-auto flex-1">
+
+        {/* Order selector */}
+        {sourceTab === 'ordine' && (
+          <div className="px-4 pt-2 flex-shrink-0">
+            {ordersLoading ? (
+              <div className="flex items-center gap-2 py-1"><Loader2 size={14} className="animate-spin text-gray-300" /><span className="text-xs text-gray-400">Carico ordini…</span></div>
+            ) : orders.length === 0 ? (
+              <p className="text-xs text-gray-400 py-1">Nessun ordine trovato</p>
+            ) : (
+              <select value={selectedOrderId} onChange={(e) => setSelectedOrderId(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:outline-none focus:border-gray-400">
+                <option value="">— Seleziona un ordine —</option>
+                {orders.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.orderNumber ?? o.id.slice(0, 8)} · {o.items?.length ?? 0} prodotti
+                    {o.destinazione?.nome ? ` · ${o.destinazione.nome}` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
+
+        {/* Search + filter toggle */}
+        <div className="px-4 pt-3 pb-2 flex-shrink-0 space-y-2">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cerca per nome…"
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-400" />
+            </div>
+            <button type="button" onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors flex-shrink-0 ${showFilters || activeFilters > 0 ? 'bg-primary/10 border-primary/30 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+              <SlidersHorizontal size={13} />
+              Filtri{activeFilters > 0 ? ` (${activeFilters})` : ''}
+              <ChevronDown size={11} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+
+          {/* Expanded filters */}
+          {showFilters && (
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: 'Famiglia', value: filterFamiglia, opts: filterOptions.famiglie, set: setFilterFamiglia },
+                { label: 'Colore', value: filterColore, opts: filterOptions.colori, set: setFilterColore },
+                { label: 'Classe', value: filterClasse, opts: filterOptions.classi, set: setFilterClasse },
+                { label: 'Sottoclasse', value: filterSottoclasse, opts: filterOptions.sottoclassi, set: setFilterSottoclasse },
+              ].map(({ label, value, opts, set }) => (
+                <select key={label} value={value} onChange={(e) => set(e.target.value)}
+                  className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-gray-400">
+                  <option value="">{label}…</option>
+                  {opts.map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Product list */}
+        <div className="overflow-y-auto flex-1 border-t border-gray-100">
           {isLoading ? (
             <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+          ) : sourceTab === 'ordine' && !selectedOrderId ? (
+            <p className="text-center py-8 text-xs text-gray-400">Seleziona un ordine per visualizzare i prodotti</p>
           ) : filtered.length === 0 ? (
             <p className="text-center py-8 text-xs text-gray-400">Nessun risultato</p>
           ) : filtered.map((p) => {
             const isChecked = selected.has(p.id);
+            const img = productImageUrl(p);
             return (
               <button key={p.id} onClick={() => toggle(p.id)}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left ${isChecked ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
                 <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${isChecked ? 'bg-primary border-primary' : 'border-gray-300'}`}>
                   {isChecked && <Check size={10} className="text-white" />}
                 </div>
-                {p.imageUrl
+                {img
                   // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={p.imageUrl} alt={p.name} className="w-9 h-9 object-cover rounded flex-shrink-0" />
+                  ? <img src={img} alt={p.name} className="w-9 h-9 object-cover rounded flex-shrink-0" />
                   : <div className="w-9 h-9 bg-gray-100 rounded flex-shrink-0" />}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-900 truncate">{p.name}</p>
-                  <p className="text-2xs text-gray-400 font-mono">{p.code}{p.famiglia ? ` · ${p.famiglia}` : ''}</p>
+                  <p className="text-xs font-medium text-gray-900 truncate">{formatProductName(p)}</p>
+                  <p className="text-2xs text-gray-400">{[p.famiglia, p.colore].filter(Boolean).join(' · ')}</p>
                 </div>
                 <span className="text-2xs text-gray-400 flex-shrink-0 font-medium">{TIPO_LABELS[tipoFromProduct(p, elementoTipo)]}</span>
               </button>
             );
           })}
         </div>
+
+        {/* Footer */}
         <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-3">
           <p className="flex-1 text-xs text-gray-400">
             {selected.size === 0 ? 'Nessun prodotto selezionato' : `${selected.size} prodott${selected.size === 1 ? 'o' : 'i'} selezionat${selected.size === 1 ? 'o' : 'i'}`}
@@ -234,7 +450,7 @@ function CatalogPickerModal({
   );
 }
 
-// ─── Product picker (single) ─────────────────────────────────────────────────
+// ─── Product picker (single, for re-linking) ─────────────────────────────────
 
 function ProductPickerModal({ onSelect, onClose }: { onSelect: (p: Product) => void; onClose: () => void }) {
   const [search, setSearch] = useState('');
@@ -247,7 +463,7 @@ function ProductPickerModal({ onSelect, onClose }: { onSelect: (p: Product) => v
   const filtered = useMemo(() => {
     if (!search.trim()) return products.slice(0, 80);
     const q = search.toLowerCase();
-    return products.filter((p) => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q));
+    return products.filter((p) => formatProductName(p).toLowerCase().includes(q));
   }, [products, search]);
 
   return (
@@ -261,7 +477,7 @@ function ProductPickerModal({ onSelect, onClose }: { onSelect: (p: Product) => v
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cerca per nome o codice…"
+              placeholder="Cerca per nome…"
               className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-400" />
           </div>
         </div>
@@ -270,19 +486,22 @@ function ProductPickerModal({ onSelect, onClose }: { onSelect: (p: Product) => v
             <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
           ) : filtered.length === 0 ? (
             <p className="text-center py-8 text-xs text-gray-400">Nessun risultato</p>
-          ) : filtered.map((p) => (
-            <button key={p.id} onClick={() => { onSelect(p); onClose(); }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left">
-              {p.imageUrl
-                // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={p.imageUrl} alt={p.name} className="w-8 h-8 object-cover rounded flex-shrink-0" />
-                : <div className="w-8 h-8 bg-gray-100 rounded flex-shrink-0" />}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-900 truncate">{p.name}</p>
-                <p className="text-2xs text-gray-400 font-mono">{p.code}</p>
-              </div>
-            </button>
-          ))}
+          ) : filtered.map((p) => {
+            const img = productImageUrl(p);
+            return (
+              <button key={p.id} onClick={() => { onSelect(p); onClose(); }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left">
+                {img
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={img} alt={p.name} className="w-8 h-8 object-cover rounded flex-shrink-0" />
+                  : <div className="w-8 h-8 bg-gray-100 rounded flex-shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-900 truncate">{formatProductName(p)}</p>
+                  <p className="text-2xs text-gray-400">{[p.famiglia, p.colore].filter(Boolean).join(' · ')}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
         <div className="px-4 py-3 border-t border-gray-100">
           <button onClick={onClose} className="w-full text-xs text-gray-400 hover:text-gray-600 transition-colors">
@@ -305,6 +524,7 @@ function ItemCard({
   canMoveLeft?: boolean; canMoveRight?: boolean;
 }) {
   const [showPicker, setShowPicker] = useState(false);
+  const [showSheet, setShowSheet] = useState(false);
   const color = item.coloreHex ?? colorForTipo(item.tipo);
   const harmony = item.coloreHex ? getColorHarmony(item.coloreHex) : null;
   const activeTaglie = new Set(item.pezzi.map((p) => p.taglia));
@@ -326,7 +546,6 @@ function ItemCard({
         <div className="w-1 self-stretch rounded-full flex-shrink-0 mt-0.5" style={{ backgroundColor: color, minHeight: 24 }} />
         <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-center gap-1 flex-wrap">
-            {/* tipo pills */}
             <div className="flex gap-1 flex-wrap">
               {tipoOptions.map((t) => (
                 <button key={t} type="button" onClick={() => onChange({ ...item, tipo: t })}
@@ -366,20 +585,36 @@ function ItemCard({
             </div>
           </div>
 
-          {/* Row 2: product link + pz count */}
-          <button type="button" onClick={() => setShowPicker(true)}
-            className="flex items-center gap-1.5 text-2xs text-gray-400 hover:text-gray-600 transition-colors w-full text-left">
+          {/* Row 2: product thumbnail + name (clickable → sheet) or link-to-catalog */}
+          <div className="flex items-center gap-1.5">
             {item.imageUrl
               // eslint-disable-next-line @next/next/no-img-element
               ? <img src={item.imageUrl} alt="" className="w-5 h-5 object-cover rounded flex-shrink-0" />
-              : <Tag size={10} className="flex-shrink-0" />}
-            {item.productCode
-              ? <span className="font-mono text-gray-600 truncate">{item.productCode} — {item.productName}</span>
-              : <span>Collega prodotto dal catalogo</span>}
-            {item.pezzi.length > 0 && <span className="ml-auto text-gray-300 flex-shrink-0">{item.pezzi.length} pz</span>}
-          </button>
+              : <Tag size={10} className="text-gray-300 flex-shrink-0" />}
+            {item.productName ? (
+              <button type="button" onClick={() => setShowSheet(true)}
+                className="flex-1 text-2xs text-gray-600 hover:text-primary hover:underline transition-colors text-left truncate">
+                {item.productName}
+              </button>
+            ) : (
+              <button type="button" onClick={() => setShowPicker(true)}
+                className="flex-1 text-2xs text-gray-400 hover:text-gray-600 transition-colors text-left">
+                Collega prodotto dal catalogo
+              </button>
+            )}
+            <div className="flex gap-1 flex-shrink-0 ml-auto">
+              {item.productName && (
+                <button type="button" onClick={() => setShowPicker(true)}
+                  title="Cambia prodotto"
+                  className="text-gray-300 hover:text-gray-500 transition-colors">
+                  <Edit2 size={10} />
+                </button>
+              )}
+              {item.pezzi.length > 0 && <span className="text-2xs text-gray-300">{item.pezzi.length} pz</span>}
+            </div>
+          </div>
 
-          {/* Row 3: color harmony — ruota cromatica integration */}
+          {/* Row 3: color harmony */}
           {harmony && (
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full border border-white/50 shadow-sm flex-shrink-0"
@@ -404,13 +639,16 @@ function ItemCard({
         <ProductPickerModal
           onSelect={(p) => onChange({
             ...item,
-            productId: p.id, productCode: p.code, productName: p.name,
-            imageUrl: p.imageUrl ?? undefined,
+            productId: p.id, productCode: p.code, productName: formatProductName(p),
+            imageUrl: productImageUrl(p),
             coloreHex: hexFromProduct(p) ?? item.coloreHex,
             availableTaglie: availableTaglieFromProduct(p),
           })}
           onClose={() => setShowPicker(false)}
         />
+      )}
+      {showSheet && item.productId && (
+        <ProductSheetModal item={item} onClose={() => setShowSheet(false)} />
       )}
     </div>
   );
@@ -495,20 +733,14 @@ function FrontaleInlineEditor({
           );
         })}
       </div>
-      {item.productCode && (
-        <div className="flex items-center gap-1">
-          {item.imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.imageUrl} alt="" className="w-4 h-4 object-cover rounded flex-shrink-0" />
-          )}
-          <p className="text-2xs text-gray-400 font-mono truncate">{item.productCode}</p>
-        </div>
+      {item.productName && (
+        <p className="text-2xs text-gray-400 truncate">{item.productName}</p>
       )}
       {showPicker && (
         <ProductPickerModal
           onSelect={(p) => onChange({
-            ...item, productId: p.id, productCode: p.code, productName: p.name,
-            imageUrl: p.imageUrl ?? undefined,
+            ...item, productId: p.id, productCode: p.code, productName: formatProductName(p),
+            imageUrl: productImageUrl(p),
             coloreHex: hexFromProduct(p) ?? item.coloreHex,
             availableTaglie: availableTaglieFromProduct(p),
           })}
@@ -583,9 +815,9 @@ function MensolaInlineEditor({
       ))}
       <button type="button" onClick={() => setShowCatalog(true)}
         className="w-full py-1.5 bg-white border border-gray-200 rounded-lg text-2xs text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1 font-medium">
-        <PackagePlus size={11} /> Importa dal catalogo
+        <PackagePlus size={11} /> Aggiungi prodotto
       </button>
-      {showCatalog && <CatalogPickerModal elementoTipo="mensola" onAdd={addFromCatalog} onClose={() => setShowCatalog(false)} />}
+      {showCatalog && <AddProductModal elementoTipo="mensola" onAdd={addFromCatalog} onClose={() => setShowCatalog(false)} />}
     </div>
   );
 }
@@ -686,7 +918,7 @@ function ElementoCard({
               <button type="button" onClick={() => setShowCatalogPicker(true)}
                 className="w-full py-2 bg-primary/5 border border-primary/20 rounded-xl text-xs text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5 font-medium">
                 <PackagePlus size={13} />
-                {isFrontale && el.items.length === 1 ? 'Aggiungi secondo capo' : 'Importa dal catalogo'}
+                {isFrontale && el.items.length === 1 ? 'Aggiungi secondo capo' : 'Aggiungi prodotto'}
               </button>
             )}
             {isBarra && (
@@ -715,7 +947,7 @@ function ElementoCard({
         </div>
       )}
       {showCatalogPicker && (
-        <CatalogPickerModal elementoTipo={el.tipo} onAdd={addFromCatalog} onClose={() => setShowCatalogPicker(false)} />
+        <AddProductModal elementoTipo={el.tipo} onAdd={addFromCatalog} onClose={() => setShowCatalogPicker(false)} />
       )}
     </div>
   );
@@ -952,7 +1184,7 @@ function CapoOnBarra({ item }: { item: ItemParete }) {
   const count = Math.max(1, item.pezzi.length);
   return (
     <div className="flex flex-shrink-0" style={{ gap: 1 }}
-      title={`${TIPO_LABELS[item.tipo]}${item.productCode ? ` — ${item.productCode}` : ''} · ${item.pezzi.length}pz`}>
+      title={`${TIPO_LABELS[item.tipo]}${item.productName ? ` — ${item.productName}` : ''} · ${item.pezzi.length}pz`}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex flex-col items-center" style={{ width: COSTA_W }}>
           <div className="w-1 h-1.5 bg-gray-400 rounded-full" />
