@@ -135,10 +135,13 @@ export interface ItemParete {
   pezzi: PezzoParete[];
 }
 
+export type PosizioneMensola = 'sopra' | 'sotto' | 'fianco';
+
 export interface MensolaInlineConfig {
   dimensione: DimensioneMensola;
   items: ItemParete[];
   offsetX?: number;
+  posizione?: PosizioneMensola;
 }
 
 export interface ElementoParete {

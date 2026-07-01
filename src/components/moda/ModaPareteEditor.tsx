@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import type {
   PareteAttrezzata, ElementoParete, ItemParete,
   TipoCapo, TipoElementoParete, DimensioneMensola, DimensioneBarra,
-  MensolaInlineConfig,
+  MensolaInlineConfig, PosizioneMensola,
 } from '@/types';
 import type { Product } from '@/types';
 import { nanoid } from 'nanoid';
@@ -435,9 +435,10 @@ function MensolaInlineEditor({
 
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
-        <p className="text-xs font-medium text-amber-800 flex-1">Mensola sopra</p>
+        <p className="text-xs font-medium text-amber-800">Mensola</p>
+        {/* dimensione */}
         <div className="flex gap-1">
           {MENSOLA_DIMS.map((d) => (
             <button key={d} type="button" onClick={() => onChange({ ...config, dimensione: d })}
@@ -446,12 +447,22 @@ function MensolaInlineEditor({
             </button>
           ))}
         </div>
-        <div className="flex gap-0.5">
+        {/* posizione */}
+        <div className="flex gap-1">
+          {(['sopra', 'sotto', 'fianco'] as PosizioneMensola[]).map((p) => (
+            <button key={p} type="button" onClick={() => onChange({ ...config, posizione: p })}
+              className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${(config.posizione ?? 'sopra') === p ? 'bg-amber-600 text-white' : 'text-amber-600 border border-amber-200 hover:bg-amber-100'}`}>
+              {p}
+            </button>
+          ))}
+        </div>
+        {/* offset */}
+        <div className="flex gap-0.5 ml-auto">
           <button type="button" onClick={() => onChange({ ...config, offsetX: Math.max(0, (config.offsetX ?? 0) - COSTA_W) })}
             className="w-5 h-5 flex items-center justify-center text-amber-400 hover:text-amber-700 disabled:opacity-20 transition-colors"
-            disabled={(config.offsetX ?? 0) === 0} title="Sposta sinistra"><ChevronLeft size={11} /></button>
+            disabled={(config.offsetX ?? 0) === 0}><ChevronLeft size={11} /></button>
           <button type="button" onClick={() => onChange({ ...config, offsetX: (config.offsetX ?? 0) + COSTA_W })}
-            className="w-5 h-5 flex items-center justify-center text-amber-400 hover:text-amber-700 transition-colors" title="Sposta destra"><ChevronRight size={11} /></button>
+            className="w-5 h-5 flex items-center justify-center text-amber-400 hover:text-amber-700 transition-colors"><ChevronRight size={11} /></button>
         </div>
         <button type="button" onClick={onRemove} className="text-amber-300 hover:text-red-400 transition-colors"><X size={13} /></button>
       </div>
@@ -626,28 +637,53 @@ function WallRenderer({ config }: { config: ElementoParete[] }) {
   );
 }
 
+function MensolaBlock({ config }: { config: MensolaInlineConfig }) {
+  return (
+    <div style={{ marginLeft: config.offsetX ?? 0 }}>
+      <MensolaRenderer config={config} />
+    </div>
+  );
+}
+
 function WallElementRenderer({ el }: { el: ElementoParete }) {
+  const pos = el.mensolaTop?.posizione ?? 'sopra';
+
   if (el.tipo === 'barra') {
     const dim = (el.dimensione ?? 'media') as DimensioneBarra;
     const pzTot = totalePezzi(el.items);
     const max = BARRA_MAX_PZ[dim];
     const over = pzTot > max;
-    return (
-      <div className="flex flex-col items-start flex-shrink-0">
-        {el.mensolaTop && (
-          <div style={{ marginLeft: el.mensolaTop.offsetX ?? 0 }}>
-            <MensolaRenderer config={el.mensolaTop} />
-          </div>
-        )}
-        <div style={{ marginLeft: el.offsetX ?? 0, marginTop: el.mensolaTop ? 12 : 0 }}>
-          <div className={`h-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`}
-            style={{ minWidth: UNIT }} />
-          <div className="flex items-start" style={{ gap: 1, minHeight: 48, minWidth: UNIT }}>
-            {el.items.length === 0
-              ? <div style={{ minWidth: UNIT }} />
-              : el.items.map((it, i) => <CapoOnBarra key={it.id ?? i} item={it} />)}
-          </div>
+
+    const barraCore = (
+      <div style={{ marginLeft: el.offsetX ?? 0 }}>
+        <div className={`h-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`} style={{ minWidth: UNIT }} />
+        <div className="flex items-start" style={{ gap: 1, minHeight: 48, minWidth: UNIT }}>
+          {el.items.length === 0
+            ? <div style={{ minWidth: UNIT }} />
+            : el.items.map((it, i) => <CapoOnBarra key={it.id ?? i} item={it} />)}
         </div>
+      </div>
+    );
+
+    if (!el.mensolaTop) return <div className="flex-shrink-0">{barraCore}</div>;
+
+    if (pos === 'sopra') return (
+      <div className="flex flex-col items-start flex-shrink-0">
+        <MensolaBlock config={el.mensolaTop} />
+        <div style={{ marginTop: 12 }}>{barraCore}</div>
+      </div>
+    );
+    if (pos === 'sotto') return (
+      <div className="flex flex-col items-start flex-shrink-0">
+        {barraCore}
+        <div style={{ marginTop: 12 }}><MensolaBlock config={el.mensolaTop} /></div>
+      </div>
+    );
+    // fianco — mensola centrata verticalmente accanto alla barra
+    return (
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {barraCore}
+        <MensolaBlock config={el.mensolaTop} />
       </div>
     );
   }
@@ -655,7 +691,7 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
   if (el.tipo === 'mensola') {
     return (
       <div className="flex-shrink-0">
-        <MensolaRenderer config={{ dimensione: (el.dimensione as DimensioneMensola) ?? 'media', items: el.items }} />
+        <MensolaRenderer config={{ dimensione: (el.dimensione as DimensioneMensola) ?? 'media', items: el.items, posizione: 'sopra' }} />
       </div>
     );
   }
@@ -663,26 +699,41 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
   if (el.tipo === 'frontale') {
     const item1 = el.items[0];
     const item2 = el.items[1];
-    return (
-      <div className="flex flex-col items-start flex-shrink-0" style={{ marginLeft: el.offsetX ?? 0 }}>
-        {el.mensolaTop && (
-          <div style={{ marginLeft: el.mensolaTop.offsetX ?? 0 }}>
-            <MensolaRenderer config={el.mensolaTop} />
-          </div>
-        )}
-        <div style={{ marginTop: el.mensolaTop ? 12 : 0 }}>
-          {item2 ? (
-            <div style={{ width: UNIT }}>
-              <div className="rounded-t border border-b-0 border-gray-200"
-                style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_TOP_H }} />
-              <div className="rounded-b border border-gray-200"
-                style={{ backgroundColor: item2.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_BOT_H }} />
-            </div>
-          ) : (
-            <div className="rounded border border-gray-200"
-              style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_H }} />
-          )}
-        </div>
+
+    const frontaleCore = item2 ? (
+      <div style={{ width: UNIT }}>
+        <div className="rounded-t border border-b-0 border-gray-200"
+          style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_TOP_H }} />
+        <div className="rounded-b border border-gray-200"
+          style={{ backgroundColor: item2.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_BOT_H }} />
+      </div>
+    ) : (
+      <div className="rounded border border-gray-200"
+        style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_H }} />
+    );
+
+    const wrapper = (children: React.ReactNode) => (
+      <div className="flex-shrink-0" style={{ marginLeft: el.offsetX ?? 0 }}>{children}</div>
+    );
+
+    if (!el.mensolaTop) return wrapper(frontaleCore);
+
+    if (pos === 'sopra') return wrapper(
+      <div className="flex flex-col items-start">
+        <MensolaBlock config={el.mensolaTop} />
+        <div style={{ marginTop: 12 }}>{frontaleCore}</div>
+      </div>
+    );
+    if (pos === 'sotto') return wrapper(
+      <div className="flex flex-col items-start">
+        {frontaleCore}
+        <div style={{ marginTop: 12 }}><MensolaBlock config={el.mensolaTop} /></div>
+      </div>
+    );
+    return wrapper(
+      <div className="flex items-center gap-2">
+        {frontaleCore}
+        <MensolaBlock config={el.mensolaTop} />
       </div>
     );
   }
