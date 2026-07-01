@@ -115,6 +115,42 @@ export interface ProductPantoneEntry {
   isPrimary: boolean;
 }
 
+export type TipoElementoParete = 'barra' | 'mensola' | 'frontale';
+export type DimensioneMensola = 'piccola' | 'media' | 'lunga';
+export type TipoCapo = 'top' | 'bottom' | 'abito' | 'capospalla' | 'borsa' | 'accessorio' | 'altro';
+
+export interface PezzoParete {
+  taglia: string;
+}
+
+export interface ItemParete {
+  id: string;
+  tipo: TipoCapo;
+  productId?: string;
+  productCode?: string;
+  productName?: string;
+  imageUrl?: string;
+  coloreHex?: string;
+  pezzi: PezzoParete[];
+}
+
+export interface ElementoParete {
+  id: string;
+  tipo: TipoElementoParete;
+  dimensione?: DimensioneMensola;
+  items: ItemParete[];
+}
+
+export interface PareteAttrezzata {
+  id: string;
+  nome: string;
+  collezione: string;
+  ordine: number;
+  configurazione: ElementoParete[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ClassificazioneValore {
   id: string;
   tipo: string;

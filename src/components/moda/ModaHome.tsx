@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { Grid3x3, Heart, ShoppingCart, Package2, Palette, HelpCircle, ArrowLeft, ChevronRight, Clock, Lock } from 'lucide-react';
+import { Grid3x3, Heart, ShoppingCart, Package2, Palette, HelpCircle, ArrowLeft, ChevronRight, Clock, Lock, Layout } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 
 const COLLECTION_ITEMS = [
   { href: '/moda/catalogo',        icon: Grid3x3,     label: 'Catalogo',        description: 'Sfoglia tutti i prodotti PE27' },
   { href: '/moda/preferiti',       icon: Heart,        label: 'Preferiti',       description: 'I tuoi prodotti preferiti'     },
   { href: '/moda/ruota-cromatica', icon: Palette,      label: 'Ruota Cromatica', description: 'Abbinamenti cromatici e visual merchandising' },
+  { href: '/moda/pareti',          icon: Layout,       label: 'Pareti Attrezzate', description: 'Simula l\'esposizione in negozio' },
   { href: '/moda/carrelli',        icon: ShoppingCart, label: 'Carrelli',        description: 'I tuoi carrelli attivi'        },
   { href: '/moda/ordini',          icon: Package2,     label: 'Ordini',          description: 'I tuoi ordini PE27'            },
 ];
