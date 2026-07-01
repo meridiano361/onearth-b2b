@@ -637,13 +637,13 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
         <div className="flex items-end" style={{ gap: 2 }}>
           {el.frontaleLeft && <FrontaleSmall item={el.frontaleLeft} />}
           <div>
-            <div className="flex items-end" style={{ gap: 1, minHeight: 48, minWidth: UNIT }}>
+            <div className={`h-0.5 mb-0 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`}
+              style={{ minWidth: UNIT }} />
+            <div className="flex items-start" style={{ gap: 1, minHeight: 48, minWidth: UNIT }}>
               {el.items.length === 0
-                ? <p className="text-2xs text-gray-300 italic" style={{ minWidth: UNIT }}>vuota</p>
+                ? <div style={{ minWidth: UNIT }} />
                 : el.items.map((it, i) => <CapoOnBarra key={it.id ?? i} item={it} />)}
             </div>
-            <div className={`h-0.5 mt-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`}
-              style={{ minWidth: UNIT }} />
           </div>
           {el.frontaleRight && <FrontaleSmall item={el.frontaleRight} />}
         </div>
@@ -704,11 +704,16 @@ function FrontaleSmall({ item }: { item: ItemParete }) {
 function CapoOnBarra({ item }: { item: ItemParete }) {
   const color = item.coloreHex ?? colorForTipo(item.tipo);
   const h = item.tipo === 'abito' ? 72 : item.tipo === 'capospalla' ? 60 : 48;
+  const count = Math.max(1, item.pezzi.length);
   return (
-    <div className="flex flex-col items-center flex-shrink-0" style={{ width: COSTA_W }}
-      title={`${TIPO_LABELS[item.tipo]}${item.productCode ? ` — ${item.productCode}` : ''} (${item.pezzi.length}pz)`}>
-      <div className="w-1 h-1.5 bg-gray-500 rounded-full" />
-      <div className="rounded-sm" style={{ backgroundColor: color, width: COSTA_W - 2, height: h }} />
+    <div className="flex flex-shrink-0" style={{ gap: 1 }}
+      title={`${TIPO_LABELS[item.tipo]}${item.productCode ? ` — ${item.productCode}` : ''} · ${item.pezzi.length}pz`}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="flex flex-col items-center" style={{ width: COSTA_W }}>
+          <div className="w-1 h-1.5 bg-gray-400 rounded-full" />
+          <div className="rounded-sm" style={{ backgroundColor: color, width: COSTA_W - 2, height: h }} />
+        </div>
+      ))}
     </div>
   );
 }
