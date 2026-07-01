@@ -133,6 +133,7 @@ export interface ItemParete {
   imageUrl?: string;
   coloreHex?: string;
   pezzi: PezzoParete[];
+  availableTaglie?: string[]; // from product sizeVariants; undefined = all sizes selectable
 }
 
 export type PosizioneMensola = 'sopra' | 'sotto' | 'fianco';

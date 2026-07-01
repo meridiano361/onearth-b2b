@@ -35,14 +35,13 @@ const TIPO_OPTIONS_BARRA: TipoCapo[] = ['capospalla', 'top', 'bottom', 'abito'];
 const TIPO_OPTIONS_MENSOLA: TipoCapo[] = ['borsa', 'accessorio', 'top', 'bottom', 'abito', 'altro'];
 const TIPO_OPTIONS_FRONTALE: TipoCapo[] = ['abito', 'capospalla', 'top', 'bottom', 'borsa', 'accessorio', 'altro'];
 
-const TAGLIE_ABBIGLIAMENTO = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'TU'];
-const TAGLIE_BORSE = ['TU', 'SMALL', 'MEDIUM', 'LARGE'];
+// Full size range shown in ItemCard
+const TAGLIE_FULL = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'TU'];
 
 const BARRA_MAX_PZ: Record<DimensioneBarra, number> = { piccola: 24, media: 36, grande: 48 };
 const BARRA_DIMS: DimensioneBarra[] = ['piccola', 'media', 'grande'];
 const MENSOLA_DIMS: DimensioneMensola[] = ['piccola', 'media', 'lunga'];
 
-// Composition suggestion patterns: each entry = [tipo, numPezzi]
 const BARRA_PATTERN: Record<DimensioneBarra, TipoCapo[]> = {
   piccola: ['top', 'bottom', 'top', 'bottom', 'top', 'bottom'],
   media:   ['top', 'top', 'bottom', 'top', 'top', 'bottom', 'top', 'top', 'bottom'],
@@ -51,12 +50,58 @@ const BARRA_PATTERN: Record<DimensioneBarra, TipoCapo[]> = {
 
 const UNIT = 80;
 const COSTA_W = 16;
-const FRONTALE_W = COSTA_W * 3; // 48px = larghezza di 3 capi di costa
+const FRONTALE_W = COSTA_W * 3;
 const FRONTALE_H = 120;
 const FRONTALE_TOP_H = 48;
 const FRONTALE_BOT_H = 72;
 const STRATO_H = 7;
 const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: UNIT, media: UNIT * 2, lunga: UNIT * 3 };
+
+// ─── Color harmony (ruota cromatica integration) ─────────────────────────────
+
+function hexToHsl(hex: string): [number, number, number] {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    h = max === r ? ((g - b) / d + (g < b ? 6 : 0)) / 6
+      : max === g ? ((b - r) / d + 2) / 6
+      : ((r - g) / d + 4) / 6;
+  }
+  return [h * 360, s, l];
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  h = ((h % 360) + 360) % 360;
+  const hk = h / 360;
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const toC = (t: number) => {
+    t = ((t % 1) + 1) % 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  const r = Math.round(toC(hk + 1 / 3) * 255);
+  const g = Math.round(toC(hk) * 255);
+  const b = Math.round(toC(hk - 1 / 3) * 255);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+// Returns [complementare, analogo+30°, analogo-30°]
+function getColorHarmony(hex: string): string[] | null {
+  if (!hex || !hex.startsWith('#') || hex.length < 7) return null;
+  try {
+    const [h, s, l] = hexToHsl(hex);
+    return [hslToHex(h + 180, s, l), hslToHex(h + 30, s, l), hslToHex(h - 30, s, l)];
+  } catch { return null; }
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -85,16 +130,17 @@ function tipoFromProduct(p: Product, elementoTipo: TipoElementoParete): TipoCapo
   return 'top';
 }
 
+function availableTaglieFromProduct(p: Product): string[] | undefined {
+  if (!p.sizeVariants?.length) return undefined;
+  return p.sizeVariants.map((sv) => sv.taglia.toUpperCase());
+}
+
 // ─── Catalog picker modal (multi-select) ─────────────────────────────────────
 
 function CatalogPickerModal({
-  elementoTipo,
-  onAdd,
-  onClose,
+  elementoTipo, onAdd, onClose,
 }: {
-  elementoTipo: TipoElementoParete;
-  onAdd: (items: ItemParete[]) => void;
-  onClose: () => void;
+  elementoTipo: TipoElementoParete; onAdd: (items: ItemParete[]) => void; onClose: () => void;
 }) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -113,11 +159,7 @@ function CatalogPickerModal({
   }, [products, search]);
 
   function toggle(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+    setSelected((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }
 
   function handleConfirm() {
@@ -128,6 +170,7 @@ function CatalogPickerModal({
       productId: p.id, productCode: p.code, productName: p.name,
       imageUrl: p.imageUrl ?? undefined,
       coloreHex: hexFromProduct(p),
+      availableTaglie: availableTaglieFromProduct(p),
       pezzi: [],
     }));
     onAdd(items);
@@ -163,12 +206,10 @@ function CatalogPickerModal({
                 <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${isChecked ? 'bg-primary border-primary' : 'border-gray-300'}`}>
                   {isChecked && <Check size={10} className="text-white" />}
                 </div>
-                {p.imageUrl ? (
+                {p.imageUrl
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.imageUrl} alt={p.name} className="w-9 h-9 object-cover rounded flex-shrink-0" />
-                ) : (
-                  <div className="w-9 h-9 bg-gray-100 rounded flex-shrink-0" />
-                )}
+                  ? <img src={p.imageUrl} alt={p.name} className="w-9 h-9 object-cover rounded flex-shrink-0" />
+                  : <div className="w-9 h-9 bg-gray-100 rounded flex-shrink-0" />}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-gray-900 truncate">{p.name}</p>
                   <p className="text-2xs text-gray-400 font-mono">{p.code}{p.famiglia ? ` · ${p.famiglia}` : ''}</p>
@@ -232,10 +273,10 @@ function ProductPickerModal({ onSelect, onClose }: { onSelect: (p: Product) => v
           ) : filtered.map((p) => (
             <button key={p.id} onClick={() => { onSelect(p); onClose(); }}
               className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left">
-              {p.imageUrl ? (
+              {p.imageUrl
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.imageUrl} alt={p.name} className="w-8 h-8 object-cover rounded flex-shrink-0" />
-              ) : <div className="w-8 h-8 bg-gray-100 rounded flex-shrink-0" />}
+                ? <img src={p.imageUrl} alt={p.name} className="w-8 h-8 object-cover rounded flex-shrink-0" />
+                : <div className="w-8 h-8 bg-gray-100 rounded flex-shrink-0" />}
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-900 truncate">{p.name}</p>
                 <p className="text-2xs text-gray-400 font-mono">{p.code}</p>
@@ -264,10 +305,13 @@ function ItemCard({
   canMoveLeft?: boolean; canMoveRight?: boolean;
 }) {
   const [showPicker, setShowPicker] = useState(false);
-  const taglieSuggested = item.tipo === 'borsa' || item.tipo === 'accessorio' ? TAGLIE_BORSE : TAGLIE_ABBIGLIAMENTO;
+  const color = item.coloreHex ?? colorForTipo(item.tipo);
+  const harmony = item.coloreHex ? getColorHarmony(item.coloreHex) : null;
   const activeTaglie = new Set(item.pezzi.map((p) => p.taglia));
+  const isAvailable = (t: string) => !item.availableTaglie?.length || item.availableTaglie.includes(t);
 
   function toggleTaglia(t: string) {
+    if (!isAvailable(t)) return;
     onChange({ ...item, pezzi: activeTaglie.has(t) ? item.pezzi.filter((p) => p.taglia !== t) : [...item.pezzi, { taglia: t }] });
   }
   function addCustomTaglia(t: string) {
@@ -276,55 +320,95 @@ function ItemCard({
   }
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2.5">
+    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
+      {/* Row 1: tipo pills (left) + sizes + actions (right) */}
       <div className="flex items-start gap-2">
-        <div className="w-2.5 h-10 rounded-sm flex-shrink-0 mt-0.5" style={{ backgroundColor: item.coloreHex ?? colorForTipo(item.tipo) }} />
+        <div className="w-1 self-stretch rounded-full flex-shrink-0 mt-0.5" style={{ backgroundColor: color, minHeight: 24 }} />
         <div className="flex-1 min-w-0 space-y-1.5">
-          <div className="flex flex-wrap gap-1">
-            {tipoOptions.map((t) => (
-              <button key={t} type="button" onClick={() => onChange({ ...item, tipo: t })}
-                className={`px-2 py-0.5 rounded-full text-2xs font-medium transition-colors ${item.tipo === t ? 'bg-primary text-white' : 'text-gray-500 border border-gray-200 hover:border-gray-400'}`}>
-                {TIPO_LABELS[t]}
-              </button>
-            ))}
+          <div className="flex items-center gap-1 flex-wrap">
+            {/* tipo pills */}
+            <div className="flex gap-1 flex-wrap">
+              {tipoOptions.map((t) => (
+                <button key={t} type="button" onClick={() => onChange({ ...item, tipo: t })}
+                  className={`px-2 py-0.5 rounded-full text-2xs font-medium transition-colors ${item.tipo === t ? 'bg-primary text-white' : 'text-gray-500 border border-gray-200 hover:border-gray-400'}`}>
+                  {TIPO_LABELS[t]}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1" />
+            {/* size chips — top right */}
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              {TAGLIE_FULL.map((t) => {
+                const avail = isAvailable(t);
+                const active = activeTaglie.has(t);
+                return (
+                  <button key={t} type="button" onClick={() => toggleTaglia(t)}
+                    disabled={!avail}
+                    title={!avail ? 'Taglia non disponibile per questo prodotto' : undefined}
+                    className={`px-1 py-0.5 rounded text-[9px] font-mono transition-colors ${
+                      active
+                        ? 'bg-primary text-white'
+                        : avail
+                          ? 'text-gray-500 border border-gray-200 hover:border-gray-400 hover:bg-white'
+                          : 'text-gray-300 border border-gray-100 opacity-30 cursor-not-allowed'
+                    }`}>
+                    {t}
+                  </button>
+                );
+              })}
+              <CustomTagliaInput onAdd={addCustomTaglia} />
+            </div>
+            {/* action buttons */}
+            <div className="flex gap-0.5 flex-shrink-0">
+              {onMoveLeft && <button type="button" onClick={onMoveLeft} disabled={!canMoveLeft} className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronLeft size={12} /></button>}
+              {onMoveRight && <button type="button" onClick={onMoveRight} disabled={!canMoveRight} className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronRight size={12} /></button>}
+              <button type="button" onClick={onDelete} className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors"><X size={12} /></button>
+            </div>
           </div>
+
+          {/* Row 2: product link + pz count */}
           <button type="button" onClick={() => setShowPicker(true)}
-            className="flex items-center gap-1.5 text-2xs text-gray-400 hover:text-gray-600 transition-colors">
+            className="flex items-center gap-1.5 text-2xs text-gray-400 hover:text-gray-600 transition-colors w-full text-left">
             {item.imageUrl
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={item.imageUrl} alt="" className="w-6 h-6 object-cover rounded flex-shrink-0" />
-              : <Tag size={10} />}
+              ? <img src={item.imageUrl} alt="" className="w-5 h-5 object-cover rounded flex-shrink-0" />
+              : <Tag size={10} className="flex-shrink-0" />}
             {item.productCode
-              ? <span className="font-mono text-gray-600">{item.productCode} — {item.productName}</span>
-              : <span>Collega prodotto</span>}
+              ? <span className="font-mono text-gray-600 truncate">{item.productCode} — {item.productName}</span>
+              : <span>Collega prodotto dal catalogo</span>}
+            {item.pezzi.length > 0 && <span className="ml-auto text-gray-300 flex-shrink-0">{item.pezzi.length} pz</span>}
           </button>
-        </div>
-        <div className="flex gap-0.5 flex-shrink-0">
-          {onMoveLeft && <button type="button" onClick={onMoveLeft} disabled={!canMoveLeft} className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronLeft size={14} /></button>}
-          {onMoveRight && <button type="button" onClick={onMoveRight} disabled={!canMoveRight} className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronRight size={14} /></button>}
-          <button type="button" onClick={onDelete} className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors"><X size={14} /></button>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <input type="color" value={item.coloreHex ?? colorForTipo(item.tipo)} onChange={(e) => onChange({ ...item, coloreHex: e.target.value })}
-          className="w-6 h-6 rounded border border-gray-200 cursor-pointer bg-transparent p-0" title="Colore capo" />
-        <span className="text-2xs text-gray-400">Colore nell'esposizione</span>
-      </div>
-      <div>
-        <p className="text-2xs text-gray-500 mb-1.5">Taglie <span className="text-gray-400">({item.pezzi.length} pz)</span></p>
-        <div className="flex flex-wrap gap-1">
-          {taglieSuggested.map((t) => (
-            <button key={t} type="button" onClick={() => toggleTaglia(t)}
-              className={`px-2 py-0.5 rounded text-2xs font-mono transition-colors ${activeTaglie.has(t) ? 'bg-primary text-white border border-primary' : 'text-gray-500 border border-gray-200 hover:border-gray-400'}`}>
-              {t}
-            </button>
-          ))}
-          <CustomTagliaInput onAdd={addCustomTaglia} />
+
+          {/* Row 3: color harmony — ruota cromatica integration */}
+          {harmony && (
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full border border-white/50 shadow-sm flex-shrink-0"
+                style={{ backgroundColor: color }} title="Colore prodotto" />
+              <span className="text-[9px] text-gray-300 flex-shrink-0">→</span>
+              {harmony.map((c, i) => (
+                <div key={i} className="w-2.5 h-2.5 rounded-full flex-shrink-0 border border-white/20"
+                  style={{ backgroundColor: c, opacity: 0.75 }}
+                  title={['Complementare', 'Analogo +30°', 'Analogo −30°'][i]} />
+              ))}
+              <a href="/moda/ruota-cromatica"
+                className="text-[9px] text-gray-300 hover:text-primary transition-colors ml-0.5 flex-shrink-0"
+                title="Apri ruota cromatica PE27">
+                ruota cromatica →
+              </a>
+            </div>
+          )}
         </div>
       </div>
+
       {showPicker && (
         <ProductPickerModal
-          onSelect={(p) => onChange({ ...item, productId: p.id, productCode: p.code, productName: p.name, imageUrl: p.imageUrl ?? undefined, coloreHex: hexFromProduct(p) ?? item.coloreHex })}
+          onSelect={(p) => onChange({
+            ...item,
+            productId: p.id, productCode: p.code, productName: p.name,
+            imageUrl: p.imageUrl ?? undefined,
+            coloreHex: hexFromProduct(p) ?? item.coloreHex,
+            availableTaglie: availableTaglieFromProduct(p),
+          })}
           onClose={() => setShowPicker(false)}
         />
       )}
@@ -337,15 +421,15 @@ function CustomTagliaInput({ onAdd }: { onAdd: (t: string) => void }) {
   const [editing, setEditing] = useState(false);
   if (!editing) return (
     <button type="button" onClick={() => setEditing(true)}
-      className="px-2 py-0.5 rounded text-2xs text-gray-400 border border-dashed border-gray-300 hover:border-gray-500 transition-colors">
-      + altra
+      className="px-1.5 py-0.5 rounded text-[9px] text-gray-400 border border-dashed border-gray-300 hover:border-gray-500 transition-colors">
+      +
     </button>
   );
   return (
     <input autoFocus value={value} onChange={(e) => setValue(e.target.value.toUpperCase())}
       onKeyDown={(e) => { if (e.key === 'Enter') { onAdd(value); setValue(''); setEditing(false); } if (e.key === 'Escape') { setValue(''); setEditing(false); } }}
       onBlur={() => { if (value) onAdd(value); setValue(''); setEditing(false); }}
-      placeholder="44…" className="w-14 px-2 py-0.5 rounded text-2xs font-mono text-gray-900 bg-white border border-gray-300 focus:outline-none" />
+      placeholder="44…" className="w-10 px-1 py-0.5 rounded text-[9px] font-mono text-gray-900 bg-white border border-gray-300 focus:outline-none" />
   );
 }
 
@@ -368,6 +452,9 @@ function FrontaleInlineEditor({
     );
   }
 
+  const activeTaglie = new Set(item.pezzi.map((p) => p.taglia));
+  const isAvailable = (t: string) => !item.availableTaglie?.length || item.availableTaglie.includes(t);
+
   return (
     <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5 space-y-1.5">
       <div className="flex items-center justify-between gap-2">
@@ -387,20 +474,22 @@ function FrontaleInlineEditor({
           </div>
         </div>
         <div className="flex gap-1 flex-shrink-0">
-          <input type="color" value={item.coloreHex ?? colorForTipo(item.tipo)} onChange={(e) => onChange({ ...item, coloreHex: e.target.value })}
-            className="w-5 h-5 rounded border border-gray-200 cursor-pointer bg-transparent p-0" />
           <button type="button" onClick={() => setShowPicker(true)} className="text-gray-300 hover:text-gray-600 transition-colors" title="Collega prodotto"><Tag size={12} /></button>
           <button type="button" onClick={onRemove} className="text-gray-300 hover:text-red-500 transition-colors"><X size={12} /></button>
         </div>
       </div>
       <div className="flex flex-wrap gap-0.5">
-        {TAGLIE_ABBIGLIAMENTO.map((t) => {
-          const active = item.pezzi.some((p) => p.taglia === t);
+        {TAGLIE_FULL.map((t) => {
+          const avail = isAvailable(t);
+          const active = activeTaglie.has(t);
           return (
             <button key={t} type="button"
-              onClick={() => onChange({ ...item, pezzi: active ? item.pezzi.filter((p) => p.taglia !== t) : [...item.pezzi, { taglia: t }] })}
-              className={`px-1.5 py-0 rounded text-2xs font-mono transition-colors ${active ? 'bg-primary text-white' : 'text-gray-400 border border-gray-200 hover:border-gray-400'}`}
-              style={{ fontSize: 9 }}>
+              onClick={() => {
+                if (!avail) return;
+                onChange({ ...item, pezzi: active ? item.pezzi.filter((p) => p.taglia !== t) : [...item.pezzi, { taglia: t }] });
+              }}
+              disabled={!avail}
+              className={`px-1 py-0 rounded text-[9px] font-mono transition-colors ${active ? 'bg-primary text-white' : avail ? 'text-gray-400 border border-gray-200 hover:border-gray-400' : 'text-gray-200 border border-gray-100 opacity-30 cursor-not-allowed'}`}>
               {t}
             </button>
           );
@@ -410,14 +499,19 @@ function FrontaleInlineEditor({
         <div className="flex items-center gap-1">
           {item.imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.imageUrl} alt="" className="w-5 h-5 object-cover rounded flex-shrink-0" />
+            <img src={item.imageUrl} alt="" className="w-4 h-4 object-cover rounded flex-shrink-0" />
           )}
           <p className="text-2xs text-gray-400 font-mono truncate">{item.productCode}</p>
         </div>
       )}
       {showPicker && (
         <ProductPickerModal
-          onSelect={(p) => onChange({ ...item, productId: p.id, productCode: p.code, productName: p.name, imageUrl: p.imageUrl ?? undefined, coloreHex: hexFromProduct(p) ?? item.coloreHex })}
+          onSelect={(p) => onChange({
+            ...item, productId: p.id, productCode: p.code, productName: p.name,
+            imageUrl: p.imageUrl ?? undefined,
+            coloreHex: hexFromProduct(p) ?? item.coloreHex,
+            availableTaglie: availableTaglieFromProduct(p),
+          })}
           onClose={() => setShowPicker(false)}
         />
       )}
@@ -430,9 +524,7 @@ function FrontaleInlineEditor({
 function MensolaInlineEditor({
   config, onChange, onRemove,
 }: {
-  config?: MensolaInlineConfig;
-  onChange: (c: MensolaInlineConfig) => void;
-  onRemove: () => void;
+  config?: MensolaInlineConfig; onChange: (c: MensolaInlineConfig) => void; onRemove: () => void;
 }) {
   const [showCatalog, setShowCatalog] = useState(false);
 
@@ -457,7 +549,6 @@ function MensolaInlineEditor({
       <div className="flex items-center gap-2 flex-wrap">
         <div className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0" />
         <p className="text-xs font-medium text-gray-700">Mensola</p>
-        {/* dimensione */}
         <div className="flex gap-1">
           {MENSOLA_DIMS.map((d) => (
             <button key={d} type="button" onClick={() => onChange({ ...config, dimensione: d })}
@@ -466,7 +557,6 @@ function MensolaInlineEditor({
             </button>
           ))}
         </div>
-        {/* posizione */}
         <div className="flex gap-1">
           {(['sopra', 'sotto', 'fianco'] as PosizioneMensola[]).map((p) => (
             <button key={p} type="button" onClick={() => onChange({ ...config, posizione: p })}
@@ -475,7 +565,6 @@ function MensolaInlineEditor({
             </button>
           ))}
         </div>
-        {/* offset */}
         <div className="flex gap-0.5 ml-auto">
           <button type="button" onClick={() => onChange({ ...config, offsetX: Math.max(0, (config.offsetX ?? 0) - COSTA_W) })}
             className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 disabled:opacity-20 transition-colors"
@@ -513,16 +602,12 @@ function ElementoCard({
   const [expanded, setExpanded] = useState(false);
   const [showCatalogPicker, setShowCatalogPicker] = useState(false);
 
-  useEffect(() => {
-    if (isActive) setExpanded(true);
-  }, [isActive]);
-
-  const tipoOptions = el.tipo === 'barra' ? TIPO_OPTIONS_BARRA : el.tipo === 'mensola' ? TIPO_OPTIONS_MENSOLA : TIPO_OPTIONS_FRONTALE;
+  useEffect(() => { if (isActive) setExpanded(true); }, [isActive]);
 
   const isBarra = el.tipo === 'barra';
   const isMensola = el.tipo === 'mensola';
   const isFrontale = el.tipo === 'frontale';
-
+  const tipoOptions = isBarra ? TIPO_OPTIONS_BARRA : isMensola ? TIPO_OPTIONS_MENSOLA : TIPO_OPTIONS_FRONTALE;
   const barraDim = (el.dimensione ?? 'media') as DimensioneBarra;
   const maxPz = isBarra ? BARRA_MAX_PZ[barraDim] : null;
   const pzCount = isBarra ? totalePezzi(el.items) : null;
@@ -533,15 +618,11 @@ function ElementoCard({
   function removeItem(idx: number) { onChange({ ...el, items: el.items.filter((_, i) => i !== idx) }); }
   function moveItem(from: number, to: number) {
     if (to < 0 || to >= el.items.length) return;
-    const a = [...el.items];
-    [a[from], a[to]] = [a[to], a[from]];
-    onChange({ ...el, items: a });
+    const a = [...el.items]; [a[from], a[to]] = [a[to], a[from]]; onChange({ ...el, items: a });
   }
   function applySuggerimento() {
     const pezziDefault = [{ taglia: 'S' }, { taglia: 'M' }, { taglia: 'L' }, { taglia: 'XL' }];
-    const pattern = BARRA_PATTERN[barraDim];
-    const newItems: ItemParete[] = pattern.map((tipo) => ({ id: nanoid(8), tipo, pezzi: pezziDefault }));
-    onChange({ ...el, items: newItems });
+    onChange({ ...el, items: BARRA_PATTERN[barraDim].map((tipo) => ({ id: nanoid(8), tipo, pezzi: pezziDefault })) });
   }
 
   const elLabel = isBarra ? 'Barra' : isMensola ? 'Mensola' : 'Frontale';
@@ -549,23 +630,17 @@ function ElementoCard({
 
   return (
     <div id={`card-${el.id}`} className={`border rounded-2xl overflow-hidden bg-white shadow-sm transition-colors ${isActive ? 'border-primary/40' : 'border-gray-200'}`}>
-      {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 bg-gray-50">
         <div className="flex gap-0.5">
-          <button type="button" onClick={onMoveUp} disabled={index === 0} className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors" title="Sposta a sinistra"><ChevronLeft size={14} /></button>
-          <button type="button" onClick={onMoveDown} disabled={index === total - 1} className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors" title="Sposta a destra"><ChevronRight size={14} /></button>
+          <button type="button" onClick={onMoveUp} disabled={index === 0} className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronLeft size={14} /></button>
+          <button type="button" onClick={onMoveDown} disabled={index === total - 1} className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronRight size={14} /></button>
         </div>
         <button type="button" onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
           <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-900 text-white flex-shrink-0">{elLabel}</span>
           <p className={`text-xs ${pzOver ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
-            {el.items.length} capi
-            {totalPz > 0 && ` · ${totalPz} pz`}
-            {maxPz !== null && ` / max ${maxPz} pz`}
-            {pzOver && ' — LIMITE SUPERATO'}
+            {el.items.length} capi{totalPz > 0 && ` · ${totalPz} pz`}{maxPz !== null && ` / max ${maxPz} pz`}{pzOver && ' — LIMITE SUPERATO'}
           </p>
         </button>
-
-        {/* Dimension selector */}
         {isBarra && (
           <div className="flex gap-1 flex-shrink-0">
             {BARRA_DIMS.map((d) => (
@@ -586,14 +661,12 @@ function ElementoCard({
             ))}
           </div>
         )}
-
         {pzOver && <AlertTriangle size={14} className="text-red-500 flex-shrink-0" />}
         <button type="button" onClick={onDelete} className="text-gray-300 hover:text-red-500 transition-colors ml-1 flex-shrink-0"><Trash2 size={14} /></button>
       </div>
 
       {expanded && (
         <div className="px-4 py-3 space-y-3">
-          {/* Mensola sopra (only for barra and frontale) */}
           {(isBarra || isFrontale) && (
             <MensolaInlineEditor
               config={el.mensolaTop}
@@ -601,8 +674,6 @@ function ElementoCard({
               onRemove={() => onChange({ ...el, mensolaTop: undefined })}
             />
           )}
-
-          {/* Main items */}
           <div className="space-y-2">
             {el.items.map((item, idx) => (
               <ItemCard key={item.id} item={item} tipoOptions={tipoOptions}
@@ -611,7 +682,6 @@ function ElementoCard({
                 onMoveRight={!isFrontale ? () => moveItem(idx, idx + 1) : undefined}
                 canMoveLeft={idx > 0} canMoveRight={idx < el.items.length - 1} />
             ))}
-
             {(!isFrontale ? true : el.items.length < 2) && (
               <button type="button" onClick={() => setShowCatalogPicker(true)}
                 className="w-full py-2 bg-primary/5 border border-primary/20 rounded-xl text-xs text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5 font-medium">
@@ -627,12 +697,9 @@ function ElementoCard({
               </button>
             )}
           </div>
-
-          {/* Horizontal offset */}
           <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
             <p className="text-2xs text-gray-400 flex-1">Posizione orizzontale</p>
-            <button type="button"
-              onClick={() => onChange({ ...el, offsetX: Math.max(0, (el.offsetX ?? 0) - COSTA_W) })}
+            <button type="button" onClick={() => onChange({ ...el, offsetX: Math.max(0, (el.offsetX ?? 0) - COSTA_W) })}
               disabled={(el.offsetX ?? 0) === 0}
               className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors">
               <ChevronLeft size={14} />
@@ -640,15 +707,13 @@ function ElementoCard({
             {(el.offsetX ?? 0) > 0 && (
               <span className="text-2xs text-gray-400 font-mono min-w-[28px] text-center">+{el.offsetX}px</span>
             )}
-            <button type="button"
-              onClick={() => onChange({ ...el, offsetX: (el.offsetX ?? 0) + COSTA_W })}
+            <button type="button" onClick={() => onChange({ ...el, offsetX: (el.offsetX ?? 0) + COSTA_W })}
               className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors">
               <ChevronRight size={14} />
             </button>
           </div>
         </div>
       )}
-
       {showCatalogPicker && (
         <CatalogPickerModal elementoTipo={el.tipo} onAdd={addFromCatalog} onClose={() => setShowCatalogPicker(false)} />
       )}
@@ -659,15 +724,10 @@ function ElementoCard({
 // ─── Wall renderer ────────────────────────────────────────────────────────────
 
 function getMensolaPhotos(el: ElementoParete): Array<{ id: string; imageUrl: string }> {
-  return (el.mensolaTop?.items ?? [])
-    .filter((it) => !!it.imageUrl)
-    .map((it) => ({ id: it.id, imageUrl: it.imageUrl! }));
+  return (el.mensolaTop?.items ?? []).filter((it) => !!it.imageUrl).map((it) => ({ id: it.id, imageUrl: it.imageUrl! }));
 }
-
 function getMainPhotos(el: ElementoParete): Array<{ id: string; imageUrl: string }> {
-  return el.items
-    .filter((it) => !!it.imageUrl)
-    .map((it) => ({ id: it.id, imageUrl: it.imageUrl! }));
+  return el.items.filter((it) => !!it.imageUrl).map((it) => ({ id: it.id, imageUrl: it.imageUrl! }));
 }
 
 const PHOTO_STRIP_H = 34;
@@ -680,7 +740,6 @@ function WallRenderer({
   onSelect?: (id: string) => void;
   zoom?: number;
 }) {
-  // Use ref so onDragOver can read the current dragging ID without waiting for React re-render
   const draggingIdRef = useRef<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
@@ -739,7 +798,7 @@ function WallRenderer({
                 overIdx === idx && draggingId !== el.id ? 'outline outline-2 outline-primary outline-offset-2 rounded' : '',
               ].join(' ')}
             >
-              {/* Mensola photos — top strip */}
+              {/* Mensola photos — top */}
               {mensolaPhotos.length > 0 ? (
                 <div className="flex-shrink-0 flex gap-0.5 border-b border-gray-100 pb-1" style={{ height: PHOTO_STRIP_H }}>
                   {mensolaPhotos.slice(0, 8).map((ph) => (
@@ -749,12 +808,12 @@ function WallRenderer({
                 </div>
               ) : <div className="flex-shrink-0" style={{ height: PHOTO_STRIP_H }} />}
 
-              {/* Wall element — bottom-aligned in remaining space */}
+              {/* Wall element */}
               <div className="flex-1 flex items-end pb-2 min-h-0">
                 <WallElementRenderer el={el} />
               </div>
 
-              {/* Main item photos — bottom strip */}
+              {/* Main item photos — bottom */}
               {mainPhotos.length > 0 ? (
                 <div className="flex-shrink-0 flex gap-0.5 border-t border-gray-100 pt-1" style={{ height: PHOTO_STRIP_H }}>
                   {mainPhotos.slice(0, 8).map((ph) => (
@@ -772,11 +831,7 @@ function WallRenderer({
 }
 
 function MensolaBlock({ config }: { config: MensolaInlineConfig }) {
-  return (
-    <div style={{ marginLeft: config.offsetX ?? 0 }}>
-      <MensolaRenderer config={config} />
-    </div>
-  );
+  return <div style={{ marginLeft: config.offsetX ?? 0 }}><MensolaRenderer config={config} /></div>;
 }
 
 function WallElementRenderer({ el }: { el: ElementoParete }) {
@@ -785,9 +840,7 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
   if (el.tipo === 'barra') {
     const dim = (el.dimensione ?? 'media') as DimensioneBarra;
     const pzTot = totalePezzi(el.items);
-    const max = BARRA_MAX_PZ[dim];
-    const over = pzTot > max;
-
+    const over = pzTot > BARRA_MAX_PZ[dim];
     const barraCore = (
       <div style={{ marginLeft: el.offsetX ?? 0 }}>
         <div className={`h-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`} style={{ minWidth: UNIT }} />
@@ -798,9 +851,7 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
         </div>
       </div>
     );
-
     if (!el.mensolaTop) return <div className="flex-shrink-0">{barraCore}</div>;
-
     if (pos === 'sopra') return (
       <div className="flex flex-col items-start flex-shrink-0">
         <MensolaBlock config={el.mensolaTop} />
@@ -813,12 +864,7 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
         <div style={{ marginTop: 12 }}><MensolaBlock config={el.mensolaTop} /></div>
       </div>
     );
-    return (
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {barraCore}
-        <MensolaBlock config={el.mensolaTop} />
-      </div>
-    );
+    return <div className="flex items-center gap-2 flex-shrink-0">{barraCore}<MensolaBlock config={el.mensolaTop} /></div>;
   }
 
   if (el.tipo === 'mensola') {
@@ -835,40 +881,29 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
 
     const frontaleCore = item2 ? (
       <div style={{ width: FRONTALE_W }}>
-        <div className="rounded-t border border-b-0 border-gray-200"
-          style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_TOP_H }} />
-        <div className="rounded-b border border-gray-200"
-          style={{ backgroundColor: item2.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_BOT_H }} />
+        {item1?.imageUrl
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={item1.imageUrl} alt="" className="rounded-t border border-b-0 border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_TOP_H }} />
+          : <div className="rounded-t border border-b-0 border-gray-200" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_TOP_H }} />}
+        {item2.imageUrl
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={item2.imageUrl} alt="" className="rounded-b border border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_BOT_H }} />
+          : <div className="rounded-b border border-gray-200" style={{ backgroundColor: item2.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_BOT_H }} />}
       </div>
+    ) : item1?.imageUrl ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={item1.imageUrl} alt="" className="rounded border border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_H }} />
     ) : (
-      <div className="rounded border border-gray-200"
-        style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_H }} />
+      <div className="rounded border border-gray-200" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_H }} />
     );
 
     const wrapper = (children: React.ReactNode) => (
       <div className="flex-shrink-0" style={{ marginLeft: el.offsetX ?? 0 }}>{children}</div>
     );
-
     if (!el.mensolaTop) return wrapper(frontaleCore);
-
-    if (pos === 'sopra') return wrapper(
-      <div className="flex flex-col items-start">
-        <MensolaBlock config={el.mensolaTop} />
-        <div style={{ marginTop: 12 }}>{frontaleCore}</div>
-      </div>
-    );
-    if (pos === 'sotto') return wrapper(
-      <div className="flex flex-col items-start">
-        {frontaleCore}
-        <div style={{ marginTop: 12 }}><MensolaBlock config={el.mensolaTop} /></div>
-      </div>
-    );
-    return wrapper(
-      <div className="flex items-center gap-2">
-        {frontaleCore}
-        <MensolaBlock config={el.mensolaTop} />
-      </div>
-    );
+    if (pos === 'sopra') return wrapper(<div className="flex flex-col items-start"><MensolaBlock config={el.mensolaTop} /><div style={{ marginTop: 12 }}>{frontaleCore}</div></div>);
+    if (pos === 'sotto') return wrapper(<div className="flex flex-col items-start">{frontaleCore}<div style={{ marginTop: 12 }}><MensolaBlock config={el.mensolaTop} /></div></div>);
+    return wrapper(<div className="flex items-center gap-2">{frontaleCore}<MensolaBlock config={el.mensolaTop} /></div>);
   }
 
   return null;
@@ -884,20 +919,17 @@ function MensolaRenderer({ config }: { config: MensolaInlineConfig }) {
           : config.items.map((it, i) => {
               const color = it.coloreHex ?? colorForTipo(it.tipo);
               if (it.tipo === 'borsa') {
-                return (
-                  <div key={it.id ?? i} className="flex-shrink-0 rounded-sm"
-                    style={{ backgroundColor: color, width: 48, height: 42 }}
-                    title={`Borsa (${it.pezzi.length}pz)`} />
-                );
+                return it.imageUrl
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img key={it.id ?? i} src={it.imageUrl} alt="" className="flex-shrink-0 rounded-sm object-cover" style={{ width: 48, height: 42 }} title={`Borsa (${it.pezzi.length}pz)`} />
+                  : <div key={it.id ?? i} className="flex-shrink-0 rounded-sm" style={{ backgroundColor: color, width: 48, height: 42 }} title={`Borsa (${it.pezzi.length}pz)`} />;
               }
               if (it.tipo === 'accessorio') {
-                return (
-                  <div key={it.id ?? i} className="flex-shrink-0 rounded-sm"
-                    style={{ backgroundColor: color, width: 29, height: 26 }}
-                    title={`Accessorio (${it.pezzi.length}pz)`} />
-                );
+                return it.imageUrl
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img key={it.id ?? i} src={it.imageUrl} alt="" className="flex-shrink-0 rounded-sm object-cover" style={{ width: 29, height: 26 }} title={`Accessorio (${it.pezzi.length}pz)`} />
+                  : <div key={it.id ?? i} className="flex-shrink-0 rounded-sm" style={{ backgroundColor: color, width: 29, height: 26 }} title={`Accessorio (${it.pezzi.length}pz)`} />;
               }
-              // Abbigliamento di costa: 1 strato per taglia, volume cresce verso l'alto
               const n = Math.max(1, it.pezzi.length);
               return (
                 <div key={it.id ?? i} className="flex flex-col-reverse flex-shrink-0" style={{ width: 48 }}
@@ -924,7 +956,10 @@ function CapoOnBarra({ item }: { item: ItemParete }) {
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex flex-col items-center" style={{ width: COSTA_W }}>
           <div className="w-1 h-1.5 bg-gray-400 rounded-full" />
-          <div className="rounded-sm" style={{ backgroundColor: color, width: COSTA_W - 2, height: h }} />
+          {item.imageUrl
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={item.imageUrl} alt="" className="rounded-sm object-cover" style={{ width: COSTA_W - 2, height: h }} />
+            : <div className="rounded-sm" style={{ backgroundColor: color, width: COSTA_W - 2, height: h }} />}
         </div>
       ))}
     </div>
@@ -936,7 +971,15 @@ function CapoOnBarra({ item }: { item: ItemParete }) {
 export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   const router = useRouter();
   const qc = useQueryClient();
-  const editorRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(60);
+
+  useEffect(() => {
+    const update = () => { if (headerRef.current) setHeaderHeight(headerRef.current.offsetHeight); };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   const { data, isLoading, isError } = useQuery<{ data: PareteAttrezzata }>({
     queryKey: ['moda-parete', pareteId],
@@ -1014,27 +1057,21 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
 
   function handleSelectElement(id: string) {
     setActiveElementId(id);
-    // Give the card's useEffect time to expand before scrolling
     setTimeout(() => {
-      const card = document.getElementById(`card-${id}`);
-      if (card && editorRef.current) {
-        const containerTop = editorRef.current.getBoundingClientRect().top;
-        const cardTop = card.getBoundingClientRect().top;
-        editorRef.current.scrollBy({ top: cardTop - containerTop - 12, behavior: 'smooth' });
-      }
+      document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 60);
   }
 
   const totalCapi = config.reduce((acc, el) => acc + el.items.length, 0);
   const totalPz = config.reduce((acc, el) => acc + totalePezzi(el.items), 0);
 
-  if (isLoading) return <div className="h-full bg-gray-50 flex items-center justify-center"><Loader2 size={24} className="animate-spin text-gray-300" /></div>;
-  if (isError || !parete) return <div className="h-full bg-gray-50 flex items-center justify-center"><p className="text-sm text-gray-400">Layout non trovato</p></div>;
+  if (isLoading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Loader2 size={24} className="animate-spin text-gray-300" /></div>;
+  if (isError || !parete) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-sm text-gray-400">Layout non trovato</p></div>;
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 text-gray-900">
-      {/* Header — fixed at top, no scrolling */}
-      <div className="flex-shrink-0 bg-gray-50/95 backdrop-blur border-b border-gray-100 px-4 py-3">
+    <div className="min-h-full bg-gray-50 text-gray-900">
+      {/* Header — sticky within main's scroll context */}
+      <div ref={headerRef} className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur border-b border-gray-100 px-4 py-3">
         <div className="max-w-6xl mx-auto flex items-center gap-3">
           <button onClick={() => router.push('/moda/pareti')} className="text-gray-400 hover:text-gray-700 transition-colors"><ArrowLeft size={20} /></button>
           <div className="flex-1 min-w-0">
@@ -1058,63 +1095,61 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
         </div>
       </div>
 
-      {/* Preview panel — fixed below header, 40vh */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm" style={{ height: '40vh' }}>
-        <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
-          <p className="text-2xs text-gray-400 uppercase tracking-widest flex-1">Anteprima parete</p>
-          <p className="text-2xs text-gray-300 hidden sm:block">Trascina ·</p>
-          {/* Zoom controls */}
-          <button type="button" onClick={() => setPreviewZoom((z) => Math.max(0.4, +(z - 0.15).toFixed(2)))}
-            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors" title="Riduci zoom">
-            <ZoomOut size={13} />
-          </button>
-          <span className="text-2xs text-gray-400 font-mono w-8 text-center">{Math.round(previewZoom * 100)}%</span>
-          <button type="button" onClick={() => setPreviewZoom((z) => Math.min(2, +(z + 0.15).toFixed(2)))}
-            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors" title="Aumenta zoom">
-            <ZoomIn size={13} />
-          </button>
-          <div className="w-px h-4 bg-gray-200 mx-1" />
-          {(['barra', 'mensola', 'frontale'] as const).map((tipo) => (
-            <button key={tipo} type="button" onClick={() => addElemento(tipo)}
-              className="flex items-center gap-1 px-2.5 py-1 bg-cream text-primary border border-border rounded-lg text-2xs font-medium hover:bg-accent/10 transition-colors">
-              <Plus size={11} /> {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+      {/* Preview panel — sticky just below header */}
+      <div className="sticky z-10 bg-white border-b border-gray-200 shadow-sm" style={{ top: headerHeight }}>
+        <div style={{ height: '40vh' }} className="flex flex-col">
+          <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
+            <p className="text-2xs text-gray-400 uppercase tracking-widest flex-1">Anteprima parete</p>
+            <p className="text-2xs text-gray-300 hidden sm:block">Trascina ·</p>
+            <button type="button" onClick={() => setPreviewZoom((z) => Math.max(0.4, +(z - 0.15).toFixed(2)))}
+              className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors">
+              <ZoomOut size={13} />
             </button>
-          ))}
-        </div>
-        <div className="border-t border-gray-100 overflow-x-auto overflow-y-hidden" style={{ height: 'calc(40vh - 44px)' }}>
-          <WallRenderer
-            config={config}
-            onReorder={handleConfigChange}
-            onSelect={handleSelectElement}
-            zoom={previewZoom}
-          />
+            <span className="text-2xs text-gray-400 font-mono w-8 text-center">{Math.round(previewZoom * 100)}%</span>
+            <button type="button" onClick={() => setPreviewZoom((z) => Math.min(2, +(z + 0.15).toFixed(2)))}
+              className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors">
+              <ZoomIn size={13} />
+            </button>
+            <div className="w-px h-4 bg-gray-200 mx-1" />
+            {(['barra', 'mensola', 'frontale'] as const).map((tipo) => (
+              <button key={tipo} type="button" onClick={() => addElemento(tipo)}
+                className="flex items-center gap-1 px-2.5 py-1 bg-cream text-primary border border-border rounded-lg text-2xs font-medium hover:bg-accent/10 transition-colors">
+                <Plus size={11} /> {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 min-h-0 border-t border-gray-100 overflow-x-auto overflow-y-hidden">
+            <WallRenderer
+              config={config}
+              onReorder={handleConfigChange}
+              onSelect={handleSelectElement}
+              zoom={previewZoom}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Editor cards — scrollable independently */}
-      <div ref={editorRef} className="flex-1 min-h-0 overflow-y-auto">
-        <div className="max-w-6xl mx-auto w-full px-4 py-4 space-y-3">
-          {config.map((el, idx) => (
-            <ElementoCard
-              key={el.id}
-              el={el}
-              index={idx}
-              total={config.length}
-              isActive={activeElementId === el.id}
-              onChange={(u) => updateElemento(idx, u)}
-              onDelete={() => deleteElemento(idx)}
-              onMoveUp={() => moveElemento(idx, idx - 1)}
-              onMoveDown={() => moveElemento(idx, idx + 1)}
-            />
-          ))}
-
-          {config.length === 0 && (
-            <div className="py-10 text-center">
-              <p className="text-sm text-gray-400">Costruisci il tuo layout</p>
-              <p className="text-xs mt-1 text-gray-300">Aggiungi barre appenderia, mensole ed esposizioni frontali usando i pulsanti in cima</p>
-            </div>
-          )}
-        </div>
+      {/* Editor cards */}
+      <div className="max-w-6xl mx-auto w-full px-4 py-4 space-y-3">
+        {config.map((el, idx) => (
+          <ElementoCard
+            key={el.id}
+            el={el}
+            index={idx}
+            total={config.length}
+            isActive={activeElementId === el.id}
+            onChange={(u) => updateElemento(idx, u)}
+            onDelete={() => deleteElemento(idx)}
+            onMoveUp={() => moveElemento(idx, idx - 1)}
+            onMoveDown={() => moveElemento(idx, idx + 1)}
+          />
+        ))}
+        {config.length === 0 && (
+          <div className="py-10 text-center">
+            <p className="text-sm text-gray-400">Costruisci il tuo layout</p>
+            <p className="text-xs mt-1 text-gray-300">Aggiungi barre appenderia, mensole ed esposizioni frontali usando i pulsanti in cima</p>
+          </div>
+        )}
       </div>
     </div>
   );
