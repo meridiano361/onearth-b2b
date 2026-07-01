@@ -147,9 +147,7 @@ export interface ElementoParete {
   dimensione?: DimensioneMensola | DimensioneBarra;
   items: ItemParete[];
   mensolaTop?: MensolaInlineConfig;
-  frontaleLeft?: ItemParete;
-  frontaleRight?: ItemParete;
-  barraOffsetX?: number;
+  offsetX?: number;
 }
 
 export interface PareteAttrezzata {

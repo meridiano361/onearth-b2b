@@ -46,6 +46,8 @@ const MENSOLA_DIMS: DimensioneMensola[] = ['piccola', 'media', 'lunga'];
 const UNIT = 60;
 const COSTA_W = 12;
 const FRONTALE_H = 90;
+const FRONTALE_TOP_H = 36;
+const FRONTALE_BOT_H = 54;
 const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: UNIT, media: UNIT * 2, lunga: UNIT * 3 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -459,16 +461,10 @@ function MensolaInlineEditor({
           onMoveRight={() => { const a = [...config.items]; const [m] = a.splice(idx, 1); a.splice(idx + 1, 0, m); onChange({ ...config, items: a }); }}
           canMoveLeft={idx > 0} canMoveRight={idx < config.items.length - 1} />
       ))}
-      <div className="flex gap-2">
-        <button type="button" onClick={() => setShowCatalog(true)}
-          className="flex-1 py-1.5 bg-white border border-amber-200 rounded-lg text-2xs text-amber-700 hover:bg-amber-50 transition-colors flex items-center justify-center gap-1 font-medium">
-          <PackagePlus size={11} /> Importa
-        </button>
-        <button type="button" onClick={addBlank}
-          className="py-1.5 px-2.5 border border-dashed border-amber-200 rounded-lg text-2xs text-amber-600 hover:bg-amber-50 transition-colors flex items-center gap-1">
-          <Plus size={11} /> Manuale
-        </button>
-      </div>
+      <button type="button" onClick={() => setShowCatalog(true)}
+        className="w-full py-1.5 bg-white border border-amber-200 rounded-lg text-2xs text-amber-700 hover:bg-amber-50 transition-colors flex items-center justify-center gap-1 font-medium">
+        <PackagePlus size={11} /> Importa dal catalogo
+      </button>
       {showCatalog && <CatalogPickerModal elementoTipo="mensola" onAdd={addFromCatalog} onClose={() => setShowCatalog(false)} />}
     </div>
   );
@@ -574,47 +570,27 @@ function ElementoCard({
                 canMoveLeft={idx > 0} canMoveRight={idx < el.items.length - 1} />
             ))}
 
-            {(!isFrontale || el.items.length === 0) && (
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setShowCatalogPicker(true)}
-                  className="flex-1 py-2 bg-primary/5 border border-primary/20 rounded-xl text-xs text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5 font-medium">
-                  <PackagePlus size={13} /> Importa dal catalogo
-                </button>
-                <button type="button" onClick={addBlankItem}
-                  className="py-2 px-3 border border-dashed border-gray-200 rounded-xl text-xs text-gray-400 hover:border-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1.5">
-                  <Plus size={13} /> Manuale
-                </button>
-              </div>
+            {(!isFrontale ? true : el.items.length < 2) && (
+              <button type="button" onClick={() => setShowCatalogPicker(true)}
+                className="w-full py-2 bg-primary/5 border border-primary/20 rounded-xl text-xs text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5 font-medium">
+                <PackagePlus size={13} />
+                {isFrontale && el.items.length === 1 ? 'Aggiungi secondo capo' : 'Importa dal catalogo'}
+              </button>
             )}
           </div>
 
-          {/* Frontali laterali (only for barra) */}
-          {isBarra && (
-            <div className="space-y-1.5">
-              <p className="text-2xs text-gray-400 font-medium uppercase tracking-wide">Capi esposti frontalmente</p>
-              <div className="flex gap-2">
-                <FrontaleInlineEditor label="Sinistra" item={el.frontaleLeft}
-                  onChange={(it) => onChange({ ...el, frontaleLeft: it })}
-                  onRemove={() => onChange({ ...el, frontaleLeft: undefined })} />
-                <FrontaleInlineEditor label="Destra" item={el.frontaleRight}
-                  onChange={(it) => onChange({ ...el, frontaleRight: it })}
-                  onRemove={() => onChange({ ...el, frontaleRight: undefined })} />
-              </div>
-            </div>
-          )}
-
-          {/* Barra horizontal offset */}
-          {isBarra && (
+          {/* Horizontal offset — barra and frontale */}
+          {(isBarra || isFrontale) && (
             <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
-              <p className="text-2xs text-gray-400 flex-1">Posizione barra</p>
+              <p className="text-2xs text-gray-400 flex-1">Posizione</p>
               <button type="button"
-                onClick={() => onChange({ ...el, barraOffsetX: Math.max(0, (el.barraOffsetX ?? 0) - COSTA_W) })}
-                disabled={(el.barraOffsetX ?? 0) === 0}
+                onClick={() => onChange({ ...el, offsetX: Math.max(0, (el.offsetX ?? 0) - COSTA_W) })}
+                disabled={(el.offsetX ?? 0) === 0}
                 className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors">
                 <ChevronLeft size={14} />
               </button>
               <button type="button"
-                onClick={() => onChange({ ...el, barraOffsetX: (el.barraOffsetX ?? 0) + COSTA_W })}
+                onClick={() => onChange({ ...el, offsetX: (el.offsetX ?? 0) + COSTA_W })}
                 className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors">
                 <ChevronRight size={14} />
               </button>
@@ -662,18 +638,14 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
             <MensolaRenderer config={el.mensolaTop} />
           </div>
         )}
-        <div className="flex items-end" style={{ gap: 2, marginTop: el.mensolaTop ? 12 : 0 }}>
-          {el.frontaleLeft && <FrontaleSmall item={el.frontaleLeft} />}
-          <div style={{ marginLeft: el.barraOffsetX ?? 0 }}>
-            <div className={`h-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`}
-              style={{ minWidth: UNIT }} />
-            <div className="flex items-start" style={{ gap: 1, minHeight: 48, minWidth: UNIT }}>
-              {el.items.length === 0
-                ? <div style={{ minWidth: UNIT }} />
-                : el.items.map((it, i) => <CapoOnBarra key={it.id ?? i} item={it} />)}
-            </div>
+        <div style={{ marginLeft: el.offsetX ?? 0, marginTop: el.mensolaTop ? 12 : 0 }}>
+          <div className={`h-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`}
+            style={{ minWidth: UNIT }} />
+          <div className="flex items-start" style={{ gap: 1, minHeight: 48, minWidth: UNIT }}>
+            {el.items.length === 0
+              ? <div style={{ minWidth: UNIT }} />
+              : el.items.map((it, i) => <CapoOnBarra key={it.id ?? i} item={it} />)}
           </div>
-          {el.frontaleRight && <FrontaleSmall item={el.frontaleRight} />}
         </div>
       </div>
     );
@@ -688,13 +660,27 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
   }
 
   if (el.tipo === 'frontale') {
-    const it = el.items[0];
+    const item1 = el.items[0];
+    const item2 = el.items[1];
     return (
-      <div className="flex flex-col items-start flex-shrink-0">
-        {el.mensolaTop && <MensolaRenderer config={el.mensolaTop} />}
-        <div className="rounded border border-gray-200 flex items-end justify-center pb-1"
-          style={{ backgroundColor: it?.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_H }}>
-          {it && it.pezzi.length > 0 && <span className="text-white font-bold drop-shadow-sm" style={{ fontSize: 8 }}>{it.pezzi.length}pz</span>}
+      <div className="flex flex-col items-start flex-shrink-0" style={{ marginLeft: el.offsetX ?? 0 }}>
+        {el.mensolaTop && (
+          <div style={{ marginLeft: el.mensolaTop.offsetX ?? 0 }}>
+            <MensolaRenderer config={el.mensolaTop} />
+          </div>
+        )}
+        <div style={{ marginTop: el.mensolaTop ? 12 : 0 }}>
+          {item2 ? (
+            <div style={{ width: UNIT }}>
+              <div className="rounded-t border border-b-0 border-gray-200"
+                style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_TOP_H }} />
+              <div className="rounded-b border border-gray-200"
+                style={{ backgroundColor: item2.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_BOT_H }} />
+            </div>
+          ) : (
+            <div className="rounded border border-gray-200"
+              style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_H }} />
+          )}
         </div>
       </div>
     );
@@ -706,11 +692,15 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
 function MensolaRenderer({ config }: { config: MensolaInlineConfig }) {
   const w = MENSOLA_W[config.dimensione];
   return (
-    <div className="space-y-0.5">
-      <div className="flex items-end gap-1 min-h-[28px]" style={{ width: w }}>
+    <div>
+      <div className="flex flex-col-reverse" style={{ width: w }}>
         {config.items.length === 0
-          ? <p className="text-2xs text-gray-300 italic">vuota</p>
-          : config.items.map((it, i) => <CapoOnMensola key={it.id ?? i} item={it} />)}
+          ? <div style={{ height: COSTA_W }} />
+          : config.items.map((it, i) => (
+              <div key={it.id ?? i} className="flex-shrink-0"
+                style={{ backgroundColor: it.coloreHex ?? colorForTipo(it.tipo), width: w, height: COSTA_W - 2 }}
+                title={`${TIPO_LABELS[it.tipo]} (${it.pezzi.length}pz)`} />
+            ))}
       </div>
       <div className="h-0.5 bg-gray-400 rounded" style={{ width: w }} />
     </div>
@@ -876,18 +866,12 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
           ))}
 
           <div className="flex flex-wrap gap-2 pt-2">
-            <button type="button" onClick={() => addElemento('barra')}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-600 hover:bg-blue-100 transition-colors">
-              <Plus size={13} /> Barra
-            </button>
-            <button type="button" onClick={() => addElemento('mensola')}
-              className="flex items-center gap-1.5 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 hover:bg-amber-100 transition-colors">
-              <Plus size={13} /> Mensola
-            </button>
-            <button type="button" onClick={() => addElemento('frontale')}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 hover:bg-emerald-100 transition-colors">
-              <Plus size={13} /> Frontale
-            </button>
+            {(['barra', 'mensola', 'frontale'] as const).map((tipo) => (
+              <button key={tipo} type="button" onClick={() => addElemento(tipo)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-medium hover:bg-gray-700 transition-colors capitalize">
+                <Plus size={13} /> {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+              </button>
+            ))}
           </div>
 
           {config.length === 0 && (
@@ -898,14 +882,13 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
           )}
         </div>
 
-        {/* Right: preview */}
+        {/* Right: preview — sticky, full viewport height */}
         <div className="lg:w-80 xl:w-96 flex-shrink-0">
-          <div className="sticky top-24">
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-3 font-medium">Anteprima Visual</p>
-            <div className="bg-white border border-gray-200 rounded-2xl min-h-64 max-h-[70vh] overflow-hidden shadow-sm">
+          <div className="sticky top-14 flex flex-col" style={{ maxHeight: 'calc(100vh - 60px)' }}>
+            <p className="text-xs text-gray-400 uppercase tracking-widest mb-3 font-medium flex-shrink-0">Anteprima parete</p>
+            <div className="bg-white border border-gray-200 rounded-2xl flex-1 overflow-auto shadow-sm min-h-64">
               <WallRenderer config={config} />
             </div>
-            <p className="text-2xs text-gray-300 mt-2 text-center">Schema schematico dell'esposizione</p>
           </div>
         </div>
       </div>
