@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowLeft, Plus, X, Search, Loader2, ChevronUp, ChevronDown,
+  ArrowLeft, Plus, X, Search, Loader2, ChevronLeft, ChevronRight,
   Trash2, Edit2, Check, Tag, PackagePlus, AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -285,8 +285,8 @@ function ItemCard({
           </button>
         </div>
         <div className="flex gap-0.5 flex-shrink-0">
-          {onMoveLeft && <button type="button" onClick={onMoveLeft} disabled={!canMoveLeft} className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronUp size={14} /></button>}
-          {onMoveRight && <button type="button" onClick={onMoveRight} disabled={!canMoveRight} className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronDown size={14} /></button>}
+          {onMoveLeft && <button type="button" onClick={onMoveLeft} disabled={!canMoveLeft} className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronLeft size={14} /></button>}
+          {onMoveRight && <button type="button" onClick={onMoveRight} disabled={!canMoveRight} className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronRight size={14} /></button>}
           <button type="button" onClick={onDelete} className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors"><X size={14} /></button>
         </div>
       </div>
@@ -506,9 +506,9 @@ function ElementoCard({
     <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-sm">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 bg-gray-50">
-        <div className="flex flex-col gap-0.5">
-          <button type="button" onClick={onMoveUp} disabled={index === 0} className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronUp size={14} /></button>
-          <button type="button" onClick={onMoveDown} disabled={index === total - 1} className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronDown size={14} /></button>
+        <div className="flex gap-0.5">
+          <button type="button" onClick={onMoveUp} disabled={index === 0} className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors" title="Sposta a sinistra"><ChevronLeft size={14} /></button>
+          <button type="button" onClick={onMoveDown} disabled={index === total - 1} className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors" title="Sposta a destra"><ChevronRight size={14} /></button>
         </div>
         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isBarra ? 'bg-blue-400' : isMensola ? 'bg-amber-400' : 'bg-emerald-400'}`} />
         <button type="button" onClick={() => setExpanded(!expanded)} className="flex-1 text-left min-w-0">
@@ -617,8 +617,10 @@ function WallRenderer({ config }: { config: ElementoParete[] }) {
     );
   }
   return (
-    <div className="h-full overflow-y-auto space-y-4 p-4">
-      {config.map((el) => <WallElementRenderer key={el.id} el={el} />)}
+    <div className="overflow-x-auto p-4">
+      <div className="flex items-end gap-3" style={{ minHeight: 200 }}>
+        {config.map((el) => <WallElementRenderer key={el.id} el={el} />)}
+      </div>
     </div>
   );
 }
@@ -630,21 +632,20 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
     const max = BARRA_MAX_PZ[dim];
     const over = pzTot > max;
     return (
-      <div className="space-y-1">
-        {/* Mensola sopra */}
+      <div className="flex flex-col items-start flex-shrink-0">
         {el.mensolaTop && <MensolaRenderer config={el.mensolaTop} />}
-        {/* Frontali + hanging items */}
-        <div className="flex items-end gap-2">
+        <div className="flex items-end" style={{ gap: 2 }}>
           {el.frontaleLeft && <FrontaleSmall item={el.frontaleLeft} />}
-          <div className="flex-1 min-w-0 overflow-x-auto">
-            <div className="flex items-end min-h-[48px]" style={{ gap: 1 }}>
+          <div>
+            <div className="flex items-end" style={{ gap: 1, minHeight: 48, minWidth: UNIT }}>
               {el.items.length === 0
-                ? <p className="text-2xs text-gray-300 italic">barra vuota</p>
+                ? <p className="text-2xs text-gray-300 italic" style={{ minWidth: UNIT }}>vuota</p>
                 : el.items.map((it, i) => <CapoOnBarra key={it.id ?? i} item={it} />)}
             </div>
-            <div className={`h-0.5 mt-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'} w-full`} />
-            <p className={`text-2xs font-mono pl-0.5 ${over ? 'text-red-400' : 'text-gray-400'}`}>
-              barra {dim} · {pzTot}/{max} pz
+            <div className={`h-0.5 mt-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`}
+              style={{ minWidth: UNIT }} />
+            <p className={`text-2xs font-mono ${over ? 'text-red-400' : 'text-gray-400'}`}>
+              {dim} · {pzTot}/{max}
             </p>
           </div>
           {el.frontaleRight && <FrontaleSmall item={el.frontaleRight} />}
@@ -654,29 +655,25 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
   }
 
   if (el.tipo === 'mensola') {
-    return <MensolaRenderer config={{ dimensione: (el.dimensione as DimensioneMensola) ?? 'media', items: el.items }} />;
+    return (
+      <div className="flex-shrink-0">
+        <MensolaRenderer config={{ dimensione: (el.dimensione as DimensioneMensola) ?? 'media', items: el.items }} />
+      </div>
+    );
   }
 
   if (el.tipo === 'frontale') {
     const it = el.items[0];
     return (
-      <div className="space-y-1">
+      <div className="flex flex-col items-start flex-shrink-0">
         {el.mensolaTop && <MensolaRenderer config={el.mensolaTop} />}
-        <div className="flex gap-3 items-start">
-          <div className="rounded border border-gray-200 flex-shrink-0 flex items-end justify-center pb-1"
-            style={{ backgroundColor: it?.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_H }}>
-            {it && it.pezzi.length > 0 && <span className="text-2xs text-white font-bold drop-shadow-sm">{it.pezzi.length}pz</span>}
-          </div>
-          <div>
-            <p className="text-xs text-gray-700 font-medium">{it?.productCode ?? '—'}</p>
-            <p className="text-2xs text-gray-400">{it?.productName ?? 'esposizione frontale'}</p>
-            {it && it.pezzi.length > 0 && (
-              <div className="flex gap-1 mt-1 flex-wrap">
-                {it.pezzi.map((p, i) => <span key={i} className="text-2xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono">{p.taglia}</span>)}
-              </div>
-            )}
-          </div>
+        <div className="rounded border border-gray-200 flex items-end justify-center pb-1"
+          style={{ backgroundColor: it?.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_H }}>
+          {it && it.pezzi.length > 0 && <span className="text-white font-bold drop-shadow-sm" style={{ fontSize: 8 }}>{it.pezzi.length}pz</span>}
         </div>
+        <p className="text-2xs text-gray-400 font-mono truncate" style={{ maxWidth: UNIT }}>
+          {it?.productCode ?? '—'}
+        </p>
       </div>
     );
   }
