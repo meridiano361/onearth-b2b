@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Plus, X, Search, Loader2, ChevronLeft, ChevronRight,
-  Trash2, Edit2, Check, Tag, PackagePlus, AlertTriangle,
+  Trash2, Edit2, Check, Tag, PackagePlus, AlertTriangle, ZoomIn, ZoomOut,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type {
@@ -42,7 +42,6 @@ const BARRA_MAX_PZ: Record<DimensioneBarra, number> = { piccola: 24, media: 32, 
 const BARRA_DIMS: DimensioneBarra[] = ['piccola', 'media', 'grande'];
 const MENSOLA_DIMS: DimensioneMensola[] = ['piccola', 'media', 'lunga'];
 
-// Visual proportions: 1 frontale = 1 mensola piccola = UNIT px; 5 capi di costa = 1 UNIT
 const UNIT = 80;
 const COSTA_W = 16;
 const FRONTALE_H = 120;
@@ -65,12 +64,14 @@ function tipoFromProduct(p: Product, elementoTipo: TipoElementoParete): TipoCapo
   const fam = (p.famiglia ?? '').toLowerCase();
   const sf = (p.sottofamiglia ?? '').toLowerCase();
   const name = p.name.toLowerCase();
-  if (/borsa|bag|clutch|tote|shopper/.test(fam + sf + name)) return 'borsa';
-  if (/accessori|sciarpa|stola|cintura|cappello|belt|hat/.test(fam + sf + name)) return 'accessorio';
-  if (/abito|vestito|dress/.test(sf + name)) return 'abito';
-  if (/giaccone|cappotto|giubbott|parka|blazer|coat|jacket/.test(sf + name)) return 'capospalla';
-  if (/pantal|gonna|skirt|short|trouser/.test(sf + name)) return 'bottom';
-  if (/top|shirt|blusa|camicia|maglia|felpa|maglione|pull|sweat/.test(sf + name)) return 'top';
+  const all = fam + ' ' + sf + ' ' + name;
+  if (/bijou|bigiotteria|gioiell|collana|bracciale|orecchino|anello|spilla|pendente|charm/.test(all)) return 'accessorio';
+  if (/borsa|bag|clutch|tote|shopper|zaino|backpack|bauletto|pochette|marsupio/.test(all)) return 'borsa';
+  if (/foulard|sciarpa|stola|cintura|cappello|guanti|occhiali|belt|hat|scarf|accessori|portafoglio|wallet/.test(all)) return 'accessorio';
+  if (/abito|vestito|dress|tuta|jumpsuit/.test(all)) return 'abito';
+  if (/giaccone|cappotto|giubbott|parka|blazer|trench|coat|jacket|mantella/.test(all)) return 'capospalla';
+  if (/pantal|gonna|skirt|short|legging|trouser|culotte/.test(all)) return 'bottom';
+  if (/top|shirt|blusa|camicia|maglia|felpa|maglione|pull|sweat|t-shirt|tshirt|canotta/.test(all)) return 'top';
   if (elementoTipo === 'mensola') return 'borsa';
   if (elementoTipo === 'frontale') return 'abito';
   return 'top';
@@ -431,7 +432,7 @@ function MensolaInlineEditor({
     return (
       <button type="button"
         onClick={() => onChange({ dimensione: 'media', items: [] })}
-        className="w-full py-1.5 border border-dashed border-amber-200 rounded-lg text-2xs text-amber-600 hover:bg-amber-50 transition-colors flex items-center justify-center gap-1">
+        className="w-full py-1.5 border border-dashed border-gray-300 rounded-lg text-2xs text-gray-500 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
         <Plus size={11} /> Mensola sopra
       </button>
     );
@@ -442,18 +443,17 @@ function MensolaInlineEditor({
   }
   function removeItem(idx: number) { onChange({ ...config!, items: config!.items.filter((_, i) => i !== idx) }); }
   function addFromCatalog(newItems: ItemParete[]) { onChange({ ...config!, items: [...config!.items, ...newItems] }); }
-  function addBlank() { onChange({ ...config!, items: [...config!.items, { id: nanoid(8), tipo: 'borsa', pezzi: [] }] }); }
 
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
-        <p className="text-xs font-medium text-amber-800">Mensola</p>
+        <div className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0" />
+        <p className="text-xs font-medium text-gray-700">Mensola</p>
         {/* dimensione */}
         <div className="flex gap-1">
           {MENSOLA_DIMS.map((d) => (
             <button key={d} type="button" onClick={() => onChange({ ...config, dimensione: d })}
-              className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${config.dimensione === d ? 'bg-amber-400 text-white' : 'text-amber-600 border border-amber-200 hover:bg-amber-100'}`}>
+              className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${config.dimensione === d ? 'bg-primary text-white' : 'text-gray-500 border border-gray-200 hover:bg-gray-100'}`}>
               {d}
             </button>
           ))}
@@ -462,7 +462,7 @@ function MensolaInlineEditor({
         <div className="flex gap-1">
           {(['sopra', 'sotto', 'fianco'] as PosizioneMensola[]).map((p) => (
             <button key={p} type="button" onClick={() => onChange({ ...config, posizione: p })}
-              className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${(config.posizione ?? 'sopra') === p ? 'bg-amber-600 text-white' : 'text-amber-600 border border-amber-200 hover:bg-amber-100'}`}>
+              className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${(config.posizione ?? 'sopra') === p ? 'bg-gray-700 text-white' : 'text-gray-500 border border-gray-200 hover:bg-gray-100'}`}>
               {p}
             </button>
           ))}
@@ -470,12 +470,12 @@ function MensolaInlineEditor({
         {/* offset */}
         <div className="flex gap-0.5 ml-auto">
           <button type="button" onClick={() => onChange({ ...config, offsetX: Math.max(0, (config.offsetX ?? 0) - COSTA_W) })}
-            className="w-5 h-5 flex items-center justify-center text-amber-400 hover:text-amber-700 disabled:opacity-20 transition-colors"
+            className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 disabled:opacity-20 transition-colors"
             disabled={(config.offsetX ?? 0) === 0}><ChevronLeft size={11} /></button>
           <button type="button" onClick={() => onChange({ ...config, offsetX: (config.offsetX ?? 0) + COSTA_W })}
-            className="w-5 h-5 flex items-center justify-center text-amber-400 hover:text-amber-700 transition-colors"><ChevronRight size={11} /></button>
+            className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"><ChevronRight size={11} /></button>
         </div>
-        <button type="button" onClick={onRemove} className="text-amber-300 hover:text-red-400 transition-colors"><X size={13} /></button>
+        <button type="button" onClick={onRemove} className="text-gray-300 hover:text-red-400 transition-colors"><X size={13} /></button>
       </div>
       {config.items.map((it, idx) => (
         <ItemCard key={it.id} item={it} tipoOptions={TIPO_OPTIONS_MENSOLA}
@@ -485,7 +485,7 @@ function MensolaInlineEditor({
           canMoveLeft={idx > 0} canMoveRight={idx < config.items.length - 1} />
       ))}
       <button type="button" onClick={() => setShowCatalog(true)}
-        className="w-full py-1.5 bg-white border border-amber-200 rounded-lg text-2xs text-amber-700 hover:bg-amber-50 transition-colors flex items-center justify-center gap-1 font-medium">
+        className="w-full py-1.5 bg-white border border-gray-200 rounded-lg text-2xs text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1 font-medium">
         <PackagePlus size={11} /> Importa dal catalogo
       </button>
       {showCatalog && <CatalogPickerModal elementoTipo="mensola" onAdd={addFromCatalog} onClose={() => setShowCatalog(false)} />}
@@ -496,14 +496,18 @@ function MensolaInlineEditor({
 // ─── Elemento card ────────────────────────────────────────────────────────────
 
 function ElementoCard({
-  el, index, total, onChange, onDelete, onMoveUp, onMoveDown,
+  el, index, total, isActive, onChange, onDelete, onMoveUp, onMoveDown,
 }: {
-  el: ElementoParete; index: number; total: number;
+  el: ElementoParete; index: number; total: number; isActive?: boolean;
   onChange: (u: ElementoParete) => void; onDelete: () => void;
   onMoveUp: () => void; onMoveDown: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showCatalogPicker, setShowCatalogPicker] = useState(false);
+
+  useEffect(() => {
+    if (isActive) setExpanded(true);
+  }, [isActive]);
 
   const tipoOptions = el.tipo === 'barra' ? TIPO_OPTIONS_BARRA : el.tipo === 'mensola' ? TIPO_OPTIONS_MENSOLA : TIPO_OPTIONS_FRONTALE;
 
@@ -529,7 +533,7 @@ function ElementoCard({
   const totalPz = totalePezzi(el.items);
 
   return (
-    <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-sm">
+    <div id={`card-${el.id}`} className={`border rounded-2xl overflow-hidden bg-white shadow-sm transition-colors ${isActive ? 'border-primary/40' : 'border-gray-200'}`}>
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 bg-gray-50">
         <div className="flex gap-0.5">
@@ -561,7 +565,7 @@ function ElementoCard({
           <div className="flex gap-1 flex-shrink-0">
             {MENSOLA_DIMS.map((d) => (
               <button key={d} type="button" onClick={() => onChange({ ...el, dimensione: d })}
-                className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${el.dimensione === d ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'text-gray-400 border border-gray-200 hover:border-gray-400'}`}>
+                className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${el.dimensione === d ? 'bg-gray-200 text-gray-700 border border-gray-300' : 'text-gray-400 border border-gray-200 hover:border-gray-400'}`}>
                 {d}
               </button>
             ))}
@@ -602,7 +606,7 @@ function ElementoCard({
             )}
           </div>
 
-          {/* Horizontal offset — barra, mensola e frontale */}
+          {/* Horizontal offset */}
           <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
             <p className="text-2xs text-gray-400 flex-1">Posizione orizzontale</p>
             <button type="button"
@@ -640,7 +644,14 @@ function getElementPhotos(el: ElementoParete): Array<{ id: string; imageUrl: str
 
 const PHOTO_STRIP_H = 34;
 
-function WallRenderer({ config, onReorder }: { config: ElementoParete[]; onReorder: (c: ElementoParete[]) => void }) {
+function WallRenderer({
+  config, onReorder, onSelect, zoom,
+}: {
+  config: ElementoParete[];
+  onReorder: (c: ElementoParete[]) => void;
+  onSelect?: (id: string) => void;
+  zoom?: number;
+}) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
 
@@ -669,13 +680,14 @@ function WallRenderer({ config, onReorder }: { config: ElementoParete[]; onReord
 
   return (
     <div className="px-4 py-3 h-full">
-      <div className="flex gap-4 h-full">
+      <div className="flex gap-4 h-full" style={zoom !== undefined ? { zoom } : undefined}>
         {config.map((el, idx) => {
           const photos = getElementPhotos(el);
           return (
             <div
               key={el.id}
               draggable
+              onClick={(e) => { e.stopPropagation(); onSelect?.(el.id); }}
               onDragStart={(e) => {
                 setDraggingId(el.id);
                 e.dataTransfer.setData('text/plain', el.id);
@@ -698,7 +710,7 @@ function WallRenderer({ config, onReorder }: { config: ElementoParete[]; onReord
               <div className="flex-1 flex items-end pb-2 min-h-0">
                 <WallElementRenderer el={el} />
               </div>
-              {/* Photo strip — fixed height, scrolls with element */}
+              {/* Photo strip */}
               <div
                 className="flex-shrink-0 flex gap-0.5 border-t border-gray-100 pt-1"
                 style={{ height: PHOTO_STRIP_H }}
@@ -760,7 +772,6 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
         <div style={{ marginTop: 12 }}><MensolaBlock config={el.mensolaTop} /></div>
       </div>
     );
-    // fianco — mensola centrata verticalmente accanto alla barra
     return (
       <div className="flex items-center gap-2 flex-shrink-0">
         {barraCore}
@@ -845,7 +856,7 @@ function MensolaRenderer({ config }: { config: MensolaInlineConfig }) {
                     title={`Accessorio (${it.pezzi.length}pz)`} />
                 );
               }
-              // Abbigliamento di costa: 1 strato per taglia
+              // Abbigliamento di costa: 1 strato per taglia, volume cresce verso l'alto
               const n = Math.max(1, it.pezzi.length);
               return (
                 <div key={it.id ?? i} className="flex flex-col-reverse flex-shrink-0" style={{ width: 48 }}
@@ -858,18 +869,6 @@ function MensolaRenderer({ config }: { config: MensolaInlineConfig }) {
             })}
       </div>
       <div className="h-0.5 bg-gray-400 rounded" style={{ width: w }} />
-    </div>
-  );
-}
-
-function FrontaleSmall({ item }: { item: ItemParete }) {
-  const color = item.coloreHex ?? colorForTipo(item.tipo);
-  return (
-    <div className="flex flex-col items-center gap-0.5 flex-shrink-0" title={`Frontale — ${TIPO_LABELS[item.tipo]}`}>
-      <div className="rounded border border-gray-200 flex items-end justify-center pb-1"
-        style={{ backgroundColor: color, width: UNIT, height: FRONTALE_H }}>
-        {item.pezzi.length > 0 && <span className="text-white font-bold drop-shadow-sm" style={{ fontSize: 8 }}>{item.pezzi.length}pz</span>}
-      </div>
     </div>
   );
 }
@@ -891,22 +890,12 @@ function CapoOnBarra({ item }: { item: ItemParete }) {
   );
 }
 
-function CapoOnMensola({ item }: { item: ItemParete }) {
-  const color = item.coloreHex ?? colorForTipo(item.tipo);
-  const w = item.tipo === 'borsa' ? 26 : 18;
-  const h = item.tipo === 'borsa' ? 24 : 18;
-  return (
-    <div className="rounded-sm flex-shrink-0"
-      style={{ backgroundColor: color, width: w, height: h }}
-      title={`${TIPO_LABELS[item.tipo]} (${item.pezzi.length}pz)`} />
-  );
-}
-
 // ─── Main editor ──────────────────────────────────────────────────────────────
 
 export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   const router = useRouter();
   const qc = useQueryClient();
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, isError } = useQuery<{ data: PareteAttrezzata }>({
     queryKey: ['moda-parete', pareteId],
@@ -919,6 +908,8 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   const [editingNome, setEditingNome] = useState(false);
   const [config, setConfig] = useState<ElementoParete[]>([]);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [activeElementId, setActiveElementId] = useState<string | null>(null);
+  const [previewZoom, setPreviewZoom] = useState(1);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const initializedRef = useRef(false);
 
@@ -977,16 +968,29 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
     const next = [...config]; const [m] = next.splice(from, 1); next.splice(to, 0, m); handleConfigChange(next);
   }
 
+  function handleSelectElement(id: string) {
+    setActiveElementId(id);
+    // Give the card's useEffect time to expand before scrolling
+    setTimeout(() => {
+      const card = document.getElementById(`card-${id}`);
+      if (card && editorRef.current) {
+        const containerTop = editorRef.current.getBoundingClientRect().top;
+        const cardTop = card.getBoundingClientRect().top;
+        editorRef.current.scrollBy({ top: cardTop - containerTop - 12, behavior: 'smooth' });
+      }
+    }, 60);
+  }
+
   const totalCapi = config.reduce((acc, el) => acc + el.items.length, 0);
   const totalPz = config.reduce((acc, el) => acc + totalePezzi(el.items), 0);
 
-  if (isLoading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Loader2 size={24} className="animate-spin text-gray-300" /></div>;
-  if (isError || !parete) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-sm text-gray-400">Layout non trovato</p></div>;
+  if (isLoading) return <div className="h-full bg-gray-50 flex items-center justify-center"><Loader2 size={24} className="animate-spin text-gray-300" /></div>;
+  if (isError || !parete) return <div className="h-full bg-gray-50 flex items-center justify-center"><p className="text-sm text-gray-400">Layout non trovato</p></div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur border-b border-gray-100 px-4 py-3">
+    <div className="h-full flex flex-col bg-gray-50 text-gray-900">
+      {/* Header — fixed at top, no scrolling */}
+      <div className="flex-shrink-0 bg-gray-50/95 backdrop-blur border-b border-gray-100 px-4 py-3">
         <div className="max-w-6xl mx-auto flex items-center gap-3">
           <button onClick={() => router.push('/moda/pareti')} className="text-gray-400 hover:text-gray-700 transition-colors"><ArrowLeft size={20} /></button>
           <div className="flex-1 min-w-0">
@@ -1010,39 +1014,63 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
         </div>
       </div>
 
-      {/* Preview panel — sticky below header, 40 vh, landscape */}
-      <div className="sticky z-10 bg-white border-b border-gray-200 shadow-sm" style={{ top: 60 }}>
-        <div className="w-full flex flex-col" style={{ height: '40vh' }}>
-          <div className="flex items-center gap-3 px-4 py-2 flex-shrink-0">
-            <p className="text-xs text-gray-400 uppercase tracking-widest font-medium flex-1">Anteprima parete</p>
-            <p className="text-2xs text-gray-300 hidden sm:block">Trascina per riordinare ·</p>
-            {(['barra', 'mensola', 'frontale'] as const).map((tipo) => (
-              <button key={tipo} type="button" onClick={() => addElemento(tipo)}
-                className="flex items-center gap-1 px-2.5 py-1 bg-cream text-primary border border-border rounded-lg text-2xs font-medium hover:bg-accent/10 transition-colors">
-                <Plus size={11} /> {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
-              </button>
-            ))}
-          </div>
-          <div className="flex-1 min-h-0 border-t border-gray-100 overflow-x-auto overflow-y-hidden">
-            <WallRenderer config={config} onReorder={handleConfigChange} />
-          </div>
+      {/* Preview panel — fixed below header, 40vh */}
+      <div className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm" style={{ height: '40vh' }}>
+        <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
+          <p className="text-xs text-gray-400 uppercase tracking-widest font-medium flex-1">Anteprima parete</p>
+          <p className="text-2xs text-gray-300 hidden sm:block">Trascina ·</p>
+          {/* Zoom controls */}
+          <button type="button" onClick={() => setPreviewZoom((z) => Math.max(0.4, +(z - 0.15).toFixed(2)))}
+            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors" title="Riduci zoom">
+            <ZoomOut size={13} />
+          </button>
+          <span className="text-2xs text-gray-400 font-mono w-8 text-center">{Math.round(previewZoom * 100)}%</span>
+          <button type="button" onClick={() => setPreviewZoom((z) => Math.min(2, +(z + 0.15).toFixed(2)))}
+            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors" title="Aumenta zoom">
+            <ZoomIn size={13} />
+          </button>
+          <div className="w-px h-4 bg-gray-200 mx-1" />
+          {(['barra', 'mensola', 'frontale'] as const).map((tipo) => (
+            <button key={tipo} type="button" onClick={() => addElemento(tipo)}
+              className="flex items-center gap-1 px-2.5 py-1 bg-cream text-primary border border-border rounded-lg text-2xs font-medium hover:bg-accent/10 transition-colors">
+              <Plus size={11} /> {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+            </button>
+          ))}
+        </div>
+        <div className="border-t border-gray-100 overflow-x-auto overflow-y-hidden" style={{ height: 'calc(40vh - 44px)' }}>
+          <WallRenderer
+            config={config}
+            onReorder={handleConfigChange}
+            onSelect={handleSelectElement}
+            zoom={previewZoom}
+          />
         </div>
       </div>
 
-      {/* Editor */}
-      <div className="max-w-6xl mx-auto w-full px-4 py-4 space-y-3">
-        {config.map((el, idx) => (
-          <ElementoCard key={el.id} el={el} index={idx} total={config.length}
-            onChange={(u) => updateElemento(idx, u)} onDelete={() => deleteElemento(idx)}
-            onMoveUp={() => moveElemento(idx, idx - 1)} onMoveDown={() => moveElemento(idx, idx + 1)} />
-        ))}
+      {/* Editor cards — scrollable independently */}
+      <div ref={editorRef} className="flex-1 min-h-0 overflow-y-auto">
+        <div className="max-w-6xl mx-auto w-full px-4 py-4 space-y-3">
+          {config.map((el, idx) => (
+            <ElementoCard
+              key={el.id}
+              el={el}
+              index={idx}
+              total={config.length}
+              isActive={activeElementId === el.id}
+              onChange={(u) => updateElemento(idx, u)}
+              onDelete={() => deleteElemento(idx)}
+              onMoveUp={() => moveElemento(idx, idx - 1)}
+              onMoveDown={() => moveElemento(idx, idx + 1)}
+            />
+          ))}
 
-        {config.length === 0 && (
-          <div className="py-10 text-center">
-            <p className="text-sm text-gray-400">Costruisci il tuo layout</p>
-            <p className="text-xs mt-1 text-gray-300">Aggiungi barre appenderia, mensole ed esposizioni frontali usando i pulsanti in cima</p>
-          </div>
-        )}
+          {config.length === 0 && (
+            <div className="py-10 text-center">
+              <p className="text-sm text-gray-400">Costruisci il tuo layout</p>
+              <p className="text-xs mt-1 text-gray-300">Aggiungi barre appenderia, mensole ed esposizioni frontali usando i pulsanti in cima</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

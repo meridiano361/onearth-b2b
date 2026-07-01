@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-01
+// AGGIORNATO: 2026-07-01 (Visual: preview fissa, zoom, click-to-scroll, mensola neutrale, bijou)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -376,7 +376,7 @@ export default function AssistenzaPage() {
           <ul className="space-y-2">
             <Bullet><span className="font-medium">Accesso:</span> dalla home dell&apos;app tocca il quadrato <em>MODA PE27</em> per entrare nella sezione. Da lì puoi navigare a Catalogo, Preferiti, Visual, Carrelli e Ordini della collezione.</Bullet>
             <Bullet><span className="font-medium">Catalogo Moda:</span> mostra solo i prodotti PE27 (il filtro collezione è pre-impostato e bloccato). Usa gli altri filtri per famiglia, classe, sottoclasse e gruppo omogeneo secondo la tassonomia moda.</Bullet>
-            <Bullet><span className="font-medium">Visual:</span> simula l&apos;esposizione in negozio costruendo layout con barre appenderia, mensole e frontali. Per ogni elemento puoi aggiungere capi (top, bottom, abiti, capispalla, borse, accessori) specificando le taglie disponibili e collegando opzionalmente il prodotto del catalogo. L&apos;anteprima schematica sulla destra mostra il layout in tempo reale.</Bullet>
+            <Bullet><span className="font-medium">Visual:</span> simula l&apos;esposizione in negozio costruendo layout con barre appenderia, mensole e frontali. L&apos;anteprima è fissa in cima alla pagina e non scorre: usa i pulsanti <strong>+/−</strong> per zoomare e tocca un elemento nell&apos;anteprima per espandere automaticamente la scheda di modifica corrispondente. I capi su mensola si vedono di costa orizzontale (volume cresce per ogni taglia). Il tipo (top, bottom, abito, capospalla, borsa, accessorio, bijou…) viene riconosciuto automaticamente dal catalogo.</Bullet>
             <Bullet><span className="font-medium">Esposizione:</span> componi outfit a parete selezionando una palette colori PE27, una fantasia/texture dominante, i capi principali (zona centro) e gli accessori coordinati (zona destra). Da ogni outfit puoi aggiungere al carrello tutti i prodotti, solo i capi o solo gli accessori.</Bullet>
             <Bullet><span className="font-medium">Ordini:</span> gli ordini moda si creano con il carrello standard e sono accessibili dalla sezione I miei Ordini.</Bullet>
           </ul>
