@@ -14,7 +14,6 @@ import type {
   MensolaInlineConfig,
 } from '@/types';
 import type { Product } from '@/types';
-import { MODA_COLLEZIONE } from '@/lib/modaAccess';
 import { nanoid } from 'nanoid';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -79,8 +78,8 @@ function CatalogPickerModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const { data, isLoading } = useQuery<{ data: Product[] }>({
-    queryKey: ['moda-products-panel'],
-    queryFn: () => fetch(`/api/products?active=true&collezione=${MODA_COLLEZIONE}&limit=500`).then((r) => r.json()),
+    queryKey: ['moda-products-visual'],
+    queryFn: () => fetch(`/api/products?active=true&gruppoMerceologico=Moda&limit=500`).then((r) => r.json()),
     staleTime: 60_000,
   });
 
@@ -175,8 +174,8 @@ function CatalogPickerModal({
 function ProductPickerModal({ onSelect, onClose }: { onSelect: (p: Product) => void; onClose: () => void }) {
   const [search, setSearch] = useState('');
   const { data, isLoading } = useQuery<{ data: Product[] }>({
-    queryKey: ['moda-products-panel'],
-    queryFn: () => fetch(`/api/products?active=true&collezione=${MODA_COLLEZIONE}&limit=500`).then((r) => r.json()),
+    queryKey: ['moda-products-visual'],
+    queryFn: () => fetch(`/api/products?active=true&gruppoMerceologico=Moda&limit=500`).then((r) => r.json()),
     staleTime: 60_000,
   });
   const products = data?.data ?? [];
