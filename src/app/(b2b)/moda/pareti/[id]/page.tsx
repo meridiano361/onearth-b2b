@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { canAccessModa } from '@/lib/modaAccess';
 import ModaPareteEditor from '@/components/moda/ModaPareteEditor';
 
-export const metadata: Metadata = { title: 'Parete Attrezzata — Moda PE27' };
+export const metadata: Metadata = { title: 'Visual — Moda PE27' };
 
 export default async function ModaPareteDetailPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);

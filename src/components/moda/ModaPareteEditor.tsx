@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Plus, X, Search, Loader2, ChevronUp, ChevronDown,
-  Trash2, GripVertical, Edit2, Check, Tag,
+  Trash2, Edit2, Check, Tag,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { PareteAttrezzata, ElementoParete, ItemParete, TipoCapo, TipoElementoParete, DimensioneMensola } from '@/types';
@@ -18,9 +18,9 @@ import { nanoid } from 'nanoid';
 function colorForTipo(tipo: TipoCapo): string {
   const map: Record<TipoCapo, string> = {
     top: '#4f7c9c', bottom: '#6b5a8c', abito: '#8c5a7c',
-    capospalla: '#4a6b4a', borsa: '#8c7a4a', accessorio: '#8c6a4a', altro: '#555',
+    capospalla: '#4a6b4a', borsa: '#8c7a4a', accessorio: '#8c6a4a', altro: '#9ca3af',
   };
-  return map[tipo] ?? '#555';
+  return map[tipo] ?? '#9ca3af';
 }
 
 const TIPO_LABELS: Record<TipoCapo, string> = {
@@ -60,54 +60,54 @@ function ProductPickerModal({
   }, [products, search]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-lg bg-[#111] border border-white/10 rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[80vh]">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
-          <p className="flex-1 text-sm font-medium text-white">Seleziona prodotto PE27</p>
-          <button onClick={onClose} className="text-white/40 hover:text-white/70"><X size={18} /></button>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="w-full max-w-lg bg-white border border-gray-200 rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[80vh] shadow-xl">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+          <p className="flex-1 text-sm font-medium text-gray-900">Seleziona prodotto PE27</p>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
-        <div className="px-4 py-3 border-b border-white/10">
+        <div className="px-4 py-3 border-b border-gray-100">
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cerca per nome o codice…"
-              className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/30"
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-400"
             />
           </div>
         </div>
         <div className="overflow-y-auto flex-1">
           {isLoading ? (
-            <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-white/30" /></div>
+            <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
           ) : filtered.length === 0 ? (
-            <p className="text-center py-8 text-xs text-white/25">Nessun risultato</p>
+            <p className="text-center py-8 text-xs text-gray-400">Nessun risultato</p>
           ) : (
             filtered.map((p) => (
               <button
                 key={p.id}
                 onClick={() => { onSelect(p); onClose(); }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
               >
                 {p.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={p.imageUrl} alt={p.name} className="w-8 h-8 object-cover rounded" />
                 ) : (
-                  <div className="w-8 h-8 bg-white/5 rounded" />
+                  <div className="w-8 h-8 bg-gray-100 rounded" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-white truncate">{p.name}</p>
-                  <p className="text-2xs text-white/30 font-mono">{p.code}</p>
+                  <p className="text-xs font-medium text-gray-900 truncate">{p.name}</p>
+                  <p className="text-2xs text-gray-400 font-mono">{p.code}</p>
                 </div>
               </button>
             ))
           )}
         </div>
-        <div className="px-4 py-3 border-t border-white/10">
+        <div className="px-4 py-3 border-t border-gray-100">
           <button
             onClick={onClose}
-            className="w-full text-xs text-white/40 hover:text-white/60 transition-colors"
+            className="w-full text-xs text-gray-400 hover:text-gray-600 transition-colors"
           >
             Senza prodotto collegato — prosegui manualmente
           </button>
@@ -156,7 +156,7 @@ function ItemCard({
   }
 
   return (
-    <div className="bg-white/[0.04] border border-white/10 rounded-xl p-3 space-y-2.5">
+    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2.5">
       {/* Row 1: tipo + product + move + delete */}
       <div className="flex items-start gap-2">
         <div
@@ -173,8 +173,8 @@ function ItemCard({
                 onClick={() => onChange({ ...item, tipo: t })}
                 className={`px-2 py-0.5 rounded-full text-2xs font-medium transition-colors ${
                   item.tipo === t
-                    ? 'bg-white text-black'
-                    : 'text-white/40 border border-white/10 hover:border-white/30'
+                    ? 'bg-primary text-white'
+                    : 'text-gray-500 border border-gray-200 hover:border-gray-400'
                 }`}
               >
                 {TIPO_LABELS[t]}
@@ -185,26 +185,26 @@ function ItemCard({
           <button
             type="button"
             onClick={() => setShowProductPicker(true)}
-            className="flex items-center gap-1.5 text-2xs text-white/30 hover:text-white/60 transition-colors"
+            className="flex items-center gap-1.5 text-2xs text-gray-400 hover:text-gray-600 transition-colors"
           >
             <Tag size={10} />
             {item.productCode
-              ? <span className="font-mono text-white/50">{item.productCode} — {item.productName}</span>
+              ? <span className="font-mono text-gray-600">{item.productCode} — {item.productName}</span>
               : <span>Collega prodotto</span>}
           </button>
         </div>
         <div className="flex gap-1 flex-shrink-0">
           {onMoveLeft && (
-            <button type="button" onClick={onMoveLeft} disabled={!canMoveLeft} className="w-6 h-6 flex items-center justify-center text-white/25 hover:text-white/60 disabled:opacity-20 transition-colors">
+            <button type="button" onClick={onMoveLeft} disabled={!canMoveLeft} className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors">
               <ChevronUp size={14} />
             </button>
           )}
           {onMoveRight && (
-            <button type="button" onClick={onMoveRight} disabled={!canMoveRight} className="w-6 h-6 flex items-center justify-center text-white/25 hover:text-white/60 disabled:opacity-20 transition-colors">
+            <button type="button" onClick={onMoveRight} disabled={!canMoveRight} className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors">
               <ChevronDown size={14} />
             </button>
           )}
-          <button type="button" onClick={onDelete} className="w-6 h-6 flex items-center justify-center text-white/25 hover:text-red-400 transition-colors">
+          <button type="button" onClick={onDelete} className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors">
             <X size={14} />
           </button>
         </div>
@@ -216,15 +216,15 @@ function ItemCard({
           type="color"
           value={item.coloreHex ?? colorForTipo(item.tipo)}
           onChange={(e) => onChange({ ...item, coloreHex: e.target.value })}
-          className="w-6 h-6 rounded border border-white/10 cursor-pointer bg-transparent p-0"
+          className="w-6 h-6 rounded border border-gray-200 cursor-pointer bg-transparent p-0"
           title="Colore capo"
         />
-        <span className="text-2xs text-white/20">Colore nell'esposizione</span>
+        <span className="text-2xs text-gray-400">Colore nell'esposizione</span>
       </div>
 
       {/* Taglie */}
       <div>
-        <p className="text-2xs text-white/30 mb-1.5">Taglie disponibili <span className="text-white/20">({item.pezzi.length} pz)</span></p>
+        <p className="text-2xs text-gray-500 mb-1.5">Taglie disponibili <span className="text-gray-400">({item.pezzi.length} pz)</span></p>
         <div className="flex flex-wrap gap-1">
           {taglieSuggested.map((t) => (
             <button
@@ -233,8 +233,8 @@ function ItemCard({
               onClick={() => toggleTaglia(t)}
               className={`px-2 py-0.5 rounded text-2xs font-mono transition-colors ${
                 activeTaglie.has(t)
-                  ? 'bg-white/20 text-white border border-white/20'
-                  : 'text-white/25 border border-white/8 hover:border-white/20'
+                  ? 'bg-primary text-white border border-primary'
+                  : 'text-gray-500 border border-gray-200 hover:border-gray-400'
               }`}
             >
               {t}
@@ -268,7 +268,7 @@ function CustomTagliaInput({ onAdd }: { onAdd: (t: string) => void }) {
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="px-2 py-0.5 rounded text-2xs text-white/20 border border-dashed border-white/10 hover:border-white/30 transition-colors"
+        className="px-2 py-0.5 rounded text-2xs text-gray-400 border border-dashed border-gray-300 hover:border-gray-500 transition-colors"
       >
         + altra
       </button>
@@ -285,7 +285,7 @@ function CustomTagliaInput({ onAdd }: { onAdd: (t: string) => void }) {
       }}
       onBlur={() => { if (value) onAdd(value); setValue(''); setEditing(false); }}
       placeholder="44…"
-      className="w-14 px-2 py-0.5 rounded text-2xs font-mono text-white bg-white/5 border border-white/20 focus:outline-none"
+      className="w-14 px-2 py-0.5 rounded text-2xs font-mono text-gray-900 bg-white border border-gray-300 focus:outline-none"
     />
   );
 }
@@ -351,18 +351,18 @@ function ElementoCard({
   const totalPezzi = el.items.reduce((acc, it) => acc + it.pezzi.length, 0);
 
   return (
-    <div className="border border-white/10 rounded-2xl overflow-hidden">
+    <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-sm">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 bg-white/[0.03]">
+      <div className="flex items-center gap-2 px-4 py-3 bg-gray-50">
         <div className="flex flex-col gap-0.5">
-          <button type="button" onClick={onMoveUp} disabled={index === 0} className="text-white/20 hover:text-white/50 disabled:opacity-20 transition-colors"><ChevronUp size={14} /></button>
-          <button type="button" onClick={onMoveDown} disabled={index === total - 1} className="text-white/20 hover:text-white/50 disabled:opacity-20 transition-colors"><ChevronDown size={14} /></button>
+          <button type="button" onClick={onMoveUp} disabled={index === 0} className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronUp size={14} /></button>
+          <button type="button" onClick={onMoveDown} disabled={index === total - 1} className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"><ChevronDown size={14} /></button>
         </div>
         <div
           className={`w-2 h-2 rounded-full flex-shrink-0 ${
-            el.tipo === 'barra' ? 'bg-blue-400/60' :
-            el.tipo === 'mensola' ? 'bg-amber-400/60' :
-            'bg-emerald-400/60'
+            el.tipo === 'barra' ? 'bg-blue-400' :
+            el.tipo === 'mensola' ? 'bg-amber-400' :
+            'bg-emerald-400'
           }`}
         />
         <button
@@ -370,9 +370,9 @@ function ElementoCard({
           onClick={() => setExpanded(!expanded)}
           className="flex-1 text-left"
         >
-          <p className="text-sm font-medium text-white">{elLabel}</p>
-          <p className="text-xs text-white/30">
-            {el.items.length} {el.tipo === 'frontale' ? 'capo' : 'capi'}{el.items.length !== 1 ? '' : ''}
+          <p className="text-sm font-medium text-gray-900">{elLabel}</p>
+          <p className="text-xs text-gray-400">
+            {el.items.length} capi
             {totalPezzi > 0 && ` · ${totalPezzi} pz totali`}
           </p>
         </button>
@@ -385,8 +385,8 @@ function ElementoCard({
                 onClick={() => onChange({ ...el, dimensione: d })}
                 className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${
                   el.dimensione === d
-                    ? 'bg-white/20 text-white'
-                    : 'text-white/30 border border-white/10 hover:border-white/30'
+                    ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                    : 'text-gray-400 border border-gray-200 hover:border-gray-400'
                 }`}
               >
                 {d}
@@ -394,7 +394,7 @@ function ElementoCard({
             ))}
           </div>
         )}
-        <button type="button" onClick={onDelete} className="text-white/20 hover:text-red-400 transition-colors ml-1">
+        <button type="button" onClick={onDelete} className="text-gray-300 hover:text-red-500 transition-colors ml-1">
           <Trash2 size={14} />
         </button>
       </div>
@@ -419,7 +419,7 @@ function ElementoCard({
             <button
               type="button"
               onClick={addItem}
-              className="w-full py-2 border border-dashed border-white/15 rounded-xl text-xs text-white/30 hover:border-white/30 hover:text-white/50 transition-colors flex items-center justify-center gap-1.5"
+              className="w-full py-2 border border-dashed border-gray-200 rounded-xl text-xs text-gray-400 hover:border-gray-400 hover:text-gray-600 transition-colors flex items-center justify-center gap-1.5"
             >
               <Plus size={13} />
               {el.tipo === 'barra' ? 'Aggiungi capo alla barra' :
@@ -438,14 +438,14 @@ function ElementoCard({
 function WallRenderer({ config }: { config: ElementoParete[] }) {
   if (config.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-white/15">
-        <p className="text-xs">Nessun elemento — aggiungi barre, mensole o frontali</p>
+      <div className="flex items-center justify-center h-full text-gray-300 p-4">
+        <p className="text-xs text-center">Aggiungi barre appenderia, mensole o frontali</p>
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto space-y-2 p-4">
+    <div className="h-full overflow-y-auto space-y-3 p-4">
       {config.map((el) => (
         <WallElementRenderer key={el.id} el={el} />
       ))}
@@ -457,15 +457,15 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
   if (el.tipo === 'barra') {
     return (
       <div className="space-y-1">
-        <div className="h-0.5 bg-white/30 w-full rounded" />
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="h-0.5 bg-gray-400 w-full rounded" />
+        <div className="flex gap-1.5 flex-wrap pt-0.5">
           {el.items.length === 0 ? (
-            <p className="text-2xs text-white/15 italic">barra vuota</p>
+            <p className="text-2xs text-gray-300 italic">barra vuota</p>
           ) : el.items.map((it, i) => (
             <CapoOnBarra key={it.id ?? i} item={it} />
           ))}
         </div>
-        <p className="text-2xs text-white/20 font-mono pl-0.5">barra appenderia</p>
+        <p className="text-2xs text-gray-400 font-mono pl-0.5">barra appenderia</p>
       </div>
     );
   }
@@ -476,13 +476,13 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
       <div className="space-y-1">
         <div className="flex items-end gap-1.5 flex-wrap min-h-[36px]">
           {el.items.length === 0 ? (
-            <p className="text-2xs text-white/15 italic">mensola vuota</p>
+            <p className="text-2xs text-gray-300 italic">mensola vuota</p>
           ) : el.items.map((it, i) => (
             <CapoOnMensola key={it.id ?? i} item={it} />
           ))}
         </div>
-        <div className={`h-0.5 bg-white/20 rounded ${w}`} />
-        <p className="text-2xs text-white/20 font-mono pl-0.5">mensola {el.dimensione ?? ''}</p>
+        <div className={`h-0.5 bg-gray-400 rounded ${w}`} />
+        <p className="text-2xs text-gray-400 font-mono pl-0.5">mensola {el.dimensione ?? ''}</p>
       </div>
     );
   }
@@ -492,22 +492,22 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
     return (
       <div className="flex gap-3 items-start">
         <div
-          className="w-14 h-20 rounded border border-white/10 flex-shrink-0 flex items-end justify-center pb-1"
-          style={{ backgroundColor: it?.coloreHex ?? '#333' }}
+          className="w-14 h-20 rounded border border-gray-200 flex-shrink-0 flex items-end justify-center pb-1"
+          style={{ backgroundColor: it?.coloreHex ?? '#e5e7eb' }}
         >
           {it && (
-            <span className="text-2xs text-white/60 font-mono">
+            <span className="text-2xs text-white font-mono drop-shadow-sm">
               {TIPO_LABELS[it.tipo]?.[0] ?? '?'}
             </span>
           )}
         </div>
         <div>
-          <p className="text-xs text-white/50 font-medium">{it?.productCode ?? '—'}</p>
-          <p className="text-2xs text-white/25">{it?.productName ?? 'esposizione frontale'}</p>
+          <p className="text-xs text-gray-700 font-medium">{it?.productCode ?? '—'}</p>
+          <p className="text-2xs text-gray-400">{it?.productName ?? 'esposizione frontale'}</p>
           {it && it.pezzi.length > 0 && (
             <div className="flex gap-1 mt-1 flex-wrap">
               {it.pezzi.map((p, i) => (
-                <span key={i} className="text-2xs bg-white/10 text-white/50 px-1.5 py-0.5 rounded font-mono">{p.taglia}</span>
+                <span key={i} className="text-2xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono">{p.taglia}</span>
               ))}
             </div>
           )}
@@ -522,9 +522,7 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
 function CapoOnBarra({ item }: { item: ItemParete }) {
   return (
     <div className="flex flex-col items-center gap-0.5" title={`${TIPO_LABELS[item.tipo]}${item.productCode ? ` — ${item.productCode}` : ''}`}>
-      {/* hanger dot */}
-      <div className="w-1 h-1 bg-white/30 rounded-full" />
-      {/* garment */}
+      <div className="w-1 h-1 bg-gray-500 rounded-full" />
       <div
         className="rounded-sm flex items-center justify-center"
         style={{
@@ -533,13 +531,12 @@ function CapoOnBarra({ item }: { item: ItemParete }) {
           height: item.tipo === 'abito' ? 44 : item.tipo === 'capospalla' ? 32 : 28,
         }}
       >
-        <span className="text-2xs text-white/70 font-bold select-none" style={{ fontSize: 8 }}>
+        <span className="font-bold text-white select-none" style={{ fontSize: 8 }}>
           {TIPO_LABELS[item.tipo][0]}
         </span>
       </div>
-      {/* pezzi count */}
       {item.pezzi.length > 0 && (
-        <span className="text-2xs text-white/25" style={{ fontSize: 8 }}>{item.pezzi.length}pz</span>
+        <span className="text-gray-500 select-none" style={{ fontSize: 8 }}>{item.pezzi.length}pz</span>
       )}
     </div>
   );
@@ -556,7 +553,7 @@ function CapoOnMensola({ item }: { item: ItemParete }) {
       }}
       title={`${TIPO_LABELS[item.tipo]}${item.productCode ? ` — ${item.productCode}` : ''} (${item.pezzi.length}pz)`}
     >
-      <span className="text-2xs text-white/70 font-bold select-none" style={{ fontSize: 8 }}>
+      <span className="font-bold text-white select-none" style={{ fontSize: 8 }}>
         {TIPO_LABELS[item.tipo][0]}
       </span>
     </div>
@@ -655,16 +652,16 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-white/30" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 size={24} className="animate-spin text-gray-300" />
       </div>
     );
   }
 
   if (isError || !parete) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <p className="text-sm text-white/40">Parete non trovata</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-sm text-gray-400">Layout non trovato</p>
       </div>
     );
   }
@@ -673,11 +670,11 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   const totalPezzi = config.reduce((acc, el) => acc + el.items.reduce((a, it) => a + it.pezzi.length, 0), 0);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-[#0a0a0a]/95 backdrop-blur border-b border-white/5 px-4 py-3">
+      <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur border-b border-gray-100 px-4 py-3">
         <div className="max-w-6xl mx-auto flex items-center gap-3">
-          <button onClick={() => router.push('/moda/pareti')} className="text-white/40 hover:text-white transition-colors">
+          <button onClick={() => router.push('/moda/pareti')} className="text-gray-400 hover:text-gray-700 transition-colors">
             <ArrowLeft size={20} />
           </button>
           <div className="flex-1 min-w-0">
@@ -688,21 +685,21 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
                 onChange={(e) => setNome(e.target.value)}
                 onBlur={handleNomeSave}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNomeSave(); if (e.key === 'Escape') { setNome(parete.nome); setEditingNome(false); } }}
-                className="bg-transparent border-b border-white/30 text-base font-semibold text-white focus:outline-none w-full"
+                className="bg-transparent border-b border-gray-400 text-base font-semibold text-gray-900 focus:outline-none w-full"
               />
             ) : (
               <button type="button" onClick={() => setEditingNome(true)} className="flex items-center gap-1.5 group">
-                <h1 className="text-base font-semibold truncate">{nome}</h1>
-                <Edit2 size={12} className="text-white/20 group-hover:text-white/50 transition-colors flex-shrink-0" />
+                <h1 className="text-base font-semibold truncate text-gray-900">{nome}</h1>
+                <Edit2 size={12} className="text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" />
               </button>
             )}
-            <p className="text-xs text-white/25">
+            <p className="text-xs text-gray-400">
               {config.length} elementi · {totalCapi} capi · {totalPezzi} pz
             </p>
           </div>
           <div className="flex-shrink-0">
-            {saveStatus === 'saving' && <Loader2 size={14} className="animate-spin text-white/30" />}
-            {saveStatus === 'saved' && <Check size={14} className="text-emerald-400" />}
+            {saveStatus === 'saving' && <Loader2 size={14} className="animate-spin text-gray-400" />}
+            {saveStatus === 'saved' && <Check size={14} className="text-emerald-500" />}
           </div>
         </div>
       </div>
@@ -729,29 +726,29 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
             <button
               type="button"
               onClick={() => addElemento('barra')}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-500/10 border border-blue-400/20 rounded-xl text-xs text-blue-300 hover:bg-blue-500/20 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-600 hover:bg-blue-100 transition-colors"
             >
               <Plus size={13} /> Barra appenderia
             </button>
             <button
               type="button"
               onClick={() => addElemento('mensola')}
-              className="flex items-center gap-1.5 px-4 py-2 bg-amber-500/10 border border-amber-400/20 rounded-xl text-xs text-amber-300 hover:bg-amber-500/20 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 hover:bg-amber-100 transition-colors"
             >
               <Plus size={13} /> Mensola
             </button>
             <button
               type="button"
               onClick={() => addElemento('frontale')}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500/10 border border-emerald-400/20 rounded-xl text-xs text-emerald-300 hover:bg-emerald-500/20 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 hover:bg-emerald-100 transition-colors"
             >
               <Plus size={13} /> Frontale
             </button>
           </div>
 
           {config.length === 0 && (
-            <div className="py-10 text-center text-white/20">
-              <p className="text-sm">Costruisci la tua parete attrezzata</p>
+            <div className="py-10 text-center text-gray-300">
+              <p className="text-sm text-gray-400">Costruisci il tuo layout</p>
               <p className="text-xs mt-1">Aggiungi barre appenderia, mensole ed esposizioni frontali</p>
             </div>
           )}
@@ -760,11 +757,11 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
         {/* Right: visual preview */}
         <div className="lg:w-80 xl:w-96 flex-shrink-0">
           <div className="sticky top-24">
-            <p className="text-xs text-white/30 uppercase tracking-widest mb-3 font-medium">Anteprima parete</p>
-            <div className="bg-white/[0.02] border border-white/8 rounded-2xl min-h-64 max-h-[70vh] overflow-hidden">
+            <p className="text-xs text-gray-400 uppercase tracking-widest mb-3 font-medium">Anteprima Visual</p>
+            <div className="bg-white border border-gray-200 rounded-2xl min-h-64 max-h-[70vh] overflow-hidden shadow-sm">
               <WallRenderer config={config} />
             </div>
-            <p className="text-2xs text-white/15 mt-2 text-center">Schema schematico dell'esposizione</p>
+            <p className="text-2xs text-gray-300 mt-2 text-center">Schema schematico dell'esposizione</p>
           </div>
         </div>
       </div>

@@ -22,7 +22,7 @@ function CreatePareteModal({ onClose, onCreated }: { onClose: () => void; onCrea
         body: JSON.stringify({ nome }),
       });
       if (!res.ok) throw new Error('Errore durante la creazione');
-      toast.success('Parete creata');
+      toast.success('Layout creato');
       onCreated();
       onClose();
     } catch {
@@ -33,20 +33,20 @@ function CreatePareteModal({ onClose, onCreated }: { onClose: () => void; onCrea
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-[#111] border border-white/10 rounded-2xl p-6">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-white border border-gray-200 rounded-2xl p-6 shadow-xl">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-sm font-semibold text-white">Nuova parete attrezzata</h2>
-          <button onClick={onClose} className="text-white/40 hover:text-white/70"><X size={18} /></button>
+          <h2 className="text-sm font-semibold text-gray-900">Nuovo layout Visual</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs text-white/40 block mb-1">Nome parete *</label>
+            <label className="text-xs text-gray-500 block mb-1">Nome *</label>
             <input
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              placeholder="es. Parete Ingresso, Zona Centrale…"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/30"
+              placeholder="es. Ingresso, Zona Centrale, Vetrina…"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-400"
               autoFocus
             />
           </div>
@@ -54,17 +54,17 @@ function CreatePareteModal({ onClose, onCreated }: { onClose: () => void; onCrea
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-lg border border-white/10 text-white/60 text-sm hover:border-white/20 transition-colors"
+              className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-500 text-sm hover:bg-gray-50 transition-colors"
             >
               Annulla
             </button>
             <button
               type="submit"
               disabled={saving || !nome.trim()}
-              className="flex-1 py-2.5 rounded-lg bg-white text-black text-sm font-medium disabled:opacity-40 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-lg bg-primary text-white text-sm font-medium disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {saving && <Loader2 size={14} className="animate-spin" />}
-              Crea parete
+              Crea layout
             </button>
           </div>
         </form>
@@ -87,11 +87,11 @@ export default function ModaPareti() {
   const pareti = data?.data ?? [];
 
   async function deleteParete(id: string) {
-    if (!confirm('Eliminare questa parete attrezzata?')) return;
+    if (!confirm('Eliminare questo layout?')) return;
     try {
       const res = await fetch(`/api/moda/pareti/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
-      toast.success('Parete eliminata');
+      toast.success('Layout eliminato');
       qc.invalidateQueries({ queryKey: ['moda-pareti'] });
     } catch {
       toast.error('Errore durante l\'eliminazione');
@@ -99,22 +99,22 @@ export default function ModaPareti() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-[#0a0a0a]/95 backdrop-blur border-b border-white/5 px-4 py-4">
+      <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur border-b border-gray-100 px-4 py-4">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <button onClick={() => router.back()} className="text-white/40 hover:text-white transition-colors">
+          <button onClick={() => router.back()} className="text-gray-400 hover:text-gray-700 transition-colors">
             <ArrowLeft size={20} />
           </button>
           <div className="flex-1">
-            <p className="text-xs text-white/30 uppercase tracking-widest">Moda PE27</p>
-            <h1 className="text-base font-semibold">Pareti Attrezzate</h1>
+            <p className="text-xs text-gray-400 uppercase tracking-widest">Moda PE27</p>
+            <h1 className="text-base font-semibold text-gray-900">Visual</h1>
           </div>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-white text-black text-xs font-medium rounded-xl hover:bg-white/90 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-medium rounded-xl hover:bg-primary/90 transition-colors"
           >
-            <Plus size={14} /> Nuova parete
+            <Plus size={14} /> Nuovo
           </button>
         </div>
       </div>
@@ -124,19 +124,19 @@ export default function ModaPareti() {
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-40 bg-white/5 rounded-2xl animate-pulse" />
+              <div key={i} className="h-40 bg-gray-200 rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : pareti.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-white/20">
+          <div className="flex flex-col items-center justify-center py-24 text-gray-300">
             <Layout size={40} className="mb-4" />
-            <p className="text-sm font-medium text-white/40">Nessuna parete attrezzata</p>
-            <p className="text-xs mt-1">Simula l'esposizione in negozio</p>
+            <p className="text-sm font-medium text-gray-500">Nessun layout</p>
+            <p className="text-xs mt-1 text-gray-400">Simula l'esposizione in negozio</p>
             <button
               onClick={() => setShowCreate(true)}
-              className="mt-5 px-5 py-2.5 bg-white text-black text-sm rounded-xl font-medium flex items-center gap-2 hover:bg-white/90 transition-colors"
+              className="mt-5 px-5 py-2.5 bg-primary text-white text-sm rounded-xl font-medium flex items-center gap-2 hover:bg-primary/90 transition-colors"
             >
-              <Plus size={14} /> Crea parete
+              <Plus size={14} /> Crea layout
             </button>
           </div>
         ) : (
@@ -151,14 +151,14 @@ export default function ModaPareti() {
               return (
                 <div
                   key={p.id}
-                  className="group relative rounded-2xl border border-white/10 bg-white/[0.03] hover:border-white/20 transition-all cursor-pointer"
+                  className="group relative rounded-2xl border border-gray-200 bg-white hover:border-gray-300 transition-all cursor-pointer shadow-sm"
                   onClick={() => router.push(`/moda/pareti/${p.id}`)}
                 >
                   {/* Wall preview thumbnail */}
-                  <div className="h-32 px-4 pt-4 pb-2 flex flex-col gap-1.5">
+                  <div className="h-32 px-4 pt-4 pb-2 flex flex-col gap-1.5 bg-gray-50 rounded-t-2xl">
                     {config.length === 0 ? (
                       <div className="flex-1 flex items-center justify-center">
-                        <p className="text-xs text-white/15">Parete vuota — clicca per configurare</p>
+                        <p className="text-xs text-gray-300">Vuoto — clicca per configurare</p>
                       </div>
                     ) : (
                       <div className="flex-1 flex flex-col gap-1 overflow-hidden">
@@ -166,18 +166,18 @@ export default function ModaPareti() {
                           <WallElementPreview key={el.id} element={el} />
                         ))}
                         {config.length > 5 && (
-                          <p className="text-2xs text-white/20 text-center">+{config.length - 5} elementi</p>
+                          <p className="text-2xs text-gray-400 text-center">+{config.length - 5} elementi</p>
                         )}
                       </div>
                     )}
                   </div>
 
                   {/* Info */}
-                  <div className="px-4 pb-4">
-                    <p className="text-sm font-medium text-white">{p.nome}</p>
-                    <p className="text-xs text-white/30 mt-0.5">
+                  <div className="px-4 py-3">
+                    <p className="text-sm font-medium text-gray-900">{p.nome}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
                       {config.length === 0
-                        ? 'Vuota'
+                        ? 'Vuoto'
                         : [
                             nBarre > 0 && `${nBarre} barra${nBarre > 1 ? 'e' : ''}`,
                             nMensole > 0 && `${nMensole} mensola${nMensole > 1 ? 'e' : ''}`,
@@ -192,7 +192,7 @@ export default function ModaPareti() {
                   {/* Delete */}
                   <button
                     onClick={(e) => { e.stopPropagation(); deleteParete(p.id); }}
-                    className="absolute top-3 right-3 w-7 h-7 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center text-white/40 hover:text-white/80 opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute top-3 right-3 w-7 h-7 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm"
                   >
                     <X size={13} />
                   </button>
@@ -218,8 +218,8 @@ function WallElementPreview({ element }: { element: any }) {
   if (element.tipo === 'barra') {
     return (
       <div className="flex items-center gap-0.5 h-5">
-        <span className="text-2xs text-white/30 w-10 flex-shrink-0 font-mono">barra</span>
-        <div className="flex-1 border-t border-white/20 relative">
+        <span className="text-2xs text-gray-400 w-10 flex-shrink-0 font-mono">barra</span>
+        <div className="flex-1 border-t border-gray-300 relative">
           <div className="flex gap-0.5 mt-0.5">
             {items.slice(0, 12).map((it: any, i: number) => (
               <div
@@ -229,7 +229,7 @@ function WallElementPreview({ element }: { element: any }) {
                 title={`${it.tipo}${it.productCode ? ` — ${it.productCode}` : ''}`}
               />
             ))}
-            {items.length > 12 && <span className="text-2xs text-white/20">+{items.length - 12}</span>}
+            {items.length > 12 && <span className="text-2xs text-gray-400">+{items.length - 12}</span>}
           </div>
         </div>
       </div>
@@ -238,8 +238,8 @@ function WallElementPreview({ element }: { element: any }) {
   if (element.tipo === 'mensola') {
     return (
       <div className="flex items-center gap-0.5 h-5">
-        <span className="text-2xs text-white/30 w-10 flex-shrink-0 font-mono">{element.dimensione ?? 'mensola'}</span>
-        <div className="flex-1 border-b border-white/20 flex gap-0.5 pb-0.5">
+        <span className="text-2xs text-gray-400 w-10 flex-shrink-0 font-mono">{element.dimensione ?? 'mens.'}</span>
+        <div className="flex-1 border-b border-gray-300 flex gap-0.5 pb-0.5">
           {items.slice(0, 10).map((it: any, i: number) => (
             <div
               key={i}
@@ -256,13 +256,13 @@ function WallElementPreview({ element }: { element: any }) {
     const it = items[0];
     return (
       <div className="flex items-center gap-0.5 h-5">
-        <span className="text-2xs text-white/30 w-10 flex-shrink-0 font-mono">front.</span>
+        <span className="text-2xs text-gray-400 w-10 flex-shrink-0 font-mono">front.</span>
         <div
-          className="w-8 h-4 rounded border border-white/10 flex-shrink-0"
-          style={{ backgroundColor: it?.coloreHex ?? '#444' }}
+          className="w-8 h-4 rounded border border-gray-200 flex-shrink-0"
+          style={{ backgroundColor: it?.coloreHex ?? '#d1d5db' }}
           title={it?.tipo ?? 'frontale'}
         />
-        {it && <span className="text-2xs text-white/30 ml-1 truncate">{it.productCode ?? it.tipo}</span>}
+        {it && <span className="text-2xs text-gray-400 ml-1 truncate">{it.productCode ?? it.tipo}</span>}
       </div>
     );
   }
@@ -271,13 +271,8 @@ function WallElementPreview({ element }: { element: any }) {
 
 function colorForTipo(tipo: string): string {
   const map: Record<string, string> = {
-    top: '#4f7c9c',
-    bottom: '#6b5a8c',
-    abito: '#8c5a7c',
-    capospalla: '#4a6b4a',
-    borsa: '#8c7a4a',
-    accessorio: '#8c6a4a',
-    altro: '#555',
+    top: '#4f7c9c', bottom: '#6b5a8c', abito: '#8c5a7c',
+    capospalla: '#4a6b4a', borsa: '#8c7a4a', accessorio: '#8c6a4a', altro: '#9ca3af',
   };
-  return map[tipo] ?? '#555';
+  return map[tipo] ?? '#9ca3af';
 }

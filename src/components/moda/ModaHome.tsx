@@ -8,7 +8,7 @@ const COLLECTION_ITEMS = [
   { href: '/moda/catalogo',        icon: Grid3x3,     label: 'Catalogo',        description: 'Sfoglia tutti i prodotti PE27' },
   { href: '/moda/preferiti',       icon: Heart,        label: 'Preferiti',       description: 'I tuoi prodotti preferiti'     },
   { href: '/moda/ruota-cromatica', icon: Palette,      label: 'Ruota Cromatica', description: 'Abbinamenti cromatici e visual merchandising' },
-  { href: '/moda/pareti',          icon: Layout,       label: 'Pareti Attrezzate', description: 'Simula l\'esposizione in negozio' },
+  { href: '/moda/pareti',          icon: Layout,       label: 'Visual',            description: 'Simula l\'esposizione in negozio' },
   { href: '/moda/carrelli',        icon: ShoppingCart, label: 'Carrelli',        description: 'I tuoi carrelli attivi'        },
   { href: '/moda/ordini',          icon: Package2,     label: 'Ordini',          description: 'I tuoi ordini PE27'            },
 ];
