@@ -138,6 +138,7 @@ export interface ItemParete {
 export interface MensolaInlineConfig {
   dimensione: DimensioneMensola;
   items: ItemParete[];
+  offsetX?: number;
 }
 
 export interface ElementoParete {
@@ -148,6 +149,7 @@ export interface ElementoParete {
   mensolaTop?: MensolaInlineConfig;
   frontaleLeft?: ItemParete;
   frontaleRight?: ItemParete;
+  barraOffsetX?: number;
 }
 
 export interface PareteAttrezzata {

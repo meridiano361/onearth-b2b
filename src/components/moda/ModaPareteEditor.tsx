@@ -443,6 +443,13 @@ function MensolaInlineEditor({
             </button>
           ))}
         </div>
+        <div className="flex gap-0.5">
+          <button type="button" onClick={() => onChange({ ...config, offsetX: Math.max(0, (config.offsetX ?? 0) - COSTA_W) })}
+            className="w-5 h-5 flex items-center justify-center text-amber-400 hover:text-amber-700 disabled:opacity-20 transition-colors"
+            disabled={(config.offsetX ?? 0) === 0} title="Sposta sinistra"><ChevronLeft size={11} /></button>
+          <button type="button" onClick={() => onChange({ ...config, offsetX: (config.offsetX ?? 0) + COSTA_W })}
+            className="w-5 h-5 flex items-center justify-center text-amber-400 hover:text-amber-700 transition-colors" title="Sposta destra"><ChevronRight size={11} /></button>
+        </div>
         <button type="button" onClick={onRemove} className="text-amber-300 hover:text-red-400 transition-colors"><X size={13} /></button>
       </div>
       {config.items.map((it, idx) => (
@@ -510,9 +517,8 @@ function ElementoCard({
           <button type="button" onClick={onMoveUp} disabled={index === 0} className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors" title="Sposta a sinistra"><ChevronLeft size={14} /></button>
           <button type="button" onClick={onMoveDown} disabled={index === total - 1} className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors" title="Sposta a destra"><ChevronRight size={14} /></button>
         </div>
-        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isBarra ? 'bg-blue-400' : isMensola ? 'bg-amber-400' : 'bg-emerald-400'}`} />
-        <button type="button" onClick={() => setExpanded(!expanded)} className="flex-1 text-left min-w-0">
-          <p className="text-sm font-medium text-gray-900">{elLabel}</p>
+        <button type="button" onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
+          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-900 text-white flex-shrink-0">{elLabel}</span>
           <p className={`text-xs ${pzOver ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
             {el.items.length} capi
             {totalPz > 0 && ` · ${totalPz} pz`}
@@ -596,6 +602,24 @@ function ElementoCard({
               </div>
             </div>
           )}
+
+          {/* Barra horizontal offset */}
+          {isBarra && (
+            <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+              <p className="text-2xs text-gray-400 flex-1">Posizione barra</p>
+              <button type="button"
+                onClick={() => onChange({ ...el, barraOffsetX: Math.max(0, (el.barraOffsetX ?? 0) - COSTA_W) })}
+                disabled={(el.barraOffsetX ?? 0) === 0}
+                className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors">
+                <ChevronLeft size={14} />
+              </button>
+              <button type="button"
+                onClick={() => onChange({ ...el, barraOffsetX: (el.barraOffsetX ?? 0) + COSTA_W })}
+                className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors">
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -633,11 +657,15 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
     const over = pzTot > max;
     return (
       <div className="flex flex-col items-start flex-shrink-0">
-        {el.mensolaTop && <MensolaRenderer config={el.mensolaTop} />}
-        <div className="flex items-end" style={{ gap: 2 }}>
+        {el.mensolaTop && (
+          <div style={{ marginLeft: el.mensolaTop.offsetX ?? 0 }}>
+            <MensolaRenderer config={el.mensolaTop} />
+          </div>
+        )}
+        <div className="flex items-end" style={{ gap: 2, marginTop: el.mensolaTop ? 12 : 0 }}>
           {el.frontaleLeft && <FrontaleSmall item={el.frontaleLeft} />}
-          <div>
-            <div className={`h-0.5 mb-0 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`}
+          <div style={{ marginLeft: el.barraOffsetX ?? 0 }}>
+            <div className={`h-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`}
               style={{ minWidth: UNIT }} />
             <div className="flex items-start" style={{ gap: 1, minHeight: 48, minWidth: UNIT }}>
               {el.items.length === 0
