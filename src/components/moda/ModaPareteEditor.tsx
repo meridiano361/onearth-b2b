@@ -602,23 +602,24 @@ function ElementoCard({
             )}
           </div>
 
-          {/* Horizontal offset — barra and frontale */}
-          {(isBarra || isFrontale) && (
-            <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
-              <p className="text-2xs text-gray-400 flex-1">Posizione</p>
-              <button type="button"
-                onClick={() => onChange({ ...el, offsetX: Math.max(0, (el.offsetX ?? 0) - COSTA_W) })}
-                disabled={(el.offsetX ?? 0) === 0}
-                className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors">
-                <ChevronLeft size={14} />
-              </button>
-              <button type="button"
-                onClick={() => onChange({ ...el, offsetX: (el.offsetX ?? 0) + COSTA_W })}
-                className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors">
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          )}
+          {/* Horizontal offset — barra, mensola e frontale */}
+          <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+            <p className="text-2xs text-gray-400 flex-1">Posizione orizzontale</p>
+            <button type="button"
+              onClick={() => onChange({ ...el, offsetX: Math.max(0, (el.offsetX ?? 0) - COSTA_W) })}
+              disabled={(el.offsetX ?? 0) === 0}
+              className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors">
+              <ChevronLeft size={14} />
+            </button>
+            {(el.offsetX ?? 0) > 0 && (
+              <span className="text-2xs text-gray-400 font-mono min-w-[28px] text-center">+{el.offsetX}px</span>
+            )}
+            <button type="button"
+              onClick={() => onChange({ ...el, offsetX: (el.offsetX ?? 0) + COSTA_W })}
+              className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors">
+              <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -770,7 +771,7 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
 
   if (el.tipo === 'mensola') {
     return (
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0" style={{ marginLeft: el.offsetX ?? 0 }}>
         <MensolaRenderer config={{ dimensione: (el.dimensione as DimensioneMensola) ?? 'media', items: el.items, posizione: 'sopra' }} />
       </div>
     );
