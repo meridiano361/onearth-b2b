@@ -644,9 +644,6 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
             </div>
             <div className={`h-0.5 mt-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`}
               style={{ minWidth: UNIT }} />
-            <p className={`text-2xs font-mono ${over ? 'text-red-400' : 'text-gray-400'}`}>
-              {dim} · {pzTot}/{max}
-            </p>
           </div>
           {el.frontaleRight && <FrontaleSmall item={el.frontaleRight} />}
         </div>
@@ -671,9 +668,6 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
           style={{ backgroundColor: it?.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_H }}>
           {it && it.pezzi.length > 0 && <span className="text-white font-bold drop-shadow-sm" style={{ fontSize: 8 }}>{it.pezzi.length}pz</span>}
         </div>
-        <p className="text-2xs text-gray-400 font-mono truncate" style={{ maxWidth: UNIT }}>
-          {it?.productCode ?? '—'}
-        </p>
       </div>
     );
   }
@@ -691,7 +685,6 @@ function MensolaRenderer({ config }: { config: MensolaInlineConfig }) {
           : config.items.map((it, i) => <CapoOnMensola key={it.id ?? i} item={it} />)}
       </div>
       <div className="h-0.5 bg-gray-400 rounded" style={{ width: w }} />
-      <p className="text-2xs text-gray-400 font-mono">mensola {config.dimensione}</p>
     </div>
   );
 }
