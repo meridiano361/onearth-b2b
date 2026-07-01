@@ -44,6 +44,7 @@ const MENSOLA_DIMS: DimensioneMensola[] = ['piccola', 'media', 'lunga'];
 
 const UNIT = 80;
 const COSTA_W = 16;
+const FRONTALE_W = COSTA_W * 3; // 48px = larghezza di 3 capi di costa
 const FRONTALE_H = 120;
 const FRONTALE_TOP_H = 48;
 const FRONTALE_BOT_H = 72;
@@ -793,15 +794,15 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
     const item2 = el.items[1];
 
     const frontaleCore = item2 ? (
-      <div style={{ width: UNIT }}>
+      <div style={{ width: FRONTALE_W }}>
         <div className="rounded-t border border-b-0 border-gray-200"
-          style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_TOP_H }} />
+          style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_TOP_H }} />
         <div className="rounded-b border border-gray-200"
-          style={{ backgroundColor: item2.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_BOT_H }} />
+          style={{ backgroundColor: item2.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_BOT_H }} />
       </div>
     ) : (
       <div className="rounded border border-gray-200"
-        style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: UNIT, height: FRONTALE_H }} />
+        style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_H }} />
     );
 
     const wrapper = (children: React.ReactNode) => (
@@ -1017,7 +1018,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
       {/* Preview panel — fixed below header, 40vh */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm" style={{ height: '40vh' }}>
         <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
-          <p className="text-xs text-gray-400 uppercase tracking-widest font-medium flex-1">Anteprima parete</p>
+          <p className="text-2xs text-gray-400 uppercase tracking-widest flex-1">Anteprima parete</p>
           <p className="text-2xs text-gray-300 hidden sm:block">Trascina ·</p>
           {/* Zoom controls */}
           <button type="button" onClick={() => setPreviewZoom((z) => Math.max(0.4, +(z - 0.15).toFixed(2)))}
