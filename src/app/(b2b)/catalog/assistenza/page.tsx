@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-02 (Ruota cromatica: vista abbinamenti prodotto con 4 set + filtri tassonomia)
+// AGGIORNATO: 2026-07-02 (Varianti taglia nella scheda prodotto; ruota cromatica vista abbinamenti)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -166,6 +166,7 @@ export default function AssistenzaPage() {
             <Bullet>Scegli la modalità di visualizzazione: griglia, lista orizzontale o lookbook.</Bullet>
             <Bullet>Clicca ❤️ su un prodotto per aggiungerlo ai Preferiti.</Bullet>
             <Bullet>Usa <span className="font-medium">+</span> e <span className="font-medium">−</span> per aggiungere quantità all&apos;ordine corrente nella barra a destra.</Bullet>
+            <Bullet><span className="font-medium">Varianti taglia:</span> i prodotti con più taglie (es. XS, S, M, L, XL) mostrano nella scheda prodotto la tabella <em>Varianti taglia</em> con il codice specifico per ciascuna taglia. Clicca <strong>+</strong> su una riga per aggiungere quella taglia al carrello; usa <strong>−</strong> / <strong>+</strong> per modificarne la quantità. Ogni taglia viene aggiunta come riga separata nel carrello con il proprio codice.</Bullet>
             <Bullet>I prodotti CA27 hanno il badge <span className="font-medium">NUOVO</span>.</Bullet>
             <Bullet>Il carrello è sincronizzato tra tutti i tuoi dispositivi: se aggiungi prodotti da un telefono, li ritrovi esattamente uguali accedendo dallo stesso account su un altro dispositivo.</Bullet>
           </ul>
