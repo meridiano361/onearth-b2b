@@ -997,12 +997,6 @@ function ElementoCard({
                   onChange={(c) => updateMensola(idx, c)}
                   onRemove={() => removeMensola(idx)} />
               ))}
-              {mensoleEl.length < maxMensole && (
-                <button type="button" onClick={addMensola}
-                  className="w-full py-1.5 border border-dashed border-gray-300 rounded-lg text-2xs text-gray-500 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
-                  <Plus size={11} /> Aggiungi mensola
-                </button>
-              )}
             </div>
           )}
           {/* Items for barra and frontale */}
@@ -1059,12 +1053,6 @@ function ElementoCard({
               ))}
               {mensoleEl.length === 0 && (
                 <p className="text-2xs text-gray-400 text-center py-2">Nessun ripiano configurato</p>
-              )}
-              {mensoleEl.length < maxMensole && (
-                <button type="button" onClick={addMensola}
-                  className="w-full py-1.5 border border-dashed border-gray-300 rounded-lg text-2xs text-gray-500 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
-                  <Plus size={11} /> {mensoleEl.length === 0 ? 'Aggiungi ripiano' : 'Aggiungi ripiano sopra'}
-                </button>
               )}
             </div>
           )}
