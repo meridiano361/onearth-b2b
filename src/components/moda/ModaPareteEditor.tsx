@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Plus, X, Search, Loader2, ChevronLeft, ChevronRight,
   Trash2, Edit2, Check, Tag, PackagePlus, AlertTriangle, ZoomIn, ZoomOut,
-  SlidersHorizontal, ChevronDown,
+  SlidersHorizontal, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type {
@@ -58,6 +58,12 @@ const FRONTALE_TOP_H = 48;
 const FRONTALE_BOT_H = 72;
 const STRATO_H = 7;
 const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: FRONTALE_W, media: UNIT * 2, lunga: UNIT * 3 };
+
+function defaultOffsetY(tipo: TipoElementoParete): number {
+  if (tipo === 'barra') return 80;
+  if (tipo === 'mensola') return 0;
+  return 40;
+}
 
 // ─── Color harmony (ruota cromatica integration) ─────────────────────────────
 
@@ -1048,6 +1054,21 @@ function ElementoCard({
               <ChevronRight size={14} />
             </button>
           </div>
+          <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+            <p className="text-2xs text-gray-400 flex-1">Posizione verticale</p>
+            <button type="button"
+              onClick={() => onChange({ ...el, offsetY: Math.max(0, (el.offsetY ?? defaultOffsetY(el.tipo)) - 4) })}
+              disabled={(el.offsetY ?? defaultOffsetY(el.tipo)) === 0}
+              className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors">
+              <ChevronUp size={14} />
+            </button>
+            <span className="text-2xs text-gray-400 font-mono min-w-[28px] text-center">{el.offsetY ?? defaultOffsetY(el.tipo)}px</span>
+            <button type="button"
+              onClick={() => onChange({ ...el, offsetY: (el.offsetY ?? defaultOffsetY(el.tipo)) + 4 })}
+              className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors">
+              <ChevronDown size={14} />
+            </button>
+          </div>
         </div>
       )}
       {showCatalogPicker && (
@@ -1071,13 +1092,38 @@ function WallRenderer({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
 
-  if (config.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full text-gray-300 p-4">
-        <p className="text-xs text-center">Aggiungi barre, mensole o frontali</p>
-      </div>
-    );
-  }
+  const { topPhotos, bottomPhotos } = useMemo(() => {
+    const top: Array<{ src: string; code: string }> = [];
+    const bottom: Array<{ src: string; code: string }> = [];
+    for (const el of config) {
+      if (el.tipo === 'barra') {
+        for (const it of el.items) {
+          if (it.imageUrl) bottom.push({ src: it.imageUrl, code: it.productCode ?? '' });
+        }
+        for (const m of getMensole(el)) {
+          for (const it of m.items) {
+            if (it.imageUrl) top.push({ src: it.imageUrl, code: it.productCode ?? '' });
+          }
+        }
+      } else if (el.tipo === 'mensola') {
+        const mensole = el.mensole?.length
+          ? el.mensole
+          : [{ dimensione: (el.dimensione as DimensioneMensola) ?? 'media', items: el.items }];
+        for (const m of mensole) {
+          for (const it of m.items) {
+            if (it.imageUrl) top.push({ src: it.imageUrl, code: it.productCode ?? '' });
+          }
+        }
+      } else if (el.tipo === 'frontale') {
+        for (const m of getMensole(el)) {
+          for (const it of m.items) {
+            if (it.imageUrl) top.push({ src: it.imageUrl, code: it.productCode ?? '' });
+          }
+        }
+      }
+    }
+    return { topPhotos: top, bottomPhotos: bottom };
+  }, [config]);
 
   function handleDrop(e: React.DragEvent, targetIdx: number) {
     e.preventDefault();
@@ -1094,36 +1140,76 @@ function WallRenderer({
     setOverIdx(null);
   }
 
+  if (config.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full text-gray-300 p-4">
+        <p className="text-xs text-center">Aggiungi barre, mensole o frontali</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="px-4 py-3 h-full">
-      <div className="flex items-start gap-4 h-full" style={zoom !== undefined ? { zoom } : undefined}>
-        {config.map((el, idx) => (
-          <div
-            key={el.id}
-            draggable
-            onClick={(e) => { e.stopPropagation(); onSelect?.(el.id); }}
-            onDragStart={(e) => {
-              draggingIdRef.current = el.id;
-              setDraggingId(el.id);
-              e.dataTransfer.setData('text/plain', el.id);
-              e.dataTransfer.effectAllowed = 'move';
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              const did = draggingIdRef.current;
-              if (did && did !== el.id) setOverIdx(idx);
-            }}
-            onDrop={(e) => handleDrop(e, idx)}
-            onDragEnd={() => { draggingIdRef.current = null; setDraggingId(null); setOverIdx(null); }}
-            className={[
-              'cursor-grab active:cursor-grabbing select-none flex-shrink-0 transition-opacity',
-              draggingId === el.id ? 'opacity-30' : 'opacity-100',
-              overIdx === idx && draggingId !== el.id ? 'outline outline-2 outline-primary outline-offset-2 rounded' : '',
-            ].join(' ')}
-          >
-            <WallElementRenderer el={el} />
-          </div>
-        ))}
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Top strip: mensola product photos */}
+      <div className="flex-shrink-0 overflow-x-auto overflow-y-hidden flex items-end gap-1 px-4 pb-1 border-b border-gray-100" style={{ height: '12.5%' }}>
+        {topPhotos.length > 0
+          ? topPhotos.map((p, i) => (
+              <div key={i} className="flex flex-col items-center flex-shrink-0 gap-px">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.src} alt="" className="object-contain rounded-sm flex-shrink-0" style={{ width: 28, height: 28 }} />
+                <p className="text-[7px] text-gray-300 truncate font-mono leading-none" style={{ maxWidth: 28 }}>{p.code}</p>
+              </div>
+            ))
+          : <p className="text-[9px] text-gray-200 italic self-center">mensole</p>
+        }
+      </div>
+
+      {/* Middle zone: wall render (75%) */}
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
+        <div className="flex items-start h-full px-4 gap-4" style={zoom !== undefined ? { zoom } : undefined}>
+          {config.map((el, idx) => (
+            <div
+              key={el.id}
+              draggable
+              onClick={(e) => { e.stopPropagation(); onSelect?.(el.id); }}
+              onDragStart={(e) => {
+                draggingIdRef.current = el.id;
+                setDraggingId(el.id);
+                e.dataTransfer.setData('text/plain', el.id);
+                e.dataTransfer.effectAllowed = 'move';
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                const did = draggingIdRef.current;
+                if (did && did !== el.id) setOverIdx(idx);
+              }}
+              onDrop={(e) => handleDrop(e, idx)}
+              onDragEnd={() => { draggingIdRef.current = null; setDraggingId(null); setOverIdx(null); }}
+              className={[
+                'cursor-grab active:cursor-grabbing select-none flex-shrink-0 transition-opacity relative',
+                draggingId === el.id ? 'opacity-30' : 'opacity-100',
+                overIdx === idx && draggingId !== el.id ? 'outline outline-2 outline-primary outline-offset-2 rounded' : '',
+              ].join(' ')}
+              style={{ top: el.offsetY ?? defaultOffsetY(el.tipo) }}
+            >
+              <WallElementRenderer el={el} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom strip: barra product photos */}
+      <div className="flex-shrink-0 overflow-x-auto overflow-y-hidden flex items-start gap-1 px-4 pt-1 border-t border-gray-100" style={{ height: '12.5%' }}>
+        {bottomPhotos.length > 0
+          ? bottomPhotos.map((p, i) => (
+              <div key={i} className="flex flex-col items-center flex-shrink-0 gap-px">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.src} alt="" className="object-contain rounded-sm flex-shrink-0" style={{ width: 28, height: 28 }} />
+                <p className="text-[7px] text-gray-300 truncate font-mono leading-none" style={{ maxWidth: 28 }}>{p.code}</p>
+              </div>
+            ))
+          : <p className="text-[9px] text-gray-200 italic self-center">barre</p>
+        }
       </div>
     </div>
   );
@@ -1155,22 +1241,6 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
             ? <div style={{ minWidth: UNIT }} />
             : el.items.map((it, i) => <CapoOnBarra key={it.id ?? i} item={it} />)}
         </div>
-        {el.items.some((it) => it.imageUrl) && (
-          <div className="flex mt-1" style={{ gap: 1 }}>
-            {el.items.map((it, i) => {
-              const count = Math.max(1, it.pezzi.length);
-              const slotW = count * COSTA_W + Math.max(0, count - 1);
-              return it.imageUrl
-                ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img key={it.id ?? i} src={it.imageUrl} alt="" draggable={false}
-                    className="flex-shrink-0 object-contain"
-                    style={{ width: slotW, height: 36 }} />
-                )
-                : <div key={it.id ?? i} className="flex-shrink-0" style={{ width: slotW, height: 36 }} />;
-            })}
-          </div>
-        )}
       </div>
     );
 
@@ -1251,27 +1321,9 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
 
 function MensolaRenderer({ config }: { config: MensolaInlineConfig }) {
   const w = MENSOLA_W[config.dimensione];
-  const hasPhotos = config.items.some((it) => it.imageUrl);
-
-  // Width of each item on the shelf (for photo alignment)
-  function itemW(it: ItemParete) { return it.tipo === 'accessorio' ? 29 : 48; }
 
   return (
     <div>
-      {/* Photos above — aligned with each item */}
-      {hasPhotos && (
-        <div className="flex items-end gap-0.5 mb-1">
-          {config.items.map((it, i) => {
-            const w2 = itemW(it);
-            return it.imageUrl
-              ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={it.id ?? i} src={it.imageUrl} alt="" className="flex-shrink-0 object-contain rounded-sm" style={{ width: w2, height: 30 }} />
-              )
-              : <div key={it.id ?? i} className="flex-shrink-0" style={{ width: w2, height: 30 }} />;
-          })}
-        </div>
-      )}
       {/* Shelf items — color blocks */}
       <div className="flex items-end gap-0.5" style={{ minWidth: w }}>
         {config.items.length === 0
@@ -1443,7 +1495,6 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
         <div style={{ height: '40vh' }} className="flex flex-col">
           <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
             <p className="text-2xs text-gray-400 uppercase tracking-widest flex-1">Anteprima parete</p>
-            <p className="text-2xs text-gray-300 hidden sm:block">Trascina ·</p>
             <button type="button" onClick={() => setPreviewZoom((z) => Math.max(0.4, +(z - 0.15).toFixed(2)))}
               className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors">
               <ZoomOut size={13} />
@@ -1461,7 +1512,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
               </button>
             ))}
           </div>
-          <div className="flex-1 min-h-0 border-t border-gray-100 overflow-x-auto overflow-y-hidden">
+          <div className="flex-1 min-h-0 border-t border-gray-100 overflow-hidden">
             <WallRenderer
               config={config}
               onReorder={handleConfigChange}

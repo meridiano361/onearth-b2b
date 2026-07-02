@@ -154,6 +154,7 @@ export interface ElementoParete {
   /** @deprecated use mensole[0] */
   mensolaTop?: MensolaInlineConfig;
   offsetX?: number;
+  offsetY?: number;
 }
 
 export interface PareteAttrezzata {
