@@ -1081,63 +1081,93 @@ function ElementoCard({
 // ─── Wall renderer ────────────────────────────────────────────────────────────
 
 function WallRenderer({
-  config, onReorder, onSelect, zoom,
+  config, onSelect, onUpdate, zoom,
 }: {
   config: ElementoParete[];
-  onReorder: (c: ElementoParete[]) => void;
   onSelect?: (id: string) => void;
+  onUpdate?: (id: string, patch: Partial<ElementoParete>) => void;
   zoom?: number;
 }) {
-  const draggingIdRef = useRef<string | null>(null);
+  const dragRef = useRef<{
+    id: string; pointerId: number;
+    startX: number; startY: number;
+    startOffsetX: number; startOffsetY: number;
+  } | null>(null);
+  const lastLivePosRef = useRef<{ id: string; x: number; y: number } | null>(null);
+  const [livePos, setLivePos] = useState<{ id: string; x: number; y: number } | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [overIdx, setOverIdx] = useState<number | null>(null);
 
-  const { topPhotos, bottomPhotos } = useMemo(() => {
-    const top: Array<{ src: string; code: string }> = [];
-    const bottom: Array<{ src: string; code: string }> = [];
-    for (const el of config) {
-      if (el.tipo === 'barra') {
-        for (const it of el.items) {
-          if (it.imageUrl) bottom.push({ src: it.imageUrl, code: it.productCode ?? '' });
+  // Per-element photos: top = mensola items, bottom = barra items aligned to item slot widths
+  const elementPhotos = useMemo(() => config.map((el) => {
+    const top: Array<{ src: string; w: number }> = [];
+    const bottom: Array<{ src: string; w: number }> = [];
+    if (el.tipo === 'barra') {
+      for (const it of el.items) {
+        const count = Math.max(1, it.pezzi.length);
+        const w = Math.max(24, count * COSTA_W + Math.max(0, count - 1));
+        if (it.imageUrl) bottom.push({ src: it.imageUrl, w });
+        else bottom.push({ src: '', w }); // blank slot keeps alignment
+      }
+      for (const m of getMensole(el)) {
+        for (const it of m.items) {
+          if (it.imageUrl) top.push({ src: it.imageUrl, w: it.tipo === 'accessorio' ? 29 : 48 });
         }
-        for (const m of getMensole(el)) {
-          for (const it of m.items) {
-            if (it.imageUrl) top.push({ src: it.imageUrl, code: it.productCode ?? '' });
-          }
+      }
+    } else if (el.tipo === 'mensola') {
+      const mensole = el.mensole?.length
+        ? el.mensole
+        : [{ dimensione: (el.dimensione as DimensioneMensola) ?? 'media', items: el.items }];
+      for (const m of mensole) {
+        for (const it of m.items) {
+          if (it.imageUrl) top.push({ src: it.imageUrl, w: it.tipo === 'accessorio' ? 29 : 48 });
         }
-      } else if (el.tipo === 'mensola') {
-        const mensole = el.mensole?.length
-          ? el.mensole
-          : [{ dimensione: (el.dimensione as DimensioneMensola) ?? 'media', items: el.items }];
-        for (const m of mensole) {
-          for (const it of m.items) {
-            if (it.imageUrl) top.push({ src: it.imageUrl, code: it.productCode ?? '' });
-          }
-        }
-      } else if (el.tipo === 'frontale') {
-        for (const m of getMensole(el)) {
-          for (const it of m.items) {
-            if (it.imageUrl) top.push({ src: it.imageUrl, code: it.productCode ?? '' });
-          }
+      }
+    } else if (el.tipo === 'frontale') {
+      for (const m of getMensole(el)) {
+        for (const it of m.items) {
+          if (it.imageUrl) top.push({ src: it.imageUrl, w: it.tipo === 'accessorio' ? 29 : 48 });
         }
       }
     }
-    return { topPhotos: top, bottomPhotos: bottom };
-  }, [config]);
+    return { id: el.id, top, bottom };
+  }), [config]);
 
-  function handleDrop(e: React.DragEvent, targetIdx: number) {
+  function startDrag(e: React.PointerEvent, el: ElementoParete) {
+    if (e.button !== 0) return;
     e.preventDefault();
-    e.stopPropagation();
-    const srcId = e.dataTransfer.getData('text/plain');
-    const srcIdx = config.findIndex((x) => x.id === srcId);
-    if (srcIdx !== -1 && srcIdx !== targetIdx) {
-      const next = [...config];
-      [next[srcIdx], next[targetIdx]] = [next[targetIdx], next[srcIdx]];
-      onReorder(next);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    lastLivePosRef.current = null;
+    dragRef.current = {
+      id: el.id, pointerId: e.pointerId,
+      startX: e.clientX, startY: e.clientY,
+      startOffsetX: el.offsetX ?? 0,
+      startOffsetY: el.offsetY ?? defaultOffsetY(el.tipo),
+    };
+    setDraggingId(el.id);
+  }
+
+  function onPointerMove(e: React.PointerEvent) {
+    const d = dragRef.current;
+    if (!d || e.pointerId !== d.pointerId) return;
+    const z = zoom ?? 1;
+    const np = { id: d.id, x: d.startOffsetX + (e.clientX - d.startX) / z, y: d.startOffsetY + (e.clientY - d.startY) / z };
+    lastLivePosRef.current = np;
+    setLivePos(np);
+  }
+
+  function endDrag() {
+    const pos = lastLivePosRef.current;
+    const d = dragRef.current;
+    if (!d) return;
+    if (pos) {
+      onUpdate?.(d.id, { offsetX: Math.round(pos.x), offsetY: Math.round(pos.y) });
+    } else {
+      onSelect?.(d.id);
     }
-    draggingIdRef.current = null;
+    setLivePos(null);
+    lastLivePosRef.current = null;
+    dragRef.current = null;
     setDraggingId(null);
-    setOverIdx(null);
   }
 
   if (config.length === 0) {
@@ -1149,67 +1179,54 @@ function WallRenderer({
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Top strip: mensola product photos */}
-      <div className="flex-shrink-0 overflow-x-auto overflow-y-hidden flex items-end gap-1 px-4 pb-1 border-b border-gray-100" style={{ height: '12.5%' }}>
-        {topPhotos.length > 0
-          ? topPhotos.map((p, i) => (
-              <div key={i} className="flex flex-col items-center flex-shrink-0 gap-px">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.src} alt="" className="object-contain rounded-sm flex-shrink-0" style={{ width: 28, height: 28 }} />
-                <p className="text-[7px] text-gray-300 truncate font-mono leading-none" style={{ maxWidth: 28 }}>{p.code}</p>
-              </div>
-            ))
-          : <p className="text-[9px] text-gray-200 italic self-center">mensole</p>
-        }
-      </div>
-
-      {/* Middle zone: wall render (75%) */}
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
-        <div className="flex items-start h-full px-4 gap-4" style={zoom !== undefined ? { zoom } : undefined}>
-          {config.map((el, idx) => (
+    <div className="h-full overflow-x-auto overflow-y-hidden">
+      <div className="flex items-start h-full px-4" style={{ gap: 16, ...(zoom !== undefined ? { zoom } : {}) }}>
+        {config.map((el, idx) => {
+          const photos = elementPhotos[idx];
+          const isLive = livePos?.id === el.id;
+          const offsetX = isLive ? livePos!.x : (el.offsetX ?? 0);
+          const offsetY = isLive ? livePos!.y : (el.offsetY ?? defaultOffsetY(el.tipo));
+          const isDragging = draggingId === el.id;
+          return (
             <div
               key={el.id}
-              draggable
-              onClick={(e) => { e.stopPropagation(); onSelect?.(el.id); }}
-              onDragStart={(e) => {
-                draggingIdRef.current = el.id;
-                setDraggingId(el.id);
-                e.dataTransfer.setData('text/plain', el.id);
-                e.dataTransfer.effectAllowed = 'move';
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                const did = draggingIdRef.current;
-                if (did && did !== el.id) setOverIdx(idx);
-              }}
-              onDrop={(e) => handleDrop(e, idx)}
-              onDragEnd={() => { draggingIdRef.current = null; setDraggingId(null); setOverIdx(null); }}
-              className={[
-                'cursor-grab active:cursor-grabbing select-none flex-shrink-0 transition-opacity relative',
-                draggingId === el.id ? 'opacity-30' : 'opacity-100',
-                overIdx === idx && draggingId !== el.id ? 'outline outline-2 outline-primary outline-offset-2 rounded' : '',
-              ].join(' ')}
-              style={{ top: el.offsetY ?? defaultOffsetY(el.tipo) }}
+              className="flex flex-col flex-shrink-0 h-full select-none"
+              style={{ transform: `translateX(${offsetX}px)` }}
             >
-              <WallElementRenderer el={el} />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Bottom strip: barra product photos */}
-      <div className="flex-shrink-0 overflow-x-auto overflow-y-hidden flex items-start gap-1 px-4 pt-1 border-t border-gray-100" style={{ height: '12.5%' }}>
-        {bottomPhotos.length > 0
-          ? bottomPhotos.map((p, i) => (
-              <div key={i} className="flex flex-col items-center flex-shrink-0 gap-px">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.src} alt="" className="object-contain rounded-sm flex-shrink-0" style={{ width: 28, height: 28 }} />
-                <p className="text-[7px] text-gray-300 truncate font-mono leading-none" style={{ maxWidth: 28 }}>{p.code}</p>
+              {/* Top strip: mensola item photos */}
+              <div className="flex items-end gap-px flex-shrink-0 overflow-hidden pb-0.5 border-b border-gray-100" style={{ height: '12.5%' }}>
+                {photos.top.map((p, i) => p.src
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img key={i} src={p.src} alt="" draggable={false} className="object-contain rounded-sm flex-shrink-0" style={{ width: p.w, height: '100%' }} />
+                  : <div key={i} className="flex-shrink-0" style={{ width: p.w }} />
+                )}
               </div>
-            ))
-          : <p className="text-[9px] text-gray-200 italic self-center">barre</p>
-        }
+
+              {/* Middle zone: draggable element render */}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <div
+                  className={`inline-block pt-1 ${isDragging ? 'opacity-60 cursor-grabbing' : 'cursor-grab'}`}
+                  style={{ transform: `translateY(${offsetY}px)` }}
+                  onPointerDown={(e) => startDrag(e, el)}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={endDrag}
+                  onPointerCancel={endDrag}
+                >
+                  <WallElementRenderer el={el} />
+                </div>
+              </div>
+
+              {/* Bottom strip: barra item photos aligned to slot widths */}
+              <div className="flex items-start gap-px flex-shrink-0 overflow-hidden pt-0.5 border-t border-gray-100" style={{ height: '12.5%' }}>
+                {photos.bottom.map((p, i) => p.src
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img key={i} src={p.src} alt="" draggable={false} className="object-contain rounded-sm flex-shrink-0" style={{ width: p.w, height: '100%' }} />
+                  : <div key={i} className="flex-shrink-0" style={{ width: p.w }} />
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1234,7 +1251,7 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
     const mensole = getMensole(el);
 
     const barraCore = (
-      <div style={{ marginLeft: el.offsetX ?? 0 }}>
+      <div>
         <div className={`h-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`} style={{ minWidth: UNIT }} />
         <div className="flex items-start" style={{ gap: 1, minHeight: 48, minWidth: UNIT }}>
           {el.items.length === 0
@@ -1273,7 +1290,7 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
       ? el.mensole
       : [{ dimensione: (el.dimensione as DimensioneMensola) ?? 'media', items: el.items }];
     return (
-      <div className="flex-shrink-0" style={{ marginLeft: el.offsetX ?? 0 }}>
+      <div className="flex-shrink-0">
         {mensole.map((m, i) => (
           <MensolaRenderer key={i} config={m} />
         ))}
@@ -1290,22 +1307,22 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
       <div style={{ width: FRONTALE_W }}>
         {item1?.imageUrl
           // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded-t border border-b-0 border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_TOP_H }} />
+          ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded-t border border-b-0 border-gray-200 object-contain bg-gray-50" style={{ width: FRONTALE_W, height: FRONTALE_TOP_H }} />
           : <div className="rounded-t border border-b-0 border-gray-200" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_TOP_H }} />}
         {item2.imageUrl
           // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={item2.imageUrl} alt="" draggable={false} className="rounded-b border border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_BOT_H }} />
+          ? <img src={item2.imageUrl} alt="" draggable={false} className="rounded-b border border-gray-200 object-contain bg-gray-50" style={{ width: FRONTALE_W, height: FRONTALE_BOT_H }} />
           : <div className="rounded-b border border-gray-200" style={{ backgroundColor: item2.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_BOT_H }} />}
       </div>
     ) : item1?.imageUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={item1.imageUrl} alt="" draggable={false} className="rounded border border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_H }} />
+      <img src={item1.imageUrl} alt="" draggable={false} className="rounded border border-gray-200 object-contain bg-gray-50" style={{ width: FRONTALE_W, height: FRONTALE_H }} />
     ) : (
       <div className="rounded border border-gray-200" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_H }} />
     );
 
     const wrapper = (children: React.ReactNode) => (
-      <div className="flex-shrink-0" style={{ marginLeft: el.offsetX ?? 0 }}>{children}</div>
+      <div className="flex-shrink-0">{children}</div>
     );
     if (mensole.length === 0) return wrapper(frontaleCore);
     return wrapper(
@@ -1466,22 +1483,23 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
     // h-full fills <main>, flex-col: header + preview (fixed) + cards (own scroll)
     <div className="flex flex-col h-full overflow-hidden bg-gray-50 text-gray-900">
       {/* Header — always visible, never scrolls */}
-      <div className="flex-shrink-0 bg-gray-50/95 backdrop-blur border-b border-gray-100 px-4 py-3 z-20">
+      <div className="flex-shrink-0 bg-gray-50/95 backdrop-blur border-b border-gray-100 px-4 py-2 z-20">
         <div className="max-w-6xl mx-auto flex items-center gap-3">
-          <button onClick={() => router.push('/moda/pareti')} className="text-gray-400 hover:text-gray-700 transition-colors"><ArrowLeft size={20} /></button>
-          <div className="flex-1 min-w-0">
+          <button onClick={() => router.push('/moda/pareti')} className="text-gray-400 hover:text-gray-700 transition-colors"><ArrowLeft size={16} /></button>
+          <div className="flex-1 min-w-0 flex items-center gap-2">
             {editingNome ? (
               <input autoFocus value={nome} onChange={(e) => setNome(e.target.value)}
                 onBlur={handleNomeSave}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNomeSave(); if (e.key === 'Escape') { setNome(parete.nome); setEditingNome(false); } }}
-                className="bg-transparent border-b border-gray-400 text-base font-semibold text-gray-900 focus:outline-none w-full" />
+                className="bg-transparent border-b border-gray-400 text-xs font-semibold uppercase tracking-wider text-gray-900 focus:outline-none" />
             ) : (
-              <button type="button" onClick={() => setEditingNome(true)} className="flex items-center gap-1.5 group">
-                <h1 className="text-base font-semibold truncate text-gray-900">{nome}</h1>
-                <Edit2 size={12} className="text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" />
+              <button type="button" onClick={() => setEditingNome(true)} className="flex items-center gap-1.5 group min-w-0">
+                <h1 className="text-xs font-semibold uppercase tracking-wider truncate text-gray-900">{nome}</h1>
+                <Edit2 size={10} className="text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" />
               </button>
             )}
-            <p className="text-xs text-gray-400">{config.length} elementi · {totalCapi} capi · {totalPz} pz</p>
+            <span className="text-gray-300 text-2xs flex-shrink-0">·</span>
+            <p className="text-2xs text-gray-400 whitespace-nowrap">{config.length} elementi · {totalCapi} capi · {totalPz} pz</p>
           </div>
           <div className="flex-shrink-0">
             {saveStatus === 'saving' && <Loader2 size={14} className="animate-spin text-gray-400" />}
@@ -1515,8 +1533,11 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
           <div className="flex-1 min-h-0 border-t border-gray-100 overflow-hidden">
             <WallRenderer
               config={config}
-              onReorder={handleConfigChange}
               onSelect={handleSelectElement}
+              onUpdate={(id, patch) => {
+                const next = config.map((el) => el.id === id ? { ...el, ...patch } : el);
+                handleConfigChange(next);
+              }}
               zoom={previewZoom}
             />
           </div>
