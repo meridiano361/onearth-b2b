@@ -1434,7 +1434,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   const [config, setConfig] = useState<ElementoParete[]>([]);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [activeElementId, setActiveElementId] = useState<string | null>(null);
-  const [previewZoom, setPreviewZoom] = useState(1);
+  const [previewZoom, setPreviewZoom] = useState(1.5);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const initializedRef = useRef(false);
 
@@ -1540,7 +1540,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
 
       {/* Preview panel — always visible, never scrolls */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm z-10">
-        <div style={{ height: '55vh' }} className="flex flex-col">
+        <div style={{ height: '40vh' }} className="flex flex-col">
           <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
             <p className="text-2xs text-gray-400 uppercase tracking-widest flex-1">Anteprima parete</p>
             <button type="button" onClick={() => setPreviewZoom((z) => Math.max(0.4, +(z - 0.15).toFixed(2)))}
