@@ -434,7 +434,7 @@ function AddProductModal({
             const img = productImageUrl(p);
             return (
               <button key={p.id} onClick={() => toggle(p.id)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left ${isChecked ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left ${isChecked ? 'bg-accent/10' : 'hover:bg-gray-50'}`}>
                 <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${isChecked ? 'bg-primary border-primary' : 'border-gray-300'}`}>
                   {isChecked && <Check size={10} className="text-white" />}
                 </div>
@@ -944,7 +944,7 @@ function ElementoCard({
           <div className="flex gap-1 flex-shrink-0">
             {BARRA_DIMS.map((d) => (
               <button key={d} type="button" onClick={() => onChange({ ...el, dimensione: d })}
-                className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${barraDim === d ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'text-gray-400 border border-gray-200 hover:border-gray-400'}`}>
+                className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${barraDim === d ? 'bg-primary text-white border border-primary' : 'text-gray-400 border border-gray-200 hover:border-gray-400'}`}>
                 {d}
               </button>
             ))}
