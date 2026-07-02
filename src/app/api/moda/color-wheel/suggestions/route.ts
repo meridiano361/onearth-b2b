@@ -21,6 +21,16 @@ export async function GET(req: NextRequest) {
   const productId = req.nextUrl.searchParams.get('productId');
   if (!productId) return NextResponse.json({ error: 'productId required' }, { status: 400 });
 
+  // Load hero product (full data for focused view)
+  const heroProduct = await prisma.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true, code: true, name: true,
+      imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true, imageUrl5: true,
+      famiglia: true, sottofamiglia: true, classe: true, sottoclasse: true, gruppoOmogeneo: true,
+    },
+  });
+
   // Load hero product primary pantone
   const heroPantoneRows = await prisma.$queryRaw<PantoneRow[]>`
     SELECT pp.product_id, pc.hex_code,
@@ -33,7 +43,23 @@ export async function GET(req: NextRequest) {
 
   const heroPrimary = heroPantoneRows.find((r) => r.is_primary) ?? heroPantoneRows[0];
   if (!heroPrimary) {
-    return NextResponse.json({ suggestions: [], groups: [] });
+    return NextResponse.json({
+      hero: heroProduct ? {
+        productId,
+        code: heroProduct.code,
+        name: heroProduct.name,
+        imageUrl: heroProduct.imageUrl ?? heroProduct.imageUrl2 ?? heroProduct.imageUrl3 ?? null,
+        famiglia: heroProduct.famiglia,
+        sottofamiglia: heroProduct.sottofamiglia,
+        classe: heroProduct.classe,
+        sottoclasse: heroProduct.sottoclasse,
+        gruppoOmogeneo: heroProduct.gruppoOmogeneo,
+        primaryPantone: null,
+      } : null,
+      suggestions: [],
+      groups: [],
+      allScored: [],
+    });
   }
 
   const heroHsl = hexToHsl(heroPrimary.hex_code);
@@ -41,18 +67,45 @@ export async function GET(req: NextRequest) {
   const heroL = heroHsl.l;
   const heroNeutral = isColorNeutral(heroHsl);
 
-  // Load all other Moda products with their primary pantone
+  // Load all other Moda products with taxonomy fields
   const allProducts = await prisma.product.findMany({
     where: {
       isActive: true,
       gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' },
       id: { not: productId },
     },
-    select: { id: true, code: true, name: true, imageUrl: true, colore: true, famiglia: true, costPrice: true, retailPrice: true },
+    select: {
+      id: true, code: true, name: true,
+      imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true, imageUrl5: true,
+      colore: true, famiglia: true, sottofamiglia: true,
+      classe: true, sottoclasse: true, gruppoOmogeneo: true,
+      costPrice: true, retailPrice: true,
+    },
   });
 
   const otherIds = allProducts.map((p) => p.id);
-  if (otherIds.length === 0) return NextResponse.json({ suggestions: [], groups: [] });
+  if (otherIds.length === 0) {
+    return NextResponse.json({
+      hero: {
+        productId,
+        code: heroProduct?.code ?? '',
+        name: heroProduct?.name ?? '',
+        imageUrl: heroProduct?.imageUrl ?? null,
+        famiglia: heroProduct?.famiglia ?? null,
+        sottofamiglia: heroProduct?.sottofamiglia ?? null,
+        classe: heroProduct?.classe ?? null,
+        sottoclasse: heroProduct?.sottoclasse ?? null,
+        gruppoOmogeneo: heroProduct?.gruppoOmogeneo ?? null,
+        primaryPantone: {
+          code: heroPrimary.code, name: heroPrimary.name, hex_code: heroPrimary.hex_code,
+          hue_angle: heroHue, lightness: heroL, is_neutral: heroNeutral,
+        },
+      },
+      suggestions: [],
+      groups: [],
+      allScored: [],
+    });
+  }
 
   const allPantones = await prisma.$queryRaw<PantoneRow[]>`
     SELECT pp.product_id, pc.hex_code,
@@ -70,10 +123,10 @@ export async function GET(req: NextRequest) {
     if (!ex || row.is_primary) primaryMap.set(row.product_id, row);
   }
 
-  // Score each product against hero
   type ScoredProduct = {
     id: string; code: string; name: string; imageUrl: string | null;
-    colore: string | null; famiglia: string | null;
+    colore: string | null; famiglia: string | null; sottofamiglia: string | null;
+    classe: string | null; sottoclasse: string | null; gruppoOmogeneo: string | null;
     costPrice: number; retailPrice: number;
     primaryPantone: { code: string; name: string; hex_code: string };
     harmonyType: string; score: number; hueFamilyId: string;
@@ -99,9 +152,13 @@ export async function GET(req: NextRequest) {
         id: product.id,
         code: product.code,
         name: product.name,
-        imageUrl: product.imageUrl,
+        imageUrl: product.imageUrl ?? product.imageUrl2 ?? product.imageUrl3 ?? product.imageUrl4 ?? product.imageUrl5 ?? null,
         colore: product.colore,
         famiglia: product.famiglia,
+        sottofamiglia: product.sottofamiglia,
+        classe: product.classe,
+        sottoclasse: product.sottoclasse,
+        gruppoOmogeneo: product.gruppoOmogeneo,
         costPrice: Number(product.costPrice),
         retailPrice: Number(product.retailPrice),
         primaryPantone: { code: pantone.code, name: pantone.name, hex_code: pantone.hex_code },
@@ -116,13 +173,12 @@ export async function GET(req: NextRequest) {
 
   scored.sort((a, b) => b.score - a.score);
 
-  // Group by harmony type
+  // Group by harmony type (top 8 each — used by original suggestion pills)
   const byType: Record<string, ScoredProduct[]> = {};
   for (const p of scored) {
     if (!byType[p.harmonyType]) byType[p.harmonyType] = [];
     byType[p.harmonyType].push(p);
   }
-
   const suggestions = Object.entries(byType).map(([type, products]) => ({
     harmonyType: type,
     products: products.slice(0, 8),
@@ -135,6 +191,14 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     hero: {
       productId,
+      code: heroProduct?.code ?? '',
+      name: heroProduct?.name ?? '',
+      imageUrl: heroProduct?.imageUrl ?? heroProduct?.imageUrl2 ?? heroProduct?.imageUrl3 ?? heroProduct?.imageUrl4 ?? heroProduct?.imageUrl5 ?? null,
+      famiglia: heroProduct?.famiglia ?? null,
+      sottofamiglia: heroProduct?.sottofamiglia ?? null,
+      classe: heroProduct?.classe ?? null,
+      sottoclasse: heroProduct?.sottoclasse ?? null,
+      gruppoOmogeneo: heroProduct?.gruppoOmogeneo ?? null,
       primaryPantone: {
         code: heroPrimary.code,
         name: heroPrimary.name,
@@ -146,5 +210,6 @@ export async function GET(req: NextRequest) {
     },
     suggestions,
     groups,
+    allScored: scored, // all scored products with taxonomy, no slice limit
   });
 }

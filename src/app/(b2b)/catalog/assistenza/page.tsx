@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-02 (Visual: mensole multiple su barre/frontali/mensole; ruota cromatica link da prodotto)
+// AGGIORNATO: 2026-07-02 (Ruota cromatica: vista abbinamenti prodotto con 4 set + filtri tassonomia)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -392,8 +392,8 @@ export default function AssistenzaPage() {
           <ul className="space-y-2">
             <Bullet><span className="font-medium">Ruota:</span> 12 famiglie cromatiche + neutri. Ogni segmento mostra quanti prodotti appartengono a quella famiglia colore. Clicca un segmento per filtrare.</Bullet>
             <Bullet><span className="font-medium">Selezione prodotto:</span> clicca un prodotto per vedere gli abbinamenti — analoghi, complementari, neutri compatibili — calcolati dal colore Pantone primario.</Bullet>
-            <Bullet><span className="font-medium">Set per esposizione:</span> il pannello suggerimenti propone automaticamente 4 set cromatici: <em>tono su tono</em>, <em>analoghi</em>, <em>a contrasto</em> (complementari) e <em>hero + neutri</em>, con uno score di qualità visiva.</Bullet>
-            <Bullet><span className="font-medium">Link diretto dal Visual:</span> il link <em>ruota cromatica →</em> accanto a un prodotto nel Visual apre questa pagina con il prodotto già selezionato e i set di abbinamento visibili subito.</Bullet>
+            <Bullet><span className="font-medium">Vista abbinamenti (focus mode):</span> cliccando <em>ruota cromatica →</em> accanto a un prodotto nel Visual si apre una vista dedicata con 4 set espositivi — <em>Tono su tono</em>, <em>Analoghi</em>, <em>A contrasto</em> e <em>Hero + Neutri</em>. Ogni set mostra i prodotti armonici; clicca un set per espanderlo e filtrare i prodotti per famiglia, classe, sottoclasse e gruppo omogeneo tramite i chip di filtro. Clicca un prodotto per aprirne la scheda.</Bullet>
+            <Bullet><span className="font-medium">Set per esposizione (ruota normale):</span> selezionando un prodotto sulla ruota, il pannello inferiore propone automaticamente i 4 set cromatici con score di qualità visiva.</Bullet>
             <Bullet><span className="font-medium">Pantone primario:</span> il colore che guida il posizionamento in ruota è il Pantone marcato come <em>principale</em> (stella) nel form prodotto admin.</Bullet>
           </ul>
         </section>

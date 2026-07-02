@@ -2,14 +2,14 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, X, ArrowLeft, Sparkles, Star, Search, ChevronDown } from 'lucide-react';
+import { Loader2, X, ArrowLeft, Sparkles, Star, Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { HUE_FAMILIES, type HueFamily } from '@/lib/colorHarmony';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface PrimaryPantone {
-  pantoneColorId: number;
+  pantoneColorId?: number;
   code: string;
   name: string;
   hex_code: string;
@@ -22,7 +22,7 @@ interface WheelProduct {
   id: string;
   code: string;
   name: string;
-  imageUrl: string | null;  // already resolved to first available url by API
+  imageUrl: string | null;
   colore: string | null;
   famiglia: string | null;
   costPrice: number;
@@ -32,6 +32,39 @@ interface WheelProduct {
   hue: number;
   lightness: number;
   isNeutral: boolean;
+}
+
+// Full product type returned by allScored (includes taxonomy)
+interface ScoredProduct {
+  id: string;
+  code: string;
+  name: string;
+  imageUrl: string | null;
+  colore: string | null;
+  famiglia: string | null;
+  sottofamiglia: string | null;
+  classe: string | null;
+  sottoclasse: string | null;
+  gruppoOmogeneo: string | null;
+  costPrice: number;
+  retailPrice: number;
+  primaryPantone: { code: string; name: string; hex_code: string };
+  harmonyType: string;
+  score: number;
+  hueFamilyId: string;
+}
+
+interface HeroData {
+  productId: string;
+  code: string;
+  name: string;
+  imageUrl: string | null;
+  famiglia: string | null;
+  sottofamiglia: string | null;
+  classe: string | null;
+  sottoclasse: string | null;
+  gruppoOmogeneo: string | null;
+  primaryPantone: PrimaryPantone | null;
 }
 
 interface WheelFamily extends HueFamily {
@@ -51,25 +84,47 @@ interface DisplayGroup {
   score: number;
 }
 
+interface SuggestionsResponse {
+  hero: HeroData | null;
+  suggestions: SuggestionGroup[];
+  groups: DisplayGroup[];
+  allScored: ScoredProduct[];
+}
+
+// ── Display group definitions ─────────────────────────────────────────────────
+
+const DISPLAY_GROUPS: { type: string; label: string; description: string }[] = [
+  { type: 'tono-su-tono', label: 'Tono su tono',  description: 'Colori identici o quasi — profondità monocromatica.' },
+  { type: 'analoghi',      label: 'Analoghi',       description: 'Colori vicini sulla ruota — armonia morbida e naturale.' },
+  { type: 'complementari', label: 'A contrasto',    description: 'Colori opposti sulla ruota — massimo impatto visivo.' },
+  { type: 'hero-neutrals', label: 'Hero + Neutri',  description: 'Colore forte con fondali neutri — elegante e versatile.' },
+];
+
+const GROUP_HARMONY_MAP: Record<string, string[]> = {
+  'tono-su-tono':  ['identical', 'analogous'],
+  'analoghi':      ['analogous', 'split-complementary'],
+  'complementari': ['complementary'],
+  'hero-neutrals': ['neutral'],
+};
+
 // ── SVG wheel constants ────────────────────────────────────────────────────────
 
 const CX = 200, CY = 200;
-const R_OUT  = 175; // outer edge
-const R_LGHT = 148; // light / medium boundary
-const R_MDDK = 116; // medium / dark boundary
-const R_IN    = 84;  // inner edge of chromatic rings (white fill up to here)
-const R_NEU_3 = 52;  // outer edge of neutral area
-const R_NEU_2 = 36;  // light / medium neutral boundary
-const R_NEU_1 = 20;  // medium / dark neutral boundary (innermost circle)
+const R_OUT  = 175;
+const R_LGHT = 148;
+const R_MDDK = 116;
+const R_IN    = 84;
+const R_NEU_3 = 52;
+const R_NEU_2 = 36;
+const R_NEU_1 = 20;
 
-// Dot-center radii (midpoints of chromatic rings)
-const R_D_LGHT = (R_OUT + R_LGHT) / 2;  // 161.5
-const R_D_MED  = (R_LGHT + R_MDDK) / 2; // 132
-const R_D_DARK = (R_MDDK + R_IN) / 2;   // 100
+const R_D_LGHT = (R_OUT + R_LGHT) / 2;
+const R_D_MED  = (R_LGHT + R_MDDK) / 2;
+const R_D_DARK = (R_MDDK + R_IN) / 2;
 
 const N_SEG   = 24;
-const SEG_DEG = 360 / N_SEG; // 15° per segment
-const SEG_GAP = 0.8;          // gap between segments (degrees)
+const SEG_DEG = 360 / N_SEG;
+const SEG_GAP = 0.8;
 
 // ── SVG helpers ────────────────────────────────────────────────────────────────
 
@@ -105,7 +160,6 @@ function dotRadius(lightness: number): number {
   return R_D_DARK;
 }
 
-// Deterministic pseudo-random [0,1] from string seed
 function hash01(seed: string): number {
   let h = 5381;
   for (const c of seed) h = ((h << 5) + h + c.charCodeAt(0)) | 0;
@@ -133,6 +187,327 @@ const HARMONY_COLORS: Record<string, string> = {
   neutral:               'bg-gray-100 text-gray-700',
 };
 
+// ── Taxonomy filter chips ─────────────────────────────────────────────────────
+
+function FilterChips({
+  label, values, active, onSelect,
+}: {
+  label: string;
+  values: string[];
+  active: string | null;
+  onSelect: (v: string | null) => void;
+}) {
+  if (values.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5 items-center">
+      <span className="text-2xs text-gray-400 font-medium mr-1">{label}:</span>
+      {values.map((v) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onSelect(active === v ? null : v)}
+          className={`px-2 py-0.5 rounded-full text-2xs transition-colors ${
+            active === v
+              ? 'bg-primary text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          {v}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Focused product view ───────────────────────────────────────────────────────
+
+function FocusProductView({
+  suggestionsData,
+  suggestionsLoading,
+  onExit,
+}: {
+  suggestionsData: SuggestionsResponse | undefined;
+  suggestionsLoading: boolean;
+  onExit: () => void;
+}) {
+  const router = useRouter();
+  const [activeGroupType, setActiveGroupType] = useState<string | null>(null);
+  const [famFilter,        setFamFilter]       = useState<string | null>(null);
+  const [classeFilter,     setClasseFilter]    = useState<string | null>(null);
+  const [sottoclasseFilter, setSottoclasseFilter] = useState<string | null>(null);
+  const [gruppoFilter,     setGruppoFilter]    = useState<string | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Reset filters when changing group
+  function selectGroup(type: string) {
+    if (activeGroupType === type) {
+      setActiveGroupType(null);
+    } else {
+      setActiveGroupType(type);
+      setFamFilter(null); setClasseFilter(null); setSottoclasseFilter(null); setGruppoFilter(null);
+    }
+  }
+
+  useEffect(() => {
+    if (activeGroupType && panelRef.current) {
+      panelRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [activeGroupType]);
+
+  const allScored = suggestionsData?.allScored ?? [];
+  const hero = suggestionsData?.hero ?? null;
+
+  // Products for active group (all harmony types that belong to it)
+  const activeProducts = useMemo(() => {
+    if (!activeGroupType) return [];
+    const harmonyTypes = GROUP_HARMONY_MAP[activeGroupType] ?? [];
+    return allScored.filter((p) => harmonyTypes.includes(p.harmonyType));
+  }, [activeGroupType, allScored]);
+
+  // Filtered by taxonomy chips
+  const filteredProducts = useMemo(() => {
+    let list = activeProducts;
+    if (famFilter)         list = list.filter((p) => p.famiglia     === famFilter);
+    if (classeFilter)      list = list.filter((p) => p.classe       === classeFilter);
+    if (sottoclasseFilter) list = list.filter((p) => p.sottoclasse  === sottoclasseFilter);
+    if (gruppoFilter)      list = list.filter((p) => p.gruppoOmogeneo === gruppoFilter);
+    return list;
+  }, [activeProducts, famFilter, classeFilter, sottoclasseFilter, gruppoFilter]);
+
+  // Unique taxonomy values for filter chips (from unfiltered active products)
+  const famiglie    = useMemo(() => [...new Set(activeProducts.map((p) => p.famiglia).filter(Boolean) as string[])].sort(), [activeProducts]);
+  const classi      = useMemo(() => [...new Set(activeProducts.map((p) => p.classe).filter(Boolean) as string[])].sort(), [activeProducts]);
+  const sottoclassi = useMemo(() => [...new Set(activeProducts.map((p) => p.sottoclasse).filter(Boolean) as string[])].sort(), [activeProducts]);
+  const gruppi      = useMemo(() => [...new Set(activeProducts.map((p) => p.gruppoOmogeneo).filter(Boolean) as string[])].sort(), [activeProducts]);
+
+  // Preview swatches + count per group card
+  const groupMeta = useMemo(() => {
+    return DISPLAY_GROUPS.map((g) => {
+      const harmonyTypes = GROUP_HARMONY_MAP[g.type] ?? [];
+      const products = allScored.filter((p) => harmonyTypes.includes(p.harmonyType));
+      return {
+        ...g,
+        count: products.length,
+        swatches: products.slice(0, 6).map((p) => p.primaryPantone.hex_code),
+        previewImages: products.filter((p) => p.imageUrl).slice(0, 3).map((p) => p.imageUrl as string),
+      };
+    });
+  }, [allScored]);
+
+  const hasFilters = famFilter || classeFilter || sottoclasseFilter || gruppoFilter;
+
+  return (
+    <div className="flex flex-col min-h-full">
+      {/* Header */}
+      <div className="px-4 sm:px-6 py-4 border-b border-border/50 flex items-center gap-3">
+        <button
+          onClick={onExit}
+          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary transition-colors flex-shrink-0"
+        >
+          <ArrowLeft size={14} /> Ruota Cromatica
+        </button>
+        <div className="flex-1 min-w-0">
+          <p className="label-luxury text-accent">Moda PE27</p>
+          <h1 className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide leading-tight">
+            Abbinamenti cromatici
+          </h1>
+        </div>
+      </div>
+
+      <div className="p-4 sm:p-6 space-y-6 max-w-3xl">
+
+        {/* Hero product card */}
+        {suggestionsLoading ? (
+          <div className="flex items-center gap-2 text-xs text-gray-400 py-4">
+            <Loader2 size={14} className="animate-spin" /> Caricamento abbinamenti…
+          </div>
+        ) : hero ? (
+          <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-border shadow-sm">
+            {hero.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={hero.imageUrl}
+                alt={hero.code}
+                className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg flex-shrink-0 border border-border/40"
+              />
+            ) : hero.primaryPantone ? (
+              <div
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex-shrink-0 border border-border/40"
+                style={{ backgroundColor: hero.primaryPantone.hex_code }}
+              />
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <p className="font-mono font-semibold text-primary text-sm">{hero.code}</p>
+              <p className="text-sm text-gray-600 leading-snug mt-0.5 truncate">{hero.name}</p>
+              {hero.primaryPantone && (
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <span
+                    className="w-4 h-4 rounded-full flex-shrink-0 border border-border/40"
+                    style={{ backgroundColor: hero.primaryPantone.hex_code }}
+                  />
+                  <span className="text-xs text-gray-500 truncate">
+                    {hero.primaryPantone.code} — {hero.primaryPantone.name}
+                  </span>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {hero.famiglia && (
+                  <span className="px-1.5 py-0.5 bg-white border border-border rounded text-2xs text-gray-500">{hero.famiglia}</span>
+                )}
+                {hero.classe && (
+                  <span className="px-1.5 py-0.5 bg-white border border-border rounded text-2xs text-gray-500">{hero.classe}</span>
+                )}
+                {hero.sottoclasse && (
+                  <span className="px-1.5 py-0.5 bg-white border border-border rounded text-2xs text-gray-500">{hero.sottoclasse}</span>
+                )}
+                {hero.gruppoOmogeneo && (
+                  <span className="px-1.5 py-0.5 bg-white border border-border rounded text-2xs text-gray-500">{hero.gruppoOmogeneo}</span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => router.push(`/catalog/${hero.productId}`)}
+              className="flex-shrink-0 text-xs text-gray-400 hover:text-primary transition-colors"
+              title="Vai alla scheda prodotto"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        ) : null}
+
+        {/* 4 set cards */}
+        {!suggestionsLoading && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles size={14} className="text-accent flex-shrink-0" />
+              <p className="text-sm font-semibold text-primary">Set espositivi</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {groupMeta.map((g) => (
+                <button
+                  key={g.type}
+                  type="button"
+                  onClick={() => selectGroup(g.type)}
+                  className={`text-left p-3 sm:p-4 rounded-xl border transition-all ${
+                    activeGroupType === g.type
+                      ? 'border-accent ring-1 ring-accent/20 bg-accent/5'
+                      : g.count === 0
+                        ? 'border-border bg-gray-50 opacity-50 cursor-not-allowed'
+                        : 'border-border hover:border-accent/50 bg-white hover:shadow-sm'
+                  }`}
+                  disabled={g.count === 0}
+                >
+                  <p className="text-sm font-semibold text-primary leading-tight">{g.label}</p>
+                  <p className="text-2xs text-gray-400 mt-0.5 leading-snug">{g.description}</p>
+                  {/* Color swatches */}
+                  <div className="flex gap-1 mt-3 flex-wrap">
+                    {g.swatches.map((hex, i) => (
+                      <span
+                        key={i}
+                        className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white shadow-sm"
+                        style={{ backgroundColor: hex }}
+                      />
+                    ))}
+                    {g.swatches.length === 0 && (
+                      <span className="text-2xs text-gray-300">Nessun prodotto</span>
+                    )}
+                  </div>
+                  <p className="text-2xs text-gray-400 mt-1.5 tabular-nums">
+                    {g.count} prodott{g.count === 1 ? 'o' : 'i'}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Expanded filter + product panel */}
+        {activeGroupType && (
+          <div ref={panelRef} className="space-y-4">
+            <div className="border-t border-border/50 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-primary">
+                  {DISPLAY_GROUPS.find((g) => g.type === activeGroupType)?.label}
+                  <span className="ml-2 text-xs font-normal text-gray-400 tabular-nums">
+                    {filteredProducts.length}{hasFilters ? `/${activeProducts.length}` : ''} prodotti
+                  </span>
+                </p>
+                {hasFilters && (
+                  <button
+                    type="button"
+                    onClick={() => { setFamFilter(null); setClasseFilter(null); setSottoclasseFilter(null); setGruppoFilter(null); }}
+                    className="text-2xs text-gray-400 hover:text-primary flex items-center gap-1"
+                  >
+                    <X size={11} /> Rimuovi filtri
+                  </button>
+                )}
+              </div>
+
+              {/* Taxonomy filter chips */}
+              <div className="space-y-2 mb-4">
+                <FilterChips label="Famiglia"       values={famiglie}    active={famFilter}         onSelect={setFamFilter} />
+                <FilterChips label="Classe"         values={classi}      active={classeFilter}      onSelect={setClasseFilter} />
+                <FilterChips label="Sottoclasse"    values={sottoclassi} active={sottoclasseFilter} onSelect={setSottoclasseFilter} />
+                <FilterChips label="Gr. Omogeneo"   values={gruppi}      active={gruppoFilter}      onSelect={setGruppoFilter} />
+              </div>
+
+              {/* Product grid */}
+              {filteredProducts.length === 0 ? (
+                <p className="text-sm text-gray-400 py-6 text-center">
+                  Nessun prodotto per i filtri selezionati
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {filteredProducts.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => router.push(`/catalog/${p.id}`)}
+                      className="group text-left rounded-lg overflow-hidden border border-border hover:border-accent/40 transition-all hover:shadow-sm"
+                      title={`${p.code} — ${p.name}`}
+                    >
+                      <div className="aspect-square bg-gray-50 overflow-hidden">
+                        {p.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={p.imageUrl}
+                            alt={p.code}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full" style={{ backgroundColor: p.primaryPantone?.hex_code ?? '#e5e5e5' }} />
+                        )}
+                      </div>
+                      <div className="p-2 bg-white">
+                        <p className="text-2xs font-mono font-semibold text-primary leading-none">{p.code}</p>
+                        <p className="text-2xs text-gray-500 truncate mt-0.5 leading-tight">{p.name}</p>
+                        {p.primaryPantone && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <span
+                              className="w-3 h-3 rounded-full flex-shrink-0 border border-border/40"
+                              style={{ backgroundColor: p.primaryPantone.hex_code }}
+                            />
+                            <span className="text-2xs text-gray-400 truncate">{p.primaryPantone.code}</span>
+                          </div>
+                        )}
+                        {(p.famiglia || p.classe) && (
+                          <p className="text-2xs text-gray-300 truncate mt-0.5">
+                            {[p.famiglia, p.classe].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 type SortKey = 'code' | 'name' | 'colore' | 'price';
@@ -140,6 +515,7 @@ type SortKey = 'code' | 'name' | 'colore' | 'price';
 export default function ColorWheelView() {
   const searchParams = useSearchParams();
   const initialProductId = searchParams.get('productId');
+  const [focusMode, setFocusMode] = useState(!!initialProductId);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
   const [selectedFamilyId, setSelectedFamilyId]   = useState<string | null>(null);
@@ -147,13 +523,6 @@ export default function ColorWheelView() {
   const [hoveredProductId, setHoveredProductId]   = useState<string | null>(null);
   const [searchQuery, setSearchQuery]             = useState('');
   const [sortBy, setSortBy]                       = useState<SortKey>('code');
-
-  // Auto-scroll to suggestions panel when arriving from a product link
-  useEffect(() => {
-    if (initialProductId && suggestionsRef.current) {
-      suggestionsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [initialProductId, suggestionsRef.current]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: wheelData, isLoading: wheelLoading, isError, error, refetch } = useQuery<{ families: WheelFamily[] }>({
     queryKey: ['moda-color-wheel'],
@@ -166,11 +535,7 @@ export default function ColorWheelView() {
     retry: 1,
   });
 
-  const { data: suggestionsData, isLoading: suggestionsLoading } = useQuery<{
-    hero: { productId: string; primaryPantone: PrimaryPantone };
-    suggestions: SuggestionGroup[];
-    groups: DisplayGroup[];
-  }>({
+  const { data: suggestionsData, isLoading: suggestionsLoading } = useQuery<SuggestionsResponse>({
     queryKey: ['color-wheel-suggestions', selectedProductId],
     queryFn: async () => {
       const res = await fetch(`/api/moda/color-wheel/suggestions?productId=${selectedProductId}`);
@@ -180,6 +545,27 @@ export default function ColorWheelView() {
     enabled: !!selectedProductId,
     staleTime: 120_000,
   });
+
+  // Auto-scroll to suggestions panel in normal mode
+  useEffect(() => {
+    if (!focusMode && selectedProductId && suggestionsRef.current) {
+      suggestionsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [focusMode, selectedProductId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Focus mode ────────────────────────────────────────────────────────────
+
+  if (focusMode) {
+    return (
+      <FocusProductView
+        suggestionsData={suggestionsData}
+        suggestionsLoading={suggestionsLoading}
+        onExit={() => { setFocusMode(false); }}
+      />
+    );
+  }
+
+  // ── Normal mode ───────────────────────────────────────────────────────────
 
   const families    = wheelData?.families ?? [];
   const chromatic   = HUE_FAMILIES.filter((f) => f.id !== 'neutral');
@@ -284,7 +670,6 @@ export default function ColorWheelView() {
                   <path d={arcPath(startDeg, endDeg, R_OUT,  R_LGHT)} fill={segColor(si, 'light')} opacity={opacity} />
                   <path d={arcPath(startDeg, endDeg, R_LGHT, R_MDDK)} fill={segColor(si, 'med')}   opacity={opacity} />
                   <path d={arcPath(startDeg, endDeg, R_MDDK, R_IN)}   fill={segColor(si, 'dark')}  opacity={opacity} />
-                  {/* Selection outline — drawn once per family (even si only) */}
                   {isSelected && si % 2 === 0 && (
                     <path
                       d={arcPath(startDeg - 0.5, startDeg + SEG_DEG * 2 - SEG_GAP + 0.5, R_OUT + 8, R_IN - 6)}
@@ -303,29 +688,23 @@ export default function ColorWheelView() {
             <circle cx={CX} cy={CY} r={R_LGHT} fill="none" stroke="white" strokeWidth="1"   opacity={0.2} className="pointer-events-none" />
             <circle cx={CX} cy={CY} r={R_MDDK} fill="none" stroke="white" strokeWidth="1"   opacity={0.2} className="pointer-events-none" />
 
-            {/* White gap — covers 0..R_IN */}
+            {/* White gap */}
             <circle cx={CX} cy={CY} r={R_IN} fill="white" className="pointer-events-none" />
 
-            {/* Neutral area — 3 concentric rings (chiaro / medio / scuro) */}
+            {/* Neutral area */}
             <g
               onClick={() => handleFamilyClick('neutral')}
               className="cursor-pointer"
               opacity={selectedFamilyId === 'neutral' ? 1 : selectedFamilyId ? 0.3 : 0.88}
             >
-              {/* Outer ring: light neutrals */}
               <circle cx={CX} cy={CY} r={R_NEU_3} fill="#D4D4D4" />
-              {/* Middle ring: medium neutrals */}
               <circle cx={CX} cy={CY} r={R_NEU_2} fill="#9E9E9E" />
-              {/* Inner circle: dark neutrals */}
               <circle cx={CX} cy={CY} r={R_NEU_1} fill="#5A5A5A" />
-              {/* Ring separator lines */}
               <circle cx={CX} cy={CY} r={R_NEU_2} fill="none" stroke="white" strokeWidth="1.2" opacity={0.5} className="pointer-events-none" />
               <circle cx={CX} cy={CY} r={R_NEU_1} fill="none" stroke="white" strokeWidth="1.2" opacity={0.5} className="pointer-events-none" />
-              {/* Selection outline */}
               {selectedFamilyId === 'neutral' && (
                 <circle cx={CX} cy={CY} r={R_NEU_3 + 5} fill="none" stroke="white" strokeWidth="2.5" className="pointer-events-none" />
               )}
-              {/* Count label in center */}
               <text x={CX} y={CY + 3} textAnchor="middle" fontSize={8} fontWeight="700" fill="white" opacity={0.9} className="pointer-events-none">
                 {neutralFam?.products.length ?? 0}
               </text>
@@ -366,7 +745,6 @@ export default function ColorWheelView() {
                   onClick={() => handleProductClick(product.id)}
                   className="cursor-pointer"
                 >
-                  {/* Wider invisible hit area */}
                   <circle cx={dotX} cy={dotY} r={9} fill="transparent" />
                   <circle
                     cx={dotX}
@@ -401,7 +779,7 @@ export default function ColorWheelView() {
             )}
           </div>
 
-          {/* ── Come si legge ─────────────────────────────────────── */}
+          {/* Come si legge */}
           <div className="w-full rounded-lg border border-border bg-gray-50/60 px-3 py-2.5 space-y-1.5 text-xs text-gray-600">
             <p className="text-2xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Come si legge</p>
             <div className="flex items-start gap-2">
@@ -418,7 +796,7 @@ export default function ColorWheelView() {
             </div>
           </div>
 
-          {/* ── Anelli tonali ─────────────────────────────────────── */}
+          {/* Anelli tonali */}
           <div className="w-full">
             <p className="text-2xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
               Anelli tonali <span className="font-normal text-gray-300 ml-1">— luminosità Pantone</span>
@@ -426,11 +804,11 @@ export default function ColorWheelView() {
             <div className="space-y-1.5">
               {(
                 [
-                  { label: 'Chiaro',         position: 'anello esterno',          bg: 'hsl(220,50%,82%)', range: 'L > 65%'    },
-                  { label: 'Medio',          position: 'anello centrale',         bg: 'hsl(220,75%,50%)', range: '35–65%'     },
-                  { label: 'Scuro',          position: 'anello interno',          bg: 'hsl(220,62%,28%)', range: 'L < 35%'    },
+                  { label: 'Chiaro',         position: 'anello esterno',           bg: 'hsl(220,50%,82%)', range: 'L > 65%'    },
+                  { label: 'Medio',          position: 'anello centrale',          bg: 'hsl(220,75%,50%)', range: '35–65%'     },
+                  { label: 'Scuro',          position: 'anello interno',           bg: 'hsl(220,62%,28%)', range: 'L < 35%'    },
                   { label: 'Neutro chiaro',  position: 'cerchio — fascia esterna', bg: '#D4D4D4',          range: 'L > 65%'    },
-                  { label: 'Neutro medio',   position: 'cerchio — fascia centrale', bg: '#9E9E9E',         range: '35–65%'     },
+                  { label: 'Neutro medio',   position: 'cerchio — fascia centrale',bg: '#9E9E9E',          range: '35–65%'     },
                   { label: 'Neutro scuro',   position: 'cerchio — fascia interna', bg: '#5A5A5A',          range: 'L < 35%'    },
                 ] as const
               ).map(({ label, position, bg, range }, i) => (
@@ -444,7 +822,7 @@ export default function ColorWheelView() {
             </div>
           </div>
 
-          {/* ── Famiglie cromatiche ───────────────────────────────── */}
+          {/* Famiglie cromatiche */}
           <div className="w-full">
             <p className="text-2xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
               Famiglie cromatiche
@@ -486,7 +864,6 @@ export default function ColorWheelView() {
 
           {/* Search + Sort toolbar */}
           <div className="sticky top-0 z-10 bg-white border-b border-border/50 px-4 sm:px-6 py-3 flex flex-wrap items-center gap-3">
-            {/* Family label */}
             {selectedFamilyId && (() => {
               const fam = HUE_FAMILIES.find((f) => f.id === selectedFamilyId);
               return fam ? (
@@ -497,7 +874,6 @@ export default function ColorWheelView() {
               ) : null;
             })()}
 
-            {/* Search */}
             <div className="relative flex-1 min-w-[160px]">
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               <input
@@ -514,7 +890,6 @@ export default function ColorWheelView() {
               )}
             </div>
 
-            {/* Sort */}
             <div className="relative flex-shrink-0">
               <select
                 value={sortBy}
@@ -529,7 +904,6 @@ export default function ColorWheelView() {
               <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             </div>
 
-            {/* Count */}
             <span className="text-2xs text-gray-400 flex-shrink-0 tabular-nums">
               {filteredProducts.length}{visibleProducts.length !== filteredProducts.length ? `/${visibleProducts.length}` : ''} prodotti
             </span>
@@ -578,12 +952,21 @@ export default function ColorWheelView() {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => setSelectedProductId(null)}
-                  className="text-gray-400 hover:text-primary transition-colors"
-                >
-                  <X size={14} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setFocusMode(true); }}
+                    className="text-xs text-gray-400 hover:text-primary transition-colors flex items-center gap-1"
+                    title="Apri vista abbinamenti"
+                  >
+                    <Sparkles size={12} /> Vista abbinamenti
+                  </button>
+                  <button
+                    onClick={() => setSelectedProductId(null)}
+                    className="text-gray-400 hover:text-primary transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
               </div>
 
               {suggestionsLoading ? (
@@ -593,7 +976,7 @@ export default function ColorWheelView() {
               ) : suggestionsData ? (
                 <div className="space-y-6">
 
-                  {/* ── Set per esposizione (enlarged) ── */}
+                  {/* Set per esposizione */}
                   {suggestionsData.groups.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
@@ -660,7 +1043,7 @@ export default function ColorWheelView() {
                     </div>
                   )}
 
-                  {/* ── Armonie cromatiche ── */}
+                  {/* Armonie cromatiche */}
                   {suggestionsData.suggestions.map(({ harmonyType, products }) => (
                     <div key={harmonyType}>
                       <div className="flex items-center gap-2 mb-2">
