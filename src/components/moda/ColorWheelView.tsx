@@ -553,19 +553,7 @@ export default function ColorWheelView() {
     }
   }, [focusMode, selectedProductId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Focus mode ────────────────────────────────────────────────────────────
-
-  if (focusMode) {
-    return (
-      <FocusProductView
-        suggestionsData={suggestionsData}
-        suggestionsLoading={suggestionsLoading}
-        onExit={() => { setFocusMode(false); }}
-      />
-    );
-  }
-
-  // ── Normal mode ───────────────────────────────────────────────────────────
+  // ── All derived state (useMemo) must run unconditionally before any early return ──
 
   const families    = wheelData?.families ?? [];
   const chromatic   = HUE_FAMILIES.filter((f) => f.id !== 'neutral');
@@ -617,6 +605,18 @@ export default function ColorWheelView() {
 
   function handleProductClick(productId: string) {
     setSelectedProductId((prev) => (prev === productId ? null : productId));
+  }
+
+  // ── Early returns (all hooks above this line) ─────────────────────────────
+
+  if (focusMode) {
+    return (
+      <FocusProductView
+        suggestionsData={suggestionsData}
+        suggestionsLoading={suggestionsLoading}
+        onExit={() => { setFocusMode(false); }}
+      />
+    );
   }
 
   if (wheelLoading) {
