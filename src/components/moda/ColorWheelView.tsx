@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, X, ArrowLeft, Sparkles, Star, Search, ChevronDown } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { HUE_FAMILIES, type HueFamily } from '@/lib/colorHarmony';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -138,11 +138,22 @@ const HARMONY_COLORS: Record<string, string> = {
 type SortKey = 'code' | 'name' | 'colore' | 'price';
 
 export default function ColorWheelView() {
+  const searchParams = useSearchParams();
+  const initialProductId = searchParams.get('productId');
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
   const [selectedFamilyId, setSelectedFamilyId]   = useState<string | null>(null);
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(initialProductId);
   const [hoveredProductId, setHoveredProductId]   = useState<string | null>(null);
   const [searchQuery, setSearchQuery]             = useState('');
   const [sortBy, setSortBy]                       = useState<SortKey>('code');
+
+  // Auto-scroll to suggestions panel when arriving from a product link
+  useEffect(() => {
+    if (initialProductId && suggestionsRef.current) {
+      suggestionsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [initialProductId, suggestionsRef.current]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: wheelData, isLoading: wheelLoading, isError, error, refetch } = useQuery<{ families: WheelFamily[] }>({
     queryKey: ['moda-color-wheel'],
@@ -545,7 +556,7 @@ export default function ColorWheelView() {
 
           {/* Suggestions panel */}
           {selectedProduct && (
-            <div className="border-t border-border/50 p-4 sm:p-6 bg-gray-50/50">
+            <div ref={suggestionsRef} className="border-t border-border/50 p-4 sm:p-6 bg-gray-50/50">
               <div className="flex items-start justify-between mb-5">
                 <div className="flex items-center gap-2">
                   <Sparkles size={15} className="text-accent flex-shrink-0" />

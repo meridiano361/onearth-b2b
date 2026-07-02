@@ -150,6 +150,8 @@ export interface ElementoParete {
   tipo: TipoElementoParete;
   dimensione?: DimensioneMensola | DimensioneBarra;
   items: ItemParete[];
+  mensole?: MensolaInlineConfig[]; // array of shelves (replaces mensolaTop)
+  /** @deprecated use mensole[0] */
   mensolaTop?: MensolaInlineConfig;
   offsetX?: number;
 }

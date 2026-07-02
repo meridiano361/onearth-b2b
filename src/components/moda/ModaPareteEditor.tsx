@@ -51,8 +51,8 @@ const BARRA_PATTERN: Record<DimensioneBarra, TipoCapo[]> = {
 };
 
 const UNIT = 80;
-const COSTA_W = 16;
-const FRONTALE_W = COSTA_W * 3;
+const COSTA_W = 5;  // 1/3 of original 16 — narrow hangers on barra
+const FRONTALE_W = 48; // independent from COSTA_W
 const FRONTALE_H = 120;
 const FRONTALE_TOP_H = 48;
 const FRONTALE_BOT_H = 72;
@@ -643,9 +643,9 @@ function ItemCard({
                   style={{ backgroundColor: c, opacity: 0.75 }}
                   title={['Complementare', 'Analogo +30°', 'Analogo −30°'][i]} />
               ))}
-              <a href="/moda/ruota-cromatica"
+              <a href={`/moda/ruota-cromatica${item.productId ? `?productId=${item.productId}` : ''}`}
                 className="text-[9px] text-gray-300 hover:text-primary transition-colors ml-0.5 flex-shrink-0"
-                title="Apri ruota cromatica PE27">
+                title="Apri ruota cromatica per questo prodotto">
                 ruota cromatica →
               </a>
             </div>
@@ -896,8 +896,36 @@ function ElementoCard({
     onChange({ ...el, items: BARRA_PATTERN[barraDim].map((tipo) => ({ id: nanoid(8), tipo, pezzi: pezziDefault })) });
   }
 
+  // ── Mensole array helpers (for barra/frontale: side mensole; for standalone mensola: stacked mensole) ──
+  function getMensoleEl(): MensolaInlineConfig[] {
+    if (el.mensole?.length) return el.mensole;
+    if (el.mensolaTop) return [el.mensolaTop];
+    return [];
+  }
+  function updateMensola(idx: number, cfg: MensolaInlineConfig) {
+    const mensole = getMensoleEl();
+    const next = [...mensole]; next[idx] = cfg;
+    onChange({ ...el, mensole: next, mensolaTop: undefined });
+  }
+  function removeMensola(idx: number) {
+    const mensole = getMensoleEl().filter((_, i) => i !== idx);
+    onChange({ ...el, mensole, mensolaTop: undefined });
+  }
+  function addMensola() {
+    const mensole = getMensoleEl();
+    onChange({ ...el, mensole: [...mensole, { dimensione: 'media', items: [] }], mensolaTop: undefined });
+  }
+
+  const mensoleEl = getMensoleEl();
+  const maxMensole = isMensola ? 4 : 2;
+
+  // For standalone mensola: items live in mensole[0].items (fall back to el.items for old data)
+  const mensolaItems = isMensola
+    ? (el.mensole?.length ? el.mensole[0].items : el.items)
+    : el.items;
+
   const elLabel = isBarra ? 'Barra' : isMensola ? 'Mensola' : 'Frontale';
-  const totalPz = totalePezzi(el.items);
+  const totalPz = isMensola ? totalePezzi(mensolaItems) : totalePezzi(el.items);
 
   return (
     <div id={`card-${el.id}`} className={`border rounded-2xl overflow-hidden bg-white shadow-sm transition-colors ${isActive ? 'border-primary/40' : 'border-gray-200'}`}>
@@ -909,7 +937,7 @@ function ElementoCard({
         <button type="button" onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
           <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-900 text-white flex-shrink-0">{elLabel}</span>
           <p className={`text-xs ${pzOver ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
-            {el.items.length} capi{totalPz > 0 && ` · ${totalPz} pz`}{maxPz !== null && ` / max ${maxPz} pz`}{pzOver && ' — LIMITE SUPERATO'}
+            {(isMensola ? mensolaItems : el.items).length} capi{totalPz > 0 && ` · ${totalPz} pz`}{maxPz !== null && ` / max ${maxPz} pz`}{pzOver && ' — LIMITE SUPERATO'}
           </p>
         </button>
         {isBarra && (
@@ -938,41 +966,73 @@ function ElementoCard({
 
       {expanded && (
         <div className="px-4 py-3 space-y-3">
+          {/* Mensole array for barra/frontale */}
           {(isBarra || isFrontale) && (
-            <MensolaInlineEditor
-              config={el.mensolaTop}
-              onChange={(c) => onChange({ ...el, mensolaTop: c })}
-              onRemove={() => onChange({ ...el, mensolaTop: undefined })}
-            />
+            <div className="space-y-2">
+              {mensoleEl.map((m, idx) => (
+                <MensolaInlineEditor key={idx} config={m}
+                  onChange={(c) => updateMensola(idx, c)}
+                  onRemove={() => removeMensola(idx)} />
+              ))}
+              {mensoleEl.length < maxMensole && (
+                <button type="button" onClick={addMensola}
+                  className="w-full py-1.5 border border-dashed border-gray-300 rounded-lg text-2xs text-gray-500 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
+                  <Plus size={11} /> Aggiungi mensola
+                </button>
+              )}
+            </div>
           )}
-          <div className="space-y-2">
-            {el.items.map((item, idx) => {
-              const itemTipoOptions = isFrontale
-                ? (idx === 0 ? TIPO_OPTIONS_FRONTALE_SLOT1 : TIPO_OPTIONS_FRONTALE_SLOT2)
-                : isBarra ? TIPO_OPTIONS_BARRA : TIPO_OPTIONS_MENSOLA;
-              return (
-                <ItemCard key={item.id} item={item} tipoOptions={itemTipoOptions}
-                  onChange={(u) => updateItem(idx, u)} onDelete={() => removeItem(idx)}
-                  onMoveLeft={!isFrontale ? () => moveItem(idx, idx - 1) : undefined}
-                  onMoveRight={!isFrontale ? () => moveItem(idx, idx + 1) : undefined}
-                  canMoveLeft={idx > 0} canMoveRight={idx < el.items.length - 1} />
-              );
-            })}
-            {canAddItem && (
-              <button type="button" onClick={() => setShowCatalogPicker(true)}
-                className="w-full py-2 bg-primary/5 border border-primary/20 rounded-xl text-xs text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5 font-medium">
-                <PackagePlus size={13} />
-                {frontaleCanAddBottom ? 'Aggiungi bottom' : 'Aggiungi prodotto'}
-              </button>
-            )}
-            {isBarra && (
-              <button type="button" onClick={applySuggerimento}
-                className="w-full py-1.5 border border-dashed border-gray-200 rounded-xl text-2xs text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors flex items-center justify-center gap-1">
-                <span className="font-mono">{BARRA_PATTERN[barraDim].map((t) => t === 'top' ? 'T' : 'B').join('·')}</span>
-                <span className="ml-1">— Riempi pattern suggerito ({BARRA_PATTERN[barraDim].length}×4pz)</span>
-              </button>
-            )}
-          </div>
+          {/* Items for barra and frontale */}
+          {!isMensola && (
+            <div className="space-y-2">
+              {el.items.map((item, idx) => {
+                const itemTipoOptions = isFrontale
+                  ? (idx === 0 ? TIPO_OPTIONS_FRONTALE_SLOT1 : TIPO_OPTIONS_FRONTALE_SLOT2)
+                  : isBarra ? TIPO_OPTIONS_BARRA : TIPO_OPTIONS_MENSOLA;
+                return (
+                  <ItemCard key={item.id} item={item} tipoOptions={itemTipoOptions}
+                    onChange={(u) => updateItem(idx, u)} onDelete={() => removeItem(idx)}
+                    onMoveLeft={!isFrontale ? () => moveItem(idx, idx - 1) : undefined}
+                    onMoveRight={!isFrontale ? () => moveItem(idx, idx + 1) : undefined}
+                    canMoveLeft={idx > 0} canMoveRight={idx < el.items.length - 1} />
+                );
+              })}
+              {canAddItem && (
+                <button type="button" onClick={() => setShowCatalogPicker(true)}
+                  className="w-full py-2 bg-primary/5 border border-primary/20 rounded-xl text-xs text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5 font-medium">
+                  <PackagePlus size={13} />
+                  {frontaleCanAddBottom ? 'Aggiungi bottom' : 'Aggiungi prodotto'}
+                </button>
+              )}
+              {isBarra && (
+                <button type="button" onClick={applySuggerimento}
+                  className="w-full py-1.5 border border-dashed border-gray-200 rounded-xl text-2xs text-gray-400 hover:text-gray-600 hover:border-gray-400 transition-colors flex items-center justify-center gap-1">
+                  <span className="font-mono">{BARRA_PATTERN[barraDim].map((t) => t === 'top' ? 'T' : 'B').join('·')}</span>
+                  <span className="ml-1">— Riempi pattern suggerito ({BARRA_PATTERN[barraDim].length}×4pz)</span>
+                </button>
+              )}
+            </div>
+          )}
+          {/* Standalone mensola: stacked mensole with their own items */}
+          {isMensola && (
+            <div className="space-y-2">
+              {mensoleEl.map((m, idx) => (
+                <MensolaInlineEditor key={idx} config={m}
+                  onChange={(c) => updateMensola(idx, c)}
+                  onRemove={() => removeMensola(idx)} />
+              ))}
+              {mensoleEl.length === 0 && (
+                <p className="text-2xs text-gray-400 text-center py-2">Nessun ripiano configurato</p>
+              )}
+              {mensoleEl.length < maxMensole && (
+                <button type="button" onClick={addMensola}
+                  className="w-full py-1.5 border border-dashed border-gray-300 rounded-lg text-2xs text-gray-500 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
+                  <Plus size={11} /> {mensoleEl.length === 0 ? 'Aggiungi ripiano' : 'Aggiungi ripiano sopra'}
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
             <p className="text-2xs text-gray-400 flex-1">Posizione orizzontale</p>
             <button type="button" onClick={() => onChange({ ...el, offsetX: Math.max(0, (el.offsetX ?? 0) - COSTA_W) })}
@@ -1036,7 +1096,7 @@ function WallRenderer({
 
   return (
     <div className="px-4 py-3 h-full">
-      <div className="flex items-end gap-4 h-full" style={zoom !== undefined ? { zoom } : undefined}>
+      <div className="flex items-start gap-4 h-full" style={zoom !== undefined ? { zoom } : undefined}>
         {config.map((el, idx) => (
           <div
             key={el.id}
@@ -1073,13 +1133,20 @@ function MensolaBlock({ config }: { config: MensolaInlineConfig }) {
   return <div style={{ marginLeft: config.offsetX ?? 0 }}><MensolaRenderer config={config} /></div>;
 }
 
-function WallElementRenderer({ el }: { el: ElementoParete }) {
-  const pos = el.mensolaTop?.posizione ?? 'sopra';
+// Resolve mensole array from element (supports both old mensolaTop and new mensole fields)
+function getMensole(el: ElementoParete): MensolaInlineConfig[] {
+  if (el.mensole?.length) return el.mensole;
+  if (el.mensolaTop) return [el.mensolaTop];
+  return [];
+}
 
+function WallElementRenderer({ el }: { el: ElementoParete }) {
   if (el.tipo === 'barra') {
     const dim = (el.dimensione ?? 'media') as DimensioneBarra;
     const pzTot = totalePezzi(el.items);
     const over = pzTot > BARRA_MAX_PZ[dim];
+    const mensole = getMensole(el);
+
     const barraCore = (
       <div style={{ marginLeft: el.offsetX ?? 0 }}>
         <div className={`h-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`} style={{ minWidth: UNIT }} />
@@ -1088,7 +1155,6 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
             ? <div style={{ minWidth: UNIT }} />
             : el.items.map((it, i) => <CapoOnBarra key={it.id ?? i} item={it} />)}
         </div>
-        {/* Photo strip — each photo aligned under its item's slot */}
         {el.items.some((it) => it.imageUrl) && (
           <div className="flex mt-1" style={{ gap: 1 }}>
             {el.items.map((it, i) => {
@@ -1097,7 +1163,7 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
               return it.imageUrl
                 ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img key={it.id ?? i} src={it.imageUrl} alt=""
+                  <img key={it.id ?? i} src={it.imageUrl} alt="" draggable={false}
                     className="flex-shrink-0 object-contain"
                     style={{ width: slotW, height: 36 }} />
                 )
@@ -1107,26 +1173,40 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
         )}
       </div>
     );
-    if (!el.mensolaTop) return <div className="flex-shrink-0">{barraCore}</div>;
-    if (pos === 'sopra') return (
+
+    if (mensole.length === 0) return <div className="flex-shrink-0">{barraCore}</div>;
+    // Stack all mensole above the barra
+    const mensoleSide = mensole.filter(m => m.posizione === 'fianco');
+    const mensoleTop = mensole.filter(m => m.posizione !== 'fianco');
+    if (mensoleSide.length > 0) {
+      return (
+        <div className="flex items-start gap-2 flex-shrink-0">
+          <div className="flex flex-col items-start">
+            {mensoleTop.map((m, i) => <MensolaBlock key={i} config={m} />)}
+            <div style={{ marginTop: mensoleTop.length ? 12 : 0 }}>{barraCore}</div>
+          </div>
+          {mensoleSide.map((m, i) => <MensolaBlock key={`s${i}`} config={m} />)}
+        </div>
+      );
+    }
+    return (
       <div className="flex flex-col items-start flex-shrink-0">
-        <MensolaBlock config={el.mensolaTop} />
+        {mensoleTop.map((m, i) => <MensolaBlock key={i} config={m} />)}
         <div style={{ marginTop: 12 }}>{barraCore}</div>
       </div>
     );
-    if (pos === 'sotto') return (
-      <div className="flex flex-col items-start flex-shrink-0">
-        {barraCore}
-        <div style={{ marginTop: 12 }}><MensolaBlock config={el.mensolaTop} /></div>
-      </div>
-    );
-    return <div className="flex items-center gap-2 flex-shrink-0">{barraCore}<MensolaBlock config={el.mensolaTop} /></div>;
   }
 
   if (el.tipo === 'mensola') {
+    // Standalone mensola — supports stacked mensole
+    const mensole = el.mensole?.length
+      ? el.mensole
+      : [{ dimensione: (el.dimensione as DimensioneMensola) ?? 'media', items: el.items }];
     return (
       <div className="flex-shrink-0" style={{ marginLeft: el.offsetX ?? 0 }}>
-        <MensolaRenderer config={{ dimensione: (el.dimensione as DimensioneMensola) ?? 'media', items: el.items, posizione: 'sopra' }} />
+        {mensole.map((m, i) => (
+          <MensolaRenderer key={i} config={m} />
+        ))}
       </div>
     );
   }
@@ -1134,21 +1214,22 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
   if (el.tipo === 'frontale') {
     const item1 = el.items[0];
     const item2 = el.items[1];
+    const mensole = getMensole(el);
 
     const frontaleCore = item2 ? (
       <div style={{ width: FRONTALE_W }}>
         {item1?.imageUrl
           // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={item1.imageUrl} alt="" className="rounded-t border border-b-0 border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_TOP_H }} />
+          ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded-t border border-b-0 border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_TOP_H }} />
           : <div className="rounded-t border border-b-0 border-gray-200" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_TOP_H }} />}
         {item2.imageUrl
           // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={item2.imageUrl} alt="" className="rounded-b border border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_BOT_H }} />
+          ? <img src={item2.imageUrl} alt="" draggable={false} className="rounded-b border border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_BOT_H }} />
           : <div className="rounded-b border border-gray-200" style={{ backgroundColor: item2.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_BOT_H }} />}
       </div>
     ) : item1?.imageUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={item1.imageUrl} alt="" className="rounded border border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_H }} />
+      <img src={item1.imageUrl} alt="" draggable={false} className="rounded border border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_H }} />
     ) : (
       <div className="rounded border border-gray-200" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_H }} />
     );
@@ -1156,10 +1237,13 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
     const wrapper = (children: React.ReactNode) => (
       <div className="flex-shrink-0" style={{ marginLeft: el.offsetX ?? 0 }}>{children}</div>
     );
-    if (!el.mensolaTop) return wrapper(frontaleCore);
-    if (pos === 'sopra') return wrapper(<div className="flex flex-col items-start"><MensolaBlock config={el.mensolaTop} /><div style={{ marginTop: 12 }}>{frontaleCore}</div></div>);
-    if (pos === 'sotto') return wrapper(<div className="flex flex-col items-start">{frontaleCore}<div style={{ marginTop: 12 }}><MensolaBlock config={el.mensolaTop} /></div></div>);
-    return wrapper(<div className="flex items-center gap-2">{frontaleCore}<MensolaBlock config={el.mensolaTop} /></div>);
+    if (mensole.length === 0) return wrapper(frontaleCore);
+    return wrapper(
+      <div className="flex flex-col items-start">
+        {mensole.map((m, i) => <MensolaBlock key={i} config={m} />)}
+        <div style={{ marginTop: 12 }}>{frontaleCore}</div>
+      </div>
+    );
   }
 
   return null;
@@ -1221,12 +1305,12 @@ function CapoOnBarra({ item }: { item: ItemParete }) {
   const h = item.tipo === 'abito' ? 96 : item.tipo === 'capospalla' ? 80 : 64;
   const count = Math.max(1, item.pezzi.length);
   return (
-    <div className="flex flex-shrink-0" style={{ gap: 1 }}
+    <div className="flex flex-shrink-0"
       title={`${TIPO_LABELS[item.tipo]}${item.productName ? ` — ${item.productName}` : ''} · ${item.pezzi.length}pz`}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex flex-col items-center" style={{ width: COSTA_W }}>
-          <div className="w-1 h-1.5 bg-gray-400 rounded-full" />
-          <div className="rounded-sm" style={{ backgroundColor: color, width: COSTA_W - 2, height: h }} />
+          <div style={{ width: 1, height: 6, backgroundColor: '#9ca3af' }} />
+          <div style={{ backgroundColor: color, width: COSTA_W, height: h }} />
         </div>
       ))}
     </div>

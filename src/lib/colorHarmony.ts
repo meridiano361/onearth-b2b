@@ -229,8 +229,8 @@ export function generateDisplayGroups(
   if (compIds.length >= 1) {
     groups.push({
       type: 'complementari',
-      label: 'Complementari',
-      description: 'Colori opposti — massimo contrasto e impatto visivo.',
+      label: 'A contrasto',
+      description: 'Colori opposti sulla ruota — massimo impatto visivo e tensione cromatica.',
       productIds: [hero.productId, ...compIds],
       score: 90,
     });
