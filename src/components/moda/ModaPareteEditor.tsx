@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Plus, X, Search, Loader2, ChevronLeft, ChevronRight,
   Trash2, Edit2, Check, Tag, PackagePlus, AlertTriangle, ZoomIn, ZoomOut,
-  SlidersHorizontal, ChevronDown, ChevronUp,
+  SlidersHorizontal, ChevronDown, ChevronUp, GripVertical,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type {
@@ -603,8 +603,8 @@ function ItemCard({
             </div>
             {/* action buttons */}
             <div className="flex gap-0.5 flex-shrink-0">
-              {onMoveLeft && <button type="button" onClick={onMoveLeft} disabled={!canMoveLeft} title="Sposta a sinistra" className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-25 transition-colors"><ChevronLeft size={13} /></button>}
-              {onMoveRight && <button type="button" onClick={onMoveRight} disabled={!canMoveRight} title="Sposta a destra" className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-25 transition-colors"><ChevronRight size={13} /></button>}
+              {onMoveLeft && <button type="button" onClick={onMoveLeft} disabled={!canMoveLeft} title="Sposta in su" className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-25 transition-colors"><ChevronUp size={13} /></button>}
+              {onMoveRight && <button type="button" onClick={onMoveRight} disabled={!canMoveRight} title="Sposta in giù" className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-25 transition-colors"><ChevronDown size={13} /></button>}
               <button type="button" onClick={onDelete} className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors"><X size={12} /></button>
             </div>
           </div>
@@ -783,6 +783,8 @@ function MensolaInlineEditor({
   config?: MensolaInlineConfig; onChange: (c: MensolaInlineConfig) => void; onRemove: () => void;
 }) {
   const [showCatalog, setShowCatalog] = useState(false);
+  const mItemDragIdxRef = useRef<number | null>(null);
+  const [mItemDragOver, setMItemDragOver] = useState<number | null>(null);
 
   if (!config) {
     return (
@@ -831,11 +833,24 @@ function MensolaInlineEditor({
         <button type="button" onClick={onRemove} className="text-gray-300 hover:text-red-400 transition-colors"><X size={13} /></button>
       </div>
       {config.items.map((it, idx) => (
-        <ItemCard key={it.id} item={it} tipoOptions={TIPO_OPTIONS_MENSOLA}
-          onChange={(u) => updateItem(idx, u)} onDelete={() => removeItem(idx)}
-          onMoveLeft={() => { const a = [...config.items]; [a[idx], a[idx - 1]] = [a[idx - 1], a[idx]]; onChange({ ...config, items: a }); }}
-          onMoveRight={() => { const a = [...config.items]; [a[idx], a[idx + 1]] = [a[idx + 1], a[idx]]; onChange({ ...config, items: a }); }}
-          canMoveLeft={idx > 0} canMoveRight={idx < config.items.length - 1} />
+        <div
+          key={it.id}
+          draggable
+          onDragStart={() => { mItemDragIdxRef.current = idx; }}
+          onDragOver={(e) => { e.preventDefault(); if (mItemDragIdxRef.current !== null && mItemDragIdxRef.current !== idx) setMItemDragOver(idx); }}
+          onDrop={(e) => { e.preventDefault(); const from = mItemDragIdxRef.current; if (from !== null && from !== idx) { const a = [...config.items]; [a[from], a[idx]] = [a[idx], a[from]]; onChange({ ...config, items: a }); } mItemDragIdxRef.current = null; setMItemDragOver(null); }}
+          onDragEnd={() => { mItemDragIdxRef.current = null; setMItemDragOver(null); }}
+          className={`flex items-start gap-1.5 ${mItemDragOver === idx ? 'ring-2 ring-primary/30 ring-offset-1 rounded-xl' : ''}`}
+        >
+          <GripVertical size={12} className="mt-3.5 text-gray-300 hover:text-gray-500 flex-shrink-0 cursor-grab" />
+          <div className="flex-1 min-w-0">
+            <ItemCard item={it} tipoOptions={TIPO_OPTIONS_MENSOLA}
+              onChange={(u) => updateItem(idx, u)} onDelete={() => removeItem(idx)}
+              onMoveLeft={() => { const a = [...config.items]; [a[idx], a[idx - 1]] = [a[idx - 1], a[idx]]; onChange({ ...config, items: a }); }}
+              onMoveRight={() => { const a = [...config.items]; [a[idx], a[idx + 1]] = [a[idx + 1], a[idx]]; onChange({ ...config, items: a }); }}
+              canMoveLeft={idx > 0} canMoveRight={idx < config.items.length - 1} />
+          </div>
+        </div>
       ))}
       <button type="button" onClick={() => setShowCatalog(true)}
         className="w-full py-1.5 bg-white border border-gray-200 rounded-lg text-2xs text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1 font-medium">
@@ -857,6 +872,8 @@ function ElementoCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showCatalogPicker, setShowCatalogPicker] = useState(false);
+  const itemDragIdxRef = useRef<number | null>(null);
+  const [itemDragOver, setItemDragOver] = useState<number | null>(null);
 
   useEffect(() => { if (isActive) setExpanded(true); }, [isActive]);
 
@@ -996,11 +1013,24 @@ function ElementoCard({
                   ? (idx === 0 ? TIPO_OPTIONS_FRONTALE_SLOT1 : TIPO_OPTIONS_FRONTALE_SLOT2)
                   : isBarra ? TIPO_OPTIONS_BARRA : TIPO_OPTIONS_MENSOLA;
                 return (
-                  <ItemCard key={item.id} item={item} tipoOptions={itemTipoOptions}
-                    onChange={(u) => updateItem(idx, u)} onDelete={() => removeItem(idx)}
-                    onMoveLeft={!isFrontale ? () => moveItem(idx, idx - 1) : undefined}
-                    onMoveRight={!isFrontale ? () => moveItem(idx, idx + 1) : undefined}
-                    canMoveLeft={idx > 0} canMoveRight={idx < el.items.length - 1} />
+                  <div
+                    key={item.id}
+                    draggable={!isFrontale}
+                    onDragStart={() => { itemDragIdxRef.current = idx; }}
+                    onDragOver={(e) => { e.preventDefault(); if (itemDragIdxRef.current !== null && itemDragIdxRef.current !== idx) setItemDragOver(idx); }}
+                    onDrop={(e) => { e.preventDefault(); const from = itemDragIdxRef.current; if (from !== null && from !== idx) moveItem(from, idx); itemDragIdxRef.current = null; setItemDragOver(null); }}
+                    onDragEnd={() => { itemDragIdxRef.current = null; setItemDragOver(null); }}
+                    className={`flex items-start gap-1.5 ${itemDragOver === idx ? 'ring-2 ring-primary/30 ring-offset-1 rounded-xl' : ''}`}
+                  >
+                    {!isFrontale && <GripVertical size={12} className="mt-3.5 text-gray-300 hover:text-gray-500 flex-shrink-0 cursor-grab" />}
+                    <div className="flex-1 min-w-0">
+                      <ItemCard item={item} tipoOptions={itemTipoOptions}
+                        onChange={(u) => updateItem(idx, u)} onDelete={() => removeItem(idx)}
+                        onMoveLeft={!isFrontale ? () => moveItem(idx, idx - 1) : undefined}
+                        onMoveRight={!isFrontale ? () => moveItem(idx, idx + 1) : undefined}
+                        canMoveLeft={idx > 0} canMoveRight={idx < el.items.length - 1} />
+                    </div>
+                  </div>
                 );
               })}
               {canAddItem && (
@@ -1510,7 +1540,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
 
       {/* Preview panel — always visible, never scrolls */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm z-10">
-        <div style={{ height: '40vh' }} className="flex flex-col">
+        <div style={{ height: '55vh' }} className="flex flex-col">
           <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
             <p className="text-2xs text-gray-400 uppercase tracking-widest flex-1">Anteprima parete</p>
             <button type="button" onClick={() => setPreviewZoom((z) => Math.max(0.4, +(z - 0.15).toFixed(2)))}
