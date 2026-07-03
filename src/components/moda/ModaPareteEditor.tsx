@@ -638,23 +638,12 @@ function ItemCard({
             </div>
           </div>
 
-          {/* Row 3: color harmony */}
-          {harmony && (
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full border border-white/50 shadow-sm flex-shrink-0"
-                style={{ backgroundColor: color }} title="Colore prodotto" />
-              <span className="text-[9px] text-gray-300 flex-shrink-0">→</span>
-              {harmony.map((c, i) => (
-                <div key={i} className="w-2.5 h-2.5 rounded-full flex-shrink-0 border border-white/20"
-                  style={{ backgroundColor: c, opacity: 0.75 }}
-                  title={['Complementare', 'Analogo +30°', 'Analogo −30°'][i]} />
-              ))}
-              <a href={`/moda/ruota-cromatica${item.productId ? `?productId=${item.productId}` : ''}`}
-                className="text-[9px] text-gray-300 hover:text-primary transition-colors ml-0.5 flex-shrink-0"
-                title="Apri ruota cromatica per questo prodotto">
-                ruota cromatica →
-              </a>
-            </div>
+          {/* Row 3: abbinamenti cromatici */}
+          {item.productId && (
+            <a href={`/moda/ruota-cromatica?productId=${item.productId}`}
+              className="text-[9px] text-gray-300 hover:text-primary transition-colors self-start">
+              abbinamenti cromatici →
+            </a>
           )}
         </div>
       </div>
