@@ -1429,6 +1429,8 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [activeElementId, setActiveElementId] = useState<string | null>(null);
   const [previewZoom, setPreviewZoom] = useState(1.5);
+  const [zoomInputVal, setZoomInputVal] = useState('');
+  const [editingZoom, setEditingZoom] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -1500,6 +1502,12 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
     setCanRedo(futureRef.current.length > 0);
     isDebouncing.current = false;
     handleConfigChange(next, true);
+  }
+
+  function applyZoomInput() {
+    const v = parseInt(zoomInputVal, 10);
+    if (!isNaN(v)) setPreviewZoom(Math.min(2, Math.max(0.4, v / 100)));
+    setEditingZoom(false);
   }
 
   function handleNomeSave() {
@@ -1613,7 +1621,24 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
               className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors">
               <ZoomOut size={13} />
             </button>
-            <span className="text-2xs text-gray-400 font-mono w-8 text-center">{Math.round(previewZoom * 100)}%</span>
+            {editingZoom ? (
+              <input
+                autoFocus
+                type="text"
+                value={zoomInputVal}
+                onChange={(e) => setZoomInputVal(e.target.value)}
+                onFocus={(e) => e.currentTarget.select()}
+                onBlur={applyZoomInput}
+                onKeyDown={(e) => { if (e.key === 'Enter') applyZoomInput(); if (e.key === 'Escape') setEditingZoom(false); }}
+                className="text-2xs text-gray-700 font-mono w-10 text-center bg-transparent border-b border-gray-400 focus:outline-none"
+              />
+            ) : (
+              <button type="button" title="Clicca per inserire un valore"
+                onClick={() => { setZoomInputVal(String(Math.round(previewZoom * 100))); setEditingZoom(true); }}
+                className="text-2xs text-gray-400 font-mono w-8 text-center hover:text-gray-700 transition-colors">
+                {Math.round(previewZoom * 100)}%
+              </button>
+            )}
             <button type="button" onClick={() => setPreviewZoom((z) => Math.min(2, +(z + 0.15).toFixed(2)))}
               className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors">
               <ZoomIn size={13} />
