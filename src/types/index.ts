@@ -134,6 +134,7 @@ export interface ItemParete {
   coloreHex?: string;
   pezzi: PezzoParete[];
   availableTaglie?: string[]; // from product sizeVariants; undefined = all sizes selectable
+  offsetX?: number; // horizontal drag offset within mensola
 }
 
 export type PosizioneMensola = 'sopra' | 'sotto' | 'fianco';

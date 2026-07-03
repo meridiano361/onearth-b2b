@@ -646,7 +646,7 @@ function ItemCard({
           {/* Row 3: abbinamenti cromatici */}
           {item.productId && (
             <a href={`/moda/ruota-cromatica?productId=${item.productId}`}
-              className="text-[9px] text-gray-300 hover:text-primary transition-colors self-start">
+              className="self-start px-2 py-0.5 rounded text-xs font-medium bg-white text-gray-800 border border-gray-200 hover:border-gray-400 hover:text-black transition-colors">
               abbinamenti cromatici →
             </a>
           )}
@@ -1283,7 +1283,11 @@ function WallRenderer({
                   onPointerUp={endDrag}
                   onPointerCancel={endDrag}
                 >
-                  <WallElementRenderer el={el} />
+                  <WallElementRenderer
+                    el={el}
+                    zoom={zoom ?? 1}
+                    onUpdate={(patch) => onUpdate?.(el.id, patch)}
+                  />
                 </div>
               </div>
             );
@@ -1308,7 +1312,11 @@ function getMensole(el: ElementoParete): MensolaInlineConfig[] {
   return [];
 }
 
-function WallElementRenderer({ el }: { el: ElementoParete }) {
+function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
+  el: ElementoParete;
+  onUpdate?: (patch: Partial<ElementoParete>) => void;
+  zoom?: number;
+}) {
   if (el.tipo === 'barra') {
     const dim = (el.dimensione ?? 'media') as DimensioneBarra;
     const pzTot = totalePezzi(el.items);
@@ -1358,7 +1366,15 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
     return (
       <div className="flex-shrink-0">
         {mensole.map((m, i) => (
-          <MensolaRenderer key={i} config={m} />
+          <MensolaRenderer
+            key={i}
+            config={m}
+            zoom={zoom}
+            onUpdate={onUpdate ? (updated) => {
+              const newMensole = mensole.map((ms, mi) => mi === i ? updated : ms);
+              onUpdate({ mensole: newMensole });
+            } : undefined}
+          />
         ))}
       </div>
     );
@@ -1402,30 +1418,78 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
   return null;
 }
 
-function MensolaRenderer({ config }: { config: MensolaInlineConfig }) {
+function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
+  config: MensolaInlineConfig;
+  onUpdate?: (c: MensolaInlineConfig) => void;
+  zoom?: number;
+}) {
   const w = MENSOLA_W[config.dimensione];
+  const itemDragRef = useRef<{ idx: number; pointerId: number; startX: number; startOffX: number } | null>(null);
+  const [liveItem, setLiveItem] = useState<{ idx: number; x: number } | null>(null);
+
+  function startItemDrag(e: React.PointerEvent, idx: number) {
+    if (!onUpdate) return;
+    e.stopPropagation();
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    itemDragRef.current = { idx, pointerId: e.pointerId, startX: e.clientX, startOffX: config.items[idx].offsetX ?? 0 };
+  }
+
+  function onItemMove(e: React.PointerEvent) {
+    const d = itemDragRef.current;
+    if (!d || e.pointerId !== d.pointerId) return;
+    e.stopPropagation();
+    setLiveItem({ idx: d.idx, x: d.startOffX + (e.clientX - d.startX) / zoom });
+  }
+
+  function endItemDrag(e: React.PointerEvent) {
+    e.stopPropagation();
+    const d = itemDragRef.current;
+    if (!d) return;
+    const finalX = liveItem?.idx === d.idx ? liveItem.x : (config.items[d.idx].offsetX ?? 0);
+    const newItems = config.items.map((it, i) => i === d.idx ? { ...it, offsetX: Math.round(finalX) } : it);
+    onUpdate?.({ ...config, items: newItems });
+    setLiveItem(null);
+    itemDragRef.current = null;
+  }
 
   return (
     <div>
-      {/* Shelf items — color blocks */}
-      <div className="flex items-end gap-0.5" style={{ minWidth: w }}>
+      {/* 2px gap between items and shelf (1/10 of grid square = 20px/10) */}
+      <div className="flex items-end gap-0.5" style={{ minWidth: w, paddingBottom: 2 }}>
         {config.items.length === 0
           ? <div style={{ width: w, height: STRATO_H }} />
           : config.items.map((it, i) => {
+              const offsetX = liveItem?.idx === i ? liveItem.x : (it.offsetX ?? 0);
               const color = it.coloreHex ?? colorForTipo(it.tipo);
+
+              let inner: React.ReactNode;
               if (it.tipo === 'borsa') {
-                return <div key={it.id ?? i} className="flex-shrink-0 rounded-sm" style={{ backgroundColor: color, width: 50, height: 50 }} title={`Borsa (${it.pezzi.length}pz)`} />;
+                inner = <div className="rounded-sm" style={{ backgroundColor: color, width: 50, height: 50 }} title={`Borsa (${it.pezzi.length}pz)`} />;
+              } else if (it.tipo === 'accessorio') {
+                inner = <div className="rounded-sm" style={{ backgroundColor: color, width: 30, height: 30 }} title={`Accessorio (${it.pezzi.length}pz)`} />;
+              } else {
+                const n = Math.max(1, it.pezzi.length);
+                inner = (
+                  <div className="flex flex-col-reverse" style={{ width: 48 }}
+                    title={`${TIPO_LABELS[it.tipo]} · ${n} strat${n === 1 ? 'o' : 'i'}`}>
+                    {Array.from({ length: n }).map((_, j) => (
+                      <div key={j} style={{ backgroundColor: color, height: STRATO_H, width: '100%' }} />
+                    ))}
+                  </div>
+                );
               }
-              if (it.tipo === 'accessorio') {
-                return <div key={it.id ?? i} className="flex-shrink-0 rounded-sm" style={{ backgroundColor: color, width: 30, height: 30 }} title={`Accessorio (${it.pezzi.length}pz)`} />;
-              }
-              const n = Math.max(1, it.pezzi.length);
+
               return (
-                <div key={it.id ?? i} className="flex flex-col-reverse flex-shrink-0" style={{ width: 48 }}
-                  title={`${TIPO_LABELS[it.tipo]} · ${n} strat${n === 1 ? 'o' : 'i'}`}>
-                  {Array.from({ length: n }).map((_, j) => (
-                    <div key={j} style={{ backgroundColor: color, height: STRATO_H, width: '100%' }} />
-                  ))}
+                <div key={it.id ?? i}
+                  className="flex-shrink-0 select-none"
+                  style={{ transform: `translateX(${offsetX}px)`, cursor: onUpdate ? 'ew-resize' : 'default' }}
+                  onPointerDown={onUpdate ? (e) => startItemDrag(e, i) : undefined}
+                  onPointerMove={onUpdate ? onItemMove : undefined}
+                  onPointerUp={onUpdate ? endItemDrag : undefined}
+                  onPointerCancel={onUpdate ? endItemDrag : undefined}
+                >
+                  {inner}
                 </div>
               );
             })}
