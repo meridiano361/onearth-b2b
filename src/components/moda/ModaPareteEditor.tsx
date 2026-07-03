@@ -1462,7 +1462,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   const [config, setConfig] = useState<ElementoParete[]>([]);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [activeElementId, setActiveElementId] = useState<string | null>(null);
-  const [previewZoom, setPreviewZoom] = useState(1.5);
+  const [previewZoom, setPreviewZoom] = useState(1.0);
   const [zoomInputVal, setZoomInputVal] = useState('');
   const [editingZoom, setEditingZoom] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
@@ -1699,7 +1699,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
                 const next = config.map((el) => el.id === id ? { ...el, ...patch } : el);
                 handleConfigChange(next);
               }}
-              zoom={previewZoom}
+              zoom={previewZoom * 1.5}
             />
           </div>
         </div>
