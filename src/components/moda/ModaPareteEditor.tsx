@@ -984,7 +984,12 @@ function ElementoCard({
         {isMensola && (
           <div className="flex gap-1 flex-shrink-0">
             {MENSOLA_DIMS.map((d) => (
-              <button key={d} type="button" onClick={() => onChange({ ...el, dimensione: d })}
+              <button key={d} type="button" onClick={() => {
+                const updatedMensole = el.mensole?.length
+                  ? el.mensole.map((m, i) => i === 0 ? { ...m, dimensione: d as DimensioneMensola } : m)
+                  : el.mensole;
+                onChange({ ...el, dimensione: d, ...(updatedMensole ? { mensole: updatedMensole } : {}) });
+              }}
                 className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${el.dimensione === d ? 'bg-gray-200 text-gray-700 border border-gray-300' : 'text-gray-400 border border-gray-200 hover:border-gray-400'}`}>
                 {d}
               </button>
