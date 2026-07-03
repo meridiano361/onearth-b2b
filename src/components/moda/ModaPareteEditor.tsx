@@ -41,6 +41,7 @@ const TIPO_OPTIONS_FRONTALE_SLOT2: TipoCapo[] = ['bottom'];
 const TAGLIE_FULL = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'TU'];
 
 const BARRA_MAX_PZ: Record<DimensioneBarra, number> = { piccola: 24, media: 36, grande: 48 };
+const BARRA_W: Record<DimensioneBarra, number> = { piccola: 7 * 20, media: 11 * 20, grande: 14 * 20 };
 const BARRA_DIMS: DimensioneBarra[] = ['piccola', 'media', 'grande'];
 const MENSOLA_DIMS: DimensioneMensola[] = ['piccola', 'media', 'lunga'];
 
@@ -1310,10 +1311,10 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
 
     const barraCore = (
       <div>
-        <div className={`h-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`} style={{ minWidth: UNIT }} />
-        <div className="flex items-start" style={{ gap: 1, minHeight: 48, minWidth: UNIT }}>
+        <div className={`h-0.5 rounded ${over ? 'bg-red-400' : 'bg-gray-400'}`} style={{ minWidth: BARRA_W[dim] }} />
+        <div className="flex items-start" style={{ gap: 1, minHeight: 48, minWidth: BARRA_W[dim] }}>
           {el.items.length === 0
-            ? <div style={{ minWidth: UNIT }} />
+            ? <div style={{ minWidth: BARRA_W[dim] }} />
             : el.items.map((it, i) => <CapoOnBarra key={it.id ?? i} item={it} />)}
         </div>
       </div>
