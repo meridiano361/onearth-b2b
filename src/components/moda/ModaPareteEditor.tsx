@@ -1406,7 +1406,7 @@ function MensolaRenderer({ config }: { config: MensolaInlineConfig }) {
           : config.items.map((it, i) => {
               const color = it.coloreHex ?? colorForTipo(it.tipo);
               if (it.tipo === 'borsa') {
-                return <div key={it.id ?? i} className="flex-shrink-0 rounded-sm" style={{ backgroundColor: color, width: 48, height: 42 }} title={`Borsa (${it.pezzi.length}pz)`} />;
+                return <div key={it.id ?? i} className="flex-shrink-0 rounded-sm" style={{ backgroundColor: color, width: 50, height: 50 }} title={`Borsa (${it.pezzi.length}pz)`} />;
               }
               if (it.tipo === 'accessorio') {
                 return <div key={it.id ?? i} className="flex-shrink-0 rounded-sm" style={{ backgroundColor: color, width: 29, height: 26 }} title={`Accessorio (${it.pezzi.length}pz)`} />;
