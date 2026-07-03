@@ -1187,9 +1187,11 @@ function WallRenderer({
     const d = dragRef.current;
     if (!d || e.pointerId !== d.pointerId) return;
     const z = zoom ?? 1;
-    const rawX = d.startOffsetX + (e.clientX - d.startX) / z;
-    const rawY = d.startOffsetY + (e.clientY - d.startY) / z;
-    const np = { id: d.id, x: Math.max(0, rawX), y: Math.max(0, rawY) };
+    const np = {
+      id: d.id,
+      x: d.startOffsetX + (e.clientX - d.startX) / z,
+      y: d.startOffsetY + (e.clientY - d.startY) / z,
+    };
     lastLivePosRef.current = np;
     setLivePos(np);
   }
@@ -1272,16 +1274,16 @@ function WallRenderer({
             return (
               <div
                 key={el.id}
-                className="flex-shrink-0 h-full select-none"
+                className={`flex-shrink-0 h-full select-none ${isDragging ? 'opacity-60 cursor-grabbing' : 'cursor-grab'}`}
                 style={{ transform: `translateX(${offsetX}px)` }}
+                onPointerDown={(e) => startDrag(e, el)}
+                onPointerMove={onPointerMove}
+                onPointerUp={endDrag}
+                onPointerCancel={endDrag}
               >
                 <div
-                  className={`inline-block pt-1 ${isDragging ? 'opacity-60 cursor-grabbing' : 'cursor-grab'}`}
+                  className="inline-block pt-1"
                   style={{ transform: `translateY(${offsetY}px)` }}
-                  onPointerDown={(e) => startDrag(e, el)}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={endDrag}
-                  onPointerCancel={endDrag}
                 >
                   <WallElementRenderer
                     el={el}
