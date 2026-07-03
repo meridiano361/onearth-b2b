@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Plus, X, Search, Loader2, ChevronLeft, ChevronRight,
   Trash2, Edit2, Check, Tag, PackagePlus, AlertTriangle, ZoomIn, ZoomOut,
-  SlidersHorizontal, ChevronDown, ChevronUp, GripVertical,
+  SlidersHorizontal, ChevronDown, ChevronUp, GripVertical, Undo2, Redo2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type {
@@ -1423,8 +1423,13 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [activeElementId, setActiveElementId] = useState<string | null>(null);
   const [previewZoom, setPreviewZoom] = useState(1.5);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const initializedRef = useRef(false);
+  const historyRef = useRef<ElementoParete[][]>([]);
+  const futureRef = useRef<ElementoParete[][]>([]);
+  const isDebouncing = useRef(false);
 
   useEffect(() => {
     if (parete && !initializedRef.current) {
@@ -1452,11 +1457,43 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
     }
   }, [pareteId, qc]);
 
-  function handleConfigChange(newConfig: ElementoParete[]) {
+  function handleConfigChange(newConfig: ElementoParete[], skipHistory = false) {
+    if (!skipHistory && !isDebouncing.current) {
+      historyRef.current = [...historyRef.current.slice(-49), config];
+      futureRef.current = [];
+      setCanUndo(true);
+      setCanRedo(false);
+      isDebouncing.current = true;
+    }
     setConfig(newConfig);
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     setSaveStatus('saving');
-    saveTimerRef.current = setTimeout(() => saveConfig(newConfig), 1200);
+    saveTimerRef.current = setTimeout(() => {
+      saveConfig(newConfig);
+      isDebouncing.current = false;
+    }, 1200);
+  }
+
+  function handleUndo() {
+    if (!historyRef.current.length) return;
+    const prev = historyRef.current[historyRef.current.length - 1];
+    historyRef.current = historyRef.current.slice(0, -1);
+    futureRef.current = [config, ...futureRef.current.slice(0, 49)];
+    setCanUndo(historyRef.current.length > 0);
+    setCanRedo(true);
+    isDebouncing.current = false;
+    handleConfigChange(prev, true);
+  }
+
+  function handleRedo() {
+    if (!futureRef.current.length) return;
+    const next = futureRef.current[0];
+    futureRef.current = futureRef.current.slice(1);
+    historyRef.current = [...historyRef.current.slice(-49), config];
+    setCanUndo(true);
+    setCanRedo(futureRef.current.length > 0);
+    isDebouncing.current = false;
+    handleConfigChange(next, true);
   }
 
   function handleNomeSave() {
@@ -1531,6 +1568,15 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
         <div style={{ height: '40vh' }} className="flex flex-col">
           <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
             <p className="text-2xs text-gray-400 uppercase tracking-widest flex-1">Anteprima parete</p>
+            <button type="button" onClick={handleUndo} disabled={!canUndo} title="Annulla"
+              className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-30 transition-colors">
+              <Undo2 size={13} />
+            </button>
+            <button type="button" onClick={handleRedo} disabled={!canRedo} title="Ripristina"
+              className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-30 transition-colors">
+              <Redo2 size={13} />
+            </button>
+            <div className="w-px h-4 bg-gray-200 mx-1" />
             <button type="button" onClick={() => setPreviewZoom((z) => Math.max(0.4, +(z - 0.15).toFixed(2)))}
               className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors">
               <ZoomOut size={13} />
