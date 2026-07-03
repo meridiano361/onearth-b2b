@@ -542,93 +542,19 @@ function ProductPickerModal({ onSelect, onClose }: { onSelect: (p: Product) => v
   );
 }
 
-// ─── Abbinamenti panel ───────────────────────────────────────────────────────
-
-interface AbbinamentiProduct {
-  id: string; code: string; name: string; imageUrl: string | null;
-  colore: string | null;
-  primaryPantone: { hex_code: string; code: string; name: string } | null;
-  harmonyType: string; score: number;
-}
-type AddProductPayload = { id: string; code: string; name: string; imageUrl: string | null; coloreHex?: string };
-
-function AbbinamentiSuggestionsPanel({ productId, onAdd, onClose }: {
-  productId: string;
-  onAdd?: (p: AddProductPayload) => void;
-  onClose: () => void;
-}) {
-  const [products, setProducts] = useState<AbbinamentiProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true); setError(false);
-    fetch(`/api/moda/color-wheel/suggestions?productId=${productId}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (cancelled) return;
-        const all: AbbinamentiProduct[] = d.allScored ?? d.suggestions ?? [];
-        setProducts(all.sort((a, b) => b.score - a.score).slice(0, 10));
-        setLoading(false);
-      })
-      .catch(() => { if (!cancelled) { setError(true); setLoading(false); } });
-    return () => { cancelled = true; };
-  }, [productId]);
-
-  return (
-    <div className="mt-2 border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
-      <div className="flex items-center px-3 py-2 border-b border-gray-100 bg-gray-50">
-        <p className="text-2xs font-semibold text-gray-600 flex-1">Abbinamenti cromatici</p>
-        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors"><X size={12} /></button>
-      </div>
-      {loading && <div className="flex justify-center py-5"><Loader2 size={16} className="animate-spin text-gray-300" /></div>}
-      {error && <p className="text-2xs text-red-400 px-3 py-4 text-center">Errore nel caricamento</p>}
-      {!loading && !error && products.length === 0 && (
-        <p className="text-2xs text-gray-400 px-3 py-4 text-center">Nessun abbinamento trovato</p>
-      )}
-      {!loading && !error && products.length > 0 && (
-        <div className="max-h-56 overflow-y-auto divide-y divide-gray-50">
-          {products.map((p) => (
-            <div key={p.id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50/80 transition-colors">
-              {p.imageUrl
-                // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={p.imageUrl} alt="" className="w-8 h-8 object-cover rounded border border-gray-100 flex-shrink-0" />
-                : <div className="w-8 h-8 rounded border border-gray-100 flex-shrink-0"
-                    style={{ backgroundColor: p.primaryPantone?.hex_code ?? '#e5e7eb' }} />}
-              <div className="flex-1 min-w-0">
-                <p className="text-2xs font-medium text-gray-700 truncate">{p.name}</p>
-                <p className="text-[9px] text-gray-400">{p.code} · <span className="capitalize">{p.harmonyType}</span></p>
-              </div>
-              {onAdd && (
-                <button type="button"
-                  onClick={() => onAdd({ id: p.id, code: p.code, name: p.name, imageUrl: p.imageUrl, coloreHex: p.primaryPantone?.hex_code })}
-                  className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 hover:bg-primary hover:text-white text-gray-600 transition-colors font-bold text-xs">
-                  +
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Item card ───────────────────────────────────────────────────────────────
 
 function ItemCard({
-  item, tipoOptions, onChange, onDelete, onMoveLeft, onMoveRight, canMoveLeft, canMoveRight, onAddProduct,
+  item, tipoOptions, onChange, onDelete, onMoveLeft, onMoveRight, canMoveLeft, canMoveRight, pareteContext,
 }: {
   item: ItemParete; tipoOptions: TipoCapo[];
   onChange: (u: ItemParete) => void; onDelete: () => void;
   onMoveLeft?: () => void; onMoveRight?: () => void;
   canMoveLeft?: boolean; canMoveRight?: boolean;
-  onAddProduct?: (p: AddProductPayload) => void;
+  pareteContext?: { pareteId: string; elementId: string; elementTipo: string };
 }) {
   const [showPicker, setShowPicker] = useState(false);
   const [showSheet, setShowSheet] = useState(false);
-  const [showAbbinamenti, setShowAbbinamenti] = useState(false);
   const color = item.coloreHex ?? colorForTipo(item.tipo);
   const harmony = item.coloreHex ? getColorHarmony(item.coloreHex) : null;
   const activeTaglie = new Set(item.pezzi.map((p) => p.taglia));
@@ -718,26 +644,13 @@ function ItemCard({
             </div>
           </div>
 
-          {/* Row 3: abbinamenti cromatici */}
-          {item.productId && (
-            <div className="flex items-center gap-2">
-              <button type="button"
-                onClick={() => setShowAbbinamenti((v) => !v)}
-                className="self-start px-2 py-0.5 rounded text-xs font-medium bg-white text-gray-800 border border-gray-200 hover:border-gray-400 hover:text-black transition-colors">
-                abbinamenti cromatici {showAbbinamenti ? '↑' : '→'}
-              </button>
-              <a href={`/moda/ruota-cromatica?productId=${item.productId}`} target="_blank" rel="noreferrer"
-                className="text-[9px] text-gray-300 hover:text-gray-500 transition-colors">
-                apri ruota
-              </a>
-            </div>
-          )}
-          {item.productId && showAbbinamenti && (
-            <AbbinamentiSuggestionsPanel
-              productId={item.productId}
-              onAdd={onAddProduct ? (p) => { onAddProduct(p); } : undefined}
-              onClose={() => setShowAbbinamenti(false)}
-            />
+          {/* Row 3: abbinamenti cromatici — navigates to ruota page with parete context */}
+          {item.productId && pareteContext && (
+            <a
+              href={`/moda/ruota-cromatica?productId=${item.productId}&pareteId=${pareteContext.pareteId}&elementId=${pareteContext.elementId}&elementTipo=${pareteContext.elementTipo}&sourceTipo=${item.tipo}`}
+              className="self-start px-2 py-0.5 rounded text-xs font-medium bg-white text-gray-800 border border-gray-200 hover:border-gray-400 hover:text-black transition-colors">
+              abbinamenti cromatici →
+            </a>
           )}
         </div>
       </div>
@@ -861,9 +774,10 @@ function FrontaleInlineEditor({
 // ─── Mensola inline editor ───────────────────────────────────────────────────
 
 function MensolaInlineEditor({
-  config, onChange, onRemove,
+  config, onChange, onRemove, elementId, pareteId,
 }: {
   config?: MensolaInlineConfig; onChange: (c: MensolaInlineConfig) => void; onRemove: () => void;
+  elementId?: string; pareteId?: string;
 }) {
   const [showCatalog, setShowCatalog] = useState(false);
   const mItemDragIdxRef = useRef<number | null>(null);
@@ -932,7 +846,7 @@ function MensolaInlineEditor({
               onMoveLeft={() => { const a = [...config.items]; [a[idx], a[idx - 1]] = [a[idx - 1], a[idx]]; onChange({ ...config, items: a }); }}
               onMoveRight={() => { const a = [...config.items]; [a[idx], a[idx + 1]] = [a[idx + 1], a[idx]]; onChange({ ...config, items: a }); }}
               canMoveLeft={idx > 0} canMoveRight={idx < config.items.length - 1}
-              onAddProduct={(p) => onChange({ ...config, items: [...config.items, { id: nanoid(8), tipo: it.tipo, productId: p.id, productCode: p.code, productName: p.name, imageUrl: p.imageUrl ?? undefined, coloreHex: p.coloreHex, pezzi: [] }] })} />
+              pareteContext={pareteId && elementId ? { pareteId, elementId, elementTipo: 'mensola' } : undefined} />
           </div>
         </div>
       ))}
@@ -948,11 +862,12 @@ function MensolaInlineEditor({
 // ─── Elemento card ────────────────────────────────────────────────────────────
 
 function ElementoCard({
-  el, index, total, isActive, onChange, onDelete, onMoveUp, onMoveDown,
+  el, index, total, isActive, onChange, onDelete, onMoveUp, onMoveDown, pareteId,
 }: {
   el: ElementoParete; index: number; total: number; isActive?: boolean;
   onChange: (u: ElementoParete) => void; onDelete: () => void;
   onMoveUp: () => void; onMoveDown: () => void;
+  pareteId?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showCatalogPicker, setShowCatalogPicker] = useState(false);
@@ -1097,7 +1012,8 @@ function ElementoCard({
               {mensoleEl.map((m, idx) => (
                 <MensolaInlineEditor key={idx} config={m}
                   onChange={(c) => updateMensola(idx, c)}
-                  onRemove={() => removeMensola(idx)} />
+                  onRemove={() => removeMensola(idx)}
+                  elementId={el.id} pareteId={pareteId} />
               ))}
             </div>
           )}
@@ -1125,7 +1041,7 @@ function ElementoCard({
                         onMoveLeft={!isFrontale ? () => moveItem(idx, idx - 1) : undefined}
                         onMoveRight={!isFrontale ? () => moveItem(idx, idx + 1) : undefined}
                         canMoveLeft={idx > 0} canMoveRight={idx < el.items.length - 1}
-                        onAddProduct={(p) => addFromCatalog([{ id: nanoid(8), tipo: item.tipo, productId: p.id, productCode: p.code, productName: p.name, imageUrl: p.imageUrl ?? undefined, coloreHex: p.coloreHex, pezzi: [] }])} />
+                        pareteContext={pareteId ? { pareteId, elementId: el.id, elementTipo: el.tipo } : undefined} />
                     </div>
                   </div>
                 );
@@ -1167,7 +1083,7 @@ function ElementoCard({
                       onMoveLeft={() => moveMensolaItem(idx, idx - 1)}
                       onMoveRight={() => moveMensolaItem(idx, idx + 1)}
                       canMoveLeft={idx > 0} canMoveRight={idx < mensolaItems.length - 1}
-                      onAddProduct={(p) => saveMensolaItems([...mensolaItems, { id: nanoid(8), tipo: item.tipo, productId: p.id, productCode: p.code, productName: p.name, imageUrl: p.imageUrl ?? undefined, coloreHex: p.coloreHex, pezzi: [] }])} />
+                      pareteContext={pareteId ? { pareteId, elementId: el.id, elementTipo: el.tipo } : undefined} />
                   </div>
                 </div>
               ))}
@@ -1807,6 +1723,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
                 onDelete={() => deleteElemento(idx)}
                 onMoveUp={() => moveElemento(idx, idx - 1)}
                 onMoveDown={() => moveElemento(idx, idx + 1)}
+                pareteId={pareteId}
               />
             ))}
             {config.length === 0 && (

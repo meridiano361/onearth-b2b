@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, X, ArrowLeft, Sparkles, Star, Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, X, ArrowLeft, Sparkles, Star, Search, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { HUE_FAMILIES, type HueFamily } from '@/lib/colorHarmony';
+import toast from 'react-hot-toast';
+import { nanoid } from 'nanoid';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -515,6 +517,11 @@ type SortKey = 'code' | 'name' | 'colore' | 'price';
 export default function ColorWheelView() {
   const searchParams = useSearchParams();
   const initialProductId = searchParams.get('productId');
+  const pareteId    = searchParams.get('pareteId');
+  const elementId   = searchParams.get('elementId');
+  const elementTipo = searchParams.get('elementTipo');
+  const sourceTipo  = searchParams.get('sourceTipo');
+
   const [focusMode, setFocusMode] = useState(!!initialProductId);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -523,6 +530,7 @@ export default function ColorWheelView() {
   const [hoveredProductId, setHoveredProductId]   = useState<string | null>(null);
   const [searchQuery, setSearchQuery]             = useState('');
   const [sortBy, setSortBy]                       = useState<SortKey>('code');
+  const [addingProductId, setAddingProductId]     = useState<string | null>(null);
 
   const { data: wheelData, isLoading: wheelLoading, isError, error, refetch } = useQuery<{ families: WheelFamily[] }>({
     queryKey: ['moda-color-wheel'],
@@ -607,6 +615,53 @@ export default function ColorWheelView() {
     setSelectedProductId((prev) => (prev === productId ? null : productId));
   }
 
+  const addToParete = useCallback(async (p: { id: string; code: string; name: string; imageUrl: string | null; hex?: string }) => {
+    if (!pareteId || !elementId) return;
+    setAddingProductId(p.id);
+    try {
+      const res = await fetch(`/api/moda/pareti/${pareteId}`);
+      if (!res.ok) throw new Error('Parete non trovata');
+      const { data: parete } = await res.json();
+      const config: import('@/types').ElementoParete[] = parete.configurazione ?? [];
+      const elIdx = config.findIndex((e) => e.id === elementId);
+      if (elIdx === -1) throw new Error('Elemento non trovato');
+      const el = config[elIdx];
+      const newItem: import('@/types').ItemParete = {
+        id: nanoid(8),
+        tipo: (sourceTipo as import('@/types').TipoCapo) ?? (elementTipo === 'mensola' ? 'borsa' : elementTipo === 'barra' ? 'top' : 'abito'),
+        productId: p.id,
+        productCode: p.code,
+        productName: p.name,
+        imageUrl: p.imageUrl ?? undefined,
+        coloreHex: p.hex,
+        pezzi: [],
+      };
+      let updatedEl: import('@/types').ElementoParete;
+      if (el.tipo === 'mensola') {
+        if (el.mensole?.length) {
+          const mensole = el.mensole.map((m, i) => i === 0 ? { ...m, items: [...m.items, newItem] } : m);
+          updatedEl = { ...el, mensole };
+        } else {
+          updatedEl = { ...el, items: [...el.items, newItem] };
+        }
+      } else {
+        updatedEl = { ...el, items: [...el.items, newItem] };
+      }
+      const newConfig = config.map((e, i) => i === elIdx ? updatedEl : e);
+      const patchRes = await fetch(`/api/moda/pareti/${pareteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ configurazione: newConfig }),
+      });
+      if (!patchRes.ok) throw new Error('Salvataggio fallito');
+      toast.success(`${p.code} aggiunto alla parete`);
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setAddingProductId(null);
+    }
+  }, [pareteId, elementId, elementTipo, sourceTipo]);
+
   // ── Early returns (all hooks above this line) ─────────────────────────────
 
   if (focusMode) {
@@ -639,6 +694,17 @@ export default function ColorWheelView() {
 
   return (
     <div className="flex flex-col min-h-full">
+      {/* Parete context banner */}
+      {pareteId && elementId && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-primary text-white text-xs">
+          <span className="flex-1">
+            Stai aggiungendo prodotti alla parete — seleziona con <strong>+</strong> accanto al prodotto
+          </span>
+          <a href={`/moda/pareti/${pareteId}`} className="underline hover:no-underline flex-shrink-0">
+            ← Torna alla parete
+          </a>
+        </div>
+      )}
       {/* Header */}
       <div className="px-4 sm:px-6 py-4 border-b border-border/50">
         <p className="label-luxury text-accent">Moda PE27</p>
@@ -922,6 +988,8 @@ export default function ColorWheelView() {
                     product={product}
                     isSelected={selectedProductId === product.id}
                     onClick={() => handleProductClick(product.id)}
+                    onAddToParete={pareteId ? () => addToParete({ id: product.id, code: product.code, name: product.name, imageUrl: product.imageUrl, hex: product.primaryPantone?.hex_code }) : undefined}
+                    isAdding={addingProductId === product.id}
                   />
                 ))}
               </div>
@@ -997,26 +1065,37 @@ export default function ColorWheelView() {
                               <div className="p-3">
                                 <div className="grid grid-cols-4 gap-2">
                                   {groupProducts.slice(0, 8).map((p) => (
-                                    <button
-                                      key={p.id}
-                                      onClick={() => handleProductClick(p.id)}
-                                      className={`group rounded-lg overflow-hidden border transition-all ${
-                                        selectedProductId === p.id ? 'border-accent ring-1 ring-accent/20' : 'border-border hover:border-accent/40'
-                                      }`}
-                                      title={`${p.code} — ${p.name}`}
-                                    >
-                                      <div className="aspect-square bg-gray-50">
-                                        {p.imageUrl ? (
-                                          // eslint-disable-next-line @next/next/no-img-element
-                                          <img src={p.imageUrl} alt={p.code} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                                        ) : (
-                                          <div className="w-full h-full" style={{ backgroundColor: p.primaryPantone?.hex_code ?? '#e5e5e5' }} />
-                                        )}
-                                      </div>
-                                      <div className="px-1 py-0.5 bg-white">
-                                        <p className="text-2xs font-mono font-semibold text-primary leading-none truncate">{p.code}</p>
-                                      </div>
-                                    </button>
+                                    <div key={p.id} className="relative group">
+                                      <button
+                                        onClick={() => handleProductClick(p.id)}
+                                        className={`w-full rounded-lg overflow-hidden border transition-all ${
+                                          selectedProductId === p.id ? 'border-accent ring-1 ring-accent/20' : 'border-border hover:border-accent/40'
+                                        }`}
+                                        title={`${p.code} — ${p.name}`}
+                                      >
+                                        <div className="aspect-square bg-gray-50">
+                                          {p.imageUrl ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={p.imageUrl} alt={p.code} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                          ) : (
+                                            <div className="w-full h-full" style={{ backgroundColor: p.primaryPantone?.hex_code ?? '#e5e5e5' }} />
+                                          )}
+                                        </div>
+                                        <div className="px-1 py-0.5 bg-white">
+                                          <p className="text-2xs font-mono font-semibold text-primary leading-none truncate">{p.code}</p>
+                                        </div>
+                                      </button>
+                                      {pareteId && (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); addToParete({ id: p.id, code: p.code, name: p.name, imageUrl: p.imageUrl, hex: p.primaryPantone?.hex_code }); }}
+                                          disabled={addingProductId === p.id}
+                                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-white/90 border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-primary hover:text-white hover:border-primary transition-colors shadow-sm"
+                                          title="Aggiungi alla parete"
+                                        >
+                                          {addingProductId === p.id ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />}
+                                        </button>
+                                      )}
+                                    </div>
                                   ))}
                                 </div>
                                 {groupProducts.length > 8 && (
@@ -1054,24 +1133,35 @@ export default function ColorWheelView() {
                       </div>
                       <div className="flex gap-2 flex-wrap">
                         {products.map((p) => (
-                          <button
-                            key={p.id}
-                            onClick={() => handleProductClick(p.id)}
-                            className={`flex items-center gap-2 px-2.5 py-1.5 bg-white border rounded-lg text-left hover:border-accent/50 transition-colors ${
-                              selectedProductId === p.id ? 'border-accent' : 'border-border'
-                            }`}
-                          >
-                            {p.primaryPantone && (
-                              <span
-                                className="w-4 h-4 rounded-full flex-shrink-0 border border-border/40"
-                                style={{ backgroundColor: p.primaryPantone.hex_code }}
-                              />
+                          <div key={p.id} className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleProductClick(p.id)}
+                              className={`flex items-center gap-2 px-2.5 py-1.5 bg-white border rounded-lg text-left hover:border-accent/50 transition-colors ${
+                                selectedProductId === p.id ? 'border-accent' : 'border-border'
+                              }`}
+                            >
+                              {p.primaryPantone && (
+                                <span
+                                  className="w-4 h-4 rounded-full flex-shrink-0 border border-border/40"
+                                  style={{ backgroundColor: p.primaryPantone.hex_code }}
+                                />
+                              )}
+                              <div>
+                                <p className="text-2xs font-semibold text-primary leading-none">{p.code}</p>
+                                <p className="text-2xs text-gray-400 leading-tight max-w-[80px] truncate">{p.name}</p>
+                              </div>
+                            </button>
+                            {pareteId && (
+                              <button
+                                onClick={() => addToParete({ id: p.id, code: p.code, name: p.name, imageUrl: p.imageUrl, hex: p.primaryPantone?.hex_code })}
+                                disabled={addingProductId === p.id}
+                                className="w-6 h-6 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-primary hover:text-white hover:border-primary transition-colors flex-shrink-0"
+                                title="Aggiungi alla parete"
+                              >
+                                {addingProductId === p.id ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />}
+                              </button>
                             )}
-                            <div>
-                              <p className="text-2xs font-semibold text-primary leading-none">{p.code}</p>
-                              <p className="text-2xs text-gray-400 leading-tight max-w-[80px] truncate">{p.name}</p>
-                            </div>
-                          </button>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -1098,54 +1188,70 @@ function ProductCard({
   product,
   isSelected,
   onClick,
+  onAddToParete,
+  isAdding,
 }: {
   product: WheelProduct;
   isSelected: boolean;
   onClick: () => void;
+  onAddToParete?: () => void;
+  isAdding?: boolean;
 }) {
   const router = useRouter();
 
   return (
-    <button
-      onClick={onClick}
-      onDoubleClick={() => router.push(`/catalog/${product.id}`)}
-      className={`group text-left rounded-lg overflow-hidden border transition-all ${
-        isSelected
-          ? 'border-accent ring-2 ring-accent/20 shadow-sm'
-          : 'border-border hover:border-accent/40'
-      }`}
-    >
-      <div className="aspect-square bg-gray-50 relative overflow-hidden">
-        {product.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        ) : product.primaryPantone ? (
-          <div className="w-full h-full" style={{ backgroundColor: product.primaryPantone.hex_code }} />
-        ) : (
-          <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300 text-xs">—</div>
-        )}
-        {product.primaryPantone && (
-          <div className="absolute bottom-1 right-1 flex items-center gap-1">
-            <div
-              className="w-4 h-4 rounded border border-[#3a3a3a]/60 shadow-sm"
-              style={{ backgroundColor: product.primaryPantone.hex_code }}
-              title={`${product.primaryPantone.code} — ${product.primaryPantone.name}`}
+    <div className="relative group/card">
+      <button
+        onClick={onClick}
+        onDoubleClick={() => router.push(`/catalog/${product.id}`)}
+        className={`w-full text-left rounded-lg overflow-hidden border transition-all ${
+          isSelected
+            ? 'border-accent ring-2 ring-accent/20 shadow-sm'
+            : 'border-border hover:border-accent/40'
+        }`}
+      >
+        <div className="aspect-square bg-gray-50 relative overflow-hidden">
+          {product.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-300"
             />
-            {isSelected && <Star size={10} className="text-accent fill-accent" />}
-          </div>
-        )}
-      </div>
-      <div className="p-2 bg-white">
-        <p className="text-2xs font-mono font-semibold text-primary leading-none">{product.code}</p>
-        <p className="text-2xs text-gray-500 truncate mt-0.5 leading-tight">{product.name}</p>
-        {product.primaryPantone && (
-          <p className="text-2xs text-gray-400 mt-0.5 truncate">{product.primaryPantone.code}</p>
-        )}
-      </div>
-    </button>
+          ) : product.primaryPantone ? (
+            <div className="w-full h-full" style={{ backgroundColor: product.primaryPantone.hex_code }} />
+          ) : (
+            <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300 text-xs">—</div>
+          )}
+          {product.primaryPantone && (
+            <div className="absolute bottom-1 right-1 flex items-center gap-1">
+              <div
+                className="w-4 h-4 rounded border border-[#3a3a3a]/60 shadow-sm"
+                style={{ backgroundColor: product.primaryPantone.hex_code }}
+                title={`${product.primaryPantone.code} — ${product.primaryPantone.name}`}
+              />
+              {isSelected && <Star size={10} className="text-accent fill-accent" />}
+            </div>
+          )}
+        </div>
+        <div className="p-2 bg-white">
+          <p className="text-2xs font-mono font-semibold text-primary leading-none">{product.code}</p>
+          <p className="text-2xs text-gray-500 truncate mt-0.5 leading-tight">{product.name}</p>
+          {product.primaryPantone && (
+            <p className="text-2xs text-gray-400 mt-0.5 truncate">{product.primaryPantone.code}</p>
+          )}
+        </div>
+      </button>
+      {onAddToParete && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onAddToParete(); }}
+          disabled={isAdding}
+          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white/90 border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-primary hover:text-white hover:border-primary transition-colors shadow-sm opacity-0 group-hover/card:opacity-100"
+          title="Aggiungi alla parete"
+        >
+          {isAdding ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
+        </button>
+      )}
+    </div>
   );
 }
