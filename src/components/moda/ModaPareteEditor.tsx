@@ -1197,7 +1197,13 @@ function WallRenderer({
   }
 
   return (
-    <div className="h-full overflow-x-auto overflow-y-hidden">
+    <div className="h-full overflow-x-auto overflow-y-hidden"
+      style={{
+        backgroundImage: 'linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px)',
+        backgroundSize: '20px 20px',
+        backgroundColor: '#ffffff',
+      }}
+    >
       <div className="flex items-start h-full px-4" style={{ gap: 16, ...(zoom !== undefined ? { zoom } : {}) }}>
         {config.map((el, idx) => {
           const photos = elementPhotos[idx];
@@ -1535,11 +1541,10 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   if (isError || !parete) return <div className="h-full bg-gray-50 flex items-center justify-center"><p className="text-sm text-gray-400">Layout non trovato</p></div>;
 
   return (
-    // h-full fills <main>, flex-col: header + preview (fixed) + cards (own scroll)
     <div className="flex flex-col h-full overflow-hidden bg-gray-50 text-gray-900">
-      {/* Header — always visible, never scrolls */}
+      {/* Header — full width, always visible */}
       <div className="flex-shrink-0 bg-gray-50/95 backdrop-blur border-b border-gray-100 px-4 py-2 z-20">
-        <div className="max-w-6xl mx-auto flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <button onClick={() => router.push('/moda/pareti')} className="text-gray-400 hover:text-gray-700 transition-colors"><ArrowLeft size={16} /></button>
           <div className="flex-1 min-w-0 flex items-center gap-2">
             {editingNome ? (
@@ -1563,9 +1568,36 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
         </div>
       </div>
 
-      {/* Preview panel — always visible, never scrolls */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm z-10">
-        <div style={{ height: '40vh' }} className="flex flex-col">
+      {/* Body: left = scrollable cards, right = fixed preview */}
+      <div className="flex flex-row flex-1 overflow-hidden">
+
+        {/* LEFT: editor cards — own scroll */}
+        <div className="flex-1 overflow-y-auto border-r border-gray-200">
+          <div className="px-4 py-4 pb-24 space-y-3">
+            {config.map((el, idx) => (
+              <ElementoCard
+                key={el.id}
+                el={el}
+                index={idx}
+                total={config.length}
+                isActive={activeElementId === el.id}
+                onChange={(u) => updateElemento(idx, u)}
+                onDelete={() => deleteElemento(idx)}
+                onMoveUp={() => moveElemento(idx, idx - 1)}
+                onMoveDown={() => moveElemento(idx, idx + 1)}
+              />
+            ))}
+            {config.length === 0 && (
+              <div className="py-10 text-center">
+                <p className="text-sm text-gray-400">Costruisci il tuo layout</p>
+                <p className="text-xs mt-1 text-gray-300">Aggiungi barre appenderia, mensole ed esposizioni frontali usando i pulsanti a destra</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT: preview — fixed, never scrolls, always visible */}
+        <div className="w-1/2 flex-shrink-0 flex flex-col bg-white border-l border-gray-200 shadow-sm overflow-hidden z-10">
           <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
             <p className="text-2xs text-gray-400 uppercase tracking-widest flex-1">Anteprima parete</p>
             <button type="button" onClick={handleUndo} disabled={!canUndo} title="Annulla"
@@ -1606,31 +1638,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
             />
           </div>
         </div>
-      </div>
 
-      {/* Editor cards — own scroll, only this section moves */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto w-full px-4 py-4 pb-24 space-y-3">
-          {config.map((el, idx) => (
-            <ElementoCard
-              key={el.id}
-              el={el}
-              index={idx}
-              total={config.length}
-              isActive={activeElementId === el.id}
-              onChange={(u) => updateElemento(idx, u)}
-              onDelete={() => deleteElemento(idx)}
-              onMoveUp={() => moveElemento(idx, idx - 1)}
-              onMoveDown={() => moveElemento(idx, idx + 1)}
-            />
-          ))}
-          {config.length === 0 && (
-            <div className="py-10 text-center">
-              <p className="text-sm text-gray-400">Costruisci il tuo layout</p>
-              <p className="text-xs mt-1 text-gray-300">Aggiungi barre appenderia, mensole ed esposizioni frontali usando i pulsanti in cima</p>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
