@@ -64,6 +64,12 @@ function defaultOffsetY(_tipo: TipoElementoParete): number {
   return 0;
 }
 
+function estimateElementWidth(el: ElementoParete): number {
+  if (el.tipo === 'mensola') return MENSOLA_W[(el.dimensione as DimensioneMensola) ?? 'media'];
+  if (el.tipo === 'barra') return BARRA_W[(el.dimensione as DimensioneBarra) ?? 'media'];
+  return FRONTALE_W;
+}
+
 // ─── Color harmony (ruota cromatica integration) ─────────────────────────────
 
 function hexToHsl(hex: string): [number, number, number] {
@@ -1569,7 +1575,15 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   function updateElemento(idx: number, updated: ElementoParete) {
     const next = [...config]; next[idx] = updated; handleConfigChange(next);
   }
-  function deleteElemento(idx: number) { handleConfigChange(config.filter((_, i) => i !== idx)); }
+  function deleteElemento(idx: number) {
+    // Compensate for the flex gap left by the deleted element so other elements don't shift
+    const deletedW = estimateElementWidth(config[idx]) + 16;
+    const next = config
+      .map((el, i) => ({ el, i }))
+      .filter(({ i }) => i !== idx)
+      .map(({ el, i }) => i > idx ? { ...el, offsetX: (el.offsetX ?? 0) + deletedW } : el);
+    handleConfigChange(next);
+  }
   function moveElemento(from: number, to: number) {
     if (to < 0 || to >= config.length) return;
     const next = [...config];
