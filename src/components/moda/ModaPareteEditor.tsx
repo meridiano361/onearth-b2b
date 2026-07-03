@@ -879,7 +879,25 @@ function ElementoCard({
     && (el.items[0].tipo === 'top' || el.items[0].tipo === 'capospalla');
   const canAddItem = !isFrontale || (el.items.length === 0) || frontaleCanAddBottom;
 
+  // ── Mensola standalone item helpers ─────────────────────────────────────────
+  function saveMensolaItems(items: ItemParete[]) {
+    if (el.mensole?.length) {
+      const m = [...el.mensole]; m[0] = { ...m[0], items }; onChange({ ...el, mensole: m });
+    } else {
+      onChange({ ...el, items });
+    }
+  }
+  function updateMensolaItem(idx: number, updated: ItemParete) {
+    const a = [...mensolaItems]; a[idx] = updated; saveMensolaItems(a);
+  }
+  function removeMensolaItem(idx: number) { saveMensolaItems(mensolaItems.filter((_, i) => i !== idx)); }
+  function moveMensolaItem(from: number, to: number) {
+    if (to < 0 || to >= mensolaItems.length) return;
+    const a = [...mensolaItems]; [a[from], a[to]] = [a[to], a[from]]; saveMensolaItems(a);
+  }
+
   function addFromCatalog(items: ItemParete[]) {
+    if (isMensola) { saveMensolaItems([...mensolaItems, ...items]); return; }
     if (isFrontale && el.items.length === 1) {
       // Second slot must always be bottom
       const it = items[0];
@@ -949,7 +967,7 @@ function ElementoCard({
         <button type="button" onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
           <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-900 text-white flex-shrink-0">{elLabel}</span>
           <p className={`text-xs ${pzOver ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
-            {(isMensola ? mensolaItems : el.items).length} capi{totalPz > 0 && ` · ${totalPz} pz`}{maxPz !== null && ` / max ${maxPz} pz`}{pzOver && ' — LIMITE SUPERATO'}
+            {(isMensola ? mensolaItems : el.items).length} prodotti{totalPz > 0 && ` · ${totalPz} pz`}{maxPz !== null && ` / max ${maxPz} pz`}{pzOver && ' — LIMITE SUPERATO'}
           </p>
         </button>
         {isBarra && (
@@ -1032,20 +1050,34 @@ function ElementoCard({
               )}
             </div>
           )}
-          {/* Standalone mensola: stacked mensole with their own items */}
+          {/* Standalone mensola: direct item list + add button */}
           {isMensola && (
             <div className="space-y-2">
-              {mensoleEl.map((m, idx) => (
-                <MensolaInlineEditor key={idx} config={m}
-                  onChange={(c) => updateMensola(idx, c)}
-                  onRemove={() => removeMensola(idx)} />
+              {mensolaItems.map((item, idx) => (
+                <div
+                  key={item.id}
+                  draggable
+                  onDragStart={() => { itemDragIdxRef.current = idx; }}
+                  onDragOver={(e) => { e.preventDefault(); if (itemDragIdxRef.current !== null && itemDragIdxRef.current !== idx) setItemDragOver(idx); }}
+                  onDrop={(e) => { e.preventDefault(); const from = itemDragIdxRef.current; if (from !== null && from !== idx) moveMensolaItem(from, idx); itemDragIdxRef.current = null; setItemDragOver(null); }}
+                  onDragEnd={() => { itemDragIdxRef.current = null; setItemDragOver(null); }}
+                  className={`flex items-start gap-1.5 ${itemDragOver === idx ? 'ring-2 ring-primary/30 ring-offset-1 rounded-xl' : ''}`}
+                >
+                  <GripVertical size={12} className="mt-3.5 text-gray-300 hover:text-gray-500 flex-shrink-0 cursor-grab" />
+                  <div className="flex-1 min-w-0">
+                    <ItemCard item={item} tipoOptions={TIPO_OPTIONS_MENSOLA}
+                      onChange={(u) => updateMensolaItem(idx, u)}
+                      onDelete={() => removeMensolaItem(idx)}
+                      onMoveLeft={() => moveMensolaItem(idx, idx - 1)}
+                      onMoveRight={() => moveMensolaItem(idx, idx + 1)}
+                      canMoveLeft={idx > 0} canMoveRight={idx < mensolaItems.length - 1} />
+                  </div>
+                </div>
               ))}
-              {/* When no shelves exist yet, show a single unconfigured editor so the user can add products */}
-              {mensoleEl.length === 0 && (
-                <MensolaInlineEditor config={undefined}
-                  onChange={(c) => updateMensola(0, c)}
-                  onRemove={() => {}} />
-              )}
+              <button type="button" onClick={() => setShowCatalogPicker(true)}
+                className="w-full py-2 bg-primary/5 border border-primary/20 rounded-xl text-xs text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5 font-medium">
+                <PackagePlus size={13} /> Aggiungi prodotto
+              </button>
             </div>
           )}
 
