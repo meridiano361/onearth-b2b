@@ -522,7 +522,9 @@ export default function ColorWheelView() {
   const elementTipo = searchParams.get('elementTipo');
   const sourceTipo  = searchParams.get('sourceTipo');
 
-  const [focusMode, setFocusMode] = useState(!!initialProductId);
+  // Don't auto-enter focus mode when coming from parete context — the normal wheel
+  // view shows the banner and "+" buttons needed to add products back to the parete.
+  const [focusMode, setFocusMode] = useState(!!initialProductId && !pareteId);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
   const [selectedFamilyId, setSelectedFamilyId]   = useState<string | null>(null);
