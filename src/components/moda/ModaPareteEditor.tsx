@@ -1040,8 +1040,11 @@ function ElementoCard({
                   onChange={(c) => updateMensola(idx, c)}
                   onRemove={() => removeMensola(idx)} />
               ))}
+              {/* When no shelves exist yet, show a single unconfigured editor so the user can add products */}
               {mensoleEl.length === 0 && (
-                <p className="text-2xs text-gray-400 text-center py-2">Nessun ripiano configurato</p>
+                <MensolaInlineEditor config={undefined}
+                  onChange={(c) => updateMensola(0, c)}
+                  onRemove={() => {}} />
               )}
             </div>
           )}
@@ -1519,6 +1522,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
       id: nanoid(8), tipo,
       dimensione: tipo === 'mensola' ? 'media' : tipo === 'barra' ? 'media' : undefined,
       items: [],
+      ...(tipo === 'mensola' ? { mensole: [{ dimensione: 'media', items: [] }] } : {}),
     };
     handleConfigChange([...config, newEl]);
   }
