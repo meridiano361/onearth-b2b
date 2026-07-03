@@ -1141,29 +1141,25 @@ function WallRenderer({
 
   const PHOTO_SQ = 52; // square side in px for the top/bottom strips
 
-  // Top strip: first 4 product photos from mensole (all elements)
+  // Top strip: ALL product photos from mensole (in config order = left-to-right correspondence)
   const topPhotos = useMemo(() => {
-    const out: string[] = [];
+    const out: Array<{ src: string | null; label?: string }> = [];
     for (const el of config) {
-      const sources: ItemParete[][] = [];
       if (el.tipo === 'mensola') {
         const mensole = el.mensole?.length ? el.mensole : [{ items: el.items, dimensione: (el.dimensione as DimensioneMensola) ?? 'media' }];
-        sources.push(...mensole.map((m) => m.items));
+        for (const m of mensole) for (const it of m.items) out.push({ src: it.imageUrl ?? null, label: it.productName ?? undefined });
       } else {
-        sources.push(...getMensole(el).map((m) => m.items));
+        for (const m of getMensole(el)) for (const it of m.items) out.push({ src: it.imageUrl ?? null, label: it.productName ?? undefined });
       }
-      for (const items of sources) for (const it of items) if (it.imageUrl && out.length < 4) out.push(it.imageUrl);
-      if (out.length >= 4) break;
     }
     return out;
   }, [config]);
 
-  // Bottom strip: first 4 product photos from barre
+  // Bottom strip: ALL product photos from barre
   const bottomPhotos = useMemo(() => {
-    const out: string[] = [];
+    const out: Array<{ src: string | null; label?: string }> = [];
     for (const el of config) {
-      if (el.tipo === 'barra') for (const it of el.items) if (it.imageUrl && out.length < 4) out.push(it.imageUrl);
-      if (out.length >= 4) break;
+      if (el.tipo === 'barra') for (const it of el.items) out.push({ src: it.imageUrl ?? null, label: it.productName ?? undefined });
     }
     return out;
   }, [config]);
@@ -1208,21 +1204,23 @@ function WallRenderer({
 
   const photoStripH = PHOTO_SQ + 8; // strip height = square + padding
 
-  function PhotoStrip({ photos, align }: { photos: string[]; align: 'top' | 'bottom' }) {
+  function PhotoStrip({ photos, align }: { photos: Array<{ src: string | null; label?: string }>; align: 'top' | 'bottom' }) {
+    const slots = Math.max(4, photos.length);
     return (
       <div
-        className={`flex-shrink-0 flex items-center gap-2 px-3 bg-gray-50/80 border-${align === 'top' ? 'b' : 't'} border-gray-100`}
+        className={`flex-shrink-0 overflow-x-auto flex items-center gap-2 px-3 bg-gray-50/80 border-${align === 'top' ? 'b' : 't'} border-gray-100`}
         style={{ height: photoStripH }}
       >
-        {Array.from({ length: 4 }).map((_, i) => (
-          photos[i]
+        {Array.from({ length: slots }).map((_, i) => {
+          const p = photos[i];
+          return p?.src
             // eslint-disable-next-line @next/next/no-img-element
-            ? <img key={i} src={photos[i]} alt="" draggable={false}
+            ? <img key={i} src={p.src} alt={p.label ?? ''} draggable={false} title={p.label}
                 className="object-contain rounded flex-shrink-0 border border-gray-100 bg-white"
                 style={{ width: PHOTO_SQ, height: PHOTO_SQ }} />
             : <div key={i} className="flex-shrink-0 rounded border border-dashed border-gray-200 bg-white/60"
-                style={{ width: PHOTO_SQ, height: PHOTO_SQ }} />
-        ))}
+                style={{ width: PHOTO_SQ, height: PHOTO_SQ }} />;
+        })}
       </div>
     );
   }
