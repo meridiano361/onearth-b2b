@@ -1248,15 +1248,17 @@ function WallRenderer({
       {/* Top strip: 4 squares — mensola photos */}
       <PhotoStrip photos={topPhotos} align="top" />
 
-      {/* Main render area with grid background */}
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden"
-        style={{
-          backgroundImage: 'linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px)',
-          backgroundSize: '20px 20px',
-          backgroundColor: '#ffffff',
-        }}
-      >
-        <div className="flex items-start h-full px-4" style={{ gap: 16, ...(zoom !== undefined ? { zoom } : {}) }}>
+      {/* Main render area — grid background is INSIDE the zoomed div so grid squares scale with content */}
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden" style={{ backgroundColor: '#ffffff' }}>
+        <div className="flex items-start h-full px-4"
+          style={{
+            gap: 16,
+            ...(zoom !== undefined ? { zoom } : {}),
+            backgroundImage: 'linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px)',
+            backgroundSize: '20px 20px',
+            backgroundColor: '#ffffff',
+          }}
+        >
           {config.map((el) => {
             const isLive = livePos?.id === el.id;
             const offsetX = isLive ? livePos!.x : (el.offsetX ?? 0);
@@ -1409,7 +1411,7 @@ function MensolaRenderer({ config }: { config: MensolaInlineConfig }) {
                 return <div key={it.id ?? i} className="flex-shrink-0 rounded-sm" style={{ backgroundColor: color, width: 50, height: 50 }} title={`Borsa (${it.pezzi.length}pz)`} />;
               }
               if (it.tipo === 'accessorio') {
-                return <div key={it.id ?? i} className="flex-shrink-0 rounded-sm" style={{ backgroundColor: color, width: 29, height: 26 }} title={`Accessorio (${it.pezzi.length}pz)`} />;
+                return <div key={it.id ?? i} className="flex-shrink-0 rounded-sm" style={{ backgroundColor: color, width: 30, height: 30 }} title={`Accessorio (${it.pezzi.length}pz)`} />;
               }
               const n = Math.max(1, it.pezzi.length);
               return (
