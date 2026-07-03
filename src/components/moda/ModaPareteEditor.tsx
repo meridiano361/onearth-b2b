@@ -60,10 +60,8 @@ const FRONTALE_BOT_H = 84;
 const STRATO_H = 7;
 const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: FRONTALE_W, media: FRONTALE_W * 2, lunga: FRONTALE_W * 3 };
 
-function defaultOffsetY(tipo: TipoElementoParete): number {
-  if (tipo === 'barra') return 80;
-  if (tipo === 'mensola') return 0;
-  return 40;
+function defaultOffsetY(_tipo: TipoElementoParete): number {
+  return 0;
 }
 
 // ─── Color harmony (ruota cromatica integration) ─────────────────────────────
@@ -984,12 +982,7 @@ function ElementoCard({
         {isMensola && (
           <div className="flex gap-1 flex-shrink-0">
             {MENSOLA_DIMS.map((d) => (
-              <button key={d} type="button" onClick={() => {
-                const updatedMensole = el.mensole?.length
-                  ? el.mensole.map((m, i) => i === 0 ? { ...m, dimensione: d as DimensioneMensola } : m)
-                  : el.mensole;
-                onChange({ ...el, dimensione: d, ...(updatedMensole ? { mensole: updatedMensole } : {}) });
-              }}
+              <button key={d} type="button" onClick={() => onChange({ ...el, dimensione: d })}
                 className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${el.dimensione === d ? 'bg-gray-200 text-gray-700 border border-gray-300' : 'text-gray-400 border border-gray-200 hover:border-gray-400'}`}>
                 {d}
               </button>
@@ -1188,7 +1181,9 @@ function WallRenderer({
     const d = dragRef.current;
     if (!d || e.pointerId !== d.pointerId) return;
     const z = zoom ?? 1;
-    const np = { id: d.id, x: d.startOffsetX + (e.clientX - d.startX) / z, y: d.startOffsetY + (e.clientY - d.startY) / z };
+    const rawX = d.startOffsetX + (e.clientX - d.startX) / z;
+    const rawY = d.startOffsetY + (e.clientY - d.startY) / z;
+    const np = { id: d.id, x: Math.max(0, rawX), y: Math.max(0, rawY) };
     lastLivePosRef.current = np;
     setLivePos(np);
   }
@@ -1349,10 +1344,11 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
   }
 
   if (el.tipo === 'mensola') {
-    // Standalone mensola — supports stacked mensole
+    // Standalone mensola: el.dimensione is authoritative for the first shelf width
+    const elDim = (el.dimensione as DimensioneMensola) ?? 'media';
     const mensole = el.mensole?.length
-      ? el.mensole
-      : [{ dimensione: (el.dimensione as DimensioneMensola) ?? 'media', items: el.items }];
+      ? el.mensole.map((m, i) => i === 0 ? { ...m, dimensione: elDim } : m)
+      : [{ dimensione: elDim, items: el.items }];
     return (
       <div className="flex-shrink-0">
         {mensole.map((m, i) => (
