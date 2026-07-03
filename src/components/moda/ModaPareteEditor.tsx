@@ -1115,40 +1115,34 @@ function WallRenderer({
   const [livePos, setLivePos] = useState<{ id: string; x: number; y: number } | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
-  // Per-element photos: top = mensola items, bottom = barra items aligned to item slot widths
-  const elementPhotos = useMemo(() => config.map((el) => {
-    const top: Array<{ src: string; w: number }> = [];
-    const bottom: Array<{ src: string; w: number }> = [];
-    if (el.tipo === 'barra') {
-      for (const it of el.items) {
-        const count = Math.max(1, it.pezzi.length);
-        const w = Math.max(24, count * COSTA_W + Math.max(0, count - 1));
-        if (it.imageUrl) bottom.push({ src: it.imageUrl, w });
-        else bottom.push({ src: '', w }); // blank slot keeps alignment
+  const PHOTO_SQ = 52; // square side in px for the top/bottom strips
+
+  // Top strip: first 4 product photos from mensole (all elements)
+  const topPhotos = useMemo(() => {
+    const out: string[] = [];
+    for (const el of config) {
+      const sources: ItemParete[][] = [];
+      if (el.tipo === 'mensola') {
+        const mensole = el.mensole?.length ? el.mensole : [{ items: el.items, dimensione: (el.dimensione as DimensioneMensola) ?? 'media' }];
+        sources.push(...mensole.map((m) => m.items));
+      } else {
+        sources.push(...getMensole(el).map((m) => m.items));
       }
-      for (const m of getMensole(el)) {
-        for (const it of m.items) {
-          if (it.imageUrl) top.push({ src: it.imageUrl, w: it.tipo === 'accessorio' ? 29 : 48 });
-        }
-      }
-    } else if (el.tipo === 'mensola') {
-      const mensole = el.mensole?.length
-        ? el.mensole
-        : [{ dimensione: (el.dimensione as DimensioneMensola) ?? 'media', items: el.items }];
-      for (const m of mensole) {
-        for (const it of m.items) {
-          if (it.imageUrl) top.push({ src: it.imageUrl, w: it.tipo === 'accessorio' ? 29 : 48 });
-        }
-      }
-    } else if (el.tipo === 'frontale') {
-      for (const m of getMensole(el)) {
-        for (const it of m.items) {
-          if (it.imageUrl) top.push({ src: it.imageUrl, w: it.tipo === 'accessorio' ? 29 : 48 });
-        }
-      }
+      for (const items of sources) for (const it of items) if (it.imageUrl && out.length < 4) out.push(it.imageUrl);
+      if (out.length >= 4) break;
     }
-    return { id: el.id, top, bottom };
-  }), [config]);
+    return out;
+  }, [config]);
+
+  // Bottom strip: first 4 product photos from barre
+  const bottomPhotos = useMemo(() => {
+    const out: string[] = [];
+    for (const el of config) {
+      if (el.tipo === 'barra') for (const it of el.items) if (it.imageUrl && out.length < 4) out.push(it.imageUrl);
+      if (out.length >= 4) break;
+    }
+    return out;
+  }, [config]);
 
   function startDrag(e: React.PointerEvent, el: ElementoParete) {
     if (e.button !== 0) return;
@@ -1188,46 +1182,68 @@ function WallRenderer({
     setDraggingId(null);
   }
 
+  const photoStripH = PHOTO_SQ + 8; // strip height = square + padding
+
+  function PhotoStrip({ photos, align }: { photos: string[]; align: 'top' | 'bottom' }) {
+    return (
+      <div
+        className={`flex-shrink-0 flex items-center gap-2 px-3 bg-gray-50/80 border-${align === 'top' ? 'b' : 't'} border-gray-100`}
+        style={{ height: photoStripH }}
+      >
+        {Array.from({ length: 4 }).map((_, i) => (
+          photos[i]
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img key={i} src={photos[i]} alt="" draggable={false}
+                className="object-contain rounded flex-shrink-0 border border-gray-100 bg-white"
+                style={{ width: PHOTO_SQ, height: PHOTO_SQ }} />
+            : <div key={i} className="flex-shrink-0 rounded border border-dashed border-gray-200 bg-white/60"
+                style={{ width: PHOTO_SQ, height: PHOTO_SQ }} />
+        ))}
+      </div>
+    );
+  }
+
   if (config.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-300 p-4">
-        <p className="text-xs text-center">Aggiungi barre, mensole o frontali</p>
+      <div className="flex flex-col h-full">
+        <PhotoStrip photos={[]} align="top" />
+        <div className="flex-1 flex items-center justify-center text-gray-300 p-4"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px)',
+            backgroundSize: '20px 20px', backgroundColor: '#ffffff',
+          }}>
+          <p className="text-xs text-center">Aggiungi barre, mensole o frontali</p>
+        </div>
+        <PhotoStrip photos={[]} align="bottom" />
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-x-auto overflow-y-hidden"
-      style={{
-        backgroundImage: 'linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px)',
-        backgroundSize: '20px 20px',
-        backgroundColor: '#ffffff',
-      }}
-    >
-      <div className="flex items-start h-full px-4" style={{ gap: 16, ...(zoom !== undefined ? { zoom } : {}) }}>
-        {config.map((el, idx) => {
-          const photos = elementPhotos[idx];
-          const isLive = livePos?.id === el.id;
-          const offsetX = isLive ? livePos!.x : (el.offsetX ?? 0);
-          const offsetY = isLive ? livePos!.y : (el.offsetY ?? defaultOffsetY(el.tipo));
-          const isDragging = draggingId === el.id;
-          return (
-            <div
-              key={el.id}
-              className="flex flex-col flex-shrink-0 h-full select-none"
-              style={{ transform: `translateX(${offsetX}px)` }}
-            >
-              {/* Top strip: mensola item photos */}
-              <div className="flex items-end gap-px flex-shrink-0 overflow-hidden pb-0.5 border-b border-gray-100" style={{ height: '12.5%' }}>
-                {photos.top.map((p, i) => p.src
-                  // eslint-disable-next-line @next/next/no-img-element
-                  ? <img key={i} src={p.src} alt="" draggable={false} className="object-contain rounded-sm flex-shrink-0" style={{ width: p.w, height: '100%' }} />
-                  : <div key={i} className="flex-shrink-0" style={{ width: p.w }} />
-                )}
-              </div>
+    <div className="flex flex-col h-full">
+      {/* Top strip: 4 squares — mensola photos */}
+      <PhotoStrip photos={topPhotos} align="top" />
 
-              {/* Middle zone: draggable element render */}
-              <div className="flex-1 min-h-0 overflow-hidden">
+      {/* Main render area with grid background */}
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden"
+        style={{
+          backgroundImage: 'linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px)',
+          backgroundSize: '20px 20px',
+          backgroundColor: '#ffffff',
+        }}
+      >
+        <div className="flex items-start h-full px-4" style={{ gap: 16, ...(zoom !== undefined ? { zoom } : {}) }}>
+          {config.map((el) => {
+            const isLive = livePos?.id === el.id;
+            const offsetX = isLive ? livePos!.x : (el.offsetX ?? 0);
+            const offsetY = isLive ? livePos!.y : (el.offsetY ?? defaultOffsetY(el.tipo));
+            const isDragging = draggingId === el.id;
+            return (
+              <div
+                key={el.id}
+                className="flex-shrink-0 h-full select-none"
+                style={{ transform: `translateX(${offsetX}px)` }}
+              >
                 <div
                   className={`inline-block pt-1 ${isDragging ? 'opacity-60 cursor-grabbing' : 'cursor-grab'}`}
                   style={{ transform: `translateY(${offsetY}px)` }}
@@ -1239,19 +1255,13 @@ function WallRenderer({
                   <WallElementRenderer el={el} />
                 </div>
               </div>
-
-              {/* Bottom strip: barra item photos aligned to slot widths */}
-              <div className="flex items-start gap-px flex-shrink-0 overflow-hidden pt-0.5 border-t border-gray-100" style={{ height: '12.5%' }}>
-                {photos.bottom.map((p, i) => p.src
-                  // eslint-disable-next-line @next/next/no-img-element
-                  ? <img key={i} src={p.src} alt="" draggable={false} className="object-contain rounded-sm flex-shrink-0" style={{ width: p.w, height: '100%' }} />
-                  : <div key={i} className="flex-shrink-0" style={{ width: p.w }} />
-                )}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
+
+      {/* Bottom strip: 4 squares — barra photos */}
+      <PhotoStrip photos={bottomPhotos} align="bottom" />
     </div>
   );
 }
@@ -1605,7 +1615,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
         </div>
 
         {/* RIGHT: preview — fixed, never scrolls, always visible */}
-        <div className="w-1/2 flex-shrink-0 flex flex-col bg-white border-l border-gray-200 shadow-sm overflow-hidden z-10">
+        <div className="w-3/5 flex-shrink-0 flex flex-col bg-white border-l border-gray-200 shadow-sm overflow-hidden z-10">
           <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
             <p className="text-2xs text-gray-400 uppercase tracking-widest flex-1">Anteprima parete</p>
             <button type="button" onClick={handleUndo} disabled={!canUndo} title="Annulla"
