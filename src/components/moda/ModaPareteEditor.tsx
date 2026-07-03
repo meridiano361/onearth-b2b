@@ -57,7 +57,7 @@ const FRONTALE_H = 120;
 const FRONTALE_TOP_H = 48;
 const FRONTALE_BOT_H = 72;
 const STRATO_H = 7;
-const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: FRONTALE_W, media: UNIT * 2, lunga: UNIT * 3 };
+const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: FRONTALE_W, media: FRONTALE_W * 2, lunga: FRONTALE_W * 3 };
 
 function defaultOffsetY(tipo: TipoElementoParete): number {
   if (tipo === 'barra') return 80;
@@ -1518,13 +1518,18 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   }
 
   function addElemento(tipo: TipoElementoParete) {
+    const id = nanoid(8);
     const newEl: ElementoParete = {
-      id: nanoid(8), tipo,
+      id, tipo,
       dimensione: tipo === 'mensola' ? 'media' : tipo === 'barra' ? 'media' : undefined,
       items: [],
       ...(tipo === 'mensola' ? { mensole: [{ dimensione: 'media', items: [] }] } : {}),
     };
     handleConfigChange([...config, newEl]);
+    setActiveElementId(id); // auto-espande la nuova card
+    setTimeout(() => {
+      document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 80);
   }
 
   function updateElemento(idx: number, updated: ElementoParete) {
