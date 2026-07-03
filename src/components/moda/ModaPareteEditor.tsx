@@ -52,10 +52,10 @@ const BARRA_PATTERN: Record<DimensioneBarra, TipoCapo[]> = {
 
 const UNIT = 80;
 const COSTA_W = 5;  // 1/3 of original 16 — narrow hangers on barra
-const FRONTALE_W = 48; // independent from COSTA_W
-const FRONTALE_H = 120;
-const FRONTALE_TOP_H = 48;
-const FRONTALE_BOT_H = 72;
+const FRONTALE_W = 60; // 3 grid squares (3×20px)
+const FRONTALE_H = 140;
+const FRONTALE_TOP_H = 56;
+const FRONTALE_BOT_H = 84;
 const STRATO_H = 7;
 const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: FRONTALE_W, media: FRONTALE_W * 2, lunga: FRONTALE_W * 3 };
 
@@ -1365,16 +1365,16 @@ function WallElementRenderer({ el }: { el: ElementoParete }) {
       <div style={{ width: FRONTALE_W }}>
         {item1?.imageUrl
           // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded-t border border-b-0 border-gray-200 object-contain bg-gray-50" style={{ width: FRONTALE_W, height: FRONTALE_TOP_H }} />
+          ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded-t border border-b-0 border-gray-200 object-contain bg-white" style={{ width: FRONTALE_W, height: FRONTALE_TOP_H }} />
           : <div className="rounded-t border border-b-0 border-gray-200" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_TOP_H }} />}
         {item2.imageUrl
           // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={item2.imageUrl} alt="" draggable={false} className="rounded-b border border-gray-200 object-contain bg-gray-50" style={{ width: FRONTALE_W, height: FRONTALE_BOT_H }} />
+          ? <img src={item2.imageUrl} alt="" draggable={false} className="rounded-b border border-gray-200 object-contain bg-white" style={{ width: FRONTALE_W, height: FRONTALE_BOT_H }} />
           : <div className="rounded-b border border-gray-200" style={{ backgroundColor: item2.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_BOT_H }} />}
       </div>
     ) : item1?.imageUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={item1.imageUrl} alt="" draggable={false} className="rounded border border-gray-200 object-contain bg-gray-50" style={{ width: FRONTALE_W, height: FRONTALE_H }} />
+      <img src={item1.imageUrl} alt="" draggable={false} className="rounded border border-gray-200 object-contain bg-white" style={{ width: FRONTALE_W, height: FRONTALE_H }} />
     ) : (
       <div className="rounded border border-gray-200" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_H }} />
     );
