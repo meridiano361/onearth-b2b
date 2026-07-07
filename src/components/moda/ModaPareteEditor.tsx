@@ -1204,12 +1204,25 @@ function WallRenderer({
   const [livePos, setLivePos] = useState<{ id: string; x: number; y: number } | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
-  const PHOTO_SQ = 52; // square side in px for the top/bottom strips
+  const PHOTO_SQ = 36; // square side in px for the top/bottom strips
 
-  // Top strip: ALL product photos from mensole (in config order = left-to-right correspondence)
+  // Sort config by visual x (flex position + offsetX) to match wall left-to-right order
+  const configSortedByVisualX = useMemo(() => {
+    let flexX = 16; // px-4 left padding
+    return config
+      .map((el) => {
+        const vx = flexX + (el.offsetX ?? 0);
+        flexX += estimateElementWidth(el) + 16; // gap-4
+        return { el, vx };
+      })
+      .sort((a, b) => a.vx - b.vx)
+      .map(({ el }) => el);
+  }, [config]);
+
+  // Top strip: ALL product photos from mensole (sorted by visual x)
   const topPhotos = useMemo(() => {
     const out: Array<{ src: string | null; label?: string }> = [];
-    for (const el of config) {
+    for (const el of configSortedByVisualX) {
       if (el.tipo === 'mensola') {
         const mensole = el.mensole?.length ? el.mensole : [{ items: el.items, dimensione: (el.dimensione as DimensioneMensola) ?? 'media' }];
         for (const m of mensole) for (const it of m.items) out.push({ src: it.imageUrl ?? null, label: it.productName ?? undefined });
@@ -1218,16 +1231,16 @@ function WallRenderer({
       }
     }
     return out;
-  }, [config]);
+  }, [configSortedByVisualX]);
 
-  // Bottom strip: ALL product photos from barre
+  // Bottom strip: ALL product photos from barre (sorted by visual x)
   const bottomPhotos = useMemo(() => {
     const out: Array<{ src: string | null; label?: string }> = [];
-    for (const el of config) {
+    for (const el of configSortedByVisualX) {
       if (el.tipo === 'barra') for (const it of el.items) out.push({ src: it.imageUrl ?? null, label: it.productName ?? undefined });
     }
     return out;
-  }, [config]);
+  }, [configSortedByVisualX]);
 
   function startDrag(e: React.PointerEvent, el: ElementoParete) {
     if (e.button !== 0) return;
@@ -1293,7 +1306,7 @@ function WallRenderer({
     const slots = Math.max(4, photos.length);
     return (
       <div
-        className={`flex-shrink-0 overflow-x-auto flex items-center gap-2 px-3 bg-gray-50/80 border-${align === 'top' ? 'b' : 't'} border-gray-100`}
+        className={`flex-shrink-0 overflow-x-auto flex items-center gap-1 px-2 bg-gray-50/80 border-${align === 'top' ? 'b' : 't'} border-gray-100`}
         style={{ height: photoStripH }}
       >
         {Array.from({ length: slots }).map((_, i) => {
@@ -1757,7 +1770,14 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
       items: [],
       ...(tipo === 'mensola' ? { mensole: [{ dimensione: 'media', items: [] }] } : {}),
     };
-    handleConfigChange([...config, newEl]);
+    // Place the new element at the visual center of the wall
+    const elW = estimateElementWidth(newEl);
+    const flexX = 16 + config.reduce((s, el) => s + estimateElementWidth(el) + 16, 0);
+    const minOX = -flexX;
+    const maxOX = WALL_SQUARES * GRID_SQ - flexX - elW;
+    const targetOX = Math.round(WALL_SQUARES * GRID_SQ / 2 - elW / 2) - flexX;
+    const offsetX = Math.max(minOX, Math.min(maxOX, targetOX));
+    handleConfigChange([...config, { ...newEl, offsetX }]);
     setActiveElementId(id); // auto-espande la nuova card
     setTimeout(() => {
       document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
