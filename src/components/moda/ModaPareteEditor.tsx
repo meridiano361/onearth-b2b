@@ -1202,17 +1202,19 @@ function WallRenderer({
   const [containerW, setContainerW] = useState(WALL_SQUARES * GRID_SQ);
   const effectiveZoomRef = useRef(1);
 
-  // Measure container synchronously before paint to avoid layout flash
+  // Re-fire when the wall div first becomes available (config loaded async after mount)
+  const hasElements = config.length > 0;
   useLayoutEffect(() => {
-    if (outerWallRef.current) setContainerW(outerWallRef.current.clientWidth || WALL_SQUARES * GRID_SQ);
-  }, []);
+    const el = outerWallRef.current;
+    if (el) setContainerW(el.clientWidth || WALL_SQUARES * GRID_SQ);
+  }, [hasElements]);
   useEffect(() => {
     const el = outerWallRef.current;
     if (!el) return;
     const ro = new ResizeObserver(() => setContainerW(el.clientWidth || WALL_SQUARES * GRID_SQ));
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [hasElements]);
 
   const dragRef = useRef<{
     id: string; pointerId: number;
@@ -1244,25 +1246,27 @@ function WallRenderer({
       .map(({ el }) => el);
   }, [config]);
 
-  // Top strip: ALL product photos from mensole (sorted by visual x)
+  type PhotoEntry = { src: string | null; color?: string; label?: string };
+
+  // Top strip: product photos from mensole (sorted by visual x), color fallback if no image
   const topPhotos = useMemo(() => {
-    const out: Array<{ src: string | null; label?: string }> = [];
+    const out: PhotoEntry[] = [];
     for (const el of configSortedByVisualX) {
       if (el.tipo === 'mensola') {
         const mensole = el.mensole?.length ? el.mensole : [{ items: el.items, dimensione: (el.dimensione as DimensioneMensola) ?? 'media' }];
-        for (const m of mensole) for (const it of m.items) out.push({ src: it.imageUrl ?? null, label: it.productName ?? undefined });
+        for (const m of mensole) for (const it of m.items) out.push({ src: it.imageUrl ?? null, color: it.coloreHex ?? colorForTipo(it.tipo), label: it.productName ?? undefined });
       } else {
-        for (const m of getMensole(el)) for (const it of m.items) out.push({ src: it.imageUrl ?? null, label: it.productName ?? undefined });
+        for (const m of getMensole(el)) for (const it of m.items) out.push({ src: it.imageUrl ?? null, color: it.coloreHex ?? colorForTipo(it.tipo), label: it.productName ?? undefined });
       }
     }
     return out;
   }, [configSortedByVisualX]);
 
-  // Bottom strip: ALL product photos from barre (sorted by visual x)
+  // Bottom strip: product photos from barre (sorted by visual x), color fallback if no image
   const bottomPhotos = useMemo(() => {
-    const out: Array<{ src: string | null; label?: string }> = [];
+    const out: PhotoEntry[] = [];
     for (const el of configSortedByVisualX) {
-      if (el.tipo === 'barra') for (const it of el.items) out.push({ src: it.imageUrl ?? null, label: it.productName ?? undefined });
+      if (el.tipo === 'barra') for (const it of el.items) out.push({ src: it.imageUrl ?? null, color: it.coloreHex ?? colorForTipo(it.tipo), label: it.productName ?? undefined });
     }
     return out;
   }, [configSortedByVisualX]);
@@ -1327,7 +1331,7 @@ function WallRenderer({
 
   const photoStripH = PHOTO_SQ + 8; // strip height = square + padding
 
-  function PhotoStrip({ photos, align }: { photos: Array<{ src: string | null; label?: string }>; align: 'top' | 'bottom' }) {
+  function PhotoStrip({ photos, align }: { photos: PhotoEntry[]; align: 'top' | 'bottom' }) {
     const slots = Math.max(4, photos.length);
     return (
       <div
@@ -1336,13 +1340,18 @@ function WallRenderer({
       >
         {Array.from({ length: slots }).map((_, i) => {
           const p = photos[i];
-          return p?.src
+          if (p?.src) {
             // eslint-disable-next-line @next/next/no-img-element
-            ? <img key={i} src={p.src} alt={p.label ?? ''} draggable={false} title={p.label}
-                className="object-contain rounded flex-shrink-0 border border-gray-100 bg-white"
-                style={{ width: PHOTO_SQ, height: PHOTO_SQ }} />
-            : <div key={i} className="flex-shrink-0 rounded border border-dashed border-gray-200 bg-white/60"
-                style={{ width: PHOTO_SQ, height: PHOTO_SQ }} />;
+            return <img key={i} src={p.src} alt={p.label ?? ''} draggable={false} title={p.label}
+              className="object-contain rounded flex-shrink-0 border border-gray-100 bg-white"
+              style={{ width: PHOTO_SQ, height: PHOTO_SQ }} />;
+          }
+          if (p?.color) {
+            return <div key={i} className="flex-shrink-0 rounded border border-gray-200 flex-shrink-0"
+              style={{ width: PHOTO_SQ, height: PHOTO_SQ, backgroundColor: p.color }} title={p.label} />;
+          }
+          return <div key={i} className="flex-shrink-0 rounded border border-dashed border-gray-200 bg-white/60"
+            style={{ width: PHOTO_SQ, height: PHOTO_SQ }} />;
         })}
       </div>
     );
@@ -1403,7 +1412,7 @@ function WallRenderer({
                 >
                   <WallElementRenderer
                     el={el}
-                    zoom={zoom ?? 1}
+                    zoom={effectiveZoom}
                     onUpdate={(patch) => onUpdate?.(el.id, patch)}
                   />
                 </div>
@@ -1575,7 +1584,7 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
 }) {
   const w = MENSOLA_W[config.dimensione];
   const over = mensola_totalItemsW(config.items) > w;
-  const itemDragRef = useRef<{ idx: number; pointerId: number; startX: number; startOffX: number } | null>(null);
+  const itemDragRef = useRef<{ idx: number; pointerId: number; startX: number; startOffX: number; minOffX: number; maxOffX: number } | null>(null);
   const [liveItem, setLiveItem] = useState<{ idx: number; x: number } | null>(null);
 
   function startItemDrag(e: React.PointerEvent, idx: number) {
@@ -1583,14 +1592,25 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
     e.stopPropagation();
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    itemDragRef.current = { idx, pointerId: e.pointerId, startX: e.clientX, startOffX: config.items[idx].offsetX ?? 0 };
+    // Compute natural flex x of this item (sum of widths + gaps of preceding items)
+    let naturalFlexX = 0;
+    for (let i = 0; i < idx; i++) naturalFlexX += mensolaItemVisualW(config.items[i]) + 2; // gap-0.5 = 2px
+    const itemW = mensolaItemVisualW(config.items[idx]);
+    const startOffX = config.items[idx].offsetX ?? 0;
+    // bounds: item visual x must stay in [0, w - itemW]
+    itemDragRef.current = {
+      idx, pointerId: e.pointerId, startX: e.clientX, startOffX,
+      minOffX: -naturalFlexX,
+      maxOffX: w - naturalFlexX - itemW,
+    };
   }
 
   function onItemMove(e: React.PointerEvent) {
     const d = itemDragRef.current;
     if (!d || e.pointerId !== d.pointerId) return;
     e.stopPropagation();
-    setLiveItem({ idx: d.idx, x: d.startOffX + (e.clientX - d.startX) / zoom });
+    const raw = d.startOffX + (e.clientX - d.startX) / zoom;
+    setLiveItem({ idx: d.idx, x: Math.max(d.minOffX, Math.min(d.maxOffX, raw)) });
   }
 
   function endItemDrag(e: React.PointerEvent) {
@@ -1598,7 +1618,8 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
     const d = itemDragRef.current;
     if (!d) return;
     const finalX = liveItem?.idx === d.idx ? liveItem.x : (config.items[d.idx].offsetX ?? 0);
-    const newItems = config.items.map((it, i) => i === d.idx ? { ...it, offsetX: Math.round(finalX) } : it);
+    const clampedX = Math.max(d.minOffX, Math.min(d.maxOffX, finalX));
+    const newItems = config.items.map((it, i) => i === d.idx ? { ...it, offsetX: Math.round(clampedX) } : it);
     onUpdate?.({ ...config, items: newItems });
     setLiveItem(null);
     itemDragRef.current = null;
