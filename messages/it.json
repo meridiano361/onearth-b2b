@@ -89,7 +89,7 @@
         "lotRequired": "Multiplo di {lotSize} richiesto"
     },
     "product": {
-        "cost": "Costo",
+        "cost": "Costo i.e.",
         "sale": "PVP",
         "add": "Aggiungi",
         "added": "Aggiunto",

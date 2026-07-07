@@ -86,6 +86,7 @@ export default function ProductDetailView({ id }: Props) {
   const router = useRouter();
   const { getItemQuantity, updateQuantity, addItem } = useCartStore();
   const [justAdded, setJustAdded] = useState(false);
+  const [showSizePanel, setShowSizePanel] = useState(false);
   const tp = useTranslations('product');
   const tf = useTranslations('filters');
   const tg = useTranslations('groupings');
@@ -242,52 +243,60 @@ export default function ProductDetailView({ id }: Props) {
 
           <div className="mt-auto">
             {product.sizeVariants && product.sizeVariants.length > 0 ? (
-              /* ── Size variants table ── */
-              <div>
-                <h2 className="label-luxury text-gray-400 mb-2">Varianti taglia</h2>
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <div className="grid grid-cols-[48px_1fr_auto] text-2xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-2 bg-gray-50 border-b border-border gap-3">
-                    <span>Taglia</span>
-                    <span>Codice</span>
-                    <span className="text-right pr-1">Qtà</span>
+              /* ── Size variants: button → collapsible panel ── */
+              (cartQty > 0 || showSizePanel) ? (
+                <div>
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    <div className="grid grid-cols-[48px_1fr_auto] text-2xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-2 bg-gray-50 border-b border-border gap-3">
+                      <span>Taglia</span>
+                      <span>Codice</span>
+                      <span className="text-right pr-1">Qtà</span>
+                    </div>
+                    {product.sizeVariants.map(({ taglia, codice }) => {
+                      const varQty = getItemQuantity(product.id, taglia);
+                      return (
+                        <div
+                          key={taglia}
+                          className={`grid grid-cols-[48px_1fr_auto] items-center px-3 py-2.5 border-b last:border-0 border-border gap-3 transition-colors ${varQty > 0 ? 'bg-accent/5' : ''}`}
+                        >
+                          <span className="text-sm font-bold text-primary">{taglia}</span>
+                          <span className="text-xs font-mono text-gray-500 truncate">{codice}</span>
+                          {varQty > 0 ? (
+                            <QuantitySelector
+                              value={varQty}
+                              onChange={(q) => updateQuantity(product.id, q, taglia)}
+                              lotSize={product.lotSize}
+                              min={0}
+                              compact
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => addItem(product, product.lotSize || 1, taglia)}
+                              className="w-7 h-7 flex items-center justify-center rounded-full border border-border hover:border-primary hover:text-primary text-gray-400 transition-colors"
+                            >
+                              <Plus size={14} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                  {product.sizeVariants.map(({ taglia, codice }) => {
-                    const varQty = getItemQuantity(product.id, taglia);
-                    return (
-                      <div
-                        key={taglia}
-                        className={`grid grid-cols-[48px_1fr_auto] items-center px-3 py-2.5 border-b last:border-0 border-border gap-3 transition-colors ${varQty > 0 ? 'bg-accent/5' : ''}`}
-                      >
-                        <span className="text-sm font-bold text-primary">{taglia}</span>
-                        <span className="text-xs font-mono text-gray-500 truncate">{codice}</span>
-                        {varQty > 0 ? (
-                          <QuantitySelector
-                            value={varQty}
-                            onChange={(q) => updateQuantity(product.id, q, taglia)}
-                            lotSize={product.lotSize}
-                            min={0}
-                            compact
-                          />
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => addItem(product, product.lotSize || 1, taglia)}
-                            className="w-7 h-7 flex items-center justify-center rounded-full border border-border hover:border-primary hover:text-primary text-gray-400 transition-colors"
-                          >
-                            <Plus size={14} />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {cartQty > 0 && (
+                    <p className="text-xs text-center text-gray-400 mt-2">
+                      {tp('inCart', { qty: cartQty })}
+                    </p>
+                  )}
                 </div>
-                {/* Total in cart summary */}
-                {cartQty > 0 && (
-                  <p className="text-xs text-center text-gray-400 mt-2">
-                    {tp('inCart', { qty: cartQty })}
-                  </p>
-                )}
-              </div>
+              ) : (
+                <button
+                  onClick={() => setShowSizePanel(true)}
+                  className="w-full py-3 text-sm font-medium rounded transition-all duration-200 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker active:scale-95"
+                >
+                  <ShoppingBag size={14} />
+                  {tp('add')}
+                </button>
+              )
             ) : inCart ? (
               /* ── Single product: already in cart ── */
               <div className="space-y-2">
@@ -326,6 +335,19 @@ export default function ProductDetailView({ id }: Props) {
 
       {/* Details sections */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {product.sizeVariants && product.sizeVariants.length > 0 && (
+          <div>
+            <h2 className="label-luxury text-gray-400 mb-3">Taglie disponibili</h2>
+            <div className="flex flex-wrap gap-1.5">
+              {product.sizeVariants.map(({ taglia }) => (
+                <span key={taglia} className="px-3 py-1 border border-border rounded text-sm font-medium text-primary bg-white">
+                  {taglia}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {activeClassFields.length > 0 && (
           <div>
             <h2 className="label-luxury text-gray-400 mb-3">{tp('classification')}</h2>
