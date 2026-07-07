@@ -1772,11 +1772,44 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   configRef.current = config;
 
   useEffect(() => {
-    if (parete && !initializedRef.current) {
-      initializedRef.current = true;
-      setNome(parete.nome);
-      setConfig(Array.isArray(parete.configurazione) ? parete.configurazione as ElementoParete[] : []);
+    if (!parete || initializedRef.current) return;
+    initializedRef.current = true;
+    setNome(parete.nome);
+    const rawConfig = Array.isArray(parete.configurazione) ? parete.configurazione as ElementoParete[] : [];
+
+    // Collect productIds whose imageUrl was lost (stale-closure bug from old sessions)
+    const missingIds = new Set<string>();
+    function gatherMissing(items: ItemParete[]) {
+      for (const it of items) if (it.productId && !it.imageUrl) missingIds.add(it.productId);
     }
+    for (const el of rawConfig) {
+      gatherMissing(el.items);
+      for (const m of (el.mensole ?? [])) gatherMissing(m.items);
+      if (el.mensolaTop) gatherMissing(el.mensolaTop.items);
+    }
+
+    if (missingIds.size === 0) { setConfig(rawConfig); return; }
+
+    // Fetch missing product images and repair the config permanently
+    fetch(`/api/products?ids=${[...missingIds].join(',')}&limit=${missingIds.size + 10}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const pMap = new Map<string, string>();
+        for (const p of (data?.data ?? [])) { const url = productImageUrl(p); if (url) pMap.set(p.id, url); }
+        function enrichItems(items: ItemParete[]): ItemParete[] {
+          return items.map((it) => (it.productId && !it.imageUrl && pMap.has(it.productId) ? { ...it, imageUrl: pMap.get(it.productId) } : it));
+        }
+        const enriched: ElementoParete[] = rawConfig.map((el) => ({
+          ...el,
+          items: enrichItems(el.items),
+          mensole: el.mensole?.map((m) => ({ ...m, items: enrichItems(m.items) })),
+          mensolaTop: el.mensolaTop ? { ...el.mensolaTop, items: enrichItems(el.mensolaTop.items) } : undefined,
+        }));
+        setConfig(enriched);
+        if (pMap.size > 0) saveConfig(enriched); // persist the repair
+      })
+      .catch(() => setConfig(rawConfig));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parete]);
 
   const saveConfig = useCallback(async (newConfig: ElementoParete[], newNome?: string) => {
