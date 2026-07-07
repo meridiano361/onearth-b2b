@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Plus, X, Search, Loader2, ChevronLeft, ChevronRight,
   Trash2, Edit2, Check, Tag, PackagePlus, AlertTriangle, ZoomIn, ZoomOut,
-  SlidersHorizontal, ChevronDown, ChevronUp, GripVertical, Undo2, Redo2,
+  SlidersHorizontal, ChevronDown, ChevronUp, GripVertical, Undo2, Redo2, ArrowUpDown,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type {
@@ -164,7 +164,7 @@ function formatProductName(p: Product): string {
 
 // Use imageUrl with imageUrl2 as fallback
 function productImageUrl(p: Product): string | undefined {
-  return p.imageUrl ?? p.imageUrl2 ?? undefined;
+  return p.imageUrl ?? p.imageUrl2 ?? p.imageUrl3 ?? p.imageUrl4 ?? p.imageUrl5 ?? undefined;
 }
 
 // Returns true if the product is a clothing item (valid for barra appenderia)
@@ -1545,7 +1545,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
     const mensole = getMensole(el);
 
     const frontaleCore = item2 ? (
-      <div style={{ width: FRONTALE_W }}>
+      <div className="relative group/frontale" style={{ width: FRONTALE_W }}>
         <div className="relative group/fitem1">
           {item1?.imageUrl
             // eslint-disable-next-line @next/next/no-img-element
@@ -1568,6 +1568,14 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
             ><X size={8} /></button>
           )}
         </div>
+        {onUpdate && item1 && (
+          <button type="button"
+            className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 bg-white border border-gray-300 rounded-full opacity-0 group-hover/frontale:opacity-100 transition-opacity flex items-center justify-center z-20 shadow-sm cursor-pointer"
+            style={{ top: FRONTALE_TOP_H }}
+            title="Inverti top e bottom"
+            onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: [item2, item1] }); }}
+          ><ArrowUpDown size={9} className="text-gray-500" /></button>
+        )}
       </div>
     ) : (
       <div className="relative group/fitem1" style={{ width: FRONTALE_W, height: FRONTALE_H }}>
