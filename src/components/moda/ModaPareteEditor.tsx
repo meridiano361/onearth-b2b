@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import {
@@ -91,7 +91,12 @@ function mensolaItemsContainerH(items: ItemParete[]): number {
 
 function estimateElementWidth(el: ElementoParete): number {
   if (el.tipo === 'mensola') return MENSOLA_W[(el.dimensione as DimensioneMensola) ?? 'media'];
-  if (el.tipo === 'barra') return BARRA_W[(el.dimensione as DimensioneBarra) ?? 'media'];
+  if (el.tipo === 'barra') {
+    if (!el.items.length) return BARRA_W[(el.dimensione as DimensioneBarra) ?? 'media'];
+    // Actual rendered width: each item = max(1, pezzi.length) columns × COSTA_W, gap=1 between items
+    const cols = el.items.reduce((s, it) => s + Math.max(1, it.pezzi.length), 0);
+    return cols * COSTA_W + Math.max(0, el.items.length - 1);
+  }
   return FRONTALE_W;
 }
 
@@ -1194,6 +1199,21 @@ function WallRenderer({
   zoom?: number;
 }) {
   const outerWallRef = useRef<HTMLDivElement>(null);
+  const [containerW, setContainerW] = useState(WALL_SQUARES * GRID_SQ);
+  const effectiveZoomRef = useRef(1);
+
+  // Measure container synchronously before paint to avoid layout flash
+  useLayoutEffect(() => {
+    if (outerWallRef.current) setContainerW(outerWallRef.current.clientWidth || WALL_SQUARES * GRID_SQ);
+  }, []);
+  useEffect(() => {
+    const el = outerWallRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setContainerW(el.clientWidth || WALL_SQUARES * GRID_SQ));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const dragRef = useRef<{
     id: string; pointerId: number;
     startX: number; startY: number;
@@ -1203,6 +1223,11 @@ function WallRenderer({
   const lastLivePosRef = useRef<{ id: string; x: number; y: number } | null>(null);
   const [livePos, setLivePos] = useState<{ id: string; x: number; y: number } | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  // Auto-fit: scale wall to always fill container width at 100% user zoom
+  const fitZoom = containerW / (WALL_SQUARES * GRID_SQ);
+  const effectiveZoom = fitZoom * (zoom ?? 1);
+  effectiveZoomRef.current = effectiveZoom;
 
   const PHOTO_SQ = 36; // square side in px for the top/bottom strips
 
@@ -1247,7 +1272,7 @@ function WallRenderer({
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     lastLivePosRef.current = null;
-    const z = zoom ?? 1;
+    const z = effectiveZoomRef.current;
     const startOffsetX = el.offsetX ?? 0;
     const startOffsetY = el.offsetY ?? defaultOffsetY(el.tipo);
     // Compute X bounds in logical pixels so element can't leave the 30-square wall
@@ -1273,7 +1298,7 @@ function WallRenderer({
   function onPointerMove(e: React.PointerEvent) {
     const d = dragRef.current;
     if (!d || e.pointerId !== d.pointerId) return;
-    const z = zoom ?? 1;
+    const z = effectiveZoomRef.current;
     const rawX = d.startOffsetX + (e.clientX - d.startX) / z;
     const rawY = d.startOffsetY + (e.clientY - d.startY) / z;
     const np = {
@@ -1350,7 +1375,7 @@ function WallRenderer({
           style={{
             gap: 16,
             width: WALL_SQUARES * GRID_SQ,
-            ...(zoom !== undefined ? { zoom } : {}),
+            zoom: effectiveZoom,
             backgroundImage: 'linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px)',
             backgroundSize: `${GRID_SQ}px ${GRID_SQ}px`,
             backgroundColor: '#ffffff',
