@@ -1080,19 +1080,19 @@ function ElementoCard({
                 return (
                   <div
                     key={item.id}
-                    draggable={!isFrontale}
+                    draggable
                     onDragStart={() => { itemDragIdxRef.current = idx; }}
                     onDragOver={(e) => { e.preventDefault(); if (itemDragIdxRef.current !== null && itemDragIdxRef.current !== idx) setItemDragOver(idx); }}
                     onDrop={(e) => { e.preventDefault(); const from = itemDragIdxRef.current; if (from !== null && from !== idx) moveItem(from, idx); itemDragIdxRef.current = null; setItemDragOver(null); }}
                     onDragEnd={() => { itemDragIdxRef.current = null; setItemDragOver(null); }}
                     className={`flex items-start gap-1.5 ${itemDragOver === idx ? 'ring-2 ring-primary/30 ring-offset-1 rounded-xl' : ''}`}
                   >
-                    {!isFrontale && <GripVertical size={12} className="mt-3.5 text-gray-300 hover:text-gray-500 flex-shrink-0 cursor-grab" />}
+                    <GripVertical size={12} className="mt-3.5 text-gray-300 hover:text-gray-500 flex-shrink-0 cursor-grab" />
                     <div className="flex-1 min-w-0">
                       <ItemCard item={item} tipoOptions={itemTipoOptions}
                         onChange={(u) => updateItem(idx, u)} onDelete={() => removeItem(idx)}
-                        onMoveLeft={!isFrontale ? () => moveItem(idx, idx - 1) : undefined}
-                        onMoveRight={!isFrontale ? () => moveItem(idx, idx + 1) : undefined}
+                        onMoveLeft={() => moveItem(idx, idx - 1)}
+                        onMoveRight={() => moveItem(idx, idx + 1)}
                         canMoveLeft={idx > 0} canMoveRight={idx < el.items.length - 1}
                         pareteContext={pareteId ? { pareteId, elementId: el.id, elementTipo: el.tipo } : undefined}
                         elementoTipo={el.tipo} />
