@@ -1325,7 +1325,7 @@ function WallRenderer({
 
   if (config.length === 0) {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col flex-1 min-h-0">
         <PhotoStrip photos={[]} align="top" />
         <div className="flex-1 flex items-center justify-center text-gray-300 p-4"
           style={{
@@ -1340,7 +1340,7 @@ function WallRenderer({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Top strip: 4 squares — mensola photos */}
       <PhotoStrip photos={topPhotos} align="top" />
 
@@ -1770,14 +1770,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
       items: [],
       ...(tipo === 'mensola' ? { mensole: [{ dimensione: 'media', items: [] }] } : {}),
     };
-    // Place the new element at the visual center of the wall
-    const elW = estimateElementWidth(newEl);
-    const flexX = 16 + config.reduce((s, el) => s + estimateElementWidth(el) + 16, 0);
-    const minOX = -flexX;
-    const maxOX = WALL_SQUARES * GRID_SQ - flexX - elW;
-    const targetOX = Math.round(WALL_SQUARES * GRID_SQ / 2 - elW / 2) - flexX;
-    const offsetX = Math.max(minOX, Math.min(maxOX, targetOX));
-    handleConfigChange([...config, { ...newEl, offsetX }]);
+    handleConfigChange([...config, newEl]);
     setActiveElementId(id); // auto-espande la nuova card
     setTimeout(() => {
       document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1920,7 +1913,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
               </button>
             ))}
           </div>
-          <div className="flex-1 min-h-0 border-t border-gray-100 overflow-hidden">
+          <div className="flex-1 min-h-0 border-t border-gray-100 overflow-hidden flex flex-col">
             <WallRenderer
               config={config}
               onSelect={handleSelectElement}
@@ -1928,7 +1921,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
                 const next = config.map((el) => el.id === id ? { ...el, ...patch } : el);
                 handleConfigChange(next);
               }}
-              zoom={previewZoom * 1.5}
+              zoom={previewZoom}
             />
           </div>
         </div>
