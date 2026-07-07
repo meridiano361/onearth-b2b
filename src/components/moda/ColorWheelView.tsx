@@ -227,10 +227,18 @@ function FocusProductView({
   suggestionsData,
   suggestionsLoading,
   onExit,
+  pareteId,
+  pareteBackHref,
+  addToParete,
+  addingProductId,
 }: {
   suggestionsData: SuggestionsResponse | undefined;
   suggestionsLoading: boolean;
   onExit: () => void;
+  pareteId?: string | null;
+  pareteBackHref?: string;
+  addToParete?: (p: { id: string; code: string; name: string; imageUrl: string | null; hex?: string }) => void;
+  addingProductId?: string | null;
 }) {
   const router = useRouter();
   const [activeGroupType, setActiveGroupType] = useState<string | null>(null);
@@ -300,6 +308,17 @@ function FocusProductView({
 
   return (
     <div className="flex flex-col min-h-full">
+      {/* Parete context banner */}
+      {pareteId && pareteBackHref && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-primary text-white text-xs">
+          <span className="flex-1">
+            Stai aggiungendo prodotti alla parete — premi <strong>+</strong> su un prodotto per aggiungerlo
+          </span>
+          <a href={pareteBackHref} className="underline hover:no-underline flex-shrink-0">
+            ← Torna alla parete
+          </a>
+        </div>
+      )}
       {/* Header */}
       <div className="px-4 sm:px-6 py-4 border-b border-border/50 flex items-center gap-3">
         <button
@@ -461,44 +480,56 @@ function FocusProductView({
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {filteredProducts.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => router.push(`/catalog/${p.id}`)}
-                      className="group text-left rounded-lg overflow-hidden border border-border hover:border-accent/40 transition-all hover:shadow-sm"
-                      title={`${p.code} — ${p.name}`}
-                    >
-                      <div className="aspect-square bg-gray-50 overflow-hidden">
-                        {p.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={p.imageUrl}
-                            alt={p.code}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="w-full h-full" style={{ backgroundColor: p.primaryPantone?.hex_code ?? '#e5e5e5' }} />
-                        )}
-                      </div>
-                      <div className="p-2 bg-white">
-                        <p className="text-2xs font-mono font-semibold text-primary leading-none">{p.code}</p>
-                        <p className="text-2xs text-gray-500 truncate mt-0.5 leading-tight">{p.name}</p>
-                        {p.primaryPantone && (
-                          <div className="flex items-center gap-1 mt-1">
-                            <span
-                              className="w-3 h-3 rounded-full flex-shrink-0 border border-border/40"
-                              style={{ backgroundColor: p.primaryPantone.hex_code }}
+                    <div key={p.id} className="relative group/fp">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/catalog/${p.id}`)}
+                        className="w-full text-left rounded-lg overflow-hidden border border-border hover:border-accent/40 transition-all hover:shadow-sm"
+                        title={`${p.code} — ${p.name}`}
+                      >
+                        <div className="aspect-square bg-gray-50 overflow-hidden">
+                          {p.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={p.imageUrl}
+                              alt={p.code}
+                              className="w-full h-full object-cover group-hover/fp:scale-105 transition-transform duration-300"
                             />
-                            <span className="text-2xs text-gray-400 truncate">{p.primaryPantone.code}</span>
-                          </div>
-                        )}
-                        {(p.famiglia || p.classe) && (
-                          <p className="text-2xs text-gray-300 truncate mt-0.5">
-                            {[p.famiglia, p.classe].filter(Boolean).join(' · ')}
-                          </p>
-                        )}
-                      </div>
-                    </button>
+                          ) : (
+                            <div className="w-full h-full" style={{ backgroundColor: p.primaryPantone?.hex_code ?? '#e5e5e5' }} />
+                          )}
+                        </div>
+                        <div className="p-2 bg-white">
+                          <p className="text-2xs font-mono font-semibold text-primary leading-none">{p.code}</p>
+                          <p className="text-2xs text-gray-500 truncate mt-0.5 leading-tight">{p.name}</p>
+                          {p.primaryPantone && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <span
+                                className="w-3 h-3 rounded-full flex-shrink-0 border border-border/40"
+                                style={{ backgroundColor: p.primaryPantone.hex_code }}
+                              />
+                              <span className="text-2xs text-gray-400 truncate">{p.primaryPantone.code}</span>
+                            </div>
+                          )}
+                          {(p.famiglia || p.classe) && (
+                            <p className="text-2xs text-gray-300 truncate mt-0.5">
+                              {[p.famiglia, p.classe].filter(Boolean).join(' · ')}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                      {addToParete && (
+                        <button
+                          type="button"
+                          onClick={() => addToParete({ id: p.id, code: p.code, name: p.name, imageUrl: p.imageUrl, hex: p.primaryPantone?.hex_code })}
+                          disabled={addingProductId === p.id}
+                          className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-primary hover:text-white hover:border-primary transition-colors shadow-sm"
+                          title="Aggiungi alla parete"
+                        >
+                          {addingProductId === p.id ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
@@ -522,9 +553,7 @@ export default function ColorWheelView() {
   const elementTipo = searchParams.get('elementTipo');
   const sourceTipo  = searchParams.get('sourceTipo');
 
-  // Don't auto-enter focus mode when coming from parete context — the normal wheel
-  // view shows the banner and "+" buttons needed to add products back to the parete.
-  const [focusMode, setFocusMode] = useState(!!initialProductId && !pareteId);
+  const [focusMode, setFocusMode] = useState(!!initialProductId);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
   const [selectedFamilyId, setSelectedFamilyId]   = useState<string | null>(null);
@@ -672,6 +701,10 @@ export default function ColorWheelView() {
         suggestionsData={suggestionsData}
         suggestionsLoading={suggestionsLoading}
         onExit={() => { setFocusMode(false); }}
+        pareteId={pareteId}
+        pareteBackHref={pareteId ? `/moda/pareti/${pareteId}` : undefined}
+        addToParete={pareteId ? addToParete : undefined}
+        addingProductId={addingProductId}
       />
     );
   }
