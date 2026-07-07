@@ -594,8 +594,13 @@ function ItemCard({
   }
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
-      {/* Row 1: tipo pills (left) + sizes + actions (right) */}
+    <div className="relative bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
+      {/* Delete button — top-right corner of card */}
+      <button type="button" onClick={onDelete}
+        className="absolute -top-2 -right-2 w-5 h-5 bg-white border border-gray-200 text-gray-400 hover:bg-red-500 hover:border-red-500 hover:text-white rounded-full flex items-center justify-center transition-colors shadow-sm z-10">
+        <X size={10} />
+      </button>
+      {/* Row 1: tipo pills (left) + sizes + move actions (right) */}
       <div className="flex items-start gap-2">
         <div className="w-1 self-stretch rounded-full flex-shrink-0 mt-0.5" style={{ backgroundColor: color, minHeight: 24 }} />
         <div className="flex-1 min-w-0 space-y-1.5">
@@ -626,11 +631,10 @@ function ItemCard({
               })}
               {item.availableTaglie === undefined && <CustomTagliaInput onAdd={addCustomTaglia} />}
             </div>
-            {/* action buttons */}
+            {/* move buttons only */}
             <div className="flex gap-0.5 flex-shrink-0">
               {onMoveLeft && <button type="button" onClick={onMoveLeft} disabled={!canMoveLeft} title="Sposta in su" className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-25 transition-colors"><ChevronUp size={13} /></button>}
               {onMoveRight && <button type="button" onClick={onMoveRight} disabled={!canMoveRight} title="Sposta in giù" className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-25 transition-colors"><ChevronDown size={13} /></button>}
-              <button type="button" onClick={onDelete} className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors"><X size={12} /></button>
             </div>
           </div>
 
@@ -742,7 +746,11 @@ function FrontaleInlineEditor({
   const taglieDaMostrare = item.availableTaglie !== undefined ? item.availableTaglie : TAGLIE_FULL;
 
   return (
-    <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5 space-y-1.5">
+    <div className="relative flex-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5 space-y-1.5">
+      <button type="button" onClick={onRemove}
+        className="absolute -top-2 -right-2 w-5 h-5 bg-white border border-gray-200 text-gray-400 hover:bg-red-500 hover:border-red-500 hover:text-white rounded-full flex items-center justify-center transition-colors shadow-sm z-10">
+        <X size={10} />
+      </button>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-7 rounded-sm flex-shrink-0" style={{ backgroundColor: item.coloreHex ?? colorForTipo(item.tipo) }} />
@@ -761,7 +769,6 @@ function FrontaleInlineEditor({
         </div>
         <div className="flex gap-1 flex-shrink-0">
           <button type="button" onClick={() => setShowPicker(true)} className="text-gray-300 hover:text-gray-600 transition-colors" title="Collega prodotto"><Tag size={12} /></button>
-          <button type="button" onClick={onRemove} className="text-gray-300 hover:text-red-500 transition-colors"><X size={12} /></button>
         </div>
       </div>
       <div className="flex flex-wrap gap-0.5">
@@ -1380,7 +1387,18 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
         <div className="flex items-start" style={{ gap: 1, minHeight: 48 }}>
           {el.items.length === 0
             ? <div style={{ width: BARRA_W[dim] }} />
-            : el.items.map((it, i) => <CapoOnBarra key={it.id ?? i} item={it} />)}
+            : el.items.map((it, i) => (
+              <div key={it.id ?? i} className="relative group/bitem">
+                <CapoOnBarra item={it} />
+                {onUpdate && (
+                  <button
+                    type="button"
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/bitem:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
+                    onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: el.items.filter((_, j) => j !== i) }); }}
+                  ><X size={8} /></button>
+                )}
+              </div>
+            ))}
         </div>
       </div>
     );
@@ -1438,20 +1456,41 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
 
     const frontaleCore = item2 ? (
       <div style={{ width: FRONTALE_W }}>
+        <div className="relative group/fitem1">
+          {item1?.imageUrl
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded-t border border-b-0 border-gray-200 object-contain bg-white" style={{ width: FRONTALE_W, height: FRONTALE_TOP_H }} />
+            : <div className="rounded-t border border-b-0 border-gray-200" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_TOP_H }} />}
+          {onUpdate && (
+            <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem1:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
+              onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: [item2] }); }}
+            ><X size={8} /></button>
+          )}
+        </div>
+        <div className="relative group/fitem2">
+          {item2.imageUrl
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={item2.imageUrl} alt="" draggable={false} className="rounded-b border border-gray-200 object-contain bg-white" style={{ width: FRONTALE_W, height: FRONTALE_BOT_H }} />
+            : <div className="rounded-b border border-gray-200" style={{ backgroundColor: item2.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_BOT_H }} />}
+          {onUpdate && (
+            <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem2:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
+              onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: item1 ? [item1] : [] }); }}
+            ><X size={8} /></button>
+          )}
+        </div>
+      </div>
+    ) : (
+      <div className="relative group/fitem1" style={{ width: FRONTALE_W, height: FRONTALE_H }}>
         {item1?.imageUrl
           // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded-t border border-b-0 border-gray-200 object-contain bg-white" style={{ width: FRONTALE_W, height: FRONTALE_TOP_H }} />
-          : <div className="rounded-t border border-b-0 border-gray-200" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_TOP_H }} />}
-        {item2.imageUrl
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={item2.imageUrl} alt="" draggable={false} className="rounded-b border border-gray-200 object-contain bg-white" style={{ width: FRONTALE_W, height: FRONTALE_BOT_H }} />
-          : <div className="rounded-b border border-gray-200" style={{ backgroundColor: item2.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_BOT_H }} />}
+          ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded border border-gray-200 object-contain bg-white w-full h-full" />
+          : <div className="rounded border border-gray-200 w-full h-full" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb' }} />}
+        {onUpdate && item1 && (
+          <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem1:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
+            onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: [] }); }}
+          ><X size={8} /></button>
+        )}
       </div>
-    ) : item1?.imageUrl ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={item1.imageUrl} alt="" draggable={false} className="rounded border border-gray-200 object-contain bg-white" style={{ width: FRONTALE_W, height: FRONTALE_H }} />
-    ) : (
-      <div className="rounded border border-gray-200" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_H }} />
     );
 
     const wrapper = (children: React.ReactNode) => (
