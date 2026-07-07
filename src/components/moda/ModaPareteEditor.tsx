@@ -546,23 +546,24 @@ function ProductPickerModal({ onSelect, onClose }: { onSelect: (p: Product) => v
 // ─── Item card ───────────────────────────────────────────────────────────────
 
 function ItemCard({
-  item, tipoOptions, onChange, onDelete, onMoveLeft, onMoveRight, canMoveLeft, canMoveRight, pareteContext,
+  item, tipoOptions, onChange, onDelete, onMoveLeft, onMoveRight, canMoveLeft, canMoveRight, pareteContext, elementoTipo,
 }: {
   item: ItemParete; tipoOptions: TipoCapo[];
   onChange: (u: ItemParete) => void; onDelete: () => void;
   onMoveLeft?: () => void; onMoveRight?: () => void;
   canMoveLeft?: boolean; canMoveRight?: boolean;
   pareteContext?: { pareteId: string; elementId: string; elementTipo: string };
+  elementoTipo?: TipoElementoParete;
 }) {
   const [showPicker, setShowPicker] = useState(false);
   const [showSheet, setShowSheet] = useState(false);
   const color = item.coloreHex ?? colorForTipo(item.tipo);
   const harmony = item.coloreHex ? getColorHarmony(item.coloreHex) : null;
   const activeTaglie = new Set(item.pezzi.map((p) => p.taglia));
-  const isAvailable = (t: string) => !item.availableTaglie?.length || item.availableTaglie.includes(t);
+  // Show only product-specific sizes when available, otherwise full standard set
+  const taglieDaMostrare = item.availableTaglie?.length ? item.availableTaglie : TAGLIE_FULL;
 
   function toggleTaglia(t: string) {
-    if (!isAvailable(t)) return;
     onChange({ ...item, pezzi: activeTaglie.has(t) ? item.pezzi.filter((p) => p.taglia !== t) : [...item.pezzi, { taglia: t }] });
   }
   function addCustomTaglia(t: string) {
@@ -586,27 +587,22 @@ function ItemCard({
               ))}
             </div>
             <div className="flex-1" />
-            {/* size chips — top right */}
+            {/* size chips — only product-available sizes (or full standard set if none defined) */}
             <div className="flex items-center gap-0.5 flex-shrink-0">
-              {TAGLIE_FULL.map((t) => {
-                const avail = isAvailable(t);
+              {taglieDaMostrare.map((t) => {
                 const active = activeTaglie.has(t);
                 return (
                   <button key={t} type="button" onClick={() => toggleTaglia(t)}
-                    disabled={!avail}
-                    title={!avail ? 'Taglia non disponibile per questo prodotto' : undefined}
                     className={`px-1 py-0.5 rounded text-[9px] font-mono transition-colors ${
                       active
                         ? 'bg-primary text-white'
-                        : avail
-                          ? 'text-gray-500 border border-gray-200 hover:border-gray-400 hover:bg-white'
-                          : 'text-gray-300 border border-gray-100 opacity-30 cursor-not-allowed'
+                        : 'text-gray-500 border border-gray-200 hover:border-gray-400 hover:bg-white'
                     }`}>
                     {t}
                   </button>
                 );
               })}
-              <CustomTagliaInput onAdd={addCustomTaglia} />
+              {!item.availableTaglie?.length && <CustomTagliaInput onAdd={addCustomTaglia} />}
             </div>
             {/* action buttons */}
             <div className="flex gap-0.5 flex-shrink-0">
@@ -658,13 +654,22 @@ function ItemCard({
 
       {showPicker && (
         <ProductPickerModal
-          onSelect={(p) => onChange({
-            ...item,
-            productId: p.id, productCode: p.code, productName: formatProductName(p),
-            imageUrl: productImageUrl(p),
-            coloreHex: hexFromProduct(p) ?? item.coloreHex,
-            availableTaglie: availableTaglieFromProduct(p),
-          })}
+          onSelect={(p) => {
+            const taglie = availableTaglieFromProduct(p);
+            const detectedTipo = tipoFromProduct(p, elementoTipo ?? 'barra');
+            const newTipo = tipoOptions.includes(detectedTipo) ? detectedTipo : tipoOptions[0];
+            onChange({
+              ...item,
+              productId: p.id, productCode: p.code, productName: formatProductName(p),
+              imageUrl: productImageUrl(p),
+              coloreHex: hexFromProduct(p) ?? item.coloreHex,
+              tipo: newTipo,
+              availableTaglie: taglie,
+              // Keep only pezzi whose taglia is still valid
+              pezzi: taglie ? item.pezzi.filter((pz) => taglie.includes(pz.taglia)) : item.pezzi,
+            });
+            setShowPicker(false);
+          }}
           onClose={() => setShowPicker(false)}
         />
       )}
@@ -712,7 +717,7 @@ function FrontaleInlineEditor({
   }
 
   const activeTaglie = new Set(item.pezzi.map((p) => p.taglia));
-  const isAvailable = (t: string) => !item.availableTaglie?.length || item.availableTaglie.includes(t);
+  const taglieDaMostrare = item.availableTaglie?.length ? item.availableTaglie : TAGLIE_FULL;
 
   return (
     <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5 space-y-1.5">
@@ -738,17 +743,12 @@ function FrontaleInlineEditor({
         </div>
       </div>
       <div className="flex flex-wrap gap-0.5">
-        {TAGLIE_FULL.map((t) => {
-          const avail = isAvailable(t);
+        {taglieDaMostrare.map((t) => {
           const active = activeTaglie.has(t);
           return (
             <button key={t} type="button"
-              onClick={() => {
-                if (!avail) return;
-                onChange({ ...item, pezzi: active ? item.pezzi.filter((p) => p.taglia !== t) : [...item.pezzi, { taglia: t }] });
-              }}
-              disabled={!avail}
-              className={`px-1 py-0 rounded text-[9px] font-mono transition-colors ${active ? 'bg-primary text-white' : avail ? 'text-gray-400 border border-gray-200 hover:border-gray-400' : 'text-gray-200 border border-gray-100 opacity-30 cursor-not-allowed'}`}>
+              onClick={() => onChange({ ...item, pezzi: active ? item.pezzi.filter((p) => p.taglia !== t) : [...item.pezzi, { taglia: t }] })}
+              className={`px-1 py-0 rounded text-[9px] font-mono transition-colors ${active ? 'bg-primary text-white' : 'text-gray-400 border border-gray-200 hover:border-gray-400'}`}>
               {t}
             </button>
           );
@@ -759,12 +759,20 @@ function FrontaleInlineEditor({
       )}
       {showPicker && (
         <ProductPickerModal
-          onSelect={(p) => onChange({
-            ...item, productId: p.id, productCode: p.code, productName: formatProductName(p),
-            imageUrl: productImageUrl(p),
-            coloreHex: hexFromProduct(p) ?? item.coloreHex,
-            availableTaglie: availableTaglieFromProduct(p),
-          })}
+          onSelect={(p) => {
+            const taglie = availableTaglieFromProduct(p);
+            const detectedTipo = tipoFromProduct(p, 'frontale');
+            const newTipo = TIPO_OPTIONS_FRONTALE_SLOT1.includes(detectedTipo) ? detectedTipo : 'abito';
+            onChange({
+              ...item, productId: p.id, productCode: p.code, productName: formatProductName(p),
+              imageUrl: productImageUrl(p),
+              coloreHex: hexFromProduct(p) ?? item.coloreHex,
+              tipo: newTipo,
+              availableTaglie: taglie,
+              pezzi: taglie ? item.pezzi.filter((pz) => taglie.includes(pz.taglia)) : item.pezzi,
+            });
+            setShowPicker(false);
+          }}
           onClose={() => setShowPicker(false)}
         />
       )}
@@ -847,7 +855,8 @@ function MensolaInlineEditor({
               onMoveLeft={() => { const a = [...config.items]; [a[idx], a[idx - 1]] = [a[idx - 1], a[idx]]; onChange({ ...config, items: a }); }}
               onMoveRight={() => { const a = [...config.items]; [a[idx], a[idx + 1]] = [a[idx + 1], a[idx]]; onChange({ ...config, items: a }); }}
               canMoveLeft={idx > 0} canMoveRight={idx < config.items.length - 1}
-              pareteContext={pareteId && elementId ? { pareteId, elementId, elementTipo: 'mensola' } : undefined} />
+              pareteContext={pareteId && elementId ? { pareteId, elementId, elementTipo: 'mensola' } : undefined}
+              elementoTipo="mensola" />
           </div>
         </div>
       ))}
@@ -1042,7 +1051,8 @@ function ElementoCard({
                         onMoveLeft={!isFrontale ? () => moveItem(idx, idx - 1) : undefined}
                         onMoveRight={!isFrontale ? () => moveItem(idx, idx + 1) : undefined}
                         canMoveLeft={idx > 0} canMoveRight={idx < el.items.length - 1}
-                        pareteContext={pareteId ? { pareteId, elementId: el.id, elementTipo: el.tipo } : undefined} />
+                        pareteContext={pareteId ? { pareteId, elementId: el.id, elementTipo: el.tipo } : undefined}
+                        elementoTipo={el.tipo} />
                     </div>
                   </div>
                 );
@@ -1084,7 +1094,8 @@ function ElementoCard({
                       onMoveLeft={() => moveMensolaItem(idx, idx - 1)}
                       onMoveRight={() => moveMensolaItem(idx, idx + 1)}
                       canMoveLeft={idx > 0} canMoveRight={idx < mensolaItems.length - 1}
-                      pareteContext={pareteId ? { pareteId, elementId: el.id, elementTipo: el.tipo } : undefined} />
+                      pareteContext={pareteId ? { pareteId, elementId: el.id, elementTipo: el.tipo } : undefined}
+                      elementoTipo="mensola" />
                   </div>
                 </div>
               ))}
