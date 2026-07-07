@@ -1767,6 +1767,9 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   const historyRef = useRef<ElementoParete[][]>([]);
   const futureRef = useRef<ElementoParete[][]>([]);
   const isDebouncing = useRef(false);
+  // Always-current ref so closures (drag handlers, timers) never capture stale config
+  const configRef = useRef<ElementoParete[]>([]);
+  configRef.current = config;
 
   useEffect(() => {
     if (parete && !initializedRef.current) {
@@ -1796,7 +1799,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
 
   function handleConfigChange(newConfig: ElementoParete[], skipHistory = false) {
     if (!skipHistory && !isDebouncing.current) {
-      historyRef.current = [...historyRef.current.slice(-49), config];
+      historyRef.current = [...historyRef.current.slice(-49), configRef.current];
       futureRef.current = [];
       setCanUndo(true);
       setCanRedo(false);
@@ -1815,7 +1818,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
     if (!historyRef.current.length) return;
     const prev = historyRef.current[historyRef.current.length - 1];
     historyRef.current = historyRef.current.slice(0, -1);
-    futureRef.current = [config, ...futureRef.current.slice(0, 49)];
+    futureRef.current = [configRef.current, ...futureRef.current.slice(0, 49)];
     setCanUndo(historyRef.current.length > 0);
     setCanRedo(true);
     isDebouncing.current = false;
@@ -1826,7 +1829,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
     if (!futureRef.current.length) return;
     const next = futureRef.current[0];
     futureRef.current = futureRef.current.slice(1);
-    historyRef.current = [...historyRef.current.slice(-49), config];
+    historyRef.current = [...historyRef.current.slice(-49), configRef.current];
     setCanUndo(true);
     setCanRedo(futureRef.current.length > 0);
     isDebouncing.current = false;
@@ -1853,31 +1856,34 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
       ...(tipo === 'mensola' ? { mensole: [{ dimensione: 'media', items: [] }] } : {}),
     };
     // Place new element at wall center so it's immediately visible (px-4=16 padding, gap-4=16 between elements)
-    const naturalFlexX = 16 + config.reduce((sum, el) => sum + estimateElementWidth(el) + 16, 0);
+    const naturalFlexX = 16 + configRef.current.reduce((sum, el) => sum + estimateElementWidth(el) + 16, 0);
     const elW = estimateElementWidth(newEl);
     const offsetX = Math.round((WALL_SQUARES * GRID_SQ) / 2 - elW / 2 - naturalFlexX);
-    handleConfigChange([...config, { ...newEl, offsetX }]);
+    handleConfigChange([...configRef.current, { ...newEl, offsetX }]);
     setActiveElementId(id); // auto-espande la nuova card
     setTimeout(() => {
       document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 80);
   }
 
-  function updateElemento(idx: number, updated: ElementoParete) {
-    const next = [...config]; next[idx] = updated; handleConfigChange(next);
+  function updateElemento(_idx: number, updated: ElementoParete) {
+    const next = configRef.current.map((el) => el.id === updated.id ? updated : el);
+    handleConfigChange(next);
   }
   function deleteElemento(idx: number) {
+    const current = configRef.current;
     // Compensate for the flex gap left by the deleted element so other elements don't shift
-    const deletedW = estimateElementWidth(config[idx]) + 16;
-    const next = config
+    const deletedW = estimateElementWidth(current[idx]) + 16;
+    const next = current
       .map((el, i) => ({ el, i }))
       .filter(({ i }) => i !== idx)
       .map(({ el, i }) => i > idx ? { ...el, offsetX: (el.offsetX ?? 0) + deletedW } : el);
     handleConfigChange(next);
   }
   function moveElemento(from: number, to: number) {
-    if (to < 0 || to >= config.length) return;
-    const next = [...config];
+    const current = configRef.current;
+    if (to < 0 || to >= current.length) return;
+    const next = [...current];
     [next[from], next[to]] = [next[to], next[from]];
     handleConfigChange(next);
   }
@@ -2004,7 +2010,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
               config={config}
               onSelect={handleSelectElement}
               onUpdate={(id, patch) => {
-                const next = config.map((el) => el.id === id ? { ...el, ...patch } : el);
+                const next = configRef.current.map((el) => el.id === id ? { ...el, ...patch } : el);
                 handleConfigChange(next);
               }}
               zoom={previewZoom}
