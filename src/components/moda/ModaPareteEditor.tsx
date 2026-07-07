@@ -190,8 +190,8 @@ function tipoFromProduct(p: Product, elementoTipo: TipoElementoParete): TipoCapo
   return 'top';
 }
 
-function availableTaglieFromProduct(p: Product): string[] | undefined {
-  if (!p.sizeVariants?.length) return undefined;
+function availableTaglieFromProduct(p: Product): string[] {
+  if (!p.sizeVariants?.length) return []; // empty = no sizes (bags, accessories)
   return p.sizeVariants.map((sv) => sv.taglia.toUpperCase());
 }
 
@@ -582,8 +582,8 @@ function ItemCard({
   const color = item.coloreHex ?? colorForTipo(item.tipo);
   const harmony = item.coloreHex ? getColorHarmony(item.coloreHex) : null;
   const activeTaglie = new Set(item.pezzi.map((p) => p.taglia));
-  // Show only product-specific sizes when available, otherwise full standard set
-  const taglieDaMostrare = item.availableTaglie?.length ? item.availableTaglie : TAGLIE_FULL;
+  // undefined = old item (unknown sizes) → fall back to TAGLIE_FULL; [] = no sizes (bags); [...] = specific sizes
+  const taglieDaMostrare = item.availableTaglie !== undefined ? item.availableTaglie : TAGLIE_FULL;
 
   function toggleTaglia(t: string) {
     onChange({ ...item, pezzi: activeTaglie.has(t) ? item.pezzi.filter((p) => p.taglia !== t) : [...item.pezzi, { taglia: t }] });
@@ -624,7 +624,7 @@ function ItemCard({
                   </button>
                 );
               })}
-              {!item.availableTaglie?.length && <CustomTagliaInput onAdd={addCustomTaglia} />}
+              {item.availableTaglie === undefined && <CustomTagliaInput onAdd={addCustomTaglia} />}
             </div>
             {/* action buttons */}
             <div className="flex gap-0.5 flex-shrink-0">
@@ -739,7 +739,7 @@ function FrontaleInlineEditor({
   }
 
   const activeTaglie = new Set(item.pezzi.map((p) => p.taglia));
-  const taglieDaMostrare = item.availableTaglie?.length ? item.availableTaglie : TAGLIE_FULL;
+  const taglieDaMostrare = item.availableTaglie !== undefined ? item.availableTaglie : TAGLIE_FULL;
 
   return (
     <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5 space-y-1.5">
@@ -1534,7 +1534,7 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
 
               return (
                 <div key={it.id ?? i}
-                  className="flex-shrink-0 select-none"
+                  className="relative group/mitem flex-shrink-0 select-none"
                   style={{ transform: `translateX(${offsetX}px)`, cursor: onUpdate ? 'ew-resize' : 'default' }}
                   onPointerDown={onUpdate ? (e) => startItemDrag(e, i) : undefined}
                   onPointerMove={onUpdate ? onItemMove : undefined}
@@ -1542,6 +1542,15 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
                   onPointerCancel={onUpdate ? endItemDrag : undefined}
                 >
                   {inner}
+                  {onUpdate && (
+                    <button
+                      type="button"
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/mitem:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
+                      onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ ...config, items: config.items.filter((_, j) => j !== i) }); }}
+                    >
+                      <X size={8} />
+                    </button>
+                  )}
                 </div>
               );
             })}
