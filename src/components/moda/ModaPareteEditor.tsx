@@ -1220,11 +1220,13 @@ function WallRenderer({
     id: string; pointerId: number;
     startX: number; startY: number;
     startOffsetX: number; startOffsetY: number;
-    minOffsetX: number; maxOffsetX: number; // logical px bounds for X
+    minOffsetX: number; maxOffsetX: number;
+    didMove: boolean;
   } | null>(null);
-  const lastLivePosRef = useRef<{ id: string; x: number; y: number } | null>(null);
-  const [livePos, setLivePos] = useState<{ id: string; x: number; y: number } | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
+  // Per-element DOM refs for direct transform updates during drag (zero re-renders)
+  const outerDivRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const innerDivRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const lastDragPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Auto-fit: scale wall to always fill container width at 100% user zoom
   const fitZoom = containerW / (WALL_SQUARES * GRID_SQ);
@@ -1274,59 +1276,71 @@ function WallRenderer({
   function startDrag(e: React.PointerEvent, el: ElementoParete) {
     if (e.button !== 0) return;
     e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    lastLivePosRef.current = null;
+    // Capture all subsequent pointer events to the outer wall container —
+    // events go here directly even when pointer leaves the dragged element
+    outerWallRef.current?.setPointerCapture(e.pointerId);
+    lastDragPosRef.current = null;
     const z = effectiveZoomRef.current;
     const startOffsetX = el.offsetX ?? 0;
     const startOffsetY = el.offsetY ?? defaultOffsetY(el.tipo);
-    // Compute X bounds in logical pixels so element can't leave the 30-square wall
     const elRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const containerRect = outerWallRef.current?.getBoundingClientRect();
     const scrollLeft = outerWallRef.current?.scrollLeft ?? 0;
+    // (viewportOffset + scrollOffset) / zoom = logical position
     const elAbsLogX = containerRect
-      ? (elRect.left - containerRect.left) / z + scrollLeft
+      ? (elRect.left - containerRect.left + scrollLeft) / z
       : startOffsetX;
     const flexLogX = elAbsLogX - startOffsetX;
     const elLogW = elRect.width / z;
     dragRef.current = {
       id: el.id, pointerId: e.pointerId,
       startX: e.clientX, startY: e.clientY,
-      startOffsetX,
-      startOffsetY,
+      startOffsetX, startOffsetY,
       minOffsetX: -flexLogX,
       maxOffsetX: WALL_SQUARES * GRID_SQ - flexLogX - elLogW,
+      didMove: false,
     };
-    setDraggingId(el.id);
   }
 
-  function onPointerMove(e: React.PointerEvent) {
+  function onWallPointerMove(e: React.PointerEvent) {
     const d = dragRef.current;
     if (!d || e.pointerId !== d.pointerId) return;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    // 4px threshold: distinguishes click from drag
+    if (!d.didMove) {
+      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      d.didMove = true;
+    }
     const z = effectiveZoomRef.current;
-    const rawX = d.startOffsetX + (e.clientX - d.startX) / z;
-    const rawY = d.startOffsetY + (e.clientY - d.startY) / z;
-    const np = {
-      id: d.id,
-      x: Math.max(d.minOffsetX, Math.min(d.maxOffsetX, rawX)),
-      y: Math.max(0, rawY), // can't drag above wall top
-    };
-    lastLivePosRef.current = np;
-    setLivePos(np);
+    const clampedX = Math.max(d.minOffsetX, Math.min(d.maxOffsetX, d.startOffsetX + dx / z));
+    const clampedY = Math.max(0, d.startOffsetY + dy / z);
+    lastDragPosRef.current = { x: clampedX, y: clampedY };
+    // Direct DOM update — zero React re-renders during drag
+    const outer = outerDivRefs.current.get(d.id);
+    const inner = innerDivRefs.current.get(d.id);
+    if (outer) outer.style.transform = `translateX(${clampedX}px)`;
+    if (inner) inner.style.transform = `translateY(${clampedY}px)`;
   }
 
-  function endDrag() {
-    const pos = lastLivePosRef.current;
+  function endDrag(e: React.PointerEvent) {
     const d = dragRef.current;
-    if (!d) return;
-    if (pos) {
-      onUpdate?.(d.id, { offsetX: Math.round(pos.x), offsetY: Math.round(pos.y) });
-    } else {
-      onSelect?.(d.id);
-    }
-    setLivePos(null);
-    lastLivePosRef.current = null;
+    if (!d || e.pointerId !== d.pointerId) return;
     dragRef.current = null;
-    setDraggingId(null);
+    if (!d.didMove) {
+      onSelect?.(d.id);
+      return;
+    }
+    const pos = lastDragPosRef.current;
+    lastDragPosRef.current = null;
+    const finalX = pos ? Math.round(pos.x) : Math.round(d.startOffsetX);
+    const finalY = pos ? Math.round(pos.y) : Math.round(d.startOffsetY);
+    // Snap DOM to committed values before React re-renders (prevents flicker)
+    const outer = outerDivRefs.current.get(d.id);
+    const inner = innerDivRefs.current.get(d.id);
+    if (outer) outer.style.transform = `translateX(${finalX}px)`;
+    if (inner) inner.style.transform = `translateY(${finalY}px)`;
+    onUpdate?.(d.id, { offsetX: finalX, offsetY: finalY });
   }
 
   const photoStripH = PHOTO_SQ + 8; // strip height = square + padding
@@ -1379,7 +1393,14 @@ function WallRenderer({
       <PhotoStrip photos={topPhotos} align="top" />
 
       {/* Main render area — grid background is INSIDE the zoomed div so grid squares scale with content */}
-      <div ref={outerWallRef} className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden" style={{ backgroundColor: '#ffffff' }}>
+      <div
+        ref={outerWallRef}
+        className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden"
+        style={{ backgroundColor: '#ffffff' }}
+        onPointerMove={onWallPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+      >
         <div className="flex items-start h-full px-4"
           style={{
             gap: 16,
@@ -1391,34 +1412,27 @@ function WallRenderer({
             borderRight: '2px solid rgba(0,0,0,0.1)',
           }}
         >
-          {config.map((el) => {
-            const isLive = livePos?.id === el.id;
-            const offsetX = isLive ? livePos!.x : (el.offsetX ?? 0);
-            const offsetY = isLive ? livePos!.y : (el.offsetY ?? defaultOffsetY(el.tipo));
-            const isDragging = draggingId === el.id;
-            return (
+          {config.map((el) => (
+            <div
+              key={el.id}
+              ref={(node) => { node ? outerDivRefs.current.set(el.id, node) : outerDivRefs.current.delete(el.id); }}
+              className="flex-shrink-0 h-full select-none cursor-grab"
+              style={{ transform: `translateX(${el.offsetX ?? 0}px)`, touchAction: 'none' }}
+              onPointerDown={(e) => startDrag(e, el)}
+            >
               <div
-                key={el.id}
-                className={`flex-shrink-0 h-full select-none ${isDragging ? 'opacity-60 cursor-grabbing' : 'cursor-grab'}`}
-                style={{ transform: `translateX(${offsetX}px)` }}
-                onPointerDown={(e) => startDrag(e, el)}
-                onPointerMove={onPointerMove}
-                onPointerUp={endDrag}
-                onPointerCancel={endDrag}
+                ref={(node) => { node ? innerDivRefs.current.set(el.id, node) : innerDivRefs.current.delete(el.id); }}
+                className="inline-block pt-1"
+                style={{ transform: `translateY(${el.offsetY ?? defaultOffsetY(el.tipo)}px)` }}
               >
-                <div
-                  className="inline-block pt-1"
-                  style={{ transform: `translateY(${offsetY}px)` }}
-                >
-                  <WallElementRenderer
-                    el={el}
-                    zoom={effectiveZoom}
-                    onUpdate={(patch) => onUpdate?.(el.id, patch)}
-                  />
-                </div>
+                <WallElementRenderer
+                  el={el}
+                  zoom={effectiveZoom}
+                  onUpdate={(patch) => onUpdate?.(el.id, patch)}
+                />
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -1584,24 +1598,30 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
 }) {
   const w = MENSOLA_W[config.dimensione];
   const over = mensola_totalItemsW(config.items) > w;
-  const itemDragRef = useRef<{ idx: number; pointerId: number; startX: number; startOffX: number; minOffX: number; maxOffX: number } | null>(null);
-  const [liveItem, setLiveItem] = useState<{ idx: number; x: number } | null>(null);
+  const mensolaContainerRef = useRef<HTMLDivElement>(null);
+  const itemElRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const itemDragRef = useRef<{
+    idx: number; pointerId: number;
+    startX: number; startOffX: number;
+    minOffX: number; maxOffX: number;
+    lastX: number;
+  } | null>(null);
 
   function startItemDrag(e: React.PointerEvent, idx: number) {
     if (!onUpdate) return;
     e.stopPropagation();
     e.preventDefault();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    // Compute natural flex x of this item (sum of widths + gaps of preceding items)
+    // Capture to the mensola container — moves always arrive here
+    mensolaContainerRef.current?.setPointerCapture(e.pointerId);
     let naturalFlexX = 0;
-    for (let i = 0; i < idx; i++) naturalFlexX += mensolaItemVisualW(config.items[i]) + 2; // gap-0.5 = 2px
+    for (let i = 0; i < idx; i++) naturalFlexX += mensolaItemVisualW(config.items[i]) + 2;
     const itemW = mensolaItemVisualW(config.items[idx]);
     const startOffX = config.items[idx].offsetX ?? 0;
-    // bounds: item visual x must stay in [0, w - itemW]
     itemDragRef.current = {
       idx, pointerId: e.pointerId, startX: e.clientX, startOffX,
       minOffX: -naturalFlexX,
       maxOffX: w - naturalFlexX - itemW,
+      lastX: startOffX,
     };
   }
 
@@ -1609,30 +1629,33 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
     const d = itemDragRef.current;
     if (!d || e.pointerId !== d.pointerId) return;
     e.stopPropagation();
-    const raw = d.startOffX + (e.clientX - d.startX) / zoom;
-    setLiveItem({ idx: d.idx, x: Math.max(d.minOffX, Math.min(d.maxOffX, raw)) });
+    const clamped = Math.max(d.minOffX, Math.min(d.maxOffX, d.startOffX + (e.clientX - d.startX) / zoom));
+    d.lastX = clamped;
+    const el = itemElRefs.current.get(d.idx);
+    if (el) el.style.transform = `translateX(${clamped}px)`;
   }
 
   function endItemDrag(e: React.PointerEvent) {
     e.stopPropagation();
     const d = itemDragRef.current;
-    if (!d) return;
-    const finalX = liveItem?.idx === d.idx ? liveItem.x : (config.items[d.idx].offsetX ?? 0);
-    const clampedX = Math.max(d.minOffX, Math.min(d.maxOffX, finalX));
-    const newItems = config.items.map((it, i) => i === d.idx ? { ...it, offsetX: Math.round(clampedX) } : it);
-    onUpdate?.({ ...config, items: newItems });
-    setLiveItem(null);
+    if (!d || e.pointerId !== d.pointerId) return;
     itemDragRef.current = null;
+    const newItems = config.items.map((it, i) => i === d.idx ? { ...it, offsetX: Math.round(d.lastX) } : it);
+    onUpdate?.({ ...config, items: newItems });
   }
 
   return (
-    <div>
-      {/* 2px gap between items and shelf (1/10 of grid square = 20px/10) */}
+    <div
+      ref={mensolaContainerRef}
+      onPointerMove={onUpdate ? onItemMove : undefined}
+      onPointerUp={onUpdate ? endItemDrag : undefined}
+      onPointerCancel={onUpdate ? endItemDrag : undefined}
+    >
+      {/* 2px gap between items and shelf */}
       <div className="flex items-end gap-0.5" style={{ minWidth: w, paddingBottom: 2 }}>
         {config.items.length === 0
           ? <div style={{ width: w, height: STRATO_H }} />
           : config.items.map((it, i) => {
-              const offsetX = liveItem?.idx === i ? liveItem.x : (it.offsetX ?? 0);
               const color = it.coloreHex ?? colorForTipo(it.tipo);
 
               let inner: React.ReactNode;
@@ -1654,12 +1677,10 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
 
               return (
                 <div key={it.id ?? i}
+                  ref={(node) => { node ? itemElRefs.current.set(i, node) : itemElRefs.current.delete(i); }}
                   className="relative group/mitem flex-shrink-0 select-none"
-                  style={{ transform: `translateX(${offsetX}px)`, cursor: onUpdate ? 'ew-resize' : 'default' }}
+                  style={{ transform: `translateX(${it.offsetX ?? 0}px)`, cursor: onUpdate ? 'ew-resize' : 'default', touchAction: 'none' }}
                   onPointerDown={onUpdate ? (e) => startItemDrag(e, i) : undefined}
-                  onPointerMove={onUpdate ? onItemMove : undefined}
-                  onPointerUp={onUpdate ? endItemDrag : undefined}
-                  onPointerCancel={onUpdate ? endItemDrag : undefined}
                 >
                   {inner}
                   {onUpdate && (
