@@ -6,7 +6,7 @@ import {
   Plus, ChevronDown, ChevronRight, Edit2, Trash2,
   ToggleLeft, ToggleRight, KeyRound, Store, Globe, Radio, Package,
   Users, MapPin, Copy, CheckSquare, Square, Loader2, Send,
-  ShoppingBag, Building, ShoppingCart, Tag, Landmark, X, Search,
+  ShoppingBag, Building, ShoppingCart, Tag, Landmark, X, Search, Download,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -485,6 +485,44 @@ function OrgOperatorsBulkBar({ count, operatorIds, onDeselect, onDone }: BulkBar
   );
 }
 
+// ─── CSV export ───────────────────────────────────────────────────────────────
+
+function csvCell(v: string | number | null | undefined): string {
+  const s = String(v ?? '');
+  return s.includes(';') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function downloadCSV(rows: string[][], filename: string) {
+  const bom = '﻿';
+  const content = bom + rows.map((r) => r.map(csvCell).join(';')).join('\n');
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportOrgsCSV(allOrgs: Organization[]) {
+  const rows: string[][] = [
+    ['Organizzazione', 'Nome operatore', 'Cognome operatore', 'Email', 'Telefono', 'Ruolo', 'Attivo', 'Destinazioni'],
+  ];
+  for (const org of allOrgs) {
+    const destNames = (org.destinazioni || []).map((d) => d.nome).join(' | ');
+    const ops = org.operatori || [];
+    if (ops.length === 0) {
+      rows.push([org.nome, '', '', '', '', '', '', destNames]);
+    } else {
+      for (const op of ops) {
+        rows.push([org.nome, op.nome, op.cognome, op.email, op.telefono || '', op.ruolo || '', op.attivo ? 'Sì' : 'No', destNames]);
+      }
+    }
+  }
+  const date = new Date().toISOString().slice(0, 10);
+  downloadCSV(rows, `organizzazioni_${date}.csv`);
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AdminOrganizzazioniPage() {
@@ -713,9 +751,14 @@ export default function AdminOrganizzazioniPage() {
             {totalOrgs} organizzazioni · {totalOps} operatori
           </p>
         </div>
-        <Button icon={<Plus size={13} />} onClick={() => setShowNewOrg(true)}>
-          Nuova organizzazione
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" icon={<Download size={13} />} onClick={() => exportOrgsCSV(allOrgs)} disabled={allOrgs.length === 0}>
+            Esporta CSV
+          </Button>
+          <Button icon={<Plus size={13} />} onClick={() => setShowNewOrg(true)}>
+            Nuova organizzazione
+          </Button>
+        </div>
       </div>
 
       {/* ── Org bulk action bar ─────────────────────────────────────────────── */}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, KeyRound, Copy, Send, MoreHorizontal } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, KeyRound, Copy, Send, MoreHorizontal, Download } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -126,6 +126,46 @@ export default function AdminCustomersPage() {
     }
   }
 
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExportCSV() {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/customers?limit=5000');
+      if (!res.ok) throw new Error('Errore nel caricamento');
+      const json = await res.json();
+      const all: (Customer & { orderCount?: number })[] = json.data || [];
+      const rows: string[][] = [
+        ['Codice', 'Ragione sociale', 'Email', 'Telefono', 'Indirizzo', 'Città', 'Paese', 'P.IVA', 'Attivo', 'N. ordini', 'Creato il'],
+      ];
+      for (const c of all) {
+        rows.push([
+          c.customerCode, c.companyName, c.email, c.phone || '',
+          c.address || '', c.city || '', c.country || '', c.vatNumber || '',
+          c.isActive ? 'Sì' : 'No',
+          String(c.orderCount ?? ''),
+          c.createdAt ? new Date(c.createdAt).toLocaleDateString('it-IT') : '',
+        ]);
+      }
+      const bom = '﻿';
+      const content = bom + rows.map((r) => r.map((v) => {
+        const s = String(v ?? '');
+        return s.includes(';') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+      }).join(';')).join('\n');
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `clienti_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Errore durante l\'esportazione');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
@@ -134,10 +174,15 @@ export default function AdminCustomersPage() {
           <h1 className="font-display text-2xl text-primary font-light">Clienti</h1>
           <p className="text-sm text-gray-400 mt-0.5">{data?.total || 0} account registrati</p>
         </div>
-        <Button icon={<Plus size={13} />} onClick={() => setShowCreate(true)}>
-          <span className="hidden sm:inline">Aggiungi Cliente</span>
-          <span className="sm:hidden">Aggiungi</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" icon={<Download size={13} />} onClick={handleExportCSV} loading={exporting} disabled={exporting}>
+            Esporta CSV
+          </Button>
+          <Button icon={<Plus size={13} />} onClick={() => setShowCreate(true)}>
+            <span className="hidden sm:inline">Aggiungi Cliente</span>
+            <span className="sm:hidden">Aggiungi</span>
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4 max-w-sm">
