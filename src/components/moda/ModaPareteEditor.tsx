@@ -586,7 +586,7 @@ function ItemCard({
 }) {
   const [showPicker, setShowPicker] = useState(false);
   const [showSheet, setShowSheet] = useState(false);
-  const color = item.coloreHex ?? colorForTipo(item.tipo);
+  const color = item.coloreHex || colorForTipo(item.tipo);
   const harmony = item.coloreHex ? getColorHarmony(item.coloreHex) : null;
   const activeTaglie = new Set(item.pezzi.map((p) => p.taglia));
   // undefined = old item (unknown sizes) → fall back to TAGLIE_FULL; [] = no sizes (bags); [...] = specific sizes
@@ -760,7 +760,7 @@ function FrontaleInlineEditor({
       </button>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
-          <div className="w-2 h-7 rounded-sm flex-shrink-0" style={{ backgroundColor: item.coloreHex ?? colorForTipo(item.tipo) }} />
+          <div className="w-2 h-7 rounded-sm flex-shrink-0" style={{ backgroundColor: item.coloreHex || colorForTipo(item.tipo) }} />
           <div>
             <p className="text-2xs font-medium text-gray-600">{label}</p>
             <div className="flex gap-0.5 flex-wrap mt-0.5">
@@ -1283,12 +1283,16 @@ function WallRenderer({
   // Top strip: product photos from mensole (sorted by visual x), color fallback if no image
   const topPhotos = useMemo(() => {
     const out: PhotoEntry[] = [];
+    function pushMensolaItem(it: ItemParete) {
+      // Use || (not ??) so empty-string coloreHex falls back to tipo color
+      out.push({ src: it.imageUrl || null, color: it.coloreHex || colorForTipo(it.tipo), label: it.productName ?? undefined });
+    }
     for (const el of configSortedByVisualX) {
       if (el.tipo === 'mensola') {
         const mensole = el.mensole?.length ? el.mensole : [{ items: el.items, dimensione: (el.dimensione as DimensioneMensola) ?? 'media' }];
-        for (const m of mensole) for (const it of m.items) out.push({ src: it.imageUrl ?? null, color: it.coloreHex ?? colorForTipo(it.tipo), label: it.productName ?? undefined });
+        for (const m of mensole) for (const it of m.items) pushMensolaItem(it);
       } else {
-        for (const m of getMensole(el)) for (const it of m.items) out.push({ src: it.imageUrl ?? null, color: it.coloreHex ?? colorForTipo(it.tipo), label: it.productName ?? undefined });
+        for (const m of getMensole(el)) for (const it of m.items) pushMensolaItem(it);
       }
     }
     return out;
@@ -1298,7 +1302,8 @@ function WallRenderer({
   const bottomPhotos = useMemo(() => {
     const out: PhotoEntry[] = [];
     function pushItem(it: ItemParete) {
-      out.push({ src: it.imageUrl ?? null, color: it.coloreHex ?? colorForTipo(it.tipo), label: it.productName ?? undefined });
+      // Use || (not ??) so empty-string coloreHex falls back to tipo color
+      out.push({ src: it.imageUrl || null, color: it.coloreHex || colorForTipo(it.tipo), label: it.productName ?? undefined });
     }
     for (const el of configSortedByVisualX) {
       if (el.tipo !== 'barra') continue;
@@ -1555,7 +1560,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
           {item1?.imageUrl
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded-t border border-b-0 border-gray-200 object-contain bg-white" style={{ width: FRONTALE_W, height: FRONTALE_TOP_H }} />
-            : <div className="rounded-t border border-b-0 border-gray-200" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_TOP_H }} />}
+            : <div className="rounded-t border border-b-0 border-gray-200" style={{ backgroundColor: item1?.coloreHex || '#e5e7eb', width: FRONTALE_W, height: FRONTALE_TOP_H }} />}
           {onUpdate && (
             <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem1:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
               onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: [item2] }); }}
@@ -1566,7 +1571,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
           {item2.imageUrl
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={item2.imageUrl} alt="" draggable={false} className="rounded-b border border-gray-200 object-contain bg-white" style={{ width: FRONTALE_W, height: FRONTALE_BOT_H }} />
-            : <div className="rounded-b border border-gray-200" style={{ backgroundColor: item2.coloreHex ?? '#e5e7eb', width: FRONTALE_W, height: FRONTALE_BOT_H }} />}
+            : <div className="rounded-b border border-gray-200" style={{ backgroundColor: item2.coloreHex || '#e5e7eb', width: FRONTALE_W, height: FRONTALE_BOT_H }} />}
           {onUpdate && (
             <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem2:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
               onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: item1 ? [item1] : [] }); }}
@@ -1587,7 +1592,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
         {item1?.imageUrl
           // eslint-disable-next-line @next/next/no-img-element
           ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded border border-gray-200 object-contain bg-white w-full h-full" />
-          : <div className="rounded border border-gray-200 w-full h-full" style={{ backgroundColor: item1?.coloreHex ?? '#e5e7eb' }} />}
+          : <div className="rounded border border-gray-200 w-full h-full" style={{ backgroundColor: item1?.coloreHex || '#e5e7eb' }} />}
         {onUpdate && item1 && (
           <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem1:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
             onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: [] }); }}
@@ -1676,7 +1681,7 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
         {config.items.length === 0
           ? <div style={{ width: w, height: STRATO_H }} />
           : config.items.map((it, i) => {
-              const color = it.coloreHex ?? colorForTipo(it.tipo);
+              const color = it.coloreHex || colorForTipo(it.tipo);
 
               let inner: React.ReactNode;
               if (it.tipo === 'borsa') {
@@ -1728,7 +1733,7 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
 }
 
 function CapoOnBarra({ item }: { item: ItemParete }) {
-  const color = item.coloreHex ?? colorForTipo(item.tipo);
+  const color = item.coloreHex || colorForTipo(item.tipo);
   const h = item.tipo === 'abito' ? 96 : item.tipo === 'capospalla' ? 80 : 64;
   const count = Math.max(1, item.pezzi.length);
   return (
