@@ -55,6 +55,8 @@ const BARRA_PATTERN: Record<DimensioneBarra, TipoCapo[]> = {
 const UNIT = 80;
 const COSTA_W = 5;  // 1/3 of original 16 — narrow hangers on barra
 const FRONTALE_W = 60; // 3 grid squares (3×20px)
+const GRID_SQ = 20; // px per grid square
+const WALL_SQUARES = 30; // wall is exactly 30 squares wide
 const FRONTALE_H = 140;
 const FRONTALE_TOP_H = 56;
 const FRONTALE_BOT_H = 84;
@@ -1191,10 +1193,12 @@ function WallRenderer({
   onUpdate?: (id: string, patch: Partial<ElementoParete>) => void;
   zoom?: number;
 }) {
+  const outerWallRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     id: string; pointerId: number;
     startX: number; startY: number;
     startOffsetX: number; startOffsetY: number;
+    minOffsetX: number; maxOffsetX: number; // logical px bounds for X
   } | null>(null);
   const lastLivePosRef = useRef<{ id: string; x: number; y: number } | null>(null);
   const [livePos, setLivePos] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -1230,11 +1234,25 @@ function WallRenderer({
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     lastLivePosRef.current = null;
+    const z = zoom ?? 1;
+    const startOffsetX = el.offsetX ?? 0;
+    const startOffsetY = el.offsetY ?? defaultOffsetY(el.tipo);
+    // Compute X bounds in logical pixels so element can't leave the 30-square wall
+    const elRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const containerRect = outerWallRef.current?.getBoundingClientRect();
+    const scrollLeft = outerWallRef.current?.scrollLeft ?? 0;
+    const elAbsLogX = containerRect
+      ? (elRect.left - containerRect.left) / z + scrollLeft
+      : startOffsetX;
+    const flexLogX = elAbsLogX - startOffsetX;
+    const elLogW = elRect.width / z;
     dragRef.current = {
       id: el.id, pointerId: e.pointerId,
       startX: e.clientX, startY: e.clientY,
-      startOffsetX: el.offsetX ?? 0,
-      startOffsetY: el.offsetY ?? defaultOffsetY(el.tipo),
+      startOffsetX,
+      startOffsetY,
+      minOffsetX: -flexLogX,
+      maxOffsetX: WALL_SQUARES * GRID_SQ - flexLogX - elLogW,
     };
     setDraggingId(el.id);
   }
@@ -1243,10 +1261,12 @@ function WallRenderer({
     const d = dragRef.current;
     if (!d || e.pointerId !== d.pointerId) return;
     const z = zoom ?? 1;
+    const rawX = d.startOffsetX + (e.clientX - d.startX) / z;
+    const rawY = d.startOffsetY + (e.clientY - d.startY) / z;
     const np = {
       id: d.id,
-      x: d.startOffsetX + (e.clientX - d.startX) / z,
-      y: d.startOffsetY + (e.clientY - d.startY) / z,
+      x: Math.max(d.minOffsetX, Math.min(d.maxOffsetX, rawX)),
+      y: Math.max(0, rawY), // can't drag above wall top
     };
     lastLivePosRef.current = np;
     setLivePos(np);
@@ -1312,14 +1332,16 @@ function WallRenderer({
       <PhotoStrip photos={topPhotos} align="top" />
 
       {/* Main render area — grid background is INSIDE the zoomed div so grid squares scale with content */}
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden" style={{ backgroundColor: '#ffffff' }}>
+      <div ref={outerWallRef} className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden" style={{ backgroundColor: '#ffffff' }}>
         <div className="flex items-start h-full px-4"
           style={{
             gap: 16,
+            width: WALL_SQUARES * GRID_SQ,
             ...(zoom !== undefined ? { zoom } : {}),
             backgroundImage: 'linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px)',
-            backgroundSize: '20px 20px',
+            backgroundSize: `${GRID_SQ}px ${GRID_SQ}px`,
             backgroundColor: '#ffffff',
+            borderRight: '2px solid rgba(0,0,0,0.1)',
           }}
         >
           {config.map((el) => {
