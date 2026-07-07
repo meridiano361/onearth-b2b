@@ -1188,6 +1188,40 @@ function ElementoCard({
   );
 }
 
+// ─── Photo strips ─────────────────────────────────────────────────────────────
+
+const PHOTO_SQ = 36;
+const PHOTO_STRIP_H = PHOTO_SQ + 8;
+
+type PhotoEntry = { src: string | null; color?: string; label?: string };
+
+function PhotoStrip({ photos, align }: { photos: PhotoEntry[]; align: 'top' | 'bottom' }) {
+  const slots = Math.max(4, photos.length);
+  const border = align === 'top' ? 'border-b' : 'border-t';
+  return (
+    <div
+      className={`flex-shrink-0 overflow-x-auto flex items-center gap-1 px-2 bg-gray-50/80 ${border} border-gray-100`}
+      style={{ height: PHOTO_STRIP_H }}
+    >
+      {Array.from({ length: slots }).map((_, i) => {
+        const p = photos[i];
+        if (p?.src) {
+          // eslint-disable-next-line @next/next/no-img-element
+          return <img key={i} src={p.src} alt={p.label ?? ''} draggable={false} title={p.label}
+            className="object-contain rounded flex-shrink-0 border border-gray-100 bg-white"
+            style={{ width: PHOTO_SQ, height: PHOTO_SQ }} />;
+        }
+        if (p?.color) {
+          return <div key={i} className="flex-shrink-0 rounded border border-gray-200"
+            style={{ width: PHOTO_SQ, height: PHOTO_SQ, backgroundColor: p.color }} title={p.label} />;
+        }
+        return <div key={i} className="flex-shrink-0 rounded border border-dashed border-gray-200 bg-white/60"
+          style={{ width: PHOTO_SQ, height: PHOTO_SQ }} />;
+      })}
+    </div>
+  );
+}
+
 // ─── Wall renderer ────────────────────────────────────────────────────────────
 
 function WallRenderer({
@@ -1233,8 +1267,6 @@ function WallRenderer({
   const effectiveZoom = fitZoom * (zoom ?? 1);
   effectiveZoomRef.current = effectiveZoom;
 
-  const PHOTO_SQ = 36; // square side in px for the top/bottom strips
-
   // Sort config by visual x (flex position + offsetX) to match wall left-to-right order
   const configSortedByVisualX = useMemo(() => {
     let flexX = 16; // px-4 left padding
@@ -1247,8 +1279,6 @@ function WallRenderer({
       .sort((a, b) => a.vx - b.vx)
       .map(({ el }) => el);
   }, [config]);
-
-  type PhotoEntry = { src: string | null; color?: string; label?: string };
 
   // Top strip: product photos from mensole (sorted by visual x), color fallback if no image
   const topPhotos = useMemo(() => {
@@ -1343,34 +1373,6 @@ function WallRenderer({
     onUpdate?.(d.id, { offsetX: finalX, offsetY: finalY });
   }
 
-  const photoStripH = PHOTO_SQ + 8; // strip height = square + padding
-
-  function PhotoStrip({ photos, align }: { photos: PhotoEntry[]; align: 'top' | 'bottom' }) {
-    const slots = Math.max(4, photos.length);
-    return (
-      <div
-        className={`flex-shrink-0 overflow-x-auto flex items-center gap-1 px-2 bg-gray-50/80 border-${align === 'top' ? 'b' : 't'} border-gray-100`}
-        style={{ height: photoStripH }}
-      >
-        {Array.from({ length: slots }).map((_, i) => {
-          const p = photos[i];
-          if (p?.src) {
-            // eslint-disable-next-line @next/next/no-img-element
-            return <img key={i} src={p.src} alt={p.label ?? ''} draggable={false} title={p.label}
-              className="object-contain rounded flex-shrink-0 border border-gray-100 bg-white"
-              style={{ width: PHOTO_SQ, height: PHOTO_SQ }} />;
-          }
-          if (p?.color) {
-            return <div key={i} className="flex-shrink-0 rounded border border-gray-200 flex-shrink-0"
-              style={{ width: PHOTO_SQ, height: PHOTO_SQ, backgroundColor: p.color }} title={p.label} />;
-          }
-          return <div key={i} className="flex-shrink-0 rounded border border-dashed border-gray-200 bg-white/60"
-            style={{ width: PHOTO_SQ, height: PHOTO_SQ }} />;
-        })}
-      </div>
-    );
-  }
-
   if (config.length === 0) {
     return (
       <div className="flex flex-col flex-1 min-h-0">
@@ -1396,7 +1398,7 @@ function WallRenderer({
       <div
         ref={outerWallRef}
         className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden"
-        style={{ backgroundColor: '#ffffff' }}
+        style={{ backgroundColor: '#ffffff', isolation: 'isolate' }}
         onPointerMove={onWallPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
