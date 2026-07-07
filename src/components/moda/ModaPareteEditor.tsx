@@ -1330,6 +1330,9 @@ function WallRenderer({
       maxOffsetX: WALL_SQUARES * GRID_SQ - flexLogX - elLogW,
       didMove: false,
     };
+    // Elevate dragged element above siblings so it renders on top during drag
+    const outerEl = outerDivRefs.current.get(el.id);
+    if (outerEl) outerEl.style.zIndex = '10';
   }
 
   function onWallPointerMove(e: React.PointerEvent) {
@@ -1357,6 +1360,8 @@ function WallRenderer({
     const d = dragRef.current;
     if (!d || e.pointerId !== d.pointerId) return;
     dragRef.current = null;
+    const outerElReset = outerDivRefs.current.get(d.id);
+    if (outerElReset) outerElReset.style.zIndex = '';
     if (!d.didMove) {
       onSelect?.(d.id);
       return;
@@ -1368,7 +1373,7 @@ function WallRenderer({
     // Snap DOM to committed values before React re-renders (prevents flicker)
     const outer = outerDivRefs.current.get(d.id);
     const inner = innerDivRefs.current.get(d.id);
-    if (outer) outer.style.transform = `translateX(${finalX}px)`;
+    if (outer) { outer.style.transform = `translateX(${finalX}px)`; outer.style.zIndex = ''; }
     if (inner) inner.style.transform = `translateY(${finalY}px)`;
     onUpdate?.(d.id, { offsetX: finalX, offsetY: finalY });
   }
@@ -1418,14 +1423,14 @@ function WallRenderer({
             <div
               key={el.id}
               ref={(node) => { node ? outerDivRefs.current.set(el.id, node) : outerDivRefs.current.delete(el.id); }}
-              className="flex-shrink-0 h-full select-none cursor-grab"
-              style={{ transform: `translateX(${el.offsetX ?? 0}px)`, touchAction: 'none' }}
-              onPointerDown={(e) => startDrag(e, el)}
+              className="flex-shrink-0 h-full select-none"
+              style={{ transform: `translateX(${el.offsetX ?? 0}px)`, pointerEvents: 'none' }}
             >
               <div
                 ref={(node) => { node ? innerDivRefs.current.set(el.id, node) : innerDivRefs.current.delete(el.id); }}
-                className="inline-block pt-1"
-                style={{ transform: `translateY(${el.offsetY ?? defaultOffsetY(el.tipo)}px)` }}
+                className="inline-block pt-1 cursor-grab"
+                style={{ transform: `translateY(${el.offsetY ?? defaultOffsetY(el.tipo)}px)`, pointerEvents: 'auto', touchAction: 'none' }}
+                onPointerDown={(e) => startDrag(e, el)}
               >
                 <WallElementRenderer
                   el={el}
