@@ -1294,11 +1294,16 @@ function WallRenderer({
     return out;
   }, [configSortedByVisualX]);
 
-  // Bottom strip: product photos from barre (sorted by visual x), color fallback if no image
+  // Bottom strip: ALL products from barra elements — hanging items (el.items) + mensola-on-barra items
   const bottomPhotos = useMemo(() => {
     const out: PhotoEntry[] = [];
+    function pushItem(it: ItemParete) {
+      out.push({ src: it.imageUrl ?? null, color: it.coloreHex ?? colorForTipo(it.tipo), label: it.productName ?? undefined });
+    }
     for (const el of configSortedByVisualX) {
-      if (el.tipo === 'barra') for (const it of el.items) out.push({ src: it.imageUrl ?? null, color: it.coloreHex ?? colorForTipo(it.tipo), label: it.productName ?? undefined });
+      if (el.tipo !== 'barra') continue;
+      for (const it of el.items) pushItem(it);
+      for (const m of getMensole(el)) for (const it of m.items) pushItem(it);
     }
     return out;
   }, [configSortedByVisualX]);
