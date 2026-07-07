@@ -65,6 +65,28 @@ function defaultOffsetY(_tipo: TipoElementoParete): number {
   return 0;
 }
 
+function mensolaItemVisualW(it: ItemParete): number {
+  if (it.tipo === 'borsa') return 50;
+  if (it.tipo === 'accessorio') return 30;
+  return 48;
+}
+
+// Total visual width of items on the shelf (including gaps)
+function mensola_totalItemsW(items: ItemParete[]): number {
+  if (!items.length) return 0;
+  return items.reduce((s, it) => s + mensolaItemVisualW(it), 0) + (items.length - 1) * 2;
+}
+
+// Height of the items container above the shelf
+function mensolaItemsContainerH(items: ItemParete[]): number {
+  if (!items.length) return STRATO_H + 2; // placeholder height + paddingBottom
+  const maxH = items.reduce((m, it) => {
+    const h = it.tipo === 'borsa' ? 50 : it.tipo === 'accessorio' ? 30 : Math.max(1, it.pezzi.length) * STRATO_H;
+    return Math.max(m, h);
+  }, 0);
+  return maxH + 2; // +2 for paddingBottom
+}
+
 function estimateElementWidth(el: ElementoParete): number {
   if (el.tipo === 'mensola') return MENSOLA_W[(el.dimensione as DimensioneMensola) ?? 'media'];
   if (el.tipo === 'barra') return BARRA_W[(el.dimensione as DimensioneBarra) ?? 'media'];
@@ -900,11 +922,18 @@ function ElementoCard({
   const canAddItem = !isFrontale || (el.items.length === 0) || frontaleCanAddBottom;
 
   // ── Mensola standalone item helpers ─────────────────────────────────────────
-  function saveMensolaItems(items: ItemParete[]) {
+  function saveMensolaItems(newItems: ItemParete[]) {
+    const prevItems = el.mensole?.length ? el.mensole[0].items : el.items;
+    // Keep shelf visually stable: compensate offsetY for height change
+    const dy = isMensola
+      ? mensolaItemsContainerH(prevItems) - mensolaItemsContainerH(newItems)
+      : 0;
+    const newOffsetY = (el.offsetY ?? defaultOffsetY(el.tipo)) + dy;
+    const extra = isMensola ? { offsetY: newOffsetY } : {};
     if (el.mensole?.length) {
-      const m = [...el.mensole]; m[0] = { ...m[0], items }; onChange({ ...el, mensole: m });
+      const m = [...el.mensole]; m[0] = { ...m[0], items: newItems }; onChange({ ...el, mensole: m, ...extra });
     } else {
-      onChange({ ...el, items });
+      onChange({ ...el, items: newItems, ...extra });
     }
   }
   function updateMensolaItem(idx: number, updated: ItemParete) {
@@ -1446,6 +1475,7 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
   zoom?: number;
 }) {
   const w = MENSOLA_W[config.dimensione];
+  const over = mensola_totalItemsW(config.items) > w;
   const itemDragRef = useRef<{ idx: number; pointerId: number; startX: number; startOffX: number } | null>(null);
   const [liveItem, setLiveItem] = useState<{ idx: number; x: number } | null>(null);
 
@@ -1516,7 +1546,13 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
               );
             })}
       </div>
-      <div className="h-0.5 bg-gray-400 rounded" style={{ width: w }} />
+      <div className={`rounded ${over ? 'h-1 bg-red-400' : 'h-0.5 bg-gray-400'}`} style={{ width: w }} />
+      {over && (
+        <div className="flex items-center gap-0.5 mt-0.5">
+          <AlertTriangle size={8} className="text-red-500 flex-shrink-0" />
+          <span className="text-[8px] text-red-500 font-medium">Mensola piena</span>
+        </div>
+      )}
     </div>
   );
 }
