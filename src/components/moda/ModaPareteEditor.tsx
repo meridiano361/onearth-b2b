@@ -58,8 +58,8 @@ const FRONTALE_W = 60; // 3 grid squares (3×20px)
 const GRID_SQ = 20; // px per grid square
 const WALL_SQUARES = 30; // wall is exactly 30 squares wide
 const FRONTALE_H = 140;
-const FRONTALE_TOP_H = 56;
-const FRONTALE_BOT_H = 84;
+const FRONTALE_TOP_H = FRONTALE_H / 2;  // 50% each when top+bottom
+const FRONTALE_BOT_H = FRONTALE_H / 2;
 const STRATO_H = 7;
 const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: FRONTALE_W, media: FRONTALE_W * 2, lunga: FRONTALE_W * 3 };
 
@@ -1839,7 +1839,11 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
       items: [],
       ...(tipo === 'mensola' ? { mensole: [{ dimensione: 'media', items: [] }] } : {}),
     };
-    handleConfigChange([...config, newEl]);
+    // Place new element at wall center so it's immediately visible (px-4=16 padding, gap-4=16 between elements)
+    const naturalFlexX = 16 + config.reduce((sum, el) => sum + estimateElementWidth(el) + 16, 0);
+    const elW = estimateElementWidth(newEl);
+    const offsetX = Math.round((WALL_SQUARES * GRID_SQ) / 2 - elW / 2 - naturalFlexX);
+    handleConfigChange([...config, { ...newEl, offsetX }]);
     setActiveElementId(id); // auto-espande la nuova card
     setTimeout(() => {
       document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
