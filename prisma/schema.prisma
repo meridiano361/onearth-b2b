@@ -895,3 +895,88 @@ model PareteAttrezzata {
 
   @@map("pareti_attrezzate")
 }
+
+// ─── Jewelry Display Rendering ────────────────────────────────────────────────
+
+enum TipoSupporto {
+  busto_legno
+  cono_legno
+  portaorecchini
+  parete_ganci
+
+  @@map("tipo_supporto")
+}
+
+enum TonoLegno {
+  chiaro
+  scuro
+
+  @@map("tono_legno")
+}
+
+enum CategoriaGioiello {
+  collana
+  bracciale
+  orecchino
+  anello
+
+  @@map("categoria_gioiello")
+}
+
+enum StatoCompositingJob {
+  pending
+  processing
+  completed
+  failed
+
+  @@map("stato_compositing_job")
+}
+
+model SupportoEspositivo {
+  id          String      @id @default(uuid())
+  nome        String
+  tipo        TipoSupporto
+  tono        TonoLegno?
+  immagineUrl String      @map("immagine_url")
+  larghezzaPx Int         @default(800) @map("larghezza_px")
+  altezzaPx   Int         @default(600) @map("altezza_px")
+  attivo      Boolean     @default(true)
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  zone ZonaPosizionamento[]
+  jobs CompositingJob[]
+
+  @@map("supporto_espositivo")
+}
+
+model ZonaPosizionamento {
+  id             String            @id @default(uuid())
+  supportoId     String            @map("supporto_id")
+  categoria      CategoriaGioiello
+  anchorX        Float             @default(0.5) @map("anchor_x")
+  anchorY        Float             @default(0.5) @map("anchor_y")
+  maxLarghezzaPx Int               @default(300) @map("max_larghezza_px")
+  maxAltezzaPx   Int               @default(300) @map("max_altezza_px")
+
+  supporto SupportoEspositivo @relation(fields: [supportoId], references: [id], onDelete: Cascade)
+
+  @@unique([supportoId, categoria])
+  @@map("zona_posizionamento")
+}
+
+model CompositingJob {
+  id              String              @id @default(uuid())
+  productId       String              @map("product_id")
+  productImageUrl String              @map("product_image_url")
+  supportoId      String              @map("supporto_id")
+  categoria       CategoriaGioiello
+  stato           StatoCompositingJob @default(pending)
+  risultatoUrl    String?             @map("risultato_url")
+  errore          String?
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  supporto SupportoEspositivo @relation(fields: [supportoId], references: [id])
+
+  @@map("compositing_job")
+}
