@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { CategoriaGioiello, SupportoEspositivo, CompositeResponse } from '@/types/jewelry';
 import { LABEL_CATEGORIA, SUPPORTI_COMPATIBILI } from '@/types/jewelry';
-import { MODA_COLLEZIONE } from '@/lib/modaAccess';
 
 interface Product {
   id: string;
@@ -36,7 +35,7 @@ export default function ModaVisualBigiotteria() {
   const { data: products = [], isFetching: loadingProducts } = useQuery<Product[]>({
     queryKey: ['moda-bigiotteria-products', search],
     queryFn: async () => {
-      const params = new URLSearchParams({ active: 'true', collezione: MODA_COLLEZIONE, limit: '500' });
+      const params = new URLSearchParams({ active: 'true', limit: '500' });
       if (search.trim()) params.set('search', search.trim());
       const res = await fetch(`/api/products?${params}`);
       const json = await res.json();
