@@ -67,8 +67,10 @@ model Product {
   colore             String?
   colore2            String?
   colore3            String?
+  altriColori        String?
   nomLinea           String?
   misura             String?
+  forma              String?
   produttore         String?
   gruppoMerceologico String?
   classe             String?

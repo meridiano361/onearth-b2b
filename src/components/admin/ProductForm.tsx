@@ -130,6 +130,7 @@ const schema = z
     name: z.string().min(1, 'Nome obbligatorio'),
     description: z.string().optional(),
     misura: z.string().optional(),
+    forma: z.string().optional(),
     taglia: z.string().optional(),
     produttore: z.string().optional(),
     paese: z.string().optional(),
@@ -146,6 +147,7 @@ const schema = z
     colore: z.string().optional(),
     colore2: z.string().optional(),
     colore3: z.string().optional(),
+    altriColori: z.string().optional(),
     lavorazione: z.string().optional(),
     materiale1: z.string().optional(),
     materiale2: z.string().optional(),
@@ -226,7 +228,7 @@ function buildComposizione(mat1: string, mat2: string, mat3: string): string {
 function buildModaName(
   dettaglio: string, modello: string,
   mat1: string, mat2: string, mat3: string,
-  colore: string, taglia: string
+  colore: string, taglia: string, forma: string
 ): string {
   const mats = [mat1, mat2, mat3].map(extractMatName).filter(Boolean).join(' ');
   const parts = [
@@ -234,6 +236,7 @@ function buildModaName(
     modello ? modello.toUpperCase() : '',
     mats,
     colore ? colore.toLowerCase() : '',
+    forma ? forma.toLowerCase() : '',
     taglia ? taglia.toUpperCase() : '',
   ].filter(Boolean);
   return parts.join(' ');
@@ -317,6 +320,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       name: src.name || '',
       description: src.description || '',
       misura: src.misura || '',
+      forma: src.forma || '',
       taglia: src.taglia || '',
       produttore: src.produttore || '',
       paese: src.paese || '',
@@ -341,6 +345,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
         }
         return { colore: raw1, colore2: raw2, colore3: raw3 };
       })(),
+      altriColori: src.altriColori || '',
       lavorazione: src.lavorazione || '',
       materiale1: src.materiale1 || '',
       materiale2: src.materiale2 || '',
@@ -399,6 +404,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
   const watchedModello   = watch('modello');
   const watchedColore    = watch('colore');
   const watchedTaglia    = watch('taglia');
+  const watchedForma     = watch('forma');
   const watchedCollezione = watch('collezione');
   const watchedMat1      = watch('materiale1');
   const watchedMat2      = watch('materiale2');
@@ -427,10 +433,10 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     const auto = buildModaName(
       watchedDettaglio || '', watchedModello || '',
       watchedMat1 || '', watchedMat2 || '', watchedMat3 || '',
-      watchedColore || '', tagliaForName
+      watchedColore || '', tagliaForName, watchedForma || ''
     );
     if (auto) setValue('name', auto, { shouldDirty: true });
-  }, [watchedDettaglio, watchedModello, watchedMat1, watchedMat2, watchedMat3, watchedColore, watchedTaglia, sizeVariants]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [watchedDettaglio, watchedModello, watchedMat1, watchedMat2, watchedMat3, watchedColore, watchedTaglia, watchedForma, sizeVariants]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const composizioneMountRef = useRef(true);
   useEffect(() => {
@@ -632,6 +638,8 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
           skipNameNormalization: isEdit,
           description:    (v as any).description    || null,
           misura:         v.misura         || null,
+          forma:          (v as any).forma          || null,
+          altriColori:    (v as any).altriColori    || null,
           taglia:         (v as any).taglia         || null,
           produttore:     v.produttore     || null,
           paese:          v.paese          || null,
@@ -710,7 +718,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
 
       {/* Codice + Nome — in Moda con taglia/varianti il codice si sposta accanto alla taglia */}
       {isModa && (watchedTaglia || sizeVariants.length > 0) ? (
-        <Input label="Nome *" {...register('name')} error={errors.name?.message} />
+        <Input label="Nome *" {...register('name')} error={errors.name?.message} className="bg-gray-50" />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -722,7 +730,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
             />
             {errors.code && <p className="mt-1 text-xs text-red-500">{errors.code.message}</p>}
           </div>
-          <Input label="Nome *" {...register('name')} error={errors.name?.message} placeholder={isModa ? '' : 'es. Copritavolo GEOMETRIC 140×240'} />
+          <Input label="Nome *" {...register('name')} error={errors.name?.message} className="bg-gray-50" placeholder={isModa ? '' : 'es. Copritavolo GEOMETRIC 140×240'} />
         </div>
       )}
 
@@ -831,10 +839,16 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
               </div>
             )}
           </div>
-          <Input label="Misure" {...register('misura')} />
+          <div className="grid grid-cols-[2fr_3fr] gap-3">
+            <Input label="Misure" {...register('misura')} />
+            <Input label="Forma" {...register('forma')} placeholder="es. tonda, rettangolare…" />
+          </div>
         </div>
       ) : (
-        <Input label="Misure" {...register('misura')} placeholder="es. 30×40 cm" />
+        <div className="grid grid-cols-[2fr_3fr] gap-3">
+          <Input label="Misure" {...register('misura')} placeholder="es. 30×40 cm" />
+          <Input label="Forma" {...register('forma')} placeholder="es. tonda, rettangolare…" />
+        </div>
       )}
 
       {/* Produttore + Paese — solo Casa (Moda lo posiziona dopo lavorazione) */}
@@ -888,6 +902,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
               <SinglePantoneField label="Pantone 3" value={pantoneSlots[2]} onChange={(v) => setPantoneSlot(2, v)} />
             </div>
           </div>
+          <Input label="Altri colori" {...register('altriColori')} placeholder="es. oro, argento, avorio chiaro…" />
           {pantoneError && <p className="text-xs text-red-500">{pantoneError}</p>}
 
           <Combobox label="Fantasia" field="fantasia" value={watch('fantasia') || ''} onChange={(v) => setValue('fantasia', v)} />
@@ -933,6 +948,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
             <Combobox label="Colore 3" field="colore"  value={watch('colore3') || ''} onChange={(v) => setValue('colore3', v)} placeholder="es. bianco" />
           </div>
           <p className="text-2xs text-gray-400 -mt-2">Al maschile: rosso, blu, nero, bianco, beige…</p>
+          <Input label="Altri colori" {...register('altriColori')} placeholder="es. oro, argento, avorio chiaro…" />
           <div>
             <Combobox label="Lavorazione" field="lavorazione" value={watch('lavorazione') || ''} onChange={(v) => setValue('lavorazione', v)} />
           </div>
