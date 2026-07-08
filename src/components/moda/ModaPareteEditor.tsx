@@ -742,10 +742,11 @@ function CustomTagliaInput({ onAdd }: { onAdd: (t: string) => void }) {
 // ─── Frontale photo slot with zoom + drag-to-pan ─────────────────────────────
 
 function FrontalePhotoSlot({
-  item, w, h, className = '', onUpdate,
+  item, w, h, className = '', onUpdate, fit = 'cover',
 }: {
   item: ItemParete; w: number; h: number; className?: string;
   onUpdate?: (patch: Partial<ItemParete>) => void;
+  fit?: 'cover' | 'contain';
 }) {
   const scale = item.photoScale ?? 1;
   const offX = item.photoOffsetX ?? 0;
@@ -808,7 +809,7 @@ function FrontalePhotoSlot({
       {item.imageUrl
         // eslint-disable-next-line @next/next/no-img-element
         ? <img src={item.imageUrl} alt="" draggable={false}
-            className="absolute object-cover"
+            className={`absolute ${fit === 'contain' ? 'object-contain' : 'object-cover'}`}
             style={{ width: scaledW, height: scaledH, left: imgLeft, top: imgTop, userSelect: 'none', pointerEvents: 'none' }} />
         : <div className="w-full h-full" style={{ backgroundColor: item.coloreHex || '#e5e7eb' }} />
       }
@@ -1680,7 +1681,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
       <div className="relative group/frontale" style={{ width: fW }}>
         <div className="relative group/fitem1">
           <FrontalePhotoSlot item={item1 ?? { id: '', tipo: 'abito', pezzi: [] }} w={fW} h={fTopH}
-            className="rounded-t border border-b-0 border-gray-200" onUpdate={updateItem1} />
+            className="rounded-t border border-b-0 border-gray-200" fit={small ? 'contain' : 'cover'} onUpdate={updateItem1} />
           {onUpdate && (
             <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem1:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
               onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: [item2] }); }}
@@ -1689,7 +1690,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
         </div>
         <div className="relative group/fitem2">
           <FrontalePhotoSlot item={item2} w={fW} h={fBotH}
-            className="rounded-b border border-gray-200" onUpdate={updateItem2} />
+            className="rounded-b border border-gray-200" fit={small ? 'contain' : 'cover'} onUpdate={updateItem2} />
           {onUpdate && (
             <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem2:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
               onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: item1 ? [item1] : [] }); }}
@@ -1709,7 +1710,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
       <div className="relative group/fitem1" style={{ width: fW, height: fH }}>
         {item1
           ? <FrontalePhotoSlot item={item1} w={fW} h={fH}
-              className="rounded border border-gray-200" onUpdate={updateItem1} />
+              className="rounded border border-gray-200" fit={small ? 'contain' : 'cover'} onUpdate={updateItem1} />
           : <div className="rounded border border-gray-200 w-full h-full" style={{ backgroundColor: '#e5e7eb' }} />
         }
         {onUpdate && item1 && (
