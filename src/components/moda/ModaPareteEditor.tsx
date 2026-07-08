@@ -1638,7 +1638,8 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
     e.preventDefault();
     // Capture to the mensola container — moves always arrive here
     mensolaContainerRef.current?.setPointerCapture(e.pointerId);
-    let naturalFlexX = 0;
+    const centerOffset = Math.max(0, (w - mensola_totalItemsW(config.items)) / 2);
+    let naturalFlexX = centerOffset;
     for (let i = 0; i < idx; i++) naturalFlexX += mensolaItemVisualW(config.items[i]) + 2;
     const itemW = mensolaItemVisualW(config.items[idx]);
     const startOffX = config.items[idx].offsetX ?? 0;
@@ -1670,8 +1671,9 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
     const domEl = itemElRefs.current.get(d.idx);
     if (domEl) domEl.style.transform = 'translateX(0px)';
 
-    // Compute natural (flex) X positions assuming all offsetX = 0
-    let natX = 0;
+    // Compute natural (flex) X positions accounting for centering
+    const centerOffset = Math.max(0, (w - mensola_totalItemsW(config.items)) / 2);
+    let natX = centerOffset;
     const natPos = config.items.map((it) => { const x = natX; natX += mensolaItemVisualW(it) + 2; return x; });
 
     // Center of dragged item after drag
@@ -1700,7 +1702,7 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
       onPointerCancel={onUpdate ? endItemDrag : undefined}
     >
       {/* 2px gap between items and shelf */}
-      <div className="flex items-end gap-0.5" style={{ minWidth: w, paddingBottom: 2 }}>
+      <div className="flex items-end justify-center gap-0.5" style={{ minWidth: w, paddingBottom: 2 }}>
         {config.items.length === 0
           ? <div style={{ width: w, height: STRATO_H }} />
           : config.items.map((it, i) => {
