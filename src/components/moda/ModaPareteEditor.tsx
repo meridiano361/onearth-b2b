@@ -767,7 +767,12 @@ function FrontalePhotoSlot({
     if (panRef.current?.pointerId === e.pointerId) panRef.current = null;
   }
   function applyZoom(delta: number) {
-    const newScale = Math.max(1, Math.min(3, Math.round((scale + delta) * 4) / 4));
+    const newScale = Math.max(0.25, Math.min(3, Math.round((scale + delta) * 4) / 4));
+    if (newScale <= 1) {
+      // Scala ≤ 1: immagine completamente visibile, nessun pan necessario
+      onUpdate?.({ photoScale: newScale, photoOffsetX: 0, photoOffsetY: 0 });
+      return;
+    }
     const newMaxX = w * (newScale - 1) / 2;
     const newMaxY = h * (newScale - 1) / 2;
     onUpdate?.({
@@ -1428,6 +1433,12 @@ function WallRenderer({
     // Elevate dragged element above siblings so it renders on top during drag
     const outerEl = outerDivRefs.current.get(el.id);
     if (outerEl) outerEl.style.zIndex = '10';
+    // Visual feedback: ring + grabbing cursor so it's clear what's being moved
+    const innerEl = innerDivRefs.current.get(el.id);
+    if (innerEl) {
+      innerEl.style.boxShadow = '0 0 0 2px #1a1a1a, 0 4px 16px rgba(0,0,0,0.18)';
+      innerEl.style.cursor = 'grabbing';
+    }
   }
 
   function onWallPointerMove(e: React.PointerEvent) {
@@ -1457,6 +1468,9 @@ function WallRenderer({
     dragRef.current = null;
     const outerElReset = outerDivRefs.current.get(d.id);
     if (outerElReset) outerElReset.style.zIndex = '';
+    // Remove drag highlight
+    const innerElReset = innerDivRefs.current.get(d.id);
+    if (innerElReset) { innerElReset.style.boxShadow = ''; innerElReset.style.cursor = ''; }
     if (!d.didMove) {
       onSelect?.(d.id);
       return;
