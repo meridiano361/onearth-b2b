@@ -34,8 +34,8 @@ const TIPO_LABELS: Record<TipoCapo, string> = {
 
 const TIPO_OPTIONS_BARRA: TipoCapo[] = ['capospalla', 'top', 'bottom', 'abito'];
 const TIPO_OPTIONS_MENSOLA: TipoCapo[] = ['borsa', 'accessorio', 'top', 'bottom', 'abito', 'altro'];
-// Frontale: slot 1 = abito | top | capospalla; slot 2 (solo se slot1 è top/capospalla) = bottom
-const TIPO_OPTIONS_FRONTALE_SLOT1: TipoCapo[] = ['abito', 'top', 'capospalla'];
+// Frontale slot 1: abbigliamento pieno + borsa/accessorio (half-size, no slot 2)
+const TIPO_OPTIONS_FRONTALE_SLOT1: TipoCapo[] = ['abito', 'top', 'capospalla', 'borsa', 'accessorio'];
 const TIPO_OPTIONS_FRONTALE_SLOT2: TipoCapo[] = ['bottom'];
 
 const TAGLIE_FULL = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'TU'];
@@ -60,6 +60,10 @@ const WALL_SQUARES = 30; // wall is exactly 30 squares wide
 const FRONTALE_H = 140;
 const FRONTALE_TOP_H = FRONTALE_H / 2;  // 50% each when top+bottom
 const FRONTALE_BOT_H = FRONTALE_H / 2;
+// Borse e accessori (stole/sciarpe) occupano metà spazio del frontale abbigliamento
+const FRONTALE_SMALL_W = FRONTALE_W / 2;   // 30px
+const FRONTALE_SMALL_H = FRONTALE_H / 2;   // 70px
+const TIPO_FRONTALE_SMALL: TipoCapo[] = ['borsa', 'accessorio'];
 const STRATO_H = 7;
 const MENSOLA_W: Record<DimensioneMensola, number> = { piccola: FRONTALE_W, media: FRONTALE_W * 2, lunga: FRONTALE_W * 3 };
 
@@ -89,6 +93,10 @@ function mensolaItemsContainerH(items: ItemParete[]): number {
   return maxH + 2; // +2 for paddingBottom
 }
 
+function isFrontaleSmall(el: ElementoParete): boolean {
+  return el.tipo === 'frontale' && TIPO_FRONTALE_SMALL.includes(el.items[0]?.tipo as TipoCapo);
+}
+
 function estimateElementWidth(el: ElementoParete): number {
   if (el.tipo === 'mensola') return MENSOLA_W[(el.dimensione as DimensioneMensola) ?? 'media'];
   if (el.tipo === 'barra') {
@@ -97,6 +105,7 @@ function estimateElementWidth(el: ElementoParete): number {
     const cols = el.items.reduce((s, it) => s + Math.max(1, it.pezzi.length), 0);
     return cols * COSTA_W + Math.max(0, el.items.length - 1);
   }
+  if (el.tipo === 'frontale') return isFrontaleSmall(el) ? FRONTALE_SMALL_W : FRONTALE_W;
   return FRONTALE_W;
 }
 
@@ -888,7 +897,7 @@ function FrontaleInlineEditor({
           onSelect={(p) => {
             const taglie = availableTaglieFromProduct(p);
             const detectedTipo = tipoFromProduct(p, 'frontale');
-            const newTipo = TIPO_OPTIONS_FRONTALE_SLOT1.includes(detectedTipo) ? detectedTipo : 'abito';
+            const newTipo = (TIPO_OPTIONS_FRONTALE_SLOT1 as string[]).includes(detectedTipo) ? detectedTipo : 'abito';
             onChange({
               ...item, productId: p.id, productCode: p.code, productName: formatProductName(p),
               imageUrl: productImageUrl(p),
@@ -1020,8 +1029,9 @@ function ElementoCard({
   const pzCount = isBarra ? totalePezzi(el.items) : null;
   const pzOver = maxPz !== null && pzCount !== null && pzCount > maxPz;
 
-  // Frontale: slot 1 may have a second slot only when tipo is top or capospalla
-  const frontaleCanAddBottom = isFrontale && el.items.length === 1
+  // Frontale: slot 2 (bottom) solo se slot 1 è top|capospalla — non per borsa/accessorio
+  const frontaleIsSmall = isFrontale && TIPO_FRONTALE_SMALL.includes(el.items[0]?.tipo as TipoCapo);
+  const frontaleCanAddBottom = isFrontale && !frontaleIsSmall && el.items.length === 1
     && (el.items[0].tipo === 'top' || el.items[0].tipo === 'capospalla');
   const canAddItem = !isFrontale || (el.items.length === 0) || frontaleCanAddBottom;
 
@@ -1062,8 +1072,8 @@ function ElementoCard({
   function updateItem(idx: number, updated: ItemParete) {
     const a = [...el.items];
     a[idx] = updated;
-    // If frontale slot 1 changes to abito, remove slot 2 (incompatible combination)
-    if (isFrontale && idx === 0 && updated.tipo === 'abito' && a.length > 1) {
+    // Se slot 1 diventa abito, borsa o accessorio, rimuovi slot 2 (incompatibile)
+    if (isFrontale && idx === 0 && (updated.tipo === 'abito' || TIPO_FRONTALE_SMALL.includes(updated.tipo as TipoCapo)) && a.length > 1) {
       onChange({ ...el, items: [a[0]] });
     } else {
       onChange({ ...el, items: a });
@@ -1652,6 +1662,12 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
     const item1 = el.items[0];
     const item2 = el.items[1];
     const mensole = getMensole(el);
+    // Borsa/accessorio (stole, sciarpe) → metà larghezza e metà altezza
+    const small = TIPO_FRONTALE_SMALL.includes(item1?.tipo as TipoCapo);
+    const fW = small ? FRONTALE_SMALL_W : FRONTALE_W;
+    const fH = small ? FRONTALE_SMALL_H : FRONTALE_H;
+    const fTopH = fH / 2;
+    const fBotH = fH / 2;
 
     const updateItem1 = onUpdate
       ? (patch: Partial<ItemParete>) => onUpdate({ items: [{ ...item1!, ...patch }, ...(item2 ? [item2] : [])] })
@@ -1661,9 +1677,9 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
       : undefined;
 
     const frontaleCore = item2 ? (
-      <div className="relative group/frontale" style={{ width: FRONTALE_W }}>
+      <div className="relative group/frontale" style={{ width: fW }}>
         <div className="relative group/fitem1">
-          <FrontalePhotoSlot item={item1 ?? { id: '', tipo: 'abito', pezzi: [] }} w={FRONTALE_W} h={FRONTALE_TOP_H}
+          <FrontalePhotoSlot item={item1 ?? { id: '', tipo: 'abito', pezzi: [] }} w={fW} h={fTopH}
             className="rounded-t border border-b-0 border-gray-200" onUpdate={updateItem1} />
           {onUpdate && (
             <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem1:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
@@ -1672,7 +1688,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
           )}
         </div>
         <div className="relative group/fitem2">
-          <FrontalePhotoSlot item={item2} w={FRONTALE_W} h={FRONTALE_BOT_H}
+          <FrontalePhotoSlot item={item2} w={fW} h={fBotH}
             className="rounded-b border border-gray-200" onUpdate={updateItem2} />
           {onUpdate && (
             <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem2:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
@@ -1683,16 +1699,16 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
         {onUpdate && item1 && (
           <button type="button"
             className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 bg-white border border-gray-300 rounded-full opacity-0 group-hover/frontale:opacity-100 transition-opacity flex items-center justify-center z-20 shadow-sm cursor-pointer"
-            style={{ top: FRONTALE_TOP_H }}
+            style={{ top: fTopH }}
             title="Inverti top e bottom"
             onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: [item2, item1] }); }}
           ><ArrowUpDown size={9} className="text-gray-500" /></button>
         )}
       </div>
     ) : (
-      <div className="relative group/fitem1" style={{ width: FRONTALE_W, height: FRONTALE_H }}>
+      <div className="relative group/fitem1" style={{ width: fW, height: fH }}>
         {item1
-          ? <FrontalePhotoSlot item={item1} w={FRONTALE_W} h={FRONTALE_H}
+          ? <FrontalePhotoSlot item={item1} w={fW} h={fH}
               className="rounded border border-gray-200" onUpdate={updateItem1} />
           : <div className="rounded border border-gray-200 w-full h-full" style={{ backgroundColor: '#e5e7eb' }} />
         }
