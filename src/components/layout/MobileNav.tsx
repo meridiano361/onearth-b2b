@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Home, LayoutGrid, ShoppingCart, Package, Heart, HelpCircle, Settings,
+  Home, LayoutGrid, ShoppingCart, Package, Heart, HelpCircle, Settings, Gem,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
@@ -56,6 +56,7 @@ const MODA_BASE: NavItem[] = [
   { icon: Heart,        label: 'Preferiti', href: '/moda/preferiti', isActive: (p) => p.startsWith('/moda/preferiti') },
   { icon: ShoppingCart, label: 'Carrelli',  href: '/moda/carrelli',  isActive: (p) => p.startsWith('/moda/carrelli') },
   { icon: Package,      label: 'Ordini',    href: '/moda/ordini',    isActive: (p) => p.startsWith('/moda/ordini') },
+  { icon: Gem,          label: 'Visual',    href: '/moda/pareti',    isActive: (p) => p.startsWith('/moda/pareti') || p.startsWith('/moda/visual') },
 ];
 
 function getNavItems(pathname: string, isAdmin: boolean): NavItem[] {

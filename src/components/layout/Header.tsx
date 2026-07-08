@@ -28,6 +28,11 @@ const MODA_NAV = [
   { key: 'assistenza',href: '/catalog/assistenza',  label: 'Aiuto',     isActive: (p: string) => p.startsWith('/catalog/assistenza') },
 ];
 
+const MODA_VISUAL_ITEMS = [
+  { href: '/moda/pareti',             label: 'Visual Parete',      isActive: (p: string) => p.startsWith('/moda/pareti') },
+  { href: '/moda/visual/bigiotteria', label: 'Visual Bigiotteria', isActive: (p: string) => p.startsWith('/moda/visual') },
+];
+
 interface HeaderProps {
   session: Session;
 }
@@ -59,18 +64,47 @@ export default function Header({ session }: HeaderProps) {
       {!isHome && (
         <nav className="hidden md:flex items-center gap-1">
           {isInModa
-            ? MODA_NAV.map(({ key, href, label, isActive }) => (
-                <Link
-                  key={key}
-                  href={href}
-                  className={cn(
-                    'text-xs px-3 py-1.5 rounded transition-colors',
-                    isActive(pathname) ? 'text-primary font-semibold bg-cream' : 'text-gray-400 hover:text-primary hover:bg-cream'
-                  )}
-                >
-                  {label}
-                </Link>
-              ))
+            ? <>
+                {MODA_NAV.map(({ key, href, label, isActive }) => (
+                  <Link
+                    key={key}
+                    href={href}
+                    className={cn(
+                      'text-xs px-3 py-1.5 rounded transition-colors',
+                      isActive(pathname) ? 'text-primary font-semibold bg-cream' : 'text-gray-400 hover:text-primary hover:bg-cream'
+                    )}
+                  >
+                    {label}
+                  </Link>
+                ))}
+                {/* Visual dropdown */}
+                <div className="relative group">
+                  <button
+                    className={cn(
+                      'text-xs px-3 py-1.5 rounded transition-colors',
+                      MODA_VISUAL_ITEMS.some((i) => i.isActive(pathname))
+                        ? 'text-primary font-semibold bg-cream'
+                        : 'text-gray-400 hover:text-primary hover:bg-cream'
+                    )}
+                  >
+                    Visual
+                  </button>
+                  <div className="absolute top-full left-0 hidden group-hover:block bg-white shadow-lg border border-border rounded py-1 min-w-[168px] z-50">
+                    {MODA_VISUAL_ITEMS.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={cn(
+                          'block px-4 py-2 text-xs transition-colors',
+                          item.isActive(pathname) ? 'text-primary font-semibold bg-cream' : 'text-gray-600 hover:text-primary hover:bg-cream'
+                        )}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </>
             : menu.ordine
                 .filter((key) => menu.items[key]?.visibile && CASA_NAV_CONFIG[key])
                 .map((key) => {

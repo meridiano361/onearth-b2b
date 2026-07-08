@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Package, Users, ShoppingCart, Layers,
   LogOut, Settings, X, UserPlus, Eye, FileText,
   Image as ImageIcon, BookOpen, Paintbrush, Bell,
-  BarChart2, MessageSquare, ChevronDown,
+  BarChart2, MessageSquare, ChevronDown, Gem,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -58,6 +58,14 @@ const NAV: NavEntry[] = [
   { href: '/admin/personalizzazione',label: 'Personalizzazione', icon: Paintbrush,      roles: ['SUPER_ADMIN'] },
   { href: '/admin/products',         label: 'Prodotti',          icon: Package,         roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO', 'COMMERCIALE'] },
   { href: '/admin/sondaggi',         label: 'Sondaggi',          icon: MessageSquare,   roles: ['SUPER_ADMIN', 'ADMIN'] },
+  {
+    groupLabel: 'Visual',
+    icon: Gem,
+    roles: ['SUPER_ADMIN', 'ADMIN'],
+    items: [
+      { href: '/admin/visual/bigiotteria', label: 'Bigiotteria', icon: Gem, roles: ['SUPER_ADMIN', 'ADMIN'] },
+    ],
+  },
 ];
 
 interface AdminSidebarProps {

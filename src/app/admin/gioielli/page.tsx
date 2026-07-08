@@ -1,8 +1,5 @@
-import { Metadata } from 'next';
-import AdminJewelryPage from '@/components/admin/AdminJewelryPage';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = { title: 'Supporti Espositivi Gioielli' };
-
-export default function GioielliPage() {
-  return <AdminJewelryPage />;
+export default function GioielliRedirect() {
+  redirect('/admin/visual/bigiotteria');
 }

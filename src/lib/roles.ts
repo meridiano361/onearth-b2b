@@ -9,7 +9,7 @@ export function isAdminRole(role: string | undefined | null): boolean {
 // Which admin routes each role may visit (prefix match)
 const ROLE_ALLOW: Record<AdminRole, string[]> = {
   SUPER_ADMIN:  ['/admin'],
-  ADMIN:        ['/admin/orders', '/admin/customers', '/admin/products', '/admin/classificazione', '/admin/access-requests', '/admin/preview', '/admin'],
+  ADMIN:        ['/admin/orders', '/admin/customers', '/admin/products', '/admin/classificazione', '/admin/access-requests', '/admin/preview', '/admin/visual', '/admin'],
   COMMERCIALE:  ['/admin/orders', '/admin/customers', '/admin'],
   MAGAZZINO:    ['/admin/products', '/admin/classificazione', '/admin'],
 };
