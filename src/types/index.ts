@@ -135,6 +135,9 @@ export interface ItemParete {
   pezzi: PezzoParete[];
   availableTaglie?: string[]; // from product sizeVariants; undefined = all sizes selectable
   offsetX?: number; // horizontal drag offset within mensola
+  photoScale?: number;   // frontale photo zoom (1–3)
+  photoOffsetX?: number; // frontale photo pan X in px (visual space)
+  photoOffsetY?: number; // frontale photo pan Y in px (visual space)
 }
 
 export type PosizioneMensola = 'sopra' | 'sotto' | 'fianco';

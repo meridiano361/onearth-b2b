@@ -191,7 +191,7 @@ function tipoFromProduct(p: Product, elementoTipo: TipoElementoParete): TipoCapo
   if (/abito|vestito|dress|tuta|jumpsuit/.test(all)) return 'abito';
   if (/giaccone|cappotto|giubbott|parka|blazer|trench|coat|jacket|mantella/.test(all)) return 'capospalla';
   if (/pantal|gonna|skirt|short|legging|trouser|culotte/.test(all)) return 'bottom';
-  if (/top|shirt|blusa|camicia|maglia|felpa|maglione|pull|sweat|t-shirt|tshirt|canotta/.test(all)) return 'top';
+  if (/\btee|top|shirt|blusa|camicia|maglia|felpa|maglione|pull|sweat|t-shirt|tshirt|canotta/.test(all)) return 'top';
   if (elementoTipo === 'mensola') return 'borsa';
   if (elementoTipo === 'frontale') return 'abito';
   return 'top';
@@ -727,6 +727,91 @@ function CustomTagliaInput({ onAdd }: { onAdd: (t: string) => void }) {
       onKeyDown={(e) => { if (e.key === 'Enter') { onAdd(value); setValue(''); setEditing(false); } if (e.key === 'Escape') { setValue(''); setEditing(false); } }}
       onBlur={() => { if (value) onAdd(value); setValue(''); setEditing(false); }}
       placeholder="44…" className="w-10 px-1 py-0.5 rounded text-[9px] font-mono text-gray-900 bg-white border border-gray-300 focus:outline-none" />
+  );
+}
+
+// ─── Frontale photo slot with zoom + drag-to-pan ─────────────────────────────
+
+function FrontalePhotoSlot({
+  item, w, h, className = '', onUpdate,
+}: {
+  item: ItemParete; w: number; h: number; className?: string;
+  onUpdate?: (patch: Partial<ItemParete>) => void;
+}) {
+  const scale = item.photoScale ?? 1;
+  const offX = item.photoOffsetX ?? 0;
+  const offY = item.photoOffsetY ?? 0;
+
+  const panRef = useRef<{
+    pointerId: number; startX: number; startY: number;
+    startOffX: number; startOffY: number;
+  } | null>(null);
+
+  function startPan(e: React.PointerEvent) {
+    if (!onUpdate || scale <= 1 || !item.imageUrl) return;
+    e.stopPropagation(); e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    panRef.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, startOffX: offX, startOffY: offY };
+  }
+  function movePan(e: React.PointerEvent) {
+    const d = panRef.current;
+    if (!d || e.pointerId !== d.pointerId) return;
+    const maxX = w * (scale - 1) / 2;
+    const maxY = h * (scale - 1) / 2;
+    onUpdate?.({
+      photoOffsetX: Math.max(-maxX, Math.min(maxX, d.startOffX + (e.clientX - d.startX))),
+      photoOffsetY: Math.max(-maxY, Math.min(maxY, d.startOffY + (e.clientY - d.startY))),
+    });
+  }
+  function endPan(e: React.PointerEvent) {
+    if (panRef.current?.pointerId === e.pointerId) panRef.current = null;
+  }
+  function applyZoom(delta: number) {
+    const newScale = Math.max(1, Math.min(3, Math.round((scale + delta) * 4) / 4));
+    const newMaxX = w * (newScale - 1) / 2;
+    const newMaxY = h * (newScale - 1) / 2;
+    onUpdate?.({
+      photoScale: newScale,
+      photoOffsetX: Math.max(-newMaxX, Math.min(newMaxX, offX)),
+      photoOffsetY: Math.max(-newMaxY, Math.min(newMaxY, offY)),
+    });
+  }
+
+  const scaledW = w * scale;
+  const scaledH = h * scale;
+  const imgLeft = (w - scaledW) / 2 + offX;
+  const imgTop = (h - scaledH) / 2 + offY;
+
+  return (
+    <div
+      className={`relative overflow-hidden group/fphoto ${className}`}
+      style={{ width: w, height: h, cursor: scale > 1 && item.imageUrl ? 'grab' : 'default' }}
+      onPointerDown={startPan}
+      onPointerMove={movePan}
+      onPointerUp={endPan}
+      onPointerCancel={endPan}
+    >
+      {item.imageUrl
+        // eslint-disable-next-line @next/next/no-img-element
+        ? <img src={item.imageUrl} alt="" draggable={false}
+            className="absolute object-cover"
+            style={{ width: scaledW, height: scaledH, left: imgLeft, top: imgTop, userSelect: 'none', pointerEvents: 'none' }} />
+        : <div className="w-full h-full" style={{ backgroundColor: item.coloreHex || '#e5e7eb' }} />
+      }
+      {onUpdate && item.imageUrl && (
+        <div className="absolute bottom-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover/fphoto:opacity-100 transition-opacity z-10"
+          onPointerDown={(e) => e.stopPropagation()}>
+          <button type="button"
+            className="w-4 h-4 bg-black/50 text-white rounded text-[10px] flex items-center justify-center leading-none"
+            onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); applyZoom(-0.25); }}
+            title="Rimpicciolisci foto">−</button>
+          <button type="button"
+            className="w-4 h-4 bg-black/50 text-white rounded text-[10px] flex items-center justify-center leading-none"
+            onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); applyZoom(+0.25); }}
+            title="Ingrandisci foto">+</button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1554,13 +1639,18 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
     const item2 = el.items[1];
     const mensole = getMensole(el);
 
+    const updateItem1 = onUpdate
+      ? (patch: Partial<ItemParete>) => onUpdate({ items: [{ ...item1!, ...patch }, ...(item2 ? [item2] : [])] })
+      : undefined;
+    const updateItem2 = onUpdate && item2
+      ? (patch: Partial<ItemParete>) => onUpdate({ items: [item1!, { ...item2, ...patch }] })
+      : undefined;
+
     const frontaleCore = item2 ? (
       <div className="relative group/frontale" style={{ width: FRONTALE_W }}>
         <div className="relative group/fitem1">
-          {item1?.imageUrl
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded-t border border-b-0 border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_TOP_H }} />
-            : <div className="rounded-t border border-b-0 border-gray-200" style={{ backgroundColor: item1?.coloreHex || '#e5e7eb', width: FRONTALE_W, height: FRONTALE_TOP_H }} />}
+          <FrontalePhotoSlot item={item1 ?? { id: '', tipo: 'abito', pezzi: [] }} w={FRONTALE_W} h={FRONTALE_TOP_H}
+            className="rounded-t border border-b-0 border-gray-200" onUpdate={updateItem1} />
           {onUpdate && (
             <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem1:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
               onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: [item2] }); }}
@@ -1568,10 +1658,8 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
           )}
         </div>
         <div className="relative group/fitem2">
-          {item2.imageUrl
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={item2.imageUrl} alt="" draggable={false} className="rounded-b border border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_BOT_H }} />
-            : <div className="rounded-b border border-gray-200" style={{ backgroundColor: item2.coloreHex || '#e5e7eb', width: FRONTALE_W, height: FRONTALE_BOT_H }} />}
+          <FrontalePhotoSlot item={item2} w={FRONTALE_W} h={FRONTALE_BOT_H}
+            className="rounded-b border border-gray-200" onUpdate={updateItem2} />
           {onUpdate && (
             <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem2:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
               onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: item1 ? [item1] : [] }); }}
@@ -1589,10 +1677,11 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
       </div>
     ) : (
       <div className="relative group/fitem1" style={{ width: FRONTALE_W, height: FRONTALE_H }}>
-        {item1?.imageUrl
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded border border-gray-200 object-cover w-full h-full" />
-          : <div className="rounded border border-gray-200 w-full h-full" style={{ backgroundColor: item1?.coloreHex || '#e5e7eb' }} />}
+        {item1
+          ? <FrontalePhotoSlot item={item1} w={FRONTALE_W} h={FRONTALE_H}
+              className="rounded border border-gray-200" onUpdate={updateItem1} />
+          : <div className="rounded border border-gray-200 w-full h-full" style={{ backgroundColor: '#e5e7eb' }} />
+        }
         {onUpdate && item1 && (
           <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem1:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
             onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUpdate({ items: [] }); }}
