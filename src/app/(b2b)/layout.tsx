@@ -22,10 +22,10 @@ const CATALOG_FONT_MAP: Record<string, string> = {
 };
 
 // Paths where the cart sidebar should not be shown (exact match only for home routes)
-const SIDEBAR_HIDDEN_PATHS = ['/catalog/orders', '/orders', '/catalog/destinazioni', '/moda/pareti'];
+const SIDEBAR_HIDDEN_PATHS = ['/catalog/orders', '/orders', '/catalog/destinazioni', '/moda/pareti', '/moda/visual'];
 const SIDEBAR_HIDDEN_EXACT = ['/catalog', '/home'];
 // Paths where <main> must be overflow-hidden (child manages its own scroll)
-const MAIN_CONTAINED_PATHS = ['/moda/pareti'];
+const MAIN_CONTAINED_PATHS = ['/moda/pareti', '/moda/visual'];
 
 export default async function B2BLayout({
   children,
