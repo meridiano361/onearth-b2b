@@ -1029,8 +1029,8 @@ function ElementoCard({
         </div>
         <button type="button" onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
           <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-900 text-white flex-shrink-0">{elLabel}</span>
-          <p className={`text-xs ${pzOver ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
-            {(isMensola ? mensolaItems : el.items).length} prodotti{totalPz > 0 && ` · ${totalPz} pz`}{maxPz !== null && ` / max ${maxPz} pz`}{pzOver && ' — LIMITE SUPERATO'}
+          <p className={`text-2xs ${pzOver ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+            {(isMensola ? mensolaItems : el.items).length} pdt{totalPz > 0 ? ` - ${totalPz}${maxPz !== null ? `/${maxPz}` : ''} pz` : ''}
           </p>
         </button>
         {isBarra && (
@@ -1281,10 +1281,11 @@ function WallRenderer({
   }, [config]);
 
   // Top strip: product photos from mensole (sorted by visual x), color fallback if no image
+  // Top strip: only CLOTHING from mensole (borsa/accessorio excluded — they live on the shelf, not in the strip)
   const topPhotos = useMemo(() => {
     const out: PhotoEntry[] = [];
     function pushMensolaItem(it: ItemParete) {
-      // Use || (not ??) so empty-string coloreHex falls back to tipo color
+      if (it.tipo === 'borsa' || it.tipo === 'accessorio') return;
       out.push({ src: it.imageUrl || null, color: it.coloreHex || colorForTipo(it.tipo), label: it.productName ?? undefined });
     }
     for (const el of configSortedByVisualX) {
@@ -1298,22 +1299,17 @@ function WallRenderer({
     return out;
   }, [configSortedByVisualX]);
 
-  // Bottom strip: ALL products from barra elements — hanging items (el.items) + mensola-on-barra items
+  // Bottom strip: products from barra elements — hanging items (el.items) + mensola-on-barra items
   const bottomPhotos = useMemo(() => {
     const out: PhotoEntry[] = [];
     function pushItem(it: ItemParete) {
-      // Use || (not ??) so empty-string coloreHex falls back to tipo color
       out.push({ src: it.imageUrl || null, color: it.coloreHex || colorForTipo(it.tipo), label: it.productName ?? undefined });
     }
-    // eslint-disable-next-line no-console
-    console.log('[parete-debug] configSortedByVisualX:', configSortedByVisualX.map((el) => ({ id: el.id, tipo: el.tipo, itemsLen: el.items?.length ?? 'UNDEFINED', mensoleLen: el.mensole?.length ?? 0 })));
     for (const el of configSortedByVisualX) {
       if (el.tipo !== 'barra') continue;
       for (const it of el.items) pushItem(it);
       for (const m of getMensole(el)) for (const it of m.items) pushItem(it);
     }
-    // eslint-disable-next-line no-console
-    console.log('[parete-debug] bottomPhotos count:', out.length);
     return out;
   }, [configSortedByVisualX]);
 
@@ -1669,7 +1665,30 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
     const d = itemDragRef.current;
     if (!d || e.pointerId !== d.pointerId) return;
     itemDragRef.current = null;
-    const newItems = config.items.map((it, i) => i === d.idx ? { ...it, offsetX: Math.round(d.lastX) } : it);
+
+    // Reset DOM transform immediately so there's no flicker after state update
+    const domEl = itemElRefs.current.get(d.idx);
+    if (domEl) domEl.style.transform = 'translateX(0px)';
+
+    // Compute natural (flex) X positions assuming all offsetX = 0
+    let natX = 0;
+    const natPos = config.items.map((it) => { const x = natX; natX += mensolaItemVisualW(it) + 2; return x; });
+
+    // Center of dragged item after drag
+    const fromIdx = d.idx;
+    const draggedCenterX = natPos[fromIdx] + mensolaItemVisualW(config.items[fromIdx]) / 2 + d.lastX;
+
+    // Find target slot: item whose center is closest to where the dragged item landed
+    let toIdx = fromIdx;
+    let minDist = Infinity;
+    for (let i = 0; i < config.items.length; i++) {
+      const dist = Math.abs(draggedCenterX - (natPos[i] + mensolaItemVisualW(config.items[i]) / 2));
+      if (dist < minDist) { minDist = dist; toIdx = i; }
+    }
+
+    // Swap and clear all offsetX so items snap back to clean flex positions
+    const newItems = config.items.map((it) => ({ ...it, offsetX: undefined }));
+    if (toIdx !== fromIdx) [newItems[fromIdx], newItems[toIdx]] = [newItems[toIdx], newItems[fromIdx]];
     onUpdate?.({ ...config, items: newItems });
   }
 
@@ -1689,9 +1708,15 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
 
               let inner: React.ReactNode;
               if (it.tipo === 'borsa') {
-                inner = <div className="rounded-sm" style={{ backgroundColor: color, width: 50, height: 50 }} title={`Borsa (${it.pezzi.length}pz)`} />;
+                // eslint-disable-next-line @next/next/no-img-element
+                inner = it.imageUrl
+                  ? <img src={it.imageUrl} alt="" draggable={false} className="object-contain rounded-sm" style={{ width: 50, height: 50 }} title={`Borsa (${it.pezzi.length}pz)`} />
+                  : <div className="rounded-sm" style={{ backgroundColor: color, width: 50, height: 50 }} title={`Borsa (${it.pezzi.length}pz)`} />;
               } else if (it.tipo === 'accessorio') {
-                inner = <div className="rounded-sm" style={{ backgroundColor: color, width: 30, height: 30 }} title={`Accessorio (${it.pezzi.length}pz)`} />;
+                // eslint-disable-next-line @next/next/no-img-element
+                inner = it.imageUrl
+                  ? <img src={it.imageUrl} alt="" draggable={false} className="object-contain rounded-sm" style={{ width: 30, height: 30 }} title={`Accessorio (${it.pezzi.length}pz)`} />
+                  : <div className="rounded-sm" style={{ backgroundColor: color, width: 30, height: 30 }} title={`Accessorio (${it.pezzi.length}pz)`} />;
               } else {
                 const n = Math.max(1, it.pezzi.length);
                 inner = (
@@ -1967,7 +1992,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
               </button>
             )}
             <span className="text-gray-300 text-2xs flex-shrink-0">·</span>
-            <p className="text-2xs text-gray-400 whitespace-nowrap">{config.length} elementi · {totalCapi} capi · {totalPz} pz</p>
+            <p className="text-2xs text-gray-600 whitespace-nowrap">{config.length} elementi · {totalCapi} capi · {totalPz} pz</p>
           </div>
           <div className="flex-shrink-0">
             {saveStatus === 'saving' && <Loader2 size={14} className="animate-spin text-gray-400" />}
@@ -2008,18 +2033,18 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
         {/* RIGHT: preview — fixed, never scrolls, always visible */}
         <div className="w-3/5 flex-shrink-0 flex flex-col bg-white border-l border-gray-200 shadow-sm overflow-hidden z-10">
           <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
-            <p className="text-2xs text-gray-400 uppercase tracking-widest flex-1">Anteprima parete</p>
+            <p className="text-2xs text-gray-600 uppercase tracking-widest flex-1">Anteprima parete</p>
             <button type="button" onClick={handleUndo} disabled={!canUndo} title="Annulla"
-              className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-30 transition-colors">
+              className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-800 disabled:opacity-30 transition-colors">
               <Undo2 size={13} />
             </button>
             <button type="button" onClick={handleRedo} disabled={!canRedo} title="Ripristina"
-              className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-30 transition-colors">
+              className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-800 disabled:opacity-30 transition-colors">
               <Redo2 size={13} />
             </button>
             <div className="w-px h-4 bg-gray-200 mx-1" />
             <button type="button" onClick={() => setPreviewZoom((z) => Math.max(0.4, +(z - 0.15).toFixed(2)))}
-              className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors">
+              className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-800 transition-colors">
               <ZoomOut size={13} />
             </button>
             {editingZoom ? (
@@ -2036,12 +2061,12 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
             ) : (
               <button type="button" title="Clicca per inserire un valore"
                 onClick={() => { setZoomInputVal(String(Math.round(previewZoom * 100))); setEditingZoom(true); }}
-                className="text-2xs text-gray-400 font-mono w-8 text-center hover:text-gray-700 transition-colors">
+                className="text-2xs text-gray-600 font-mono w-8 text-center hover:text-gray-800 transition-colors">
                 {Math.round(previewZoom * 100)}%
               </button>
             )}
             <button type="button" onClick={() => setPreviewZoom((z) => Math.min(2, +(z + 0.15).toFixed(2)))}
-              className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors">
+              className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-800 transition-colors">
               <ZoomIn size={13} />
             </button>
             <div className="w-px h-4 bg-gray-200 mx-1" />
