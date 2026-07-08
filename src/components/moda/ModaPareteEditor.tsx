@@ -1559,7 +1559,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
         <div className="relative group/fitem1">
           {item1?.imageUrl
             // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded-t border border-b-0 border-gray-200 object-contain bg-white" style={{ width: FRONTALE_W, height: FRONTALE_TOP_H }} />
+            ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded-t border border-b-0 border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_TOP_H }} />
             : <div className="rounded-t border border-b-0 border-gray-200" style={{ backgroundColor: item1?.coloreHex || '#e5e7eb', width: FRONTALE_W, height: FRONTALE_TOP_H }} />}
           {onUpdate && (
             <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem1:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
@@ -1570,7 +1570,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
         <div className="relative group/fitem2">
           {item2.imageUrl
             // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={item2.imageUrl} alt="" draggable={false} className="rounded-b border border-gray-200 object-contain bg-white" style={{ width: FRONTALE_W, height: FRONTALE_BOT_H }} />
+            ? <img src={item2.imageUrl} alt="" draggable={false} className="rounded-b border border-gray-200 object-cover" style={{ width: FRONTALE_W, height: FRONTALE_BOT_H }} />
             : <div className="rounded-b border border-gray-200" style={{ backgroundColor: item2.coloreHex || '#e5e7eb', width: FRONTALE_W, height: FRONTALE_BOT_H }} />}
           {onUpdate && (
             <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem2:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
@@ -1591,7 +1591,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
       <div className="relative group/fitem1" style={{ width: FRONTALE_W, height: FRONTALE_H }}>
         {item1?.imageUrl
           // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded border border-gray-200 object-contain bg-white w-full h-full" />
+          ? <img src={item1.imageUrl} alt="" draggable={false} className="rounded border border-gray-200 object-cover w-full h-full" />
           : <div className="rounded border border-gray-200 w-full h-full" style={{ backgroundColor: item1?.coloreHex || '#e5e7eb' }} />}
         {onUpdate && item1 && (
           <button type="button" className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover/fitem1:opacity-100 transition-opacity flex items-center justify-center z-10 cursor-pointer"
