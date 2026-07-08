@@ -1305,11 +1305,15 @@ function WallRenderer({
       // Use || (not ??) so empty-string coloreHex falls back to tipo color
       out.push({ src: it.imageUrl || null, color: it.coloreHex || colorForTipo(it.tipo), label: it.productName ?? undefined });
     }
+    // eslint-disable-next-line no-console
+    console.log('[parete-debug] configSortedByVisualX:', configSortedByVisualX.map((el) => ({ id: el.id, tipo: el.tipo, itemsLen: el.items?.length ?? 'UNDEFINED', mensoleLen: el.mensole?.length ?? 0 })));
     for (const el of configSortedByVisualX) {
       if (el.tipo !== 'barra') continue;
       for (const it of el.items) pushItem(it);
       for (const m of getMensole(el)) for (const it of m.items) pushItem(it);
     }
+    // eslint-disable-next-line no-console
+    console.log('[parete-debug] bottomPhotos count:', out.length);
     return out;
   }, [configSortedByVisualX]);
 
