@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import NotificationBell from '@/components/layout/NotificationBell';
 import { useSettings } from '@/contexts/SettingsContext';
+import { isAdminRole } from '@/lib/roles';
 
 const CASA_NAV_CONFIG: Record<string, { href: string; isActive: (p: string) => boolean }> = {
   catalogo:     { href: '/catalog/products',    isActive: (p) => p.startsWith('/catalog/products') },
@@ -44,6 +45,7 @@ export default function Header({ session }: HeaderProps) {
 
   const isHome = pathname === '/home';
   const isInModa = pathname.startsWith('/moda');
+  const isAdmin = isAdminRole(session.user.role);
 
   return (
     <header className="bg-white border-b border-border flex-shrink-0 z-10 pt-safe">
@@ -77,8 +79,8 @@ export default function Header({ session }: HeaderProps) {
                     {label}
                   </Link>
                 ))}
-                {/* Visual dropdown */}
-                <div className="relative group">
+                {/* Visual dropdown — solo admin */}
+                {isAdmin && <div className="relative group">
                   <button
                     className={cn(
                       'text-xs px-3 py-1.5 rounded transition-colors',
@@ -103,7 +105,7 @@ export default function Header({ session }: HeaderProps) {
                       </Link>
                     ))}
                   </div>
-                </div>
+                </div>}
               </>
             : menu.ordine
                 .filter((key) => menu.items[key]?.visibile && CASA_NAV_CONFIG[key])

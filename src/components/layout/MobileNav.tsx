@@ -63,7 +63,10 @@ function getNavItems(pathname: string, isAdmin: boolean): NavItem[] {
   const tail = isAdmin ? ADMIN_ITEM : AIUTO_ITEM;
 
   if (pathname === '/home') return [tail];
-  if (pathname.startsWith('/moda')) return [...MODA_BASE, tail];
+  if (pathname.startsWith('/moda')) {
+    const moda = isAdmin ? MODA_BASE : MODA_BASE.filter((i) => i.href !== '/moda/pareti' && !i.href.startsWith('/moda/visual'));
+    return [...moda, tail];
+  }
   if (pathname.startsWith('/catalog/') || pathname.startsWith('/casa')) return [...CASA_BASE, tail];
   return [HOME_ITEM, tail];
 }
