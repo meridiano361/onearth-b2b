@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power, Shirt, Home, Copy, Download } from 'lucide-react';
+import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power, Shirt, Home, Copy, Download, Columns2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -22,6 +22,28 @@ type FotoFilter = 'all' | 'con-foto' | 'senza-foto' | 'foto-multiple';
 type TemaColorePresenzaFilter = 'all' | 'con-tema' | 'senza-tema';
 type SortField = 'code' | 'name' | 'produttore' | 'collezione' | 'costPrice' | 'retailPrice';
 type SortDir = 'asc' | 'desc';
+type ColKey = 'produttore' | 'collezione' | 'temaColore' | 'costPrice' | 'retailPrice' | 'sconto' | 'ricarico' | 'foto' | 'stato';
+
+const ALL_COLS: { key: ColKey; label: string }[] = [
+  { key: 'produttore',  label: 'Produttore'  },
+  { key: 'collezione',  label: 'Collezione'  },
+  { key: 'temaColore',  label: 'Tema colore' },
+  { key: 'costPrice',   label: 'Costo i.e.'  },
+  { key: 'retailPrice', label: 'Vendita i.i.' },
+  { key: 'sconto',      label: '% Sconto'    },
+  { key: 'ricarico',    label: '% Ricarico'  },
+  { key: 'foto',        label: 'Foto'        },
+  { key: 'stato',       label: 'Stato'       },
+];
+const DEFAULT_COLS: ColKey[] = ['produttore', 'collezione', 'costPrice', 'retailPrice', 'sconto', 'ricarico', 'foto', 'stato'];
+
+function loadSavedCols(): Set<ColKey> {
+  try {
+    const raw = localStorage.getItem('admin-products-cols');
+    if (raw) return new Set(JSON.parse(raw) as ColKey[]);
+  } catch {}
+  return new Set(DEFAULT_COLS);
+}
 
 interface BulkEditValues {
   // Anagrafica
@@ -115,6 +137,19 @@ export default function AdminProductsPage() {
   // Sort
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  // Column picker
+  const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(() => loadSavedCols());
+  const [showColPicker, setShowColPicker] = useState(false);
+
+  function toggleCol(k: ColKey) {
+    setVisibleCols((prev) => {
+      const next = new Set(prev);
+      next.has(k) ? next.delete(k) : next.add(k);
+      try { localStorage.setItem('admin-products-cols', JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
 
   // CSV export
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -764,35 +799,83 @@ export default function AdminProductsPage() {
         </div>
       )}
 
+      {/* Table header row: column picker */}
+      <div className="flex items-center justify-end mb-1.5">
+        <div className="relative">
+          <button
+            onClick={() => setShowColPicker((v) => !v)}
+            className="flex items-center gap-1.5 h-7 px-2.5 text-xs text-gray-500 border border-border rounded hover:bg-cream hover:text-primary transition-colors"
+          >
+            <Columns2 size={12} />
+            Colonne
+          </button>
+          {showColPicker && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowColPicker(false)} />
+              <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-border rounded shadow-lg p-3 w-44 space-y-1">
+                <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Colonne visibili</p>
+                {ALL_COLS.map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-2 cursor-pointer hover:text-primary text-xs text-gray-600 py-0.5 select-none">
+                    <input
+                      type="checkbox"
+                      checked={visibleCols.has(key)}
+                      onChange={() => toggleCol(key)}
+                      className="w-3.5 h-3.5 accent-accent cursor-pointer"
+                    />
+                    {label}
+                  </label>
+                ))}
+                <div className="border-t border-border pt-1 mt-1">
+                  <button
+                    onClick={() => {
+                      const next = new Set(DEFAULT_COLS);
+                      setVisibleCols(next);
+                      try { localStorage.setItem('admin-products-cols', JSON.stringify([...next])); } catch {}
+                      setShowColPicker(false);
+                    }}
+                    className="text-2xs text-accent hover:underline"
+                  >
+                    Ripristina predefinite
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Table */}
-      <div className="bg-white border border-border rounded overflow-hidden overflow-x-auto">
-        <table className="table-luxury w-full min-w-[640px]">
+      <div className="bg-white border border-border rounded overflow-hidden">
+        <table className="table-luxury w-full">
           <thead>
             <tr>
               <th className="w-8">
                 <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} className="w-3.5 h-3.5 accent-accent cursor-pointer" disabled={products.length === 0} />
               </th>
-              <th>{thBtn('code', 'Codice')}</th>
+              <th className="w-24">{thBtn('code', 'Codice')}</th>
               <th>{thBtn('name', 'Descrizione')}</th>
-              <th>{thBtn('produttore', 'Produttore')}</th>
-              <th className="hidden sm:table-cell">{thBtn('collezione', 'Collezione')}</th>
-              <th className="hidden lg:table-cell">Tema colore</th>
-              <th>{thBtn('costPrice', 'Costo i.e.')}</th>
-              <th>{thBtn('retailPrice', 'Vendita i.i.')}</th>
-              <th>% Sc.</th>
-              <th>% Ric.</th>
-              <th className="text-center">Foto</th>
-              <th>Stato</th>
-              <th className="w-20"></th>
+              {visibleCols.has('produttore')  && <th className="w-28">{thBtn('produttore', 'Produttore')}</th>}
+              {visibleCols.has('collezione')  && <th className="w-24">{thBtn('collezione', 'Collezione')}</th>}
+              {visibleCols.has('temaColore')  && <th className="w-28">Tema colore</th>}
+              {visibleCols.has('costPrice')   && <th className="w-24">{thBtn('costPrice', 'Costo i.e.')}</th>}
+              {visibleCols.has('retailPrice') && <th className="w-24">{thBtn('retailPrice', 'Vendita i.i.')}</th>}
+              {visibleCols.has('sconto')      && <th className="w-16 text-center">% Sc.</th>}
+              {visibleCols.has('ricarico')    && <th className="w-16 text-center">% Ric.</th>}
+              {visibleCols.has('foto')        && <th className="w-12 text-center">Foto</th>}
+              {visibleCols.has('stato')       && <th className="w-16">Stato</th>}
+              <th className="w-24"></th>
             </tr>
           </thead>
           <tbody>
-            {isLoading ? (
-              <tr><td colSpan={13} className="py-12 text-center"><LoadingSpinner className="mx-auto" /></td></tr>
-            ) : products.length === 0 ? (
-              <tr><td colSpan={13} className="py-12 text-center text-gray-400 text-sm">Nessun prodotto trovato</td></tr>
-            ) : (
-              products.map((product) => {
+            {(() => {
+              const colCount = 4 + visibleCols.size;
+              if (isLoading) return (
+                <tr><td colSpan={colCount} className="py-12 text-center"><LoadingSpinner className="mx-auto" /></td></tr>
+              );
+              if (products.length === 0) return (
+                <tr><td colSpan={colCount} className="py-12 text-center text-gray-400 text-sm">Nessun prodotto trovato</td></tr>
+              );
+              return products.map((product) => {
                 const ivaFactor = 1 + (product.iva ?? 22) / 100;
                 const pvn = product.retailPrice / ivaFactor;
                 const ricarico = product.costPrice > 0 ? ((pvn - product.costPrice) / product.costPrice) * 100 : null;
@@ -800,40 +883,48 @@ export default function AdminProductsPage() {
                   <tr key={product.id} className={selectedIds.has(product.id) ? 'bg-accent/5' : undefined}>
                     <td><input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="w-3.5 h-3.5 accent-accent cursor-pointer" /></td>
                     <td><span className="font-mono text-xs text-gray-500">{product.code}</span></td>
-                    <td><p className="font-medium text-primary text-xs">{product.name}</p></td>
-                    <td><span className="text-xs text-gray-500">{product.produttore || '—'}</span></td>
-                    <td className="hidden sm:table-cell"><span className="text-xs text-gray-500">{product.collezione || '—'}</span></td>
-                    <td className="hidden lg:table-cell">
-                      {hasTemaColore(product)
-                        ? <span className="inline-flex items-center gap-1 text-2xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded max-w-[120px] truncate" title={[product.temaColore, product.temaColore2, product.temaColore3, product.temaColore4, product.temaColore5].filter(Boolean).join(', ')}>{product.temaColore}</span>
-                        : <span className="text-xs text-gray-300">—</span>
-                      }
-                    </td>
-                    <td className="font-medium text-xs">{formatCurrency(product.costPrice)}</td>
-                    <td className="text-xs text-gray-500">{formatCurrency(product.retailPrice)}</td>
-                    <td className="text-xs text-center">
-                      {(() => {
-                        const sc = computeSconto(product);
-                        const color = sc > 40 ? 'text-green-600' : sc >= 30 ? 'text-yellow-600' : 'text-red-500';
-                        return <span className={color}>{sc.toFixed(1)}%</span>;
-                      })()}
-                    </td>
-                    <td className="text-xs text-center">
-                      {ricarico !== null ? (
-                        <span className={ricarico >= 0 ? 'text-green-600' : 'text-red-500'}>
-                          {ricarico >= 0 ? '+' : ''}{ricarico.toFixed(1)}%
-                        </span>
-                      ) : <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="text-center whitespace-nowrap">
-                      {(() => {
-                        const cnt = [product.imageUrl, product.imageUrl2, product.imageUrl3, product.imageUrl4].filter(Boolean).length;
-                        return cnt > 0
-                          ? <span className="text-xs text-green-600">📷 {cnt}</span>
-                          : <span className="text-xs text-gray-300">📷</span>;
-                      })()}
-                    </td>
-                    <td><Badge variant={product.isActive ? 'success' : 'default'} size="xs">{product.isActive ? 'Attivo' : 'Inattivo'}</Badge></td>
+                    <td className="max-w-[200px]"><p className="font-medium text-primary text-xs truncate" title={product.name}>{product.name}</p></td>
+                    {visibleCols.has('produttore')  && <td><span className="text-xs text-gray-500 truncate block max-w-[110px]">{product.produttore || '—'}</span></td>}
+                    {visibleCols.has('collezione')  && <td><span className="text-xs text-gray-500">{product.collezione || '—'}</span></td>}
+                    {visibleCols.has('temaColore')  && (
+                      <td>
+                        {hasTemaColore(product)
+                          ? <span className="inline-flex items-center gap-1 text-2xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded max-w-[110px] truncate" title={[product.temaColore, product.temaColore2, product.temaColore3, product.temaColore4, product.temaColore5].filter(Boolean).join(', ')}>{product.temaColore}</span>
+                          : <span className="text-xs text-gray-300">—</span>
+                        }
+                      </td>
+                    )}
+                    {visibleCols.has('costPrice')   && <td className="font-medium text-xs">{formatCurrency(product.costPrice)}</td>}
+                    {visibleCols.has('retailPrice') && <td className="text-xs text-gray-500">{formatCurrency(product.retailPrice)}</td>}
+                    {visibleCols.has('sconto')      && (
+                      <td className="text-xs text-center">
+                        {(() => {
+                          const sc = computeSconto(product);
+                          const color = sc > 40 ? 'text-green-600' : sc >= 30 ? 'text-yellow-600' : 'text-red-500';
+                          return <span className={color}>{sc.toFixed(1)}%</span>;
+                        })()}
+                      </td>
+                    )}
+                    {visibleCols.has('ricarico')    && (
+                      <td className="text-xs text-center">
+                        {ricarico !== null ? (
+                          <span className={ricarico >= 0 ? 'text-green-600' : 'text-red-500'}>
+                            {ricarico >= 0 ? '+' : ''}{ricarico.toFixed(1)}%
+                          </span>
+                        ) : <span className="text-gray-300">—</span>}
+                      </td>
+                    )}
+                    {visibleCols.has('foto')        && (
+                      <td className="text-center whitespace-nowrap">
+                        {(() => {
+                          const cnt = [product.imageUrl, product.imageUrl2, product.imageUrl3, product.imageUrl4].filter(Boolean).length;
+                          return cnt > 0
+                            ? <span className="text-xs text-green-600">📷 {cnt}</span>
+                            : <span className="text-xs text-gray-300">📷</span>;
+                        })()}
+                      </td>
+                    )}
+                    {visibleCols.has('stato')       && <td><Badge variant={product.isActive ? 'success' : 'default'} size="xs">{product.isActive ? 'Attivo' : 'Inattivo'}</Badge></td>}
                     <td>
                       <div className="flex items-center gap-1">
                         <button onClick={() => setPreviewProduct(product)} className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Anteprima"><Eye size={13} /></button>
@@ -847,8 +938,8 @@ export default function AdminProductsPage() {
                     </td>
                   </tr>
                 );
-              })
-            )}
+              });
+            })()}
           </tbody>
         </table>
       </div>
