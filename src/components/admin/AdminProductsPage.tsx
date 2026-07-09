@@ -601,6 +601,9 @@ export default function AdminProductsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          <Button variant="secondary" icon={<Upload size={13} />} onClick={() => setShowImport(true)}>
+            <span className="hidden sm:inline">Importa da Excel</span>
+          </Button>
           <Button variant="secondary" icon={<ImagePlus size={13} />} onClick={() => setShowBulkImages(true)}>
             <span className="hidden sm:inline">Carica foto in blocco</span>
           </Button>
