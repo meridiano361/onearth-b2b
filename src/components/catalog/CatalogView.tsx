@@ -121,10 +121,12 @@ const CHIP_LABELS: { key: keyof Filters; label: string }[] = [
 export default function CatalogView({
   lockedCollezione,
   lockedGruppoMerceologico,
+  lockedFamiglia,
   excludeGruppoMerceologico,
 }: {
   lockedCollezione?: string;
   lockedGruppoMerceologico?: string;
+  lockedFamiglia?: string;
   excludeGruppoMerceologico?: string;
 } = {}) {
   const { data: session } = useSession();
@@ -141,8 +143,9 @@ export default function CatalogView({
       const v = searchParams.get(urlKey);
       if (v) (init as any)[filterKey] = v;
     }
-    // Locked collection always overrides URL param
+    // Locked values always override URL params
     if (lockedCollezione) init.collezione = lockedCollezione;
+    if (lockedFamiglia)   init.famiglia   = lockedFamiglia;
     return init;
   });
 
@@ -194,7 +197,11 @@ export default function CatalogView({
   }
 
   function handleResetAll() {
-    const reset = lockedCollezione ? { ...EMPTY_FILTERS, collezione: lockedCollezione } : EMPTY_FILTERS;
+    const reset = {
+      ...EMPTY_FILTERS,
+      ...(lockedCollezione ? { collezione: lockedCollezione } : {}),
+      ...(lockedFamiglia   ? { famiglia:   lockedFamiglia   } : {}),
+    };
     setFilters(reset);
     setBloccoColoreFilter(null);
     updateUrl(reset, sortBy, search, null);
@@ -291,6 +298,9 @@ export default function CatalogView({
     if (excludeGruppoMerceologico) {
       base = base.filter((p) => p.gruppoMerceologico?.toLowerCase() !== excludeGruppoMerceologico.toLowerCase());
     }
+    if (lockedFamiglia) {
+      base = base.filter((p) => p.famiglia?.toLowerCase() === lockedFamiglia.toLowerCase());
+    }
     return base;
   }, [products, lockedGruppoMerceologico, excludeGruppoMerceologico]);
 
@@ -322,7 +332,7 @@ export default function CatalogView({
     if (colore)             result = result.filter((p) => p.colore             === colore);
     if (temaColore)         result = result.filter((p) => [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].includes(temaColore));
     if (stagione)           result = result.filter((p) => p.stagione           === stagione);
-    if (collezione)         result = result.filter((p) => p.collezione         === collezione);
+    if (collezione)         result = result.filter((p) => p.collezione?.toLowerCase() === collezione.toLowerCase());
     if (produttore)         result = result.filter((p) => p.produttore         === produttore);
     if (tranche)            result = result.filter((p) => p.tranche            === tranche);
     if (bloccoColoreFilter) result = result.filter((p) => (p.colorBlockIds ?? []).includes(bloccoColoreFilter.id));
@@ -382,6 +392,7 @@ export default function CatalogView({
       onResetAll: handleResetAll,
       enabledFilters,
       lockedCollezione,
+      lockedFamiglia,
     };
   }
 
@@ -591,7 +602,7 @@ export default function CatalogView({
         {hasActiveFilters && (
           <div className="hidden md:flex flex-wrap gap-1.5 px-6 py-2 border-b border-border/50 bg-cream/30">
             {CHIP_LABELS.map(({ key, label }) =>
-              filters[key] && !(lockedCollezione && key === 'collezione') ? (
+              filters[key] && !(lockedCollezione && key === 'collezione') && !(lockedFamiglia && key === 'famiglia') ? (
                 <span key={key} className="inline-flex items-center gap-1 text-2xs bg-white border border-border rounded-full px-2.5 py-1 text-primary">
                   <span className="text-gray-400">{label}:</span> {filters[key]}
                   <button onClick={() => setFilter(key, null)} className="text-gray-400 hover:text-primary ml-0.5">

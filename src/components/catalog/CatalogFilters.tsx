@@ -38,6 +38,7 @@ interface CatalogFiltersProps {
   onResetAll: () => void;
   enabledFilters?: string[] | null;
   lockedCollezione?: string;
+  lockedFamiglia?: string;
 }
 
 type FilterRecord = Record<string, string | null>;
@@ -153,6 +154,7 @@ export default function CatalogFilters({
   hasActiveFilters,           onResetAll,
   enabledFilters,
   lockedCollezione,
+  lockedFamiglia,
 }: CatalogFiltersProps) {
   const t = useTranslations('filters');
 
@@ -221,7 +223,7 @@ export default function CatalogFilters({
         </div>
 
         {show('gruppoMerceologico') && <FilterSelect label={t('gruppoMerceologico')} allLabel={t('all')} value={selectedGruppoMerceologico} options={opts.gruppoMerceologico} onChange={onGruppoMerceologicoChange} />}
-        {show('famiglia')           && <FilterSelect label={t('famiglia')}           allLabel={t('all')} value={selectedFamiglia}           options={opts.famiglia}           onChange={onFamigliaChange} />}
+        {show('famiglia') && !lockedFamiglia && <FilterSelect label={t('famiglia')} allLabel={t('all')} value={selectedFamiglia} options={opts.famiglia} onChange={onFamigliaChange} />}
         {show('classe')             && <FilterSelect label={t('classe')}             allLabel={t('all')} value={selectedClasse}             options={opts.classe}             onChange={onClasseChange} />}
         {show('sottoclasse')        && <FilterSelect label={t('sottoclasse')}        allLabel={t('all')} value={selectedSottoclasse}        options={opts.sottoclasse}        onChange={onSottoclasseChange} />}
         {show('gruppoOmogeneo')     && <FilterSelect label={t('gruppoOmogeneo')}     allLabel={t('all')} value={selectedGruppoOmogeneo}     options={opts.gruppoOmogeneo}     onChange={onGruppoOmogeneoChange} />}

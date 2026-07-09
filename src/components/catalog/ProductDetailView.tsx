@@ -113,12 +113,12 @@ export default function ProductDetailView({ id }: Props) {
   ];
 
   const detailFields: { key: string; label: string; show?: boolean }[] = [
-    { key: 'produttore', label: 'Produttore', show: ss.produttore },
-    { key: 'conferente', label: 'Conferente' },
-    { key: 'paese',      label: 'Paese',      show: ss.paese },
-    { key: 'misura',     label: 'Misura',     show: ss.misure },
-    { key: 'modello',    label: 'Modello' },
     { key: 'dettaglio',  label: 'Dettaglio' },
+    { key: 'modello',    label: 'Modello' },
+    { key: 'misura',     label: 'Misura',     show: ss.misure },
+    { key: 'produttore', label: 'Produttore', show: ss.produttore },
+    { key: 'paese',      label: 'Paese',      show: ss.paese },
+    { key: 'conferente', label: 'Conferente' },
     { key: 'forma',      label: 'Forma' },
     { key: 'taglia',     label: 'Taglia' },
     { key: 'lotSize',    label: 'Confezione', show: ss.confezione },
