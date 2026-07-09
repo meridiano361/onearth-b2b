@@ -298,6 +298,8 @@ export type ProductForPDF = {
   description: string | null;
   costPrice: number;
   retailPrice: number;
+  costoIeConReso?: number | null;
+  costoIeSenzaReso?: number | null;
   lotSize: number;
   misura: string | null;
   produttore: string | null;
@@ -1019,14 +1021,29 @@ function ProductCard({
               <View style={[s.priceItem, { alignItems: 'flex-end' }]}>
                 {f.prezzoCosto && (
                   <View style={{ alignItems: alignToFlex(cfs.prezzoCosto.align) }}>
-                    <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Costo i.e.</Text>
-                    <Text style={{
-                      fontSize: cfs.prezzoCosto.fontSize,
-                      fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia),
-                      color: cfs.prezzoCosto.color,
-                    }}>
-                      {euro(product.costPrice)}
-                    </Text>
+                    {product.costoIeConReso != null ? (
+                      <>
+                        <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Con reso</Text>
+                        <Text style={{ fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color }}>
+                          {euro(product.costoIeConReso)}
+                        </Text>
+                        {product.costoIeSenzaReso != null && (
+                          <>
+                            <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color, marginTop: 2 }]}>Senza reso</Text>
+                            <Text style={{ fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color }}>
+                              {euro(product.costoIeSenzaReso)}
+                            </Text>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Costo i.e.</Text>
+                        <Text style={{ fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color }}>
+                          {euro(product.costPrice)}
+                        </Text>
+                      </>
+                    )}
                   </View>
                 )}
                 {f.pvp && (

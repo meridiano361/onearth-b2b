@@ -364,7 +364,10 @@ export default function AdminProductsPage() {
       if (filterGruppoOmogeneo && p.gruppoOmogeneo !== filterGruppoOmogeneo) return false;
       if (filterColore && p.colore !== filterColore) return false;
       if (filterTemaColore && ![p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].includes(filterTemaColore)) return false;
-      if (filterCollezione && p.collezione !== filterCollezione) return false;
+      if (filterCollezione) {
+        if (filterCollezione === '__empty__') { if (p.collezione) return false; }
+        else if (p.collezione !== filterCollezione) return false;
+      }
       if (filterLinea && p.nomLinea !== filterLinea) return false;
       if (filterProduttore && p.produttore !== filterProduttore) return false;
       if (filterTranche && p.tranche !== filterTranche) return false;
@@ -879,6 +882,7 @@ export default function AdminProductsPage() {
           </select>
           <select value={filterCollezione} onChange={(e) => setFilterCollezione(e.target.value)} className={selectClass}>
             <option value="">Collezione</option>
+            <option value="__empty__">(nessuna)</option>
             {collezioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
           <select value={filterLinea} onChange={(e) => setFilterLinea(e.target.value)} className={selectClass}>
