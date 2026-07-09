@@ -187,6 +187,7 @@ function detectColumns(headers: string[]): {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const LS_KEY = 'import-fields-v1';
+const LS_LAST_IMPORT = 'import-last-result-v1';
 
 const FIELD_LABELS: Record<string, string> = {
   code:               'Codice prodotto',
@@ -324,6 +325,7 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
   const [modalita, setModalita] = useState<'upsert' | 'solo-aggiorna' | 'solo-crea'>('upsert');
   const [applicaSelezioneCampiAiNuovi, setApplicaSelezioneCampiAiNuovi] = useState(false);
   const [forzaGruppo, setForzaGruppo] = useState<string>('');
+  const [lastImportDismissed, setLastImportDismissed] = useState(false);
 
   useEffect(() => {
     try {
@@ -524,6 +526,16 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
       setResult(data);
       setRecognitionLog(buildRecognitionLog());
       setStep('done');
+      try {
+        localStorage.setItem(LS_LAST_IMPORT, JSON.stringify({
+          date: new Date().toISOString(),
+          filename: file?.name ?? null,
+          created: data.created ?? 0,
+          updated: data.updated,
+          skipped: data.skipped ?? 0,
+          errors: data.errors.length,
+        }));
+      } catch { /* ignore */ }
       if (data.updated > 0 || (data.created ?? 0) > 0) {
         const parts: string[] = [];
         if (data.updated > 0) parts.push(`${data.updated} aggiornati`);
@@ -541,8 +553,41 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
   // ─── Step 1: Upload ─────────────────────────────────────────────────────────
 
   if (step === 'upload') {
+    let lastImport: { date: string; filename: string | null; created: number; updated: number; skipped: number; errors: number } | null = null;
+    if (!lastImportDismissed) {
+      try {
+        const raw = localStorage.getItem(LS_LAST_IMPORT);
+        if (raw) lastImport = JSON.parse(raw);
+      } catch { /* ignore */ }
+    }
+
     return (
       <div>
+        {lastImport && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-blue-800 mb-0.5">Ultima importazione</p>
+              <p className="text-xs text-blue-700">
+                {new Date(lastImport.date).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                {lastImport.filename && <span className="text-blue-500"> · {lastImport.filename}</span>}
+              </p>
+              <p className="text-xs text-blue-700 mt-1">
+                {[
+                  lastImport.created > 0 ? `${lastImport.created} creati` : null,
+                  lastImport.updated > 0 ? `${lastImport.updated} aggiornati` : null,
+                  lastImport.skipped > 0 ? `${lastImport.skipped} ignorati` : null,
+                  lastImport.errors > 0 ? `${lastImport.errors} errori` : null,
+                ].filter(Boolean).join(' · ')}
+              </p>
+            </div>
+            <button
+              onClick={() => setLastImportDismissed(true)}
+              className="text-blue-400 hover:text-blue-700 flex-shrink-0"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all ${
