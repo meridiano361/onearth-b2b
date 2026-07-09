@@ -608,10 +608,6 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     const finalPantones: ProductPantoneEntry[] = isModaProduct
       ? (pantoneSlots.filter(Boolean) as ProductPantoneEntry[]).map((p, i) => ({ ...p, sortOrder: i, isPrimary: i === 0 }))
       : selectedPantones;
-    if (isModaProduct && finalPantones.length === 0) {
-      setPantoneError('Il Pantone è obbligatorio per i prodotti MODA');
-      return;
-    }
     setPantoneError(null);
 
     if (isModaProduct) {
