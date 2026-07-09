@@ -269,22 +269,24 @@ export default function ProductDetailView({ id }: Props) {
             )}
             {ss.prezzoCosto && (
               <div className="mt-1 space-y-0.5">
-                {(product as any).costoIeConReso != null ? (
-                  <>
-                    <p className="text-xs text-gray-400">
-                      Costo i.e. con reso: <span className="font-medium text-primary">{formatCurrency((product as any).costoIeConReso)}</span>
-                    </p>
-                    {(product as any).costoIeSenzaReso != null && (
-                      <p className="text-xs text-gray-400">
-                        Costo i.e. senza reso: <span className="font-medium text-primary">{formatCurrency((product as any).costoIeSenzaReso)}</span>
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-xs text-gray-400">
-                    {tp('cost')}: {formatCurrency(product.costPrice)}
-                  </p>
-                )}
+                {(() => {
+                  const conReso = Number((product as any).costoIeConReso);
+                  const senzaReso = Number((product as any).costoIeSenzaReso);
+                  const hasConReso = conReso > 0;
+                  const hasSenzaReso = senzaReso > 0;
+                  return (hasConReso || hasSenzaReso) ? (
+                    <>
+                      {hasConReso && (
+                        <p className="text-xs text-gray-400">Con reso: <span className="font-medium text-primary">{formatCurrency(conReso)}</span></p>
+                      )}
+                      {hasSenzaReso && (
+                        <p className="text-xs text-gray-400">Senza reso: <span className="font-medium text-primary">{formatCurrency(senzaReso)}</span></p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-400">{tp('cost')}: {formatCurrency(product.costPrice)}</p>
+                  );
+                })()}
               </div>
             )}
           </div>

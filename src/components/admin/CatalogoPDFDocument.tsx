@@ -1021,29 +1021,34 @@ function ProductCard({
               <View style={[s.priceItem, { alignItems: 'flex-end' }]}>
                 {f.prezzoCosto && (
                   <View style={{ alignItems: alignToFlex(cfs.prezzoCosto.align) }}>
-                    {product.costoIeConReso != null ? (
-                      <>
-                        <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Con reso</Text>
-                        <Text style={{ fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color }}>
-                          {euro(product.costoIeConReso)}
-                        </Text>
-                        {product.costoIeSenzaReso != null && (
-                          <>
-                            <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color, marginTop: 2 }]}>Senza reso</Text>
-                            <Text style={{ fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color }}>
-                              {euro(product.costoIeSenzaReso)}
-                            </Text>
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Costo i.e.</Text>
-                        <Text style={{ fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color }}>
-                          {euro(product.costPrice)}
-                        </Text>
-                      </>
-                    )}
+                    {(() => {
+                      const conReso = Number(product.costoIeConReso);
+                      const senzaReso = Number(product.costoIeSenzaReso);
+                      const hasConReso = conReso > 0;
+                      const hasSenzaReso = senzaReso > 0;
+                      const ts = { fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color };
+                      return (hasConReso || hasSenzaReso) ? (
+                        <>
+                          {hasConReso && (
+                            <>
+                              <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Con reso</Text>
+                              <Text style={ts}>{euro(conReso)}</Text>
+                            </>
+                          )}
+                          {hasSenzaReso && (
+                            <>
+                              <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color, marginTop: hasConReso ? 2 : 0 }]}>Senza reso</Text>
+                              <Text style={ts}>{euro(senzaReso)}</Text>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Costo i.e.</Text>
+                          <Text style={ts}>{euro(product.costPrice)}</Text>
+                        </>
+                      );
+                    })()}
                   </View>
                 )}
                 {f.pvp && (
