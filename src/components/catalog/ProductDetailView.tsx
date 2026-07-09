@@ -42,7 +42,7 @@ function ProductGallery({ product }: { product: Product }) {
           touchStartX.current = null;
         }}
       >
-        <ProductImage src={photos[active]} alt={product.name} className="w-full h-full object-cover" />
+        <ProductImage src={photos[active]} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
         {photos.length > 1 && (
           <>
             <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/80 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors">

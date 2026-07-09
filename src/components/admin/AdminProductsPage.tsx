@@ -280,7 +280,7 @@ export default function AdminProductsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-products'],
     queryFn: async () => {
-      const res = await fetch('/api/products?limit=500');
+      const res = await fetch('/api/products?limit=9999');
       if (!res.ok) throw new Error('Failed');
       return res.json();
     },

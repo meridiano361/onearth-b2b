@@ -66,7 +66,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <ProductImage
             src={product.imageUrl ?? product.imageUrl2 ?? product.imageUrl3 ?? product.imageUrl4 ?? product.imageUrl5}
             alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
 
           {/* Heart / favorite */}
