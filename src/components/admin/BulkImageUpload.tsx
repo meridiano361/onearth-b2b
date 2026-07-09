@@ -33,6 +33,7 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleFiles(files: FileList | null) {
@@ -80,25 +81,60 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
   }
 
   async function handleUpload() {
-    if (!entries.length) return;
+    const validEntries = entries.filter((e) => e.valid);
+    if (!validEntries.length) return;
+
+    const BATCH_SIZE = 5;
+    const batches: FileEntry[][] = [];
+    for (let i = 0; i < validEntries.length; i += BATCH_SIZE) {
+      batches.push(validEntries.slice(i, i + BATCH_SIZE));
+    }
+
     setIsUploading(true);
+    setUploadProgress({ done: 0, total: validEntries.length });
+
+    const aggregate: UploadResult = {
+      uploaded: 0,
+      uploadedLinked: 0,
+      uploadedOrphan: 0,
+      notFound: [],
+      errors: [],
+      nonConforming: [],
+      total: entries.length,
+    };
+
     try {
-      const formData = new FormData();
-      for (const entry of entries) formData.append('files', entry.file, entry.file.name);
+      for (const batch of batches) {
+        const formData = new FormData();
+        for (const entry of batch) formData.append('files', entry.file, entry.file.name);
 
-      const res = await fetch('/api/admin/products/import-images', { method: 'POST', body: formData });
-      const data: UploadResult = await res.json();
-      if (!res.ok) throw new Error((data as any).error || 'Upload fallito');
+        const res = await fetch('/api/admin/products/import-images', { method: 'POST', body: formData });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text.slice(0, 120));
+        }
+        const data: UploadResult = await res.json();
 
-      setResult(data);
-      if (data.uploaded > 0) {
-        toast.success(`${data.uploaded} foto caricate con successo`);
+        aggregate.uploaded += data.uploaded;
+        aggregate.uploadedLinked += data.uploadedLinked;
+        aggregate.uploadedOrphan += data.uploadedOrphan;
+        aggregate.notFound.push(...data.notFound);
+        aggregate.errors.push(...data.errors);
+        aggregate.nonConforming.push(...(data.nonConforming ?? []));
+
+        setUploadProgress((prev) => ({ done: (prev?.done ?? 0) + batch.length, total: validEntries.length }));
+      }
+
+      setResult(aggregate);
+      if (aggregate.uploaded > 0) {
+        toast.success(`${aggregate.uploaded} foto caricate con successo`);
         onSuccess();
       }
     } catch (err: any) {
       toast.error(err.message || 'Errore durante il caricamento');
     } finally {
       setIsUploading(false);
+      setUploadProgress(null);
     }
   }
 
@@ -256,7 +292,11 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
           disabled={!validCount || isUploading}
           icon={isUploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
         >
-          {isUploading ? 'Caricamento...' : `Carica ${validCount} foto`}
+          {isUploading && uploadProgress
+            ? `${uploadProgress.done}/${uploadProgress.total} foto...`
+            : isUploading
+            ? 'Caricamento...'
+            : `Carica ${validCount} foto`}
         </Button>
       </div>
     </div>
