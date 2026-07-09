@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       'produttore', 'tranche',
     ] as const;
     for (const f of filterFields) {
-      if (body[f]) where[f] = body[f];
+      if (body[f]) where[f] = { equals: body[f], mode: 'insensitive' };
     }
 
     // Use dynamic colonne/righe if provided, else fall back to defaults
