@@ -1027,27 +1027,18 @@ function ProductCard({
                       const hasConReso = conReso > 0;
                       const hasSenzaReso = senzaReso > 0;
                       const ts = { fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color };
-                      return (hasConReso || hasSenzaReso) ? (
+                      const lbl = (t: string) => <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>{t}</Text>;
+                      if (hasConReso) return (
                         <>
-                          {hasConReso && (
-                            <>
-                              <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Con reso</Text>
-                              <Text style={ts}>{euro(conReso)}</Text>
-                            </>
-                          )}
-                          {hasSenzaReso && (
-                            <>
-                              <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color, marginTop: hasConReso ? 2 : 0 }]}>Senza reso</Text>
-                              <Text style={ts}>{euro(senzaReso)}</Text>
-                            </>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>Costo i.e.</Text>
-                          <Text style={ts}>{euro(product.costPrice)}</Text>
+                          {lbl('Costo i.e. con reso')}
+                          <Text style={ts}>{euro(conReso)}</Text>
+                          {hasSenzaReso && <>{lbl('Senza reso')}<Text style={[ts, { marginTop: 2 }]}>{euro(senzaReso)}</Text></>}
                         </>
                       );
+                      if (hasSenzaReso) return (
+                        <>{lbl('Costo i.e.')}<Text style={ts}>{euro(senzaReso)}</Text></>
+                      );
+                      return <>{lbl('Costo i.e.')}<Text style={ts}>{euro(product.costPrice)}</Text></>;
                     })()}
                   </View>
                 )}

@@ -1641,7 +1641,7 @@ export default function AdminCatalogoPDFPage() {
     staleTime: 30_000,
   });
 
-  // Derived option lists — deduplicate case-insensitively client-side as safety net
+  // Derived option lists — deduplicate case-insensitively but preserve original value
   const byType = (tipo: string): string[] => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const raw: string[] = classData?.data?.filter((v: any) => v.tipo === tipo).map((v: any) => v.nome as string) ?? [];
@@ -1651,7 +1651,7 @@ export default function AdminCatalogoPDFPage() {
       const key = n.trim().toLowerCase();
       if (key && !seen.has(key)) {
         seen.add(key);
-        result.push(key.charAt(0).toUpperCase() + key.slice(1));
+        result.push(n.trim());
       }
     }
     return result.sort((a, b) => a.localeCompare(b, 'it'));

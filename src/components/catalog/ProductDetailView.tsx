@@ -274,18 +274,16 @@ export default function ProductDetailView({ id }: Props) {
                   const senzaReso = Number((product as any).costoIeSenzaReso);
                   const hasConReso = conReso > 0;
                   const hasSenzaReso = senzaReso > 0;
-                  return (hasConReso || hasSenzaReso) ? (
+                  if (hasConReso) return (
                     <>
-                      {hasConReso && (
-                        <p className="text-xs text-gray-400">Con reso: <span className="font-medium text-primary">{formatCurrency(conReso)}</span></p>
-                      )}
-                      {hasSenzaReso && (
-                        <p className="text-xs text-gray-400">Senza reso: <span className="font-medium text-primary">{formatCurrency(senzaReso)}</span></p>
-                      )}
+                      <p className="text-xs text-gray-400">Costo i.e. con reso: <span className="font-medium text-primary">{formatCurrency(conReso)}</span></p>
+                      {hasSenzaReso && <p className="text-xs text-gray-400">Senza reso: <span className="font-medium text-primary">{formatCurrency(senzaReso)}</span></p>}
                     </>
-                  ) : (
-                    <p className="text-xs text-gray-400">{tp('cost')}: {formatCurrency(product.costPrice)}</p>
                   );
+                  if (hasSenzaReso) return (
+                    <p className="text-xs text-gray-400">{tp('cost')}: <span className="font-medium text-primary">{formatCurrency(senzaReso)}</span></p>
+                  );
+                  return <p className="text-xs text-gray-400">{tp('cost')}: {formatCurrency(product.costPrice)}</p>;
                 })()}
               </div>
             )}

@@ -154,14 +154,10 @@ export default function ProductCard({ product }: ProductCardProps) {
               const senzaReso = Number((product as any).costoIeSenzaReso);
               const hasConReso = conReso > 0;
               const hasSenzaReso = senzaReso > 0;
-              return (hasConReso || hasSenzaReso) ? (
+              if (hasConReso) return (
                 <>
-                  {hasConReso && (
-                    <>
-                      <p className="text-2xs text-gray-400 uppercase tracking-wide">Con reso</p>
-                      <p className="text-sm font-semibold text-primary">{formatCurrency(conReso)}</p>
-                    </>
-                  )}
+                  <p className="text-2xs text-gray-400 uppercase tracking-wide">Costo i.e. con reso</p>
+                  <p className="text-sm font-semibold text-primary">{formatCurrency(conReso)}</p>
                   {hasSenzaReso && (
                     <>
                       <p className="text-2xs text-gray-400 uppercase tracking-wide">Senza reso</p>
@@ -169,7 +165,14 @@ export default function ProductCard({ product }: ProductCardProps) {
                     </>
                   )}
                 </>
-              ) : (
+              );
+              if (hasSenzaReso) return (
+                <>
+                  <p className="text-2xs text-gray-400 uppercase tracking-wide">{t('cost')}</p>
+                  <p className="text-sm font-semibold text-primary">{formatCurrency(senzaReso)}</p>
+                </>
+              );
+              return (
                 <>
                   <p className="text-2xs text-gray-400 uppercase tracking-wide">{t('cost')}</p>
                   <p className="text-sm font-semibold text-primary">{formatCurrency(product.costPrice)}</p>

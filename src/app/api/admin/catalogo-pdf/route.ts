@@ -438,7 +438,7 @@ export async function GET(req: NextRequest) {
     ] as const;
     for (const f of filterFields) {
       const v = sp.get(f);
-      if (v) where[f] = v;
+      if (v) where[f] = { equals: v, mode: 'insensitive' };
     }
 
     // Sort
@@ -517,7 +517,7 @@ export async function POST(req: NextRequest) {
       'produttore', 'tranche',
     ] as const;
     for (const f of filterFields) {
-      if (body[f]) where[f] = body[f];
+      if (body[f]) where[f] = { equals: body[f], mode: 'insensitive' };
     }
 
     const ordinaKey = body.ordina || 'code';
