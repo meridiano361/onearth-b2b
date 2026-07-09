@@ -323,6 +323,7 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
   const [isImporting, setIsImporting] = useState(false);
   const [modalita, setModalita] = useState<'upsert' | 'solo-aggiorna' | 'solo-crea'>('upsert');
   const [applicaSelezioneCampiAiNuovi, setApplicaSelezioneCampiAiNuovi] = useState(false);
+  const [forzaGruppo, setForzaGruppo] = useState<string>('');
 
   useEffect(() => {
     try {
@@ -471,6 +472,14 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
     return { auto, manual, ignored };
   }
 
+  function buildRows() {
+    return rawRows.map((r) => {
+      const row = applyMapping(r, effectiveMapping);
+      if (forzaGruppo) row.gruppoMerceologico = forzaGruppo;
+      return row;
+    });
+  }
+
   async function loadPreview() {
     if (modalita !== 'solo-crea' && activeFields.length === 0) {
       toast.error('Seleziona almeno un campo da importare');
@@ -478,11 +487,14 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
     }
     setIsLoadingPreview(true);
     try {
-      const mappedRows = rawRows.map((r) => applyMapping(r, effectiveMapping));
+      const mappedRows = buildRows();
+      const campi = forzaGruppo && !activeFields.includes('gruppoMerceologico')
+        ? [...activeFields, 'gruppoMerceologico']
+        : activeFields;
       const res = await fetch('/api/admin/products/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: mappedRows, campiDaAggiornare: activeFields, dryRun: true, modalita, applicaSelezioneCampiAiNuovi }),
+        body: JSON.stringify({ rows: mappedRows, campiDaAggiornare: campi, dryRun: true, modalita, applicaSelezioneCampiAiNuovi }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Errore nel caricamento anteprima');
@@ -498,11 +510,14 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
   async function handleImport() {
     setIsImporting(true);
     try {
-      const mappedRows = rawRows.map((r) => applyMapping(r, effectiveMapping));
+      const mappedRows = buildRows();
+      const campi = forzaGruppo && !activeFields.includes('gruppoMerceologico')
+        ? [...activeFields, 'gruppoMerceologico']
+        : activeFields;
       const res = await fetch('/api/admin/products/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: mappedRows, campiDaAggiornare: activeFields, dryRun: false, modalita, applicaSelezioneCampiAiNuovi }),
+        body: JSON.stringify({ rows: mappedRows, campiDaAggiornare: campi, dryRun: false, modalita, applicaSelezioneCampiAiNuovi }),
       });
       if (!res.ok) throw new Error('Importazione fallita');
       const data: ImportResult = await res.json();
@@ -574,6 +589,21 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
             </p>
           </div>
           <button onClick={reset} className="text-gray-400 hover:text-primary"><X size={16} /></button>
+        </div>
+
+        {/* ── Gruppo merceologico ──────────────────────────────────────── */}
+        <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-200">
+          <p className="text-xs font-medium text-blue-800 mb-1">Gruppo merceologico</p>
+          <p className="text-2xs text-blue-600 mb-2">Se il file non ha una colonna "Gruppo merceologico", impostalo qui per tutti i prodotti importati.</p>
+          <select
+            value={forzaGruppo}
+            onChange={(e) => setForzaGruppo(e.target.value)}
+            className="w-full h-8 border border-blue-300 rounded px-2 text-xs bg-white focus:outline-none"
+          >
+            <option value="">— Non impostare (usa colonna del file) —</option>
+            <option value="MODA">MODA</option>
+            <option value="CASA">CASA</option>
+          </select>
         </div>
 
         {/* ── Modalità importazione ────────────────────────────────────── */}
