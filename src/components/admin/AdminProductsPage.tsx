@@ -1537,9 +1537,9 @@ export default function AdminProductsPage() {
               ['gruppoMerceologico', 'Gruppo merceologico'], ['famiglia', 'Famiglia'],
               ['classe', 'Classe'], ['sottoclasse', 'Sottoclasse'],
               ['gruppoOmogeneo', 'Gruppo omogeneo'], ['nomLinea', 'Linea'],
-              ['collezione', 'Collezione'], ['tranche', 'Tranche'],
-              ['modello', 'Modello'], ['dettaglio', 'Dettaglio'],
-              ['forma', 'Forma'], ['taglia', 'Taglia'],
+              ['tranche', 'Tranche'], ['modello', 'Modello'],
+              ['dettaglio', 'Dettaglio'], ['forma', 'Forma'],
+              ['taglia', 'Taglia'],
             ] as [keyof BulkEditValues, string][]).map(([k, label]) => (
               <div key={k}>
                 <label className={bulkLabelClass}>{label}</label>
@@ -1551,6 +1551,13 @@ export default function AdminProductsPage() {
               <select value={bulkEditValues.stagione} onChange={(e) => setBulk('stagione', e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
                 <option value="">— non modificare —</option>
                 {STAGIONE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Collezione</label>
+              <select value={bulkEditValues.collezione} onChange={(e) => setBulk('collezione', e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+                <option value="">— non modificare —</option>
+                {collezioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
             </div>
           </div>
