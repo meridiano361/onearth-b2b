@@ -484,12 +484,13 @@ function renderHtmlBlocks(
   return blocks.map((block, i) => {
     const blockAlign = getBlockAlign(block, defaultAlign);
 
-    const inlineText = (inlines: HtmlInline[]) =>
+    const inlineText = (inlines: HtmlInline[], c: string) =>
       inlines.map((seg, j) => {
         const decoration = seg.underline ? 'underline' : seg.strike ? 'line-through' : undefined;
         return (
           <Text key={j} style={{
             fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique' : seg.bold ? 'Helvetica-Bold' : seg.italic ? 'Helvetica-Oblique' : 'Helvetica',
+            color: c,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ...(decoration ? { textDecoration: decoration as any } : {}),
           }}>{seg.text}</Text>
@@ -499,21 +500,21 @@ function renderHtmlBlocks(
     if (block.type === 'paragraph') {
       return (
         <View key={i} style={{ width: '100%', alignItems: alignToFlex(blockAlign), marginBottom: 3 }}>
-          <Text style={{ fontSize, color, lineHeight: 1.6 }}>{inlineText(block.inlines)}</Text>
+          <Text style={{ fontSize, color, lineHeight: 1.6 }}>{inlineText(block.inlines, color)}</Text>
         </View>
       );
     }
     if (block.type === 'h1') {
       return (
         <View key={i} style={{ width: '100%', alignItems: alignToFlex(blockAlign), marginBottom: 6 }}>
-          <Text style={{ fontSize: fontSize * 1.6, fontFamily: 'Helvetica-Bold', color, lineHeight: 1.4 }}>{inlineText(block.inlines)}</Text>
+          <Text style={{ fontSize: fontSize * 1.6, fontFamily: 'Helvetica-Bold', color, lineHeight: 1.4 }}>{inlineText(block.inlines, color)}</Text>
         </View>
       );
     }
     if (block.type === 'h2') {
       return (
         <View key={i} style={{ width: '100%', alignItems: alignToFlex(blockAlign), marginBottom: 4 }}>
-          <Text style={{ fontSize: fontSize * 1.3, fontFamily: 'Helvetica-Bold', color, lineHeight: 1.4 }}>{inlineText(block.inlines)}</Text>
+          <Text style={{ fontSize: fontSize * 1.3, fontFamily: 'Helvetica-Bold', color, lineHeight: 1.4 }}>{inlineText(block.inlines, color)}</Text>
         </View>
       );
     }
@@ -526,7 +527,7 @@ function renderHtmlBlocks(
                 <Text style={{ fontSize, color }}>{block.type === 'bullet' ? '•' : `${j + 1}.`}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize, color, lineHeight: 1.6 }}>{inlineText(item)}</Text>
+                <Text style={{ fontSize, color, lineHeight: 1.6 }}>{inlineText(item, color)}</Text>
               </View>
             </View>
           ))}
@@ -1357,6 +1358,7 @@ function renderTitleInlines(inlines: HtmlInline[], typo: { titoloFontSize: numbe
         {inlines.map((seg, i) => (
           <Text key={i} style={{
             fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique' : seg.bold ? 'Helvetica-Bold' : seg.italic ? 'Helvetica-Oblique' : 'Helvetica',
+            color: typo.titoloColor,
           }}>{seg.text}</Text>
         ))}
       </Text>

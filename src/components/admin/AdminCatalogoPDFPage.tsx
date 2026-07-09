@@ -3069,8 +3069,11 @@ export default function AdminCatalogoPDFPage() {
                         <option value="Courier">Courier (monospace)</option>
                       </select>
                     </div>
-                    <MiniColorPicker value={config.copertinaTypo.titoloColor}
-                      onChange={(v) => setCopertinaTypo({ titoloColor: v })} />
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore titolo</label>
+                      <MiniColorPicker value={config.copertinaTypo.titoloColor}
+                        onChange={(v) => setCopertinaTypo({ titoloColor: v })} />
+                    </div>
 
                     {/* Sottotitolo */}
                     <div className="grid grid-cols-2 gap-3">
@@ -3095,8 +3098,11 @@ export default function AdminCatalogoPDFPage() {
                         <option value="Courier">Courier (monospace)</option>
                       </select>
                     </div>
-                    <MiniColorPicker value={config.copertinaTypo.sottotitoloColor}
-                      onChange={(v) => setCopertinaTypo({ sottotitoloColor: v })} />
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore sottotitolo</label>
+                      <MiniColorPicker value={config.copertinaTypo.sottotitoloColor}
+                        onChange={(v) => setCopertinaTypo({ sottotitoloColor: v })} />
+                    </div>
 
                     {/* Sottotitolo 2 */}
                     {config.copertina.sottotitolo2 && (
@@ -3113,8 +3119,11 @@ export default function AdminCatalogoPDFPage() {
                             <ToggleBtn active={config.copertinaTypo.sottotitolo2Italic ?? false} onClick={() => setCopertinaTypo({ sottotitolo2Italic: !(config.copertinaTypo.sottotitolo2Italic ?? false) })}><span className="italic">I</span></ToggleBtn>
                           </div>
                         </div>
-                        <MiniColorPicker value={config.copertinaTypo.sottotitolo2Color ?? config.copertinaTypo.sottotitoloColor}
-                          onChange={(v) => setCopertinaTypo({ sottotitolo2Color: v })} />
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Colore sottotitolo 2</label>
+                          <MiniColorPicker value={config.copertinaTypo.sottotitolo2Color ?? config.copertinaTypo.sottotitoloColor}
+                            onChange={(v) => setCopertinaTypo({ sottotitolo2Color: v })} />
+                        </div>
                       </>
                     )}
 
@@ -3198,18 +3207,22 @@ export default function AdminCatalogoPDFPage() {
                         onChange={(e) => setPaginaPenultimaTypo({ titoloFontSize: parseFloat(e.target.value) || 20 })}
                         className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
                     </div>
-                    <MiniColorPicker value={config.paginaPenultimaTypo.titoloColor}
-                      onChange={(v) => setPaginaPenultimaTypo({ titoloColor: v })} />
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Font testo corpo (pt)</label>
-                        <input type="number" min={6} max={24} value={config.paginaPenultimaTypo.testoFontSize}
-                          onChange={(e) => setPaginaPenultimaTypo({ testoFontSize: parseFloat(e.target.value) || 10 })}
-                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
-                      </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore titolo</label>
+                      <MiniColorPicker value={config.paginaPenultimaTypo.titoloColor}
+                        onChange={(v) => setPaginaPenultimaTypo({ titoloColor: v })} />
                     </div>
-                    <MiniColorPicker value={config.paginaPenultimaTypo.testoColor}
-                      onChange={(v) => setPaginaPenultimaTypo({ testoColor: v })} />
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Font testo corpo (pt)</label>
+                      <input type="number" min={6} max={24} value={config.paginaPenultimaTypo.testoFontSize}
+                        onChange={(e) => setPaginaPenultimaTypo({ testoFontSize: parseFloat(e.target.value) || 10 })}
+                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore testo corpo</label>
+                      <MiniColorPicker value={config.paginaPenultimaTypo.testoColor}
+                        onChange={(v) => setPaginaPenultimaTypo({ testoColor: v })} />
+                    </div>
 
                     {/* Spaziatura */}
                     <p className="text-xs font-semibold text-gray-600 pt-1">Spaziatura</p>
@@ -3544,18 +3557,22 @@ export default function AdminCatalogoPDFPage() {
                         onChange={(e) => setPaginaFinaleTypo({ titoloFontSize: parseFloat(e.target.value) || 20 })}
                         className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
                     </div>
-                    <MiniColorPicker value={config.paginaFinaleTypo.titoloColor}
-                      onChange={(v) => setPaginaFinaleTypo({ titoloColor: v })} />
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Font testo corpo (pt)</label>
-                        <input type="number" min={6} max={24} value={config.paginaFinaleTypo.testoFontSize}
-                          onChange={(e) => setPaginaFinaleTypo({ testoFontSize: parseFloat(e.target.value) || 10 })}
-                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
-                      </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore titolo</label>
+                      <MiniColorPicker value={config.paginaFinaleTypo.titoloColor}
+                        onChange={(v) => setPaginaFinaleTypo({ titoloColor: v })} />
                     </div>
-                    <MiniColorPicker value={config.paginaFinaleTypo.testoColor}
-                      onChange={(v) => setPaginaFinaleTypo({ testoColor: v })} />
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Font testo corpo (pt)</label>
+                      <input type="number" min={6} max={24} value={config.paginaFinaleTypo.testoFontSize}
+                        onChange={(e) => setPaginaFinaleTypo({ testoFontSize: parseFloat(e.target.value) || 10 })}
+                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore testo corpo</label>
+                      <MiniColorPicker value={config.paginaFinaleTypo.testoColor}
+                        onChange={(v) => setPaginaFinaleTypo({ testoColor: v })} />
+                    </div>
 
                     {/* Spaziatura */}
                     <p className="text-xs font-semibold text-gray-600 pt-1">Spaziatura</p>
