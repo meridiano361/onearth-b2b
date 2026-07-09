@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power, Shirt, Home, Copy, Download, Columns2 } from 'lucide-react';
+import { CONFERENTE_OPTIONS, STAGIONE_OPTIONS } from '@/lib/productConstants';
 import { formatCurrency } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -47,9 +48,12 @@ function loadSavedCols(): Set<ColKey> {
 
 interface BulkEditValues {
   // Anagrafica
+  description: string;
   produttore: string;
+  conferente: string;
   misura: string;
   paese: string;
+  stock: string;
   // Classificazione
   gruppoMerceologico: string;
   famiglia: string;
@@ -59,32 +63,58 @@ interface BulkEditValues {
   nomLinea: string;
   stagione: string;
   collezione: string;
+  tranche: string;
+  modello: string;
+  dettaglio: string;
+  forma: string;
+  taglia: string;
+  // Colori
   colore: string;
+  colore2: string;
+  colore3: string;
+  altriColori: string;
+  bloccoColore: string;
   temaColore: string;
   temaColore2: string;
   temaColore3: string;
   temaColore4: string;
   temaColore5: string;
   temaColoreBulkMode: 'sostituisci' | 'aggiungi';
+  // Materiali
+  materiale1: string;
+  materiale2: string;
+  materiale3: string;
+  composizione: string;
+  fantasia: string;
+  lavorazione: string;
+  // Certificazioni
+  certificazione1: string;
+  certificazione2: string;
+  certificazione3: string;
   // Prezzi e logistica
   lotSize: string;
   iva: string;
   costPrice: string;
   retailPrice: string;
+  costoIeConReso: string;
+  costoIeSenzaReso: string;
   fasciaRicarico: string;
   fasciaSconto: string;
-  tranche: string;
   // Altri
   notes: string;
   isActive: '' | 'true' | 'false';
 }
 
 const EMPTY_BULK: BulkEditValues = {
-  produttore: '', misura: '', paese: '',
+  description: '', produttore: '', conferente: '', misura: '', paese: '', stock: '',
   gruppoMerceologico: '', famiglia: '', classe: '', sottoclasse: '', gruppoOmogeneo: '',
-  nomLinea: '', stagione: '', collezione: '', colore: '', temaColore: '',
-  temaColore2: '', temaColore3: '', temaColore4: '', temaColore5: '', temaColoreBulkMode: 'sostituisci',
-  lotSize: '', iva: '', costPrice: '', retailPrice: '', fasciaRicarico: '', fasciaSconto: '', tranche: '',
+  nomLinea: '', stagione: '', collezione: '', tranche: '', modello: '', dettaglio: '', forma: '', taglia: '',
+  colore: '', colore2: '', colore3: '', altriColori: '', bloccoColore: '',
+  temaColore: '', temaColore2: '', temaColore3: '', temaColore4: '', temaColore5: '', temaColoreBulkMode: 'sostituisci',
+  materiale1: '', materiale2: '', materiale3: '', composizione: '', fantasia: '', lavorazione: '',
+  certificazione1: '', certificazione2: '', certificazione3: '',
+  lotSize: '', iva: '', costPrice: '', retailPrice: '', costoIeConReso: '', costoIeSenzaReso: '',
+  fasciaRicarico: '', fasciaSconto: '',
   notes: '', isActive: '',
 };
 
@@ -396,15 +426,17 @@ export default function AdminProductsPage() {
     const b = bulkEditValues;
     const payload: Record<string, unknown> = {};
 
-    const strMap: [keyof BulkEditValues, string][] = [
-      ['produttore', b.produttore], ['misura', b.misura], ['paese', b.paese],
-      ['gruppoMerceologico', b.gruppoMerceologico], ['famiglia', b.famiglia],
-      ['classe', b.classe], ['sottoclasse', b.sottoclasse], ['gruppoOmogeneo', b.gruppoOmogeneo],
-      ['nomLinea', b.nomLinea], ['stagione', b.stagione], ['collezione', b.collezione],
-      ['colore', b.colore],
-      ['fasciaRicarico', b.fasciaRicarico], ['tranche', b.tranche], ['notes', b.notes],
+    const strKeys: (keyof BulkEditValues)[] = [
+      'description', 'produttore', 'conferente', 'misura', 'paese',
+      'gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo',
+      'nomLinea', 'stagione', 'collezione', 'tranche', 'modello', 'dettaglio', 'forma', 'taglia',
+      'colore', 'colore2', 'colore3', 'altriColori', 'bloccoColore',
+      'materiale1', 'materiale2', 'materiale3', 'composizione', 'fantasia', 'lavorazione',
+      'certificazione1', 'certificazione2', 'certificazione3',
+      'fasciaRicarico', 'notes',
     ];
-    for (const [k, v] of strMap) {
+    for (const k of strKeys) {
+      const v = b[k] as string;
       if (v.trim()) payload[k] = v.trim();
     }
 
@@ -416,10 +448,13 @@ export default function AdminProductsPage() {
       payload.temaColore4 = b.temaColore4.trim() || null;
       payload.temaColore5 = b.temaColore5.trim() || null;
     }
+    if (b.stock.trim()) { const n = parseInt(b.stock, 10); if (!isNaN(n) && n >= 0) payload.stock = n; }
     if (b.lotSize.trim()) { const n = parseInt(b.lotSize, 10); if (!isNaN(n) && n > 0) payload.lotSize = n; }
     if (b.iva.trim()) { const n = parseInt(b.iva, 10); if (!isNaN(n)) payload.iva = n; }
     if (b.costPrice.trim()) { const n = parseFloat(b.costPrice); if (!isNaN(n) && n > 0) payload.costPrice = n; }
     if (b.retailPrice.trim()) { const n = parseFloat(b.retailPrice); if (!isNaN(n) && n > 0) payload.retailPrice = n; }
+    if (b.costoIeConReso.trim()) { const n = parseFloat(b.costoIeConReso); if (!isNaN(n) && n >= 0) payload.costoIeConReso = n; }
+    if (b.costoIeSenzaReso.trim()) { const n = parseFloat(b.costoIeSenzaReso); if (!isNaN(n) && n >= 0) payload.costoIeSenzaReso = n; }
     if (b.fasciaSconto.trim()) { const n = parseFloat(b.fasciaSconto); if (!isNaN(n)) payload.fasciaSconto = n; }
     if (b.isActive !== '') payload.isActive = b.isActive === 'true';
 
@@ -1108,19 +1143,34 @@ export default function AdminProductsPage() {
       </Modal>
 
       {/* Bulk Edit Modal */}
-      <Modal isOpen={showBulkEdit} onClose={() => setShowBulkEdit(false)} title={`Modifica ${selectedIds.size} prodott${selectedIds.size === 1 ? 'o' : 'i'}`} size="lg">
+      <Modal isOpen={showBulkEdit} onClose={() => setShowBulkEdit(false)} title={`Modifica ${selectedIds.size} prodott${selectedIds.size === 1 ? 'o' : 'i'}`} size="xl">
         <div className="space-y-2">
           <p className="text-xs text-gray-400 pb-1">Solo i campi compilati verranno aggiornati.</p>
 
           <p className={bulkSectionClass}>Anagrafica</p>
+          <div>
+            <label className={bulkLabelClass}>Descrizione</label>
+            <textarea value={bulkEditValues.description} onChange={(e) => setBulk('description', e.target.value)} placeholder="—" rows={2} className="w-full border border-border rounded px-3 py-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-gray-300 resize-none" />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={bulkLabelClass}>Produttore</label>
               <input value={bulkEditValues.produttore} onChange={(e) => setBulk('produttore', e.target.value)} placeholder="—" className={bulkInputClass} />
             </div>
             <div>
+              <label className={bulkLabelClass}>Conferente</label>
+              <select value={bulkEditValues.conferente} onChange={(e) => setBulk('conferente', e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+                <option value="">— non modificare —</option>
+                {CONFERENTE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+            <div>
               <label className={bulkLabelClass}>Misure</label>
               <input value={bulkEditValues.misura} onChange={(e) => setBulk('misura', e.target.value)} placeholder="—" className={bulkInputClass} />
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Stock</label>
+              <input type="number" min="0" step="1" value={bulkEditValues.stock} onChange={(e) => setBulk('stock', e.target.value)} placeholder="—" className={bulkInputClass} />
             </div>
           </div>
           <PaeseSelect label="Paese" value={bulkEditValues.paese} onChange={(v) => setBulk('paese', v)} placeholder="— non modificare —" />
@@ -1131,12 +1181,30 @@ export default function AdminProductsPage() {
               ['gruppoMerceologico', 'Gruppo merceologico'], ['famiglia', 'Famiglia'],
               ['classe', 'Classe'], ['sottoclasse', 'Sottoclasse'],
               ['gruppoOmogeneo', 'Gruppo omogeneo'], ['nomLinea', 'Linea'],
-              ['stagione', 'Stagione'], ['collezione', 'Collezione'],
-              ['colore', 'Colore'],
+              ['collezione', 'Collezione'], ['tranche', 'Tranche'],
+              ['modello', 'Modello'], ['dettaglio', 'Dettaglio'],
+              ['forma', 'Forma'], ['taglia', 'Taglia'],
             ] as [keyof BulkEditValues, string][]).map(([k, label]) => (
               <div key={k}>
                 <label className={bulkLabelClass}>{label}</label>
                 <input value={bulkEditValues[k] as string} onChange={(e) => setBulk(k, e.target.value)} placeholder="—" className={bulkInputClass} />
+              </div>
+            ))}
+            <div>
+              <label className={bulkLabelClass}>Stagione</label>
+              <select value={bulkEditValues.stagione} onChange={(e) => setBulk('stagione', e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+                <option value="">— non modificare —</option>
+                {STAGIONE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <p className={bulkSectionClass}>Colori</p>
+          <div className="grid grid-cols-2 gap-3">
+            {(['colore', 'colore2', 'colore3', 'altriColori', 'bloccoColore'] as const).map((k) => (
+              <div key={k}>
+                <label className={bulkLabelClass}>{k === 'colore' ? 'Colore 1' : k === 'colore2' ? 'Colore 2' : k === 'colore3' ? 'Colore 3' : k === 'altriColori' ? 'Altri colori' : 'Blocco colore'}</label>
+                <input value={bulkEditValues[k]} onChange={(e) => setBulk(k, e.target.value)} placeholder="—" className={bulkInputClass} />
               </div>
             ))}
           </div>
@@ -1167,19 +1235,31 @@ export default function AdminProductsPage() {
             )}
           </div>
 
+          <p className={bulkSectionClass}>Materiali e Tessuti</p>
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              ['materiale1', 'Materiale 1'], ['materiale2', 'Materiale 2'], ['materiale3', 'Materiale 3'],
+              ['composizione', 'Composizione'], ['fantasia', 'Fantasia'], ['lavorazione', 'Lavorazione'],
+            ] as [keyof BulkEditValues, string][]).map(([k, label]) => (
+              <div key={k}>
+                <label className={bulkLabelClass}>{label}</label>
+                <input value={bulkEditValues[k] as string} onChange={(e) => setBulk(k, e.target.value)} placeholder="—" className={bulkInputClass} />
+              </div>
+            ))}
+          </div>
+
+          <p className={bulkSectionClass}>Certificazioni</p>
+          <div className="grid grid-cols-3 gap-3">
+            {(['certificazione1', 'certificazione2', 'certificazione3'] as const).map((k, i) => (
+              <div key={k}>
+                <label className={bulkLabelClass}>Certificazione {i + 1}</label>
+                <input value={bulkEditValues[k]} onChange={(e) => setBulk(k, e.target.value)} placeholder="—" className={bulkInputClass} />
+              </div>
+            ))}
+          </div>
+
           <p className={bulkSectionClass}>Prezzi e Logistica</p>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={bulkLabelClass}>Confezione</label>
-              <input type="number" min="1" step="1" value={bulkEditValues.lotSize} onChange={(e) => setBulk('lotSize', e.target.value)} placeholder="—" className={bulkInputClass} />
-            </div>
-            <div>
-              <label className={bulkLabelClass}>IVA (%)</label>
-              <select value={bulkEditValues.iva} onChange={(e) => setBulk('iva', e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
-                <option value="">— non modificare —</option>
-                {[0, 4, 5, 10, 22].map((v) => <option key={v} value={String(v)}>{v}%</option>)}
-              </select>
-            </div>
             <div>
               <label className={bulkLabelClass}>Prezzo costo i.e. (€)</label>
               <input type="number" step="0.01" min="0" value={bulkEditValues.costPrice} onChange={(e) => setBulk('costPrice', e.target.value)} placeholder="—" className={bulkInputClass} />
@@ -1187,6 +1267,14 @@ export default function AdminProductsPage() {
             <div>
               <label className={bulkLabelClass}>Prezzo vendita i.i. (€)</label>
               <input type="number" step="0.01" min="0" value={bulkEditValues.retailPrice} onChange={(e) => setBulk('retailPrice', e.target.value)} placeholder="—" className={bulkInputClass} />
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Costo i.e. con reso (€)</label>
+              <input type="number" step="0.01" min="0" value={bulkEditValues.costoIeConReso} onChange={(e) => setBulk('costoIeConReso', e.target.value)} placeholder="—" className={bulkInputClass} />
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Costo i.e. senza reso (€)</label>
+              <input type="number" step="0.01" min="0" value={bulkEditValues.costoIeSenzaReso} onChange={(e) => setBulk('costoIeSenzaReso', e.target.value)} placeholder="—" className={bulkInputClass} />
             </div>
             <div>
               <label className={bulkLabelClass}>Fascia di ricarico</label>
@@ -1197,8 +1285,15 @@ export default function AdminProductsPage() {
               <input type="number" step="0.01" min="0" max="100" value={bulkEditValues.fasciaSconto} onChange={(e) => setBulk('fasciaSconto', e.target.value)} placeholder="—" className={bulkInputClass} />
             </div>
             <div>
-              <label className={bulkLabelClass}>Tranche</label>
-              <input value={bulkEditValues.tranche} onChange={(e) => setBulk('tranche', e.target.value)} placeholder="—" className={bulkInputClass} />
+              <label className={bulkLabelClass}>Confezione (pz)</label>
+              <input type="number" min="1" step="1" value={bulkEditValues.lotSize} onChange={(e) => setBulk('lotSize', e.target.value)} placeholder="—" className={bulkInputClass} />
+            </div>
+            <div>
+              <label className={bulkLabelClass}>IVA (%)</label>
+              <select value={bulkEditValues.iva} onChange={(e) => setBulk('iva', e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+                <option value="">— non modificare —</option>
+                {[0, 4, 5, 10, 22].map((v) => <option key={v} value={String(v)}>{v}%</option>)}
+              </select>
             </div>
           </div>
 

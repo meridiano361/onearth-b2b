@@ -6,41 +6,80 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { normalizeProductClassificationFields } from '@/lib/normalizeClassification';
 
+const strOpt = z.string().optional().nullable();
+const numOpt = z.coerce.number().optional().nullable();
+
 const schema = z.object({
   ids: z.array(z.string()).min(1),
   data: z.object({
     // Anagrafica
-    produttore:          z.string().optional().nullable(),
-    misura:              z.string().optional().nullable(),
-    paese:               z.string().optional().nullable(),
+    description:         strOpt,
+    produttore:          strOpt,
+    conferente:          strOpt,
+    misura:              strOpt,
+    paese:               strOpt,
+    stock:               z.coerce.number().int().min(0).optional().nullable(),
     // Classificazione
-    gruppoMerceologico:  z.string().optional().nullable(),
-    famiglia:            z.string().optional().nullable(),
-    classe:              z.string().optional().nullable(),
-    sottoclasse:         z.string().optional().nullable(),
-    gruppoOmogeneo:      z.string().optional().nullable(),
-    nomLinea:            z.string().optional().nullable(),
-    stagione:            z.string().optional().nullable(),
-    collezione:          z.string().optional().nullable(),
-    colore:              z.string().optional().nullable(),
-    temaColore:          z.string().optional().nullable(),
-    temaColore2:         z.string().optional().nullable(),
-    temaColore3:         z.string().optional().nullable(),
-    temaColore4:         z.string().optional().nullable(),
-    temaColore5:         z.string().optional().nullable(),
+    gruppoMerceologico:  strOpt,
+    famiglia:            strOpt,
+    classe:              strOpt,
+    sottoclasse:         strOpt,
+    gruppoOmogeneo:      strOpt,
+    nomLinea:            strOpt,
+    stagione:            strOpt,
+    collezione:          strOpt,
+    tranche:             strOpt,
+    modello:             strOpt,
+    dettaglio:           strOpt,
+    forma:               strOpt,
+    taglia:              strOpt,
+    // Colori
+    colore:              strOpt,
+    colore2:             strOpt,
+    colore3:             strOpt,
+    altriColori:         strOpt,
+    bloccoColore:        strOpt,
+    temaColore:          strOpt,
+    temaColore2:         strOpt,
+    temaColore3:         strOpt,
+    temaColore4:         strOpt,
+    temaColore5:         strOpt,
+    // Materiali e tessuti
+    materiale1:          strOpt,
+    materiale2:          strOpt,
+    materiale3:          strOpt,
+    composizione:        strOpt,
+    fantasia:            strOpt,
+    lavorazione:         strOpt,
+    // Certificazioni
+    certificazione1:     strOpt,
+    certificazione2:     strOpt,
+    certificazione3:     strOpt,
     // Prezzi e logistica
     lotSize:             z.coerce.number().int().positive().optional(),
     iva:                 z.coerce.number().int().min(0).max(100).optional(),
     costPrice:           z.coerce.number().positive().optional(),
     retailPrice:         z.coerce.number().positive().optional(),
-    fasciaRicarico:      z.string().optional().nullable(),
+    costoIeConReso:      numOpt,
+    costoIeSenzaReso:    numOpt,
+    fasciaRicarico:      strOpt,
     fasciaSconto:        z.coerce.number().min(0).max(100).optional().nullable(),
-    tranche:             z.string().optional().nullable(),
     // Altri
-    notes:               z.string().optional().nullable(),
+    notes:               strOpt,
     isActive:            z.boolean().optional(),
   }),
 });
+
+const ALL_STR_FIELDS = [
+  'description', 'produttore', 'conferente', 'misura', 'paese',
+  'gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo',
+  'nomLinea', 'stagione', 'collezione', 'tranche', 'modello', 'dettaglio', 'forma', 'taglia',
+  'colore', 'colore2', 'colore3', 'altriColori', 'bloccoColore',
+  'temaColore', 'temaColore2', 'temaColore3', 'temaColore4', 'temaColore5',
+  'materiale1', 'materiale2', 'materiale3', 'composizione', 'fantasia', 'lavorazione',
+  'certificazione1', 'certificazione2', 'certificazione3',
+  'fasciaRicarico', 'notes',
+] as const;
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -55,19 +94,16 @@ export async function PATCH(req: NextRequest) {
     const normalized = normalizeProductClassificationFields(data as Record<string, any>);
 
     const updateData: Record<string, unknown> = {};
-    const strFields = [
-      'produttore', 'misura', 'paese',
-      'gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo',
-      'nomLinea', 'stagione', 'collezione', 'colore', 'temaColore', 'temaColore2', 'temaColore3', 'temaColore4', 'temaColore5',
-      'fasciaRicarico', 'tranche', 'notes',
-    ] as const;
-    for (const f of strFields) {
+    for (const f of ALL_STR_FIELDS) {
       if (normalized[f] !== undefined) updateData[f] = normalized[f] || null;
     }
+    if (normalized.stock !== undefined) updateData.stock = normalized.stock ?? null;
     if (normalized.lotSize !== undefined) updateData.lotSize = normalized.lotSize;
     if (normalized.iva !== undefined) updateData.iva = normalized.iva;
     if (normalized.costPrice !== undefined) updateData.costPrice = normalized.costPrice;
     if (normalized.retailPrice !== undefined) updateData.retailPrice = normalized.retailPrice;
+    if (normalized.costoIeConReso !== undefined) updateData.costoIeConReso = normalized.costoIeConReso ?? null;
+    if (normalized.costoIeSenzaReso !== undefined) updateData.costoIeSenzaReso = normalized.costoIeSenzaReso ?? null;
     if (normalized.fasciaSconto !== undefined) updateData.fasciaSconto = normalized.fasciaSconto ?? null;
     if (normalized.isActive !== undefined) updateData.isActive = normalized.isActive;
 
