@@ -576,7 +576,7 @@ function computeLayout(config: CatalogConfig): Layout {
   const CODE_H = 10;
   const DESC_H = 18;
   const DETAIL_H = 10;
-  const PRICES_H = 18;
+  const PRICES_H = 24;
 
   const TEXT_AREA_H = CARD_H - IMG_H - 2; // 2 for border
 
@@ -991,69 +991,48 @@ function ProductCard({
 
         {anyPriceRow && (
           <View style={[s.priceRow, { height: layout.PRICES_H }]}>
-            {/* Left column: produttore + paese */}
+            {/* Left column: prezzoCosto + pvp (inline label+value per row) */}
+            {(f.prezzoCosto || f.pvp) && (
+              <View style={[s.priceItem, { justifyContent: 'center' }]}>
+                {f.prezzoCosto && (() => {
+                  const conReso = Number(product.costoIeConReso);
+                  const senzaReso = Number(product.costoIeSenzaReso);
+                  const hasConReso = conReso > 0;
+                  const hasSenzaReso = senzaReso > 0;
+                  const vs = { fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color };
+                  const ls = [s.priceLabel, { color: cfs.prezzoCosto.color }] as any;
+                  if (hasConReso) return (
+                    <>
+                      <Text><Text style={ls}>Costo i.e. con reso </Text><Text style={vs}>{euro(conReso)}</Text></Text>
+                      {hasSenzaReso && <Text><Text style={ls}>Senza reso </Text><Text style={vs}>{euro(senzaReso)}</Text></Text>}
+                    </>
+                  );
+                  if (hasSenzaReso) return (
+                    <Text><Text style={ls}>Costo i.e. </Text><Text style={vs}>{euro(senzaReso)}</Text></Text>
+                  );
+                  return <Text><Text style={ls}>Costo i.e. </Text><Text style={vs}>{euro(product.costPrice)}</Text></Text>;
+                })()}
+                {f.pvp && (
+                  <Text>
+                    <Text style={[s.priceLabel, { color: cfs.pvp.color }]}>PVP i.i. </Text>
+                    <Text style={{ fontSize: cfs.pvp.fontSize, fontFamily: fieldFont(cfs.pvp, config.fontFamiglia), color: cfs.pvp.color }}>{euro(product.retailPrice)}</Text>
+                  </Text>
+                )}
+              </View>
+            )}
+            {/* Right column: produttore + paese */}
             {(f.produttore || f.paese) && (
-              <View style={[s.priceItem, { alignItems: 'flex-start', justifyContent: 'center' }]}>
+              <View style={[s.priceItem, { alignItems: 'flex-end', justifyContent: 'center' }]}>
                 {f.produttore && product.produttore ? (
-                  <Text style={{
-                    fontSize: cfs.produttore.fontSize,
-                    fontFamily: fieldFont(cfs.produttore, config.fontFamiglia),
-                    color: cfs.produttore.color,
-                    lineHeight: 1.3,
-                  }}>
+                  <Text style={{ fontSize: cfs.produttore.fontSize, fontFamily: fieldFont(cfs.produttore, config.fontFamiglia), color: cfs.produttore.color, lineHeight: 1.3 }}>
                     {cfs.produttore.uppercase ? product.produttore.toUpperCase() : product.produttore}
                   </Text>
                 ) : null}
                 {f.paese && product.paese ? (
-                  <Text style={{
-                    fontSize: cfs.paese.fontSize,
-                    fontFamily: fieldFont(cfs.paese, config.fontFamiglia),
-                    color: cfs.paese.color,
-                    lineHeight: 1.3,
-                  }}>
+                  <Text style={{ fontSize: cfs.paese.fontSize, fontFamily: fieldFont(cfs.paese, config.fontFamiglia), color: cfs.paese.color, lineHeight: 1.3 }}>
                     {cfs.paese.uppercase ? product.paese.toUpperCase() : product.paese}
                   </Text>
                 ) : null}
-              </View>
-            )}
-            {/* Right column: prezzoCosto + pvp */}
-            {(f.prezzoCosto || f.pvp) && (
-              <View style={[s.priceItem, { alignItems: 'flex-end' }]}>
-                {f.prezzoCosto && (
-                  <View style={{ alignItems: alignToFlex(cfs.prezzoCosto.align) }}>
-                    {(() => {
-                      const conReso = Number(product.costoIeConReso);
-                      const senzaReso = Number(product.costoIeSenzaReso);
-                      const hasConReso = conReso > 0;
-                      const hasSenzaReso = senzaReso > 0;
-                      const ts = { fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color };
-                      const lbl = (t: string) => <Text style={[s.priceLabel, { color: cfs.prezzoCosto.color }]}>{t}</Text>;
-                      if (hasConReso) return (
-                        <>
-                          {lbl('Costo i.e. con reso')}
-                          <Text style={ts}>{euro(conReso)}</Text>
-                          {hasSenzaReso && <>{lbl('Senza reso')}<Text style={[ts, { marginTop: 2 }]}>{euro(senzaReso)}</Text></>}
-                        </>
-                      );
-                      if (hasSenzaReso) return (
-                        <>{lbl('Costo i.e.')}<Text style={ts}>{euro(senzaReso)}</Text></>
-                      );
-                      return <>{lbl('Costo i.e.')}<Text style={ts}>{euro(product.costPrice)}</Text></>;
-                    })()}
-                  </View>
-                )}
-                {f.pvp && (
-                  <View style={{ alignItems: alignToFlex(cfs.pvp.align) }}>
-                    <Text style={[s.priceLabel, { color: cfs.pvp.color }]}>PVP i.i.</Text>
-                    <Text style={{
-                      fontSize: cfs.pvp.fontSize,
-                      fontFamily: fieldFont(cfs.pvp, config.fontFamiglia),
-                      color: cfs.pvp.color,
-                    }}>
-                      {euro(product.retailPrice)}
-                    </Text>
-                  </View>
-                )}
               </View>
             )}
           </View>
