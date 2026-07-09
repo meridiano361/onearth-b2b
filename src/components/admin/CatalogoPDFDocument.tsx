@@ -555,6 +555,7 @@ interface Layout {
   DESC_H: number;
   DETAIL_H: number;
   PRICES_H: number;
+  ROW_GAP: number;
   SPACER_H: number;
 }
 
@@ -578,6 +579,7 @@ function computeLayout(config: CatalogConfig): Layout {
   const DESC_H = 18;
   const DETAIL_H = 10;
   const PRICES_H = 24;
+  const ROW_GAP = 2;
 
   const TEXT_AREA_H = CARD_H - IMG_H - (config.cardBoxStyle?.borderWidth ?? 0) * 2;
 
@@ -586,9 +588,9 @@ function computeLayout(config: CatalogConfig): Layout {
   const anyPrice = f.prezzoCosto || f.pvp || f.produttore || f.paese;
 
   let usedTextH = TEXT_PAD * 2;
-  if (f.codice) usedTextH += CODE_H;
-  if (f.descrizione) usedTextH += DESC_H;
-  if (anyDetail) usedTextH += DETAIL_H;
+  if (f.codice) usedTextH += CODE_H + ROW_GAP;
+  if (f.descrizione) usedTextH += DESC_H + ROW_GAP;
+  if (anyDetail) usedTextH += DETAIL_H + ROW_GAP;
   if (anyPrice) usedTextH += PRICES_H;
 
   const SPACER_H = Math.max(0, TEXT_AREA_H - usedTextH);
@@ -596,7 +598,7 @@ function computeLayout(config: CatalogConfig): Layout {
   return {
     pageW, pageH, M, COLS, ROWS,
     CARD_W, CARD_H, IMG_H, TEXT_AREA_H,
-    TEXT_PAD, CODE_H, DESC_H, DETAIL_H, PRICES_H, SPACER_H,
+    TEXT_PAD, CODE_H, DESC_H, DETAIL_H, PRICES_H, ROW_GAP, SPACER_H,
   };
 }
 
@@ -861,7 +863,8 @@ function ProductCard({
           return (
             <View style={{ width: cardW, height: layout.IMG_H, backgroundColor: colori.sfondoFoto, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
               {mainUri ? (
-                <Link src={`${APP_BASE_URL}/catalog/${product.id}`}>
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                <Link src={`${APP_BASE_URL}/catalog/${product.id}`} style={{ width: cardW, height: layout.IMG_H } as any}>
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   <Image style={{ width: cardW, height: layout.IMG_H, objectFit: 'contain' as any }} src={mainUri} />
                 </Link>
@@ -930,7 +933,7 @@ function ProductCard({
         }]}
       >
         {f.codice && (
-          <View style={{ height: layout.CODE_H, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+          <View style={{ height: layout.CODE_H, marginBottom: layout.ROW_GAP, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 3 }}>
             <Link src={`${APP_BASE_URL}/catalog/${product.id}`}>
               <Text style={{
                 fontSize: cfs.codice.fontSize,
@@ -954,7 +957,7 @@ function ProductCard({
         )}
 
         {f.descrizione && (
-          <View style={{ height: layout.DESC_H, overflow: 'hidden', alignItems: alignToFlex(cfs.descrizione.align) }}>
+          <View style={{ height: layout.DESC_H, marginBottom: layout.ROW_GAP, overflow: 'hidden', alignItems: alignToFlex(cfs.descrizione.align) }}>
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <Text style={{
               fontSize: cfs.descrizione.fontSize,
@@ -972,7 +975,7 @@ function ProductCard({
         )}
 
         {anyDetail && (
-          <View style={{ height: layout.DETAIL_H, overflow: 'hidden', alignItems: alignToFlex(misureStyle.align) }}>
+          <View style={{ height: layout.DETAIL_H, marginBottom: layout.ROW_GAP, overflow: 'hidden', alignItems: alignToFlex(misureStyle.align) }}>
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <Text style={{
               fontSize: misureStyle.fontSize,
@@ -1003,14 +1006,14 @@ function ProductCard({
                   const ls = [s.priceLabel, { color: cfs.prezzoCosto.color }] as any;
                   if (hasConReso) return (
                     <>
-                      <Text><Text style={ls}>Costo i.e. con reso </Text><Text style={ls}>{euro(conReso)}</Text></Text>
+                      <Text style={{ marginBottom: 1.5 }}><Text style={ls}>Costo i.e. con reso </Text><Text style={ls}>{euro(conReso)}</Text></Text>
                       {hasSenzaReso && <Text><Text style={ls}>Senza reso </Text><Text style={ls}>{euro(senzaReso)}</Text></Text>}
                     </>
                   );
                   if (hasSenzaReso) return (
-                    <Text><Text style={ls}>Costo i.e. </Text><Text style={ls}>{euro(senzaReso)}</Text></Text>
+                    <Text style={{ marginBottom: 1.5 }}><Text style={ls}>Costo i.e. </Text><Text style={ls}>{euro(senzaReso)}</Text></Text>
                   );
-                  return <Text><Text style={ls}>Costo i.e. </Text><Text style={ls}>{euro(product.costPrice)}</Text></Text>;
+                  return <Text style={{ marginBottom: 1.5 }}><Text style={ls}>Costo i.e. </Text><Text style={ls}>{euro(product.costPrice)}</Text></Text>;
                 })()}
                 {f.pvp && (
                   <Text>
@@ -1024,7 +1027,7 @@ function ProductCard({
             {(f.produttore || f.paese) && (
               <View style={[s.priceItem, { alignItems: 'flex-end', justifyContent: 'center' }]}>
                 {f.produttore && product.produttore ? (
-                  <Text style={{ fontSize: cfs.produttore.fontSize, fontFamily: fieldFont(cfs.produttore, config.fontFamiglia), color: cfs.produttore.color, lineHeight: 1.3 }}>
+                  <Text style={{ fontSize: cfs.produttore.fontSize, fontFamily: fieldFont(cfs.produttore, config.fontFamiglia), color: cfs.produttore.color, lineHeight: 1.3, marginBottom: 1.5 }}>
                     {cfs.produttore.uppercase ? product.produttore.toUpperCase() : product.produttore}
                   </Text>
                 ) : null}
