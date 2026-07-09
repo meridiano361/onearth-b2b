@@ -84,7 +84,7 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
     const validEntries = entries.filter((e) => e.valid);
     if (!validEntries.length) return;
 
-    const BATCH_SIZE = 5;
+    const BATCH_SIZE = 1;
     const batches: FileEntry[][] = [];
     for (let i = 0; i < validEntries.length; i += BATCH_SIZE) {
       batches.push(validEntries.slice(i, i + BATCH_SIZE));
