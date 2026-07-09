@@ -578,7 +578,7 @@ function computeLayout(config: CatalogConfig): Layout {
   const DETAIL_H = 10;
   const PRICES_H = 24;
 
-  const TEXT_AREA_H = CARD_H - IMG_H - 2; // 2 for border
+  const TEXT_AREA_H = CARD_H - IMG_H - (config.cardBoxStyle?.borderWidth ?? 0) * 2;
 
   // Calculate which text blocks are enabled
   const anyDetail = f.misure || f.linea || f.collezione || f.confezione || f.iva;
@@ -826,7 +826,7 @@ function ProductCard({
       {/* Image area */}
       {f.foto && (() => {
         const fc = config.fotoConfig;
-        const cardW = layout.CARD_W - box.borderWidth;
+        const cardW = layout.CARD_W - box.borderWidth * 2;
         // Collect all available images
         const allUris = [product.imageDataUri, product.imageDataUri2, product.imageDataUri3, product.imageDataUri4].filter(Boolean) as string[];
         // Determine how many photos to show
