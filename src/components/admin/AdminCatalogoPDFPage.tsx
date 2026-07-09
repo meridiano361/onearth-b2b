@@ -176,6 +176,7 @@ interface FormState {
   ordineTranche: 'az' | 'za' | 'custom';
   trancheOrder: string[];
   includeTrancheSenzaNome: boolean;
+  productOrder: string[];
   separatoreTrancheAttivo: boolean;
   stileSeparatoreTranche: {
     bgColor: string;
@@ -384,6 +385,7 @@ const DEFAULT_STATE: FormState = {
   ordineTranche: 'az' as const,
   trancheOrder: [] as string[],
   includeTrancheSenzaNome: false,
+  productOrder: [] as string[],
   separatoreTrancheAttivo: true,
   stileSeparatoreTranche: {
     bgColor: '#1C1C1C',
@@ -420,6 +422,7 @@ function mergeWithDefaults(saved: any): FormState {
     sezioniPersonalizzate: saved?.sezioniPersonalizzate ?? DEFAULT_STATE.sezioniPersonalizzate,
     stileSeparatoreTranche: { ...DEFAULT_STATE.stileSeparatoreTranche, ...saved?.stileSeparatoreTranche },
     trancheOrder: saved?.trancheOrder ?? DEFAULT_STATE.trancheOrder,
+    productOrder: saved?.productOrder ?? DEFAULT_STATE.productOrder,
   };
 }
 
@@ -1521,6 +1524,21 @@ function SortableTranche({ id, label }: { id: string; label: string }) {
   );
 }
 
+// ── SortableProductRow ────────────────────────────────────────────────────────
+
+function SortableProductRow({ product }: { product: { id: string; code: string; name: string | null; modello: string | null } }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: product.id });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 p-2 bg-white border border-border rounded">
+      <span {...attributes} {...listeners} className="cursor-grab text-gray-300 hover:text-gray-500 select-none text-base leading-none" title="Trascina">⠿</span>
+      <span className="font-mono text-2xs text-gray-400 w-20 flex-shrink-0">{product.code}</span>
+      {product.modello && <span className="text-2xs text-gray-400 italic flex-shrink-0">{product.modello}</span>}
+      <span className="text-xs text-primary truncate flex-1">{product.name ?? ''}</span>
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function AdminCatalogoPDFPage() {
@@ -1592,6 +1610,32 @@ export default function AdminCatalogoPDFPage() {
   const { data: templatesData, refetch: refetchTemplates } = useQuery({
     queryKey: ['catalogo-templates'],
     queryFn: () => fetch('/api/admin/catalogo-pdf/templates').then((r) => r.json()),
+  });
+
+  const prodottiFiltriKey = [
+    config.gruppoMerceologico, config.famiglia, config.classe, config.sottoclasse,
+    config.gruppoOmogeneo, config.nomLinea, config.collezione, config.colore,
+    config.produttore, config.tranche, config.soloAttivi,
+  ];
+  const { data: prodottiOrdinabili, isLoading: isLoadingProdotti } = useQuery<{ products: { id: string; code: string; name: string | null; modello: string | null }[] }>({
+    queryKey: ['catalogo-prodotti-ordine', ...prodottiFiltriKey],
+    queryFn: () => {
+      const sp = new URLSearchParams();
+      if (!config.soloAttivi) sp.set('soloAttivi', 'false');
+      if (config.gruppoMerceologico) sp.set('gruppoMerceologico', config.gruppoMerceologico);
+      if (config.famiglia) sp.set('famiglia', config.famiglia);
+      if (config.classe) sp.set('classe', config.classe);
+      if (config.sottoclasse) sp.set('sottoclasse', config.sottoclasse);
+      if (config.gruppoOmogeneo) sp.set('gruppoOmogeneo', config.gruppoOmogeneo);
+      if (config.nomLinea) sp.set('nomLinea', config.nomLinea);
+      if (config.collezione) sp.set('collezione', config.collezione);
+      if (config.colore) sp.set('colore', config.colore);
+      if (config.produttore) sp.set('produttore', config.produttore);
+      if (config.tranche) sp.set('tranche', config.tranche);
+      return fetch(`/api/admin/catalogo-pdf/prodotti?${sp}`).then((r) => r.json());
+    },
+    enabled: config.ordina === 'custom',
+    staleTime: 30_000,
   });
 
   // Derived option lists — deduplicate case-insensitively client-side as safety net
@@ -2171,9 +2215,65 @@ export default function AdminCatalogoPDFPage() {
                     <option value="costPrice_desc">Prezzo decrescente</option>
                     <option value="nomLinea">Linea</option>
                     <option value="collezione">Collezione</option>
+                    <option value="modello">Modello (parure)</option>
+                    <option value="custom">Ordine personalizzato</option>
                   </select>
                 </div>
               </div>
+
+              {/* Ordine personalizzato prodotti */}
+              {config.ordina === 'custom' && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-gray-600">Ordine prodotti nel PDF</p>
+                    {config.productOrder.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => set('productOrder', [])}
+                        className="text-2xs text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        Azzera ordine
+                      </button>
+                    )}
+                  </div>
+                  {isLoadingProdotti ? (
+                    <div className="flex items-center gap-2 text-xs text-gray-400 py-3">
+                      <Loader2 size={12} className="animate-spin" /> Caricamento prodotti...
+                    </div>
+                  ) : (prodottiOrdinabili?.products?.length ?? 0) === 0 ? (
+                    <p className="text-xs text-gray-400">Nessun prodotto con i filtri correnti.</p>
+                  ) : (() => {
+                    const raw = prodottiOrdinabili!.products;
+                    const ordered = config.productOrder.length > 0
+                      ? [
+                          ...config.productOrder.map((id) => raw.find((p) => p.id === id)).filter(Boolean) as typeof raw,
+                          ...raw.filter((p) => !config.productOrder.includes(p.id)),
+                        ]
+                      : raw;
+                    return (
+                      <DndContext
+                        collisionDetection={closestCenter}
+                        onDragEnd={({ active, over }) => {
+                          if (!over || active.id === over.id) return;
+                          const oldIdx = ordered.findIndex((p) => p.id === active.id);
+                          const newIdx = ordered.findIndex((p) => p.id === over.id);
+                          if (oldIdx >= 0 && newIdx >= 0) {
+                            set('productOrder', arrayMove(ordered, oldIdx, newIdx).map((p) => p.id));
+                          }
+                        }}
+                      >
+                        <SortableContext items={ordered.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+                          <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+                            {ordered.map((p) => (
+                              <SortableProductRow key={p.id} product={p} />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
+                    );
+                  })()}
+                </div>
+              )}
 
               {/* Separator mode — shown only when grouping is active */}
               {config.raggruppa && (

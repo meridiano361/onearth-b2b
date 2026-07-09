@@ -30,6 +30,8 @@ const SORT_MAP: Record<string, any> = {
   costPrice_desc: [{ costPrice: 'desc' }],
   nomLinea: [{ nomLinea: 'asc' }, { code: 'asc' }],
   collezione: [{ collezione: 'asc' }, { code: 'asc' }],
+  modello: [{ modello: 'asc' }, { code: 'asc' }],
+  custom: [{ code: 'asc' }],
 };
 
 const RAGGRUPPAMENTO_FIELD: Record<string, keyof ProductForPDF> = {
@@ -78,6 +80,7 @@ interface FetchProductsOptions {
   raggruppa: string;
   mostraLogo: boolean;
   coverImgBase64?: string | null;
+  productOrder?: string[];
   fotoConfig?: { numero: 'solo-principale' | 'tutte' | 'scegli'; quantita: number; layout: 'grande-thumbnail' | 'griglia-2x2' | 'prima-disponibile' };
 }
 
@@ -105,6 +108,7 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
       lotSize: true,
       imageUrl: true,
       misura: true,
+      modello: true,
       produttore: true,
       paese: true,
       nomLinea: true,
@@ -176,6 +180,12 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
     gruppoOmogeneo: p.gruppoOmogeneo,
     tranche: p.tranche,
   }));
+
+  // Apply custom product order if provided
+  if (opts.productOrder?.length) {
+    const orderMap = new Map(opts.productOrder.map((id, i) => [id, i]));
+    productsForPDF.sort((a, b) => (orderMap.get(a.id) ?? 9999) - (orderMap.get(b.id) ?? 9999));
+  }
 
   function buildSectionGroups(prods: ProductForPDF[], fc: Partial<CatalogConfig>): GroupForPDF[] {
     if (fc.useSezioniPersonalizzate && fc.sezioniPersonalizzate && fc.sezioniPersonalizzate.length > 0) {
@@ -528,6 +538,7 @@ export async function POST(req: NextRequest) {
       mostraData: body.mostraData !== false,
       mostraPagina: body.mostraPagina !== false,
       fotoConfig: body.fotoConfig,
+      productOrder: body.ordina === 'custom' ? (body.productOrder ?? []) : [],
       // Pass all new fields through fullConfig
       fullConfig: {
         formato: body.formato,
