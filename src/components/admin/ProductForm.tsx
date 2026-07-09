@@ -63,11 +63,23 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   );
 }
 
+function capitalizeFirst(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function canonicalizeMaterial(raw: string): string {
+  const lower = raw.toLowerCase();
+  return (MATERIALE_OPTIONS as readonly string[]).find((m) => m.toLowerCase() === lower) ?? raw;
+}
+
 // Materiale con percentuale (es. "10% Lino") — usato sia per Moda che Casa
 function MaterialFieldWithPct({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const parse = (v: string) => {
     const m = (v || '').match(/^(\d+(?:\.\d+)?)\s*%\s+(.+)$/);
-    return m ? { pct: m[1], mat: m[2] } : { pct: '', mat: v || '' };
+    if (m) return { pct: m[1], mat: canonicalizeMaterial(m[2]) };
+    const mat = v ? canonicalizeMaterial(v) : '';
+    return { pct: '', mat };
   };
   const init = parse(value);
   const isCustomMat = !!init.mat && !(MATERIALE_OPTIONS as readonly string[]).includes(init.mat);
@@ -884,17 +896,17 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
                 onChange={(v) => {
                   if (hasColorSeparator(v)) {
                     const [c1, c2, c3] = splitColori(v);
-                    setValue('colore', c1); setValue('colore2', c2); setValue('colore3', c3);
-                  } else { setValue('colore', v); }
+                    setValue('colore', capitalizeFirst(c1)); setValue('colore2', capitalizeFirst(c2)); setValue('colore3', capitalizeFirst(c3));
+                  } else { setValue('colore', capitalizeFirst(v)); }
                 }} />
               <SinglePantoneField label="Pantone 1 *" value={pantoneSlots[0]} onChange={(v) => setPantoneSlot(0, v)} />
             </div>
             <div className="space-y-2">
-              <Combobox label="Colore 2" field="colore" value={watch('colore2') || ''} onChange={(v) => setValue('colore2', v)} placeholder="es. blu" />
+              <Combobox label="Colore 2" field="colore" value={watch('colore2') || ''} onChange={(v) => setValue('colore2', capitalizeFirst(v))} placeholder="es. blu" />
               <SinglePantoneField label="Pantone 2" value={pantoneSlots[1]} onChange={(v) => setPantoneSlot(1, v)} />
             </div>
             <div className="space-y-2">
-              <Combobox label="Colore 3" field="colore" value={watch('colore3') || ''} onChange={(v) => setValue('colore3', v)} placeholder="es. bianco" />
+              <Combobox label="Colore 3" field="colore" value={watch('colore3') || ''} onChange={(v) => setValue('colore3', capitalizeFirst(v))} placeholder="es. bianco" />
               <SinglePantoneField label="Pantone 3" value={pantoneSlots[2]} onChange={(v) => setPantoneSlot(2, v)} />
             </div>
           </div>
@@ -937,11 +949,11 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
               onChange={(v) => {
                 if (hasColorSeparator(v)) {
                   const [c1, c2, c3] = splitColori(v);
-                  setValue('colore', c1); setValue('colore2', c2); setValue('colore3', c3);
-                } else { setValue('colore', v); }
+                  setValue('colore', capitalizeFirst(c1)); setValue('colore2', capitalizeFirst(c2)); setValue('colore3', capitalizeFirst(c3));
+                } else { setValue('colore', capitalizeFirst(v)); }
               }} />
-            <Combobox label="Colore 2" field="colore"  value={watch('colore2') || ''} onChange={(v) => setValue('colore2', v)} placeholder="es. blu" />
-            <Combobox label="Colore 3" field="colore"  value={watch('colore3') || ''} onChange={(v) => setValue('colore3', v)} placeholder="es. bianco" />
+            <Combobox label="Colore 2" field="colore"  value={watch('colore2') || ''} onChange={(v) => setValue('colore2', capitalizeFirst(v))} placeholder="es. blu" />
+            <Combobox label="Colore 3" field="colore"  value={watch('colore3') || ''} onChange={(v) => setValue('colore3', capitalizeFirst(v))} placeholder="es. bianco" />
           </div>
           <p className="text-2xs text-gray-400 -mt-2">Al maschile: rosso, blu, nero, bianco, beige…</p>
           <Input label="Altri colori" {...register('altriColori')} placeholder="es. oro, argento, avorio chiaro…" />
