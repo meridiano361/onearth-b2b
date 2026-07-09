@@ -229,9 +229,24 @@ export default function ProductDetailView({ id }: Props) {
               </>
             )}
             {ss.prezzoCosto && (
-              <p className="text-xs text-gray-400 mt-1">
-                {tp('cost')}: {formatCurrency(product.costPrice)}
-              </p>
+              <div className="mt-1 space-y-0.5">
+                {(product as any).costoIeConReso != null ? (
+                  <>
+                    <p className="text-xs text-gray-400">
+                      Costo i.e. con reso: <span className="font-medium text-primary">{formatCurrency((product as any).costoIeConReso)}</span>
+                    </p>
+                    {(product as any).costoIeSenzaReso != null && (
+                      <p className="text-xs text-gray-400">
+                        Costo i.e. senza reso: <span className="font-medium text-primary">{formatCurrency((product as any).costoIeSenzaReso)}</span>
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-400">
+                    {tp('cost')}: {formatCurrency(product.costPrice)}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 

@@ -148,11 +148,24 @@ export default function ProductCard({ product }: ProductCardProps) {
         {(cs.prezzoCosto || cs.pvp) && (
         <div className="flex items-end justify-between mb-3">
           {cs.prezzoCosto && (
-          <div>
-            <p className="text-2xs text-gray-400 uppercase tracking-wide">{t('cost')}</p>
-            <p className="text-sm font-semibold text-primary">
-              {formatCurrency(product.costPrice)}
-            </p>
+          <div className="space-y-0.5">
+            {(product as any).costoIeConReso != null ? (
+              <>
+                <p className="text-2xs text-gray-400 uppercase tracking-wide">Con reso</p>
+                <p className="text-sm font-semibold text-primary">{formatCurrency((product as any).costoIeConReso)}</p>
+                {(product as any).costoIeSenzaReso != null && (
+                  <>
+                    <p className="text-2xs text-gray-400 uppercase tracking-wide">Senza reso</p>
+                    <p className="text-xs font-medium text-gray-600">{formatCurrency((product as any).costoIeSenzaReso)}</p>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="text-2xs text-gray-400 uppercase tracking-wide">{t('cost')}</p>
+                <p className="text-sm font-semibold text-primary">{formatCurrency(product.costPrice)}</p>
+              </>
+            )}
           </div>
           )}
           {cs.pvp && (

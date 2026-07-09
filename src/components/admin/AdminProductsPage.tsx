@@ -880,8 +880,8 @@ export default function AdminProductsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-border rounded overflow-hidden">
-        <table className="table-luxury w-full">
+      <div className="bg-white border border-border rounded overflow-hidden overflow-x-auto">
+        <table className="table-luxury w-full min-w-[600px]">
           <thead>
             <tr>
               <th className="w-8">
@@ -898,7 +898,7 @@ export default function AdminProductsPage() {
               {visibleCols.has('ricarico')    && <th className="w-16 text-center">% Ric.</th>}
               {visibleCols.has('foto')        && <th className="w-12 text-center">Foto</th>}
               {visibleCols.has('stato')       && <th className="w-16">Stato</th>}
-              <th className="w-24"></th>
+              <th className="w-28 sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]"></th>
             </tr>
           </thead>
           <tbody>
@@ -960,7 +960,7 @@ export default function AdminProductsPage() {
                       </td>
                     )}
                     {visibleCols.has('stato')       && <td><Badge variant={product.isActive ? 'success' : 'default'} size="xs">{product.isActive ? 'Attivo' : 'Inattivo'}</Badge></td>}
-                    <td>
+                    <td className={`sticky right-0 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)] ${selectedIds.has(product.id) ? 'bg-accent/5' : 'bg-white'}`}>
                       <div className="flex items-center gap-1">
                         <button onClick={() => setPreviewProduct(product)} className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Anteprima"><Eye size={13} /></button>
                         <button onClick={() => setEditingProduct(product)} className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica"><Edit2 size={13} /></button>
