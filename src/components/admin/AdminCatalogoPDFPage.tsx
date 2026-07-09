@@ -848,98 +848,127 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
   const H = Math.round(W * 842 / 595);
   const S = PREVIEW_SCALE;
 
-  const justifyLogo = (cov.logoPosX ?? 'left') === 'left' ? 'flex-start'
-    : (cov.logoPosX ?? 'left') === 'center' ? 'center'
-    : 'flex-end';
-
-  // PDF uses COVER_LOGO_H = { piccolo: 18, medio: 28, grande: 42 } pt → scale
+  // Logo — mirrors PDF logic exactly
+  const posX = cov.logoPosX ?? 'left';
+  const posY = cov.logoPosY ?? 'top';
+  const justifyLogo = posX === 'left' ? 'flex-start' : posX === 'center' ? 'center' : 'flex-end';
   const COVER_LOGO_H_PT: Record<string, number> = { piccolo: 18, medio: 28, grande: 42 };
-  const rawLogoH = (cov.logoTipo === 'custom' && (cov as any).logoCustomH) ? (cov as any).logoCustomH : (COVER_LOGO_H_PT[cov.logoDimensione] ?? 28);
+  const rawLogoH = (cov.logoTipo === 'custom' && cov.logoCustomH) ? cov.logoCustomH : (COVER_LOGO_H_PT[cov.logoDimensione] ?? 28);
   const logoH = Math.round(rawLogoH * S);
-
   const logoSrc = cov.logoTipo === 'onearth' ? (config.mostraLogo ? '/logo-on-earth/onearth_solo.png' : null)
     : cov.logoTipo === 'custom' ? cov.logoCustomBase64
     : null;
+  // Logo vertical position mirrors PDF logoVertical map (LOGO_MARGIN=28pt, but cover uses 28pt)
+  const logoTopPx = posY === 'top' ? 28 * S : posY === 'middle' ? H / 2 - logoH / 2 : H - logoH - 28 * S;
 
-  const bg = config.colori.sfondoPagina;
-  const textColor = config.colori.testoPrimario;
-  const mutedColor = config.colori.testoSecondario;
+  // Image transforms — same formula as PDF
+  const imgScalePct = cov.imgScale ?? 100;
+  const imgOffsetX  = cov.imgOffsetX ?? 0;
+  const imgOffsetY  = cov.imgOffsetY ?? 0;
+  const imgOpacity  = (cov.imgOpacity ?? 100) / 100;
 
-  const titleFontSize = typo.titoloFontSize * S;
-  const titleColor = typo.titoloColor;
+  // Typography
+  const titleFontSize  = typo.titoloFontSize * S;
+  const titleColor     = typo.titoloColor;
   const titleUppercase = typo.titoloUppercase ? 'uppercase' as const : 'none' as const;
-  const titleBold = typo.titoloBold;
-  const subtitleFontSize = typo.sottotitoloFontSize * S;
-  const subtitleColor = typo.sottotitoloColor;
+  const titleBold      = typo.titoloBold;
+  const subtitleFontSize  = typo.sottotitoloFontSize * S;
+  const subtitleColor     = typo.sottotitoloColor;
   const subtitle2FontSize = (typo.sottotitolo2FontSize ?? 11) * S;
-  const subtitle2Color = typo.sottotitolo2Color ?? typo.sottotitoloColor;
-  const spacingTS = ((typo.spacingTitoloSottotitolo ?? 6) * S);
-  const spacingSS2 = ((typo.spacingSottotitoloSottotitolo2 ?? 4) * S);
+  const subtitle2Color    = typo.sottotitolo2Color ?? typo.sottotitoloColor;
+  const spacingTS  = (typo.spacingTitoloSottotitolo ?? 6) * S;
+  const spacingSS2 = (typo.spacingSottotitoloSottotitolo2 ?? 4) * S;
+  const titleAlign = cov.titoloAllineamento ?? 'center';
+  const titoloText = typo.titoloUppercase ? (cov.titolo ?? '').toUpperCase() : cov.titolo;
+  const subtitle2  = cov.sottotitolo2 ?? '';
+
+  // Shared text block
+  const textBlock = (ls: number) => (
+    <>
+      {cov.titolo && <p style={{ color: titleColor, fontSize: titleFontSize, fontWeight: titleBold ? 'bold' : 'normal', margin: 0, textAlign: titleAlign, textTransform: titleUppercase, letterSpacing: ls, whiteSpace: 'pre-wrap', marginBottom: spacingTS }}>{titoloText}</p>}
+      {cov.sottotitolo && <p style={{ color: subtitleColor, fontSize: subtitleFontSize, margin: 0, textAlign: cov.sottotitoloAllineamento ?? 'center', whiteSpace: 'pre-wrap', marginBottom: subtitle2 ? spacingSS2 : 0, letterSpacing: 1 * S }}>{cov.sottotitolo}</p>}
+      {subtitle2 && <p style={{ color: subtitle2Color, fontSize: subtitle2FontSize, margin: 0, textAlign: cov.sottotitolo2Allineamento ?? 'center', whiteSpace: 'pre-wrap', letterSpacing: 1 * S }}>{subtitle2}</p>}
+    </>
+  );
+
+  let inner: React.ReactNode;
+
+  if (cov.layout === 'full-overlay') {
+    const imgW = W * imgScalePct / 100;
+    const imgHH = H * imgScalePct / 100;
+    const imgLeft = (W - imgW) / 2 + (W * imgOffsetX / 100);
+    const imgTop  = (H - imgHH) / 2 + (H * imgOffsetY / 100);
+    const overlayH = 160 * S;
+
+    inner = (
+      <>
+        {cov.immagineBase64 && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={cov.immagineBase64} alt="" style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgHH, objectFit: 'cover', opacity: imgOpacity }} />
+        )}
+        {logoSrc && (
+          <div style={{ position: 'absolute', top: logoTopPx, left: 32 * S, right: 32 * S, display: 'flex', justifyContent: justifyLogo }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
+          </div>
+        )}
+        {/* Solid dark overlay — matches PDF opacity: 0.55 rectangle */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, backgroundColor: 'rgba(0,0,0,0.55)' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `0 ${40 * S}px ${44 * S}px` }}>
+          {textBlock(3 * S)}
+        </div>
+      </>
+    );
+  } else if (cov.layout === 'half') {
+    const halfH = H / 2;
+    const imgW = W * imgScalePct / 100;
+    const imgHH = halfH * imgScalePct / 100;
+    const imgLeft = (W - imgW) / 2 + (W * imgOffsetX / 100);
+    const imgTop  = (halfH - imgHH) / 2 + (halfH * imgOffsetY / 100);
+
+    inner = (
+      <>
+        {/* Top half: image */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: halfH, overflow: 'hidden', backgroundColor: config.colori.sfondoPagina }}>
+          {cov.immagineBase64 && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={cov.immagineBase64} alt="" style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgHH, objectFit: 'cover', opacity: imgOpacity }} />
+          )}
+        </div>
+        {/* Bottom half: typo.bgColor + logo + text */}
+        <div style={{ position: 'absolute', top: halfH, left: 0, right: 0, bottom: 0, backgroundColor: typo.bgColor ?? '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `0 ${40 * S}px` }}>
+          {logoSrc && (
+            <div style={{ display: 'flex', justifyContent: justifyLogo, marginBottom: 16 * S }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
+            </div>
+          )}
+          {textBlock(3 * S)}
+        </div>
+      </>
+    );
+  } else {
+    // solo-testo — PDF uses typo.bgColor as full background
+    inner = (
+      <div style={{ position: 'absolute', inset: 0, backgroundColor: typo.bgColor ?? config.colori.sfondoPagina, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `0 ${60 * S}px` }}>
+        {logoSrc && (
+          <div style={{ display: 'flex', justifyContent: justifyLogo, marginBottom: 24 * S }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
+          </div>
+        )}
+        {/* Accent line — 50×1.5pt in PDF */}
+        <div style={{ width: 50 * S, height: Math.max(1, 1.5 * S), backgroundColor: '#8B7355', alignSelf: 'center', marginBottom: 20 * S, flexShrink: 0 }} />
+        {textBlock(4 * S)}
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4">
       <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Anteprima copertina</p>
-      <div style={{ width: W, height: H, position: 'relative', overflow: 'hidden', backgroundColor: bg, border: '1px solid #e5e7eb', borderRadius: 4 }} className="shadow-sm flex-shrink-0">
-
-        {/* Background image */}
-        {cov.immagineBase64 && cov.layout !== 'solo-testo' && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={cov.immagineBase64}
-            alt=""
-            style={{
-              position: 'absolute', inset: 0, width: '100%',
-              height: cov.layout === 'half' ? '50%' : '100%',
-              objectFit: 'cover',
-            }}
-          />
-        )}
-
-        {cov.layout === 'full-overlay' && (
-          <>
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '42%', background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.65))' }} />
-            {logoSrc && (
-              <div style={{ position: 'absolute', top: 8, left: 8, right: 8, display: 'flex', justifyContent: justifyLogo }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
-              </div>
-            )}
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 10px 10px', textAlign: cov.titoloAllineamento }}>
-              {cov.titolo && <p style={{ color: titleColor, fontSize: titleFontSize, fontWeight: titleBold ? 'bold' : 'normal', margin: 0, textTransform: titleUppercase, letterSpacing: 1, whiteSpace: 'pre-wrap', marginBottom: spacingTS }}>{cov.titolo}</p>}
-              {cov.sottotitolo && <p style={{ color: subtitleColor, fontSize: subtitleFontSize, margin: 0, textAlign: cov.sottotitoloAllineamento, whiteSpace: 'pre-wrap', marginBottom: cov.sottotitolo2 ? spacingSS2 : 0 }}>{cov.sottotitolo}</p>}
-              {cov.sottotitolo2 && <p style={{ color: subtitle2Color, fontSize: subtitle2FontSize, margin: 0, textAlign: (cov.sottotitolo2Allineamento ?? 'center'), whiteSpace: 'pre-wrap' }}>{cov.sottotitolo2}</p>}
-            </div>
-          </>
-        )}
-
-        {cov.layout === 'half' && (
-          <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, bottom: 0, backgroundColor: typo.bgColor ?? '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '6px 10px' }}>
-            {logoSrc && (
-              <div style={{ display: 'flex', justifyContent: justifyLogo, marginBottom: 4 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
-              </div>
-            )}
-            {cov.titolo && <p style={{ color: titleColor, fontSize: titleFontSize, fontWeight: titleBold ? 'bold' : 'normal', margin: 0, textTransform: titleUppercase, textAlign: cov.titoloAllineamento, whiteSpace: 'pre-wrap', marginBottom: spacingTS }}>{cov.titolo}</p>}
-            {cov.sottotitolo && <p style={{ color: subtitleColor, fontSize: subtitleFontSize, margin: 0, textAlign: cov.sottotitoloAllineamento, whiteSpace: 'pre-wrap', marginBottom: cov.sottotitolo2 ? spacingSS2 : 0 }}>{cov.sottotitolo}</p>}
-            {cov.sottotitolo2 && <p style={{ color: subtitle2Color, fontSize: subtitle2FontSize, margin: 0, textAlign: (cov.sottotitolo2Allineamento ?? 'center'), whiteSpace: 'pre-wrap' }}>{cov.sottotitolo2}</p>}
-          </div>
-        )}
-
-        {cov.layout === 'solo-testo' && (
-          <div style={{ position: 'absolute', inset: 0, backgroundColor: bg, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 14px' }}>
-            {logoSrc && (
-              <div style={{ display: 'flex', justifyContent: justifyLogo, marginBottom: 6 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
-              </div>
-            )}
-            <div style={{ width: 16, height: 1, backgroundColor: '#8B7355', marginBottom: 6, alignSelf: 'center' }} />
-            {cov.titolo && <p style={{ color: titleColor, fontSize: titleFontSize, fontWeight: titleBold ? 'bold' : 'normal', margin: 0, textTransform: titleUppercase, textAlign: cov.titoloAllineamento, whiteSpace: 'pre-wrap', marginBottom: spacingTS }}>{cov.titolo}</p>}
-            {cov.sottotitolo && <p style={{ color: subtitleColor, fontSize: subtitleFontSize, margin: 0, textAlign: cov.sottotitoloAllineamento, whiteSpace: 'pre-wrap', marginBottom: cov.sottotitolo2 ? spacingSS2 : 0 }}>{cov.sottotitolo}</p>}
-            {cov.sottotitolo2 && <p style={{ color: subtitle2Color, fontSize: subtitle2FontSize, margin: 0, textAlign: (cov.sottotitolo2Allineamento ?? 'center'), whiteSpace: 'pre-wrap' }}>{cov.sottotitolo2}</p>}
-          </div>
-        )}
+      <div style={{ width: W, height: H, position: 'relative', overflow: 'hidden', backgroundColor: config.colori.sfondoPagina, border: '1px solid #e5e7eb', borderRadius: 4 }} className="shadow-sm flex-shrink-0">
+        {inner}
       </div>
     </div>
   );
@@ -1887,6 +1916,11 @@ export default function AdminCatalogoPDFPage() {
     reader.onload = (ev) => {
       const dataUrl = ev.target?.result as string;
       setCopertina('logoCustomBase64', dataUrl);
+      // Save immediately — don't rely on debounce (can be cancelled on navigation)
+      try {
+        const logos = loadLogosFromStorage();
+        localStorage.setItem(LS_PDF_LOGOS, JSON.stringify({ ...logos, copertinaLogo: dataUrl }));
+      } catch {}
     };
     reader.readAsDataURL(file);
   }
@@ -3459,8 +3493,10 @@ export default function AdminCatalogoPDFPage() {
                             if (!file) return;
                             const reader = new FileReader();
                             reader.onload = (ev) => {
-                              setPaginaPenultima('logoCustomBase64', ev.target?.result as string);
+                              const dataUrl = ev.target?.result as string;
+                              setPaginaPenultima('logoCustomBase64', dataUrl);
                               if (penultimaLogoFileInputRef.current) penultimaLogoFileInputRef.current.value = '';
+                              try { const l = loadLogosFromStorage(); localStorage.setItem(LS_PDF_LOGOS, JSON.stringify({ ...l, paginaPenultimaLogo: dataUrl })); } catch {}
                             };
                             reader.readAsDataURL(file);
                           }}
@@ -3809,8 +3845,10 @@ export default function AdminCatalogoPDFPage() {
                             if (!file) return;
                             const reader = new FileReader();
                             reader.onload = (ev) => {
-                              setPaginaFinale('logoCustomBase64', ev.target?.result as string);
+                              const dataUrl = ev.target?.result as string;
+                              setPaginaFinale('logoCustomBase64', dataUrl);
                               if (finalLogoFileInputRef.current) finalLogoFileInputRef.current.value = '';
+                              try { const l = loadLogosFromStorage(); localStorage.setItem(LS_PDF_LOGOS, JSON.stringify({ ...l, paginaFinaleLogo: dataUrl })); } catch {}
                             };
                             reader.readAsDataURL(file);
                           }}
