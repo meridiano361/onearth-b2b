@@ -771,18 +771,28 @@ function CardPreview({ config }: { config: FormState }) {
           {(f.misure || f.produttore || f.paese || f.linea || f.collezione || f.confezione || f.iva) && (
             <p style={{ ...fieldCSS(cfs.misure), marginBottom: 2 }}>10×5 cm · Produttore</p>
           )}
-          {(f.prezzoCosto || f.pvp) && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-              {f.prezzoCosto && (
-                <div>
-                  <p style={{ fontSize: fs2px(5.5), color: cfs.prezzoCosto.color, textTransform: 'uppercase', margin: 0 }}>Costo</p>
-                  <p style={fieldCSS(cfs.prezzoCosto)}>€12,50</p>
+          {(f.prezzoCosto || f.pvp || f.produttore || f.paese) && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 3, gap: 2 }}>
+              {(f.prezzoCosto || f.pvp) && (
+                <div style={{ flex: 1 }}>
+                  {f.prezzoCosto && (
+                    <p style={{ fontSize: fs2px(5.5), color: cfs.prezzoCosto.color, margin: 0, lineHeight: 1.4 }}>
+                      <span style={{ textTransform: 'uppercase' }}>Costo i.e. </span>
+                      <span style={{ ...fieldCSS(cfs.prezzoCosto), display: 'inline' }}>€12,50</span>
+                    </p>
+                  )}
+                  {f.pvp && (
+                    <p style={{ fontSize: fs2px(5.5), color: cfs.pvp.color, margin: 0, lineHeight: 1.4 }}>
+                      <span style={{ textTransform: 'uppercase' }}>PVP i.i. </span>
+                      <span style={{ ...fieldCSS(cfs.pvp), display: 'inline' }}>€29,90</span>
+                    </p>
+                  )}
                 </div>
               )}
-              {f.pvp && (
+              {(f.produttore || f.paese) && (
                 <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: fs2px(5.5), color: cfs.pvp.color, textTransform: 'uppercase', margin: 0 }}>PVP</p>
-                  <p style={fieldCSS(cfs.pvp)}>€29,90</p>
+                  {f.produttore && <p style={{ ...fieldCSS(cfs.produttore), margin: 0, lineHeight: 1.3 }}>Produttore</p>}
+                  {f.paese && <p style={{ ...fieldCSS(cfs.paese), margin: 0, lineHeight: 1.3 }}>Italia</p>}
                 </div>
               )}
             </div>
@@ -2539,8 +2549,8 @@ export default function AdminCatalogoPDFPage() {
                       onChange={(fs) => setCardFieldStyle('pvp', fs)} />
                   )}
                 </div>
-                <div className="flex justify-center sm:justify-start">
-                  <CardPreview config={config} />
+                <div className="hidden">
+                  {/* CardPreview moved to side panel */}
                 </div>
               </div>
             </div>
@@ -3099,8 +3109,7 @@ export default function AdminCatalogoPDFPage() {
                     )}
                   </div>
 
-                  {/* Preview */}
-                  <CoverPreview config={config} />
+                  {/* Preview moved to side panel */}
                 </div>
               )}
             </div>
@@ -3446,8 +3455,7 @@ export default function AdminCatalogoPDFPage() {
                     )}
                   </div>
 
-                  {/* Preview */}
-                  <PenultimaPagePreview config={config} />
+                  {/* Preview moved to side panel */}
                 </div>
               )}
             </div>
@@ -3793,8 +3801,7 @@ export default function AdminCatalogoPDFPage() {
                     )}
                   </div>
 
-                  {/* Preview */}
-                  <FinalPagePreview config={config} />
+                  {/* Preview moved to side panel */}
                 </div>
               )}
             </div>
@@ -4279,6 +4286,42 @@ export default function AdminCatalogoPDFPage() {
               Esegui prima l&apos;anteprima per stimare il numero di pagine
             </p>
           )}
+        </div>
+
+        {/* Live previews panel */}
+        <div className="border border-border rounded overflow-hidden">
+          <p className="px-4 py-3 bg-gray-50 text-xs font-semibold tracking-widest uppercase text-gray-500">Anteprime live</p>
+          <div className="p-4 space-y-4 bg-white">
+            {/* Card preview */}
+            <CardPreview config={config} />
+            {/* Cover preview */}
+            {config.copertina.attiva && (
+              <div>
+                <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Copertina</p>
+                <div style={{ transform: 'scale(0.88)', transformOrigin: 'top left', marginBottom: -24 }}>
+                  <CoverPreview config={config} />
+                </div>
+              </div>
+            )}
+            {/* Penultima page preview */}
+            {config.paginaPenultima.attiva && (
+              <div>
+                <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Pagina penultima</p>
+                <div style={{ transform: 'scale(0.88)', transformOrigin: 'top left', marginBottom: -24 }}>
+                  <PenultimaPagePreview config={config} />
+                </div>
+              </div>
+            )}
+            {/* Final page preview */}
+            {config.paginaFinale.attiva && (
+              <div>
+                <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Pagina finale</p>
+                <div style={{ transform: 'scale(0.88)', transformOrigin: 'top left', marginBottom: -24 }}>
+                  <FinalPagePreview config={config} />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Templates */}
