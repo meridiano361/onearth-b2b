@@ -800,10 +800,10 @@ function CardPreview({ config }: { config: FormState }) {
           </div>
         )}
         <div style={{ padding: box.padding * 0.4 }}>
-          {f.codice && <p style={fieldCSS(cfs.codice)}>COD-001</p>}
-          {f.descrizione && <p style={{ ...fieldCSS(cfs.descrizione), marginBottom: 1, lineHeight: 1.25 }}>Nome prodotto esempio</p>}
-          {(f.misure || f.produttore || f.paese || f.linea || f.collezione || f.confezione || f.iva) && (
-            <p style={{ ...fieldCSS(cfs.misure), marginBottom: 2 }}>10×5 cm · Produttore</p>
+          {f.codice && <p style={{ ...fieldCSS(cfs.codice), marginBottom: 2 }}>COD-001</p>}
+          {f.descrizione && <p style={{ ...fieldCSS(cfs.descrizione), marginBottom: 2, lineHeight: 1.25 }}>Nome prodotto esempio</p>}
+          {(f.misure || f.linea || f.collezione || f.confezione || f.iva) && (
+            <p style={{ ...fieldCSS(cfs.misure), marginBottom: 2 }}>10×5 cm</p>
           )}
           {(f.prezzoCosto || f.pvp || f.produttore || f.paese) && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 3, gap: 2 }}>
@@ -882,12 +882,12 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
   const titoloText = typo.titoloUppercase ? (cov.titolo ?? '').toUpperCase() : cov.titolo;
   const subtitle2  = cov.sottotitolo2 ?? '';
 
-  // Shared text block
-  const textBlock = (ls: number) => (
+  // Shared text block — subOpacity/sub2Opacity for full-overlay (PDF: 0.85/0.75), subLS for subtitle letterSpacing (solo-testo uses 1.5)
+  const textBlock = (ls: number, subOpacity = 1, sub2Opacity = 1, subLS = 1 * S) => (
     <>
       {cov.titolo && <p style={{ color: titleColor, fontSize: titleFontSize, fontWeight: titleBold ? 'bold' : 'normal', margin: 0, textAlign: titleAlign, textTransform: titleUppercase, letterSpacing: ls, whiteSpace: 'pre-wrap', marginBottom: spacingTS }}>{titoloText}</p>}
-      {cov.sottotitolo && <p style={{ color: subtitleColor, fontSize: subtitleFontSize, margin: 0, textAlign: cov.sottotitoloAllineamento ?? 'center', whiteSpace: 'pre-wrap', marginBottom: subtitle2 ? spacingSS2 : 0, letterSpacing: 1 * S }}>{cov.sottotitolo}</p>}
-      {subtitle2 && <p style={{ color: subtitle2Color, fontSize: subtitle2FontSize, margin: 0, textAlign: cov.sottotitolo2Allineamento ?? 'center', whiteSpace: 'pre-wrap', letterSpacing: 1 * S }}>{subtitle2}</p>}
+      {cov.sottotitolo && <p style={{ color: subtitleColor, fontSize: subtitleFontSize, margin: 0, textAlign: cov.sottotitoloAllineamento ?? 'center', whiteSpace: 'pre-wrap', marginBottom: subtitle2 ? spacingSS2 : 0, letterSpacing: subLS, opacity: subOpacity }}>{cov.sottotitolo}</p>}
+      {subtitle2 && <p style={{ color: subtitle2Color, fontSize: subtitle2FontSize, margin: 0, textAlign: cov.sottotitolo2Allineamento ?? 'center', whiteSpace: 'pre-wrap', letterSpacing: subLS, opacity: sub2Opacity }}>{subtitle2}</p>}
     </>
   );
 
@@ -915,7 +915,7 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
         {/* Solid dark overlay — matches PDF opacity: 0.55 rectangle */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, backgroundColor: 'rgba(0,0,0,0.55)' }} />
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `0 ${40 * S}px ${44 * S}px` }}>
-          {textBlock(3 * S)}
+          {textBlock(3 * S, 0.85, 0.75)}
         </div>
       </>
     );
@@ -959,7 +959,7 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
         )}
         {/* Accent line — 50×1.5pt in PDF */}
         <div style={{ width: 50 * S, height: Math.max(1, 1.5 * S), backgroundColor: '#8B7355', alignSelf: 'center', marginBottom: 20 * S, flexShrink: 0 }} />
-        {textBlock(4 * S)}
+        {textBlock(4 * S, 1, 1, 1.5 * S)}
       </div>
     );
   }
@@ -1192,38 +1192,41 @@ function FinalPagePreview({ config }: { config: FormState }) {
   const posX = pf.logoPosX ?? 'center';
   const posY = pf.logoPosY ?? 'bottom';
   const logoDim = pf.logoDimensione ?? 'medio';
-  const logoH = logoDim === 'piccolo' ? 8 : logoDim === 'medio' ? 12 : 18;
+  // Logo height: matches PDF FINAL_LOGO_H = { piccolo: 14, medio: 22, grande: 34 } scaled
+  const logoH = (logoDim === 'piccolo' ? 14 : logoDim === 'medio' ? 22 : 34) * scale;
   const logoTipo = pf.logoTipo ?? (pf.mostraLogo ? 'onearth' : 'none');
   const logoSrc = logoTipo === 'onearth' ? (config.mostraLogo ? '/logo-on-earth/onearth_solo.png' : null)
     : logoTipo === 'custom' ? pf.logoCustomBase64 : null;
 
-  const imgStyle: React.CSSProperties = {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    opacity,
-    transform: `scale(${imgScale / 100}) translate(${offsetX}%, ${offsetY}%)`,
-    transformOrigin: 'center center',
-  };
+  // Image position — same formula as PDF fullImgStyle
+  function imgPos(areaW: number, areaH: number): React.CSSProperties {
+    const iw = areaW * imgScale / 100;
+    const ih = areaH * imgScale / 100;
+    const left = (areaW - iw) / 2 + (areaW * offsetX / 100);
+    const top = (areaH - ih) / 2 + (areaH * offsetY / 100);
+    return { position: 'absolute', top, left, width: iw, height: ih, objectFit: 'cover', opacity };
+  }
 
-  // Logo position in the 3×3 grid
+  // Logo position — matches PDF: LOGO_MARGIN=30pt, full-width row with justifyContent
+  const LOGO_MARGIN_PX = 30 * scale;
+  const logoTopPx = posY === 'top' ? LOGO_MARGIN_PX : posY === 'middle' ? H / 2 - logoH / 2 : H - logoH - LOGO_MARGIN_PX;
+  const justifyLogo = posX === 'left' ? 'flex-start' : posX === 'center' ? 'center' : 'flex-end';
   const logoStyle: React.CSSProperties = {
     position: 'absolute',
-    top: posY === 'top' ? 6 : posY === 'middle' ? '50%' : undefined,
-    bottom: posY === 'bottom' ? 6 : undefined,
-    left: posX === 'left' ? 8 : posX === 'center' ? '50%' : undefined,
-    right: posX === 'right' ? 8 : undefined,
-    transform: posX === 'center' && posY === 'middle' ? 'translate(-50%, -50%)'
-      : posX === 'center' ? 'translateX(-50%)'
-      : posY === 'middle' ? 'translateY(-50%)'
-      : undefined,
+    top: logoTopPx,
+    left: LOGO_MARGIN_PX,
+    right: LOGO_MARGIN_PX,
     display: 'flex',
+    justifyContent: justifyLogo,
     pointerEvents: 'none',
   };
 
+  const PAD_H = 60 * scale;
+  const PAD_V = 48 * scale;
+
   const titleEl = pf.titolo ? (
     <div
-      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pf.titoloAllineamento, margin: '0 0 4px', letterSpacing: 2 * scale }}
+      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pf.titoloAllineamento, margin: `0 0 ${4 * scale}px`, letterSpacing: 2 * scale }}
       dangerouslySetInnerHTML={{ __html: pf.titolo }}
     />
   ) : null;
@@ -1245,16 +1248,17 @@ function FinalPagePreview({ config }: { config: FormState }) {
   let inner: React.ReactNode;
 
   if (layout === 'full-overlay') {
+    const overlayH = H * 0.45;
     inner = (
       <>
         {imgSrc && (
           <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imgSrc} alt="" style={imgStyle} />
+            <img src={imgSrc} alt="" style={imgPos(W, H)} />
           </div>
         )}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.65))' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 10px 10px' }}>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, backgroundColor: 'rgba(0,0,0,0.55)' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `0 ${PAD_H}px ${PAD_V}px` }}>
           {titleEl}
           {textEl}
         </div>
@@ -1267,10 +1271,10 @@ function FinalPagePreview({ config }: { config: FormState }) {
         {imgSrc && (
           <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imgSrc} alt="" style={imgStyle} />
+            <img src={imgSrc} alt="" style={imgPos(W, H)} />
           </div>
         )}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 12px' }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px` }}>
           {titleEl}
           {textEl}
         </div>
@@ -1283,39 +1287,42 @@ function FinalPagePreview({ config }: { config: FormState }) {
         {imgSrc && (
           <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imgSrc} alt="" style={imgStyle} />
+            <img src={imgSrc} alt="" style={imgPos(W, H)} />
           </div>
         )}
         {logoEl}
       </>
     );
   } else if (layout === 'img-left') {
+    const imgAreaW = W * 0.45;
     inner = (
       <div style={{ display: 'flex', height: '100%' }}>
-        <div style={{ width: '45%', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+        <div style={{ width: imgAreaW, height: H, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
           {imgSrc && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={imgSrc} alt="" style={{ ...imgStyle, position: 'absolute', width: '100%' }} />
+            <img src={imgSrc} alt="" style={imgPos(imgAreaW, H)} />
           )}
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 10px', position: 'relative' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${32 * scale}px`, position: 'relative' }}>
           {titleEl}
           {textEl}
-          {logoEl}
         </div>
+        {logoEl}
       </div>
     );
   } else if (layout === 'img-bottom') {
+    const imgAreaH = H * 0.4;
+    const textAreaH = H - imgAreaH;
     inner = (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 12px' }}>
+        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px` }}>
           {titleEl}
           {textEl}
         </div>
-        <div style={{ height: '40%', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+        <div style={{ height: imgAreaH, overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
           {imgSrc && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={imgSrc} alt="" style={{ ...imgStyle, position: 'absolute', width: '100%' }} />
+            <img src={imgSrc} alt="" style={imgPos(W, imgAreaH)} />
           )}
         </div>
         {logoEl}
@@ -1323,15 +1330,17 @@ function FinalPagePreview({ config }: { config: FormState }) {
     );
   } else {
     // img-top (default)
+    const imgAreaH = H * 0.4;
+    const textAreaH = H - imgAreaH;
     inner = (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ height: '40%', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+        <div style={{ height: imgAreaH, overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
           {imgSrc && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={imgSrc} alt="" style={{ ...imgStyle, position: 'absolute', width: '100%' }} />
+            <img src={imgSrc} alt="" style={imgPos(W, imgAreaH)} />
           )}
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 12px' }}>
+        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px` }}>
           {titleEl}
           {textEl}
         </div>
@@ -1372,37 +1381,38 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
   const posX = pp.logoPosX ?? 'center';
   const posY = pp.logoPosY ?? 'bottom';
   const logoDim = pp.logoDimensione ?? 'medio';
-  const logoH = logoDim === 'piccolo' ? 8 : logoDim === 'medio' ? 12 : 18;
+  const logoH = (logoDim === 'piccolo' ? 14 : logoDim === 'medio' ? 22 : 34) * scale;
   const logoTipo = pp.logoTipo ?? (pp.mostraLogo ? 'onearth' : 'none');
   const logoSrc = logoTipo === 'onearth' ? (config.mostraLogo ? '/logo-on-earth/onearth_solo.png' : null)
     : logoTipo === 'custom' ? pp.logoCustomBase64 : null;
 
-  const imgStyle: React.CSSProperties = {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    opacity,
-    transform: `scale(${imgScale / 100}) translate(${offsetX}%, ${offsetY}%)`,
-    transformOrigin: 'center center',
-  };
+  function imgPos(areaW: number, areaH: number): React.CSSProperties {
+    const iw = areaW * imgScale / 100;
+    const ih = areaH * imgScale / 100;
+    const left = (areaW - iw) / 2 + (areaW * offsetX / 100);
+    const top = (areaH - ih) / 2 + (areaH * offsetY / 100);
+    return { position: 'absolute', top, left, width: iw, height: ih, objectFit: 'cover', opacity };
+  }
 
+  const LOGO_MARGIN_PX = 30 * scale;
+  const logoTopPx = posY === 'top' ? LOGO_MARGIN_PX : posY === 'middle' ? H / 2 - logoH / 2 : H - logoH - LOGO_MARGIN_PX;
+  const justifyLogo = posX === 'left' ? 'flex-start' : posX === 'center' ? 'center' : 'flex-end';
   const logoStyle: React.CSSProperties = {
     position: 'absolute',
-    top: posY === 'top' ? 6 : posY === 'middle' ? '50%' : undefined,
-    bottom: posY === 'bottom' ? 6 : undefined,
-    left: posX === 'left' ? 8 : posX === 'center' ? '50%' : undefined,
-    right: posX === 'right' ? 8 : undefined,
-    transform: posX === 'center' && posY === 'middle' ? 'translate(-50%, -50%)'
-      : posX === 'center' ? 'translateX(-50%)'
-      : posY === 'middle' ? 'translateY(-50%)'
-      : undefined,
+    top: logoTopPx,
+    left: LOGO_MARGIN_PX,
+    right: LOGO_MARGIN_PX,
     display: 'flex',
+    justifyContent: justifyLogo,
     pointerEvents: 'none',
   };
 
+  const PAD_H = 60 * scale;
+  const PAD_V = 48 * scale;
+
   const titleEl = pp.titolo ? (
     <div
-      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pp.titoloAllineamento, margin: '0 0 4px', letterSpacing: 2 * scale }}
+      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pp.titoloAllineamento, margin: `0 0 ${4 * scale}px`, letterSpacing: 2 * scale }}
       dangerouslySetInnerHTML={{ __html: pp.titolo }}
     />
   ) : null;
@@ -1424,16 +1434,17 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
   let inner: React.ReactNode;
 
   if (layout === 'full-overlay') {
+    const overlayH = H * 0.45;
     inner = (
       <>
         {imgSrc && (
           <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imgSrc} alt="" style={imgStyle} />
+            <img src={imgSrc} alt="" style={imgPos(W, H)} />
           </div>
         )}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.65))' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 10px 10px' }}>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, backgroundColor: 'rgba(0,0,0,0.55)' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `0 ${PAD_H}px ${PAD_V}px` }}>
           {titleEl}
           {textEl}
         </div>
@@ -1446,10 +1457,10 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
         {imgSrc && (
           <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imgSrc} alt="" style={imgStyle} />
+            <img src={imgSrc} alt="" style={imgPos(W, H)} />
           </div>
         )}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 12px' }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px` }}>
           {titleEl}
           {textEl}
         </div>
@@ -1462,39 +1473,42 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
         {imgSrc && (
           <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imgSrc} alt="" style={imgStyle} />
+            <img src={imgSrc} alt="" style={imgPos(W, H)} />
           </div>
         )}
         {logoEl}
       </>
     );
   } else if (layout === 'img-left') {
+    const imgAreaW = W * 0.45;
     inner = (
       <div style={{ display: 'flex', height: '100%' }}>
-        <div style={{ width: '45%', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+        <div style={{ width: imgAreaW, height: H, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
           {imgSrc && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={imgSrc} alt="" style={{ ...imgStyle, position: 'absolute', width: '100%' }} />
+            <img src={imgSrc} alt="" style={imgPos(imgAreaW, H)} />
           )}
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 10px', position: 'relative' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${32 * scale}px`, position: 'relative' }}>
           {titleEl}
           {textEl}
-          {logoEl}
         </div>
+        {logoEl}
       </div>
     );
   } else if (layout === 'img-bottom') {
+    const imgAreaH = H * 0.4;
+    const textAreaH = H - imgAreaH;
     inner = (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 12px' }}>
+        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px` }}>
           {titleEl}
           {textEl}
         </div>
-        <div style={{ height: '40%', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+        <div style={{ height: imgAreaH, overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
           {imgSrc && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={imgSrc} alt="" style={{ ...imgStyle, position: 'absolute', width: '100%' }} />
+            <img src={imgSrc} alt="" style={imgPos(W, imgAreaH)} />
           )}
         </div>
         {logoEl}
@@ -1502,15 +1516,17 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
     );
   } else {
     // img-top (default)
+    const imgAreaH = H * 0.4;
+    const textAreaH = H - imgAreaH;
     inner = (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ height: '40%', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+        <div style={{ height: imgAreaH, overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
           {imgSrc && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={imgSrc} alt="" style={{ ...imgStyle, position: 'absolute', width: '100%' }} />
+            <img src={imgSrc} alt="" style={imgPos(W, imgAreaH)} />
           )}
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 12px' }}>
+        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px` }}>
           {titleEl}
           {textEl}
         </div>
