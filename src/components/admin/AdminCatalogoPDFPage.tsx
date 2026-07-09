@@ -1233,7 +1233,7 @@ function FinalPagePreview({ config }: { config: FormState }) {
 
   const textEl = pf.testo ? (
     <div
-      style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, lineHeight: 1.5 }}
+      style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, lineHeight: 1.5, textAlign: pf.testoAllineamento ?? 'center' }}
       dangerouslySetInnerHTML={{ __html: pf.testo }}
     />
   ) : null;
@@ -1419,7 +1419,7 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
 
   const textEl = pp.testo ? (
     <div
-      style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, lineHeight: 1.5 }}
+      style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, lineHeight: 1.5, textAlign: pp.testoAllineamento ?? 'center' }}
       dangerouslySetInnerHTML={{ __html: pp.testo }}
     />
   ) : null;

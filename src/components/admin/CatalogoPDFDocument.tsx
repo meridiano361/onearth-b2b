@@ -394,7 +394,7 @@ type Segment = { text: string; bold: boolean; italic: boolean };
 
 type HtmlInline = { text: string; bold: boolean; italic: boolean; underline?: boolean; strike?: boolean };
 type HtmlBlock =
-  | { type: 'paragraph' | 'h1' | 'h2'; align: 'left' | 'center' | 'right'; inlines: HtmlInline[] }
+  | { type: 'paragraph' | 'h1' | 'h2'; align: 'left' | 'center' | 'right'; hasExplicitAlign: boolean; inlines: HtmlInline[] }
   | { type: 'bullet' | 'ordered'; items: HtmlInline[][] };
 
 function decodeHtmlEntities(s: string): string {
@@ -434,19 +434,24 @@ function parseHtmlToPdf(html: string): HtmlBlock[] {
       const classAttr: string = node.getAttribute?.('class') ?? '';
       const dataAlign: string = node.getAttribute?.('data-text-align') ?? '';
       let align: 'left' | 'center' | 'right' = 'left';
+      let hasExplicitAlign = false;
       const styleMatch = styleAttr.match(/text-align\s*:\s*(left|center|right)/);
       if (styleMatch) {
         align = styleMatch[1] as 'left' | 'center' | 'right';
+        hasExplicitAlign = true;
       } else if (classAttr.includes('text-right') || dataAlign === 'right') {
         align = 'right';
+        hasExplicitAlign = true;
       } else if (classAttr.includes('text-center') || dataAlign === 'center') {
         align = 'center';
+        hasExplicitAlign = true;
       }
       const inlines = collectInlines(node);
       if (inlines.length > 0) {
         blocks.push({
           type: tag === 'h1' ? 'h1' : tag === 'h2' ? 'h2' : 'paragraph',
           align,
+          hasExplicitAlign,
           inlines,
         });
       }
@@ -464,14 +469,16 @@ function parseHtmlToPdf(html: string): HtmlBlock[] {
 
   if (blocks.length === 0) {
     const plain = html.replace(/<[^>]+>/g, '').trim();
-    if (plain) blocks.push({ type: 'paragraph', align: 'left', inlines: [{ text: plain, bold: false, italic: false }] });
+    if (plain) blocks.push({ type: 'paragraph', align: 'left', hasExplicitAlign: false, inlines: [{ text: plain, bold: false, italic: false }] });
   }
   return blocks;
 }
 
 function getBlockAlign(block: HtmlBlock, defaultAlign: 'left' | 'center' | 'right'): 'left' | 'center' | 'right' {
   if (block.type === 'paragraph' || block.type === 'h1' || block.type === 'h2') {
-    return block.align !== 'left' ? block.align : defaultAlign;
+    // hasExplicitAlign: text-align set in HTML → honour it even if it's 'left'
+    // no explicit align: use the page-level default
+    return block.hasExplicitAlign ? block.align : defaultAlign;
   }
   return defaultAlign;
 }
