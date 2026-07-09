@@ -239,7 +239,7 @@ function buildModaName(
     forma ? forma.toLowerCase() : '',
     taglia ? taglia.toUpperCase() : '',
   ].filter(Boolean);
-  return parts.join(' ');
+  return parts.join(' ').replace(/\s+/g, ' ').trim();
 }
 
 export default function ProductForm({ product, initialValues, duplicateSource, onSuccess, onCancel }: ProductFormProps) {
