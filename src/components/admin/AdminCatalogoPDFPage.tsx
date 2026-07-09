@@ -805,7 +805,7 @@ function CardPreview({ config }: { config: FormState }) {
 
 const PREVIEW_SCALE = 200 / 595; // PDF A4 = 595pt wide
 
-function CoverPreview({ config }: { config: { copertina: FormState['copertina']; colori: FormState['colori']; copertinaTypo: FormState['copertinaTypo'] } }) {
+function CoverPreview({ config }: { config: { copertina: FormState['copertina']; colori: FormState['colori']; copertinaTypo: FormState['copertinaTypo']; mostraLogo: boolean } }) {
   const cov = config.copertina;
   const typo = config.copertinaTypo;
   if (!cov.attiva) return null;
@@ -823,7 +823,7 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
   const rawLogoH = (cov.logoTipo === 'custom' && (cov as any).logoCustomH) ? (cov as any).logoCustomH : (COVER_LOGO_H_PT[cov.logoDimensione] ?? 28);
   const logoH = Math.round(rawLogoH * S);
 
-  const logoSrc = cov.logoTipo === 'onearth' ? '/logo-on-earth/onearth_solo.png'
+  const logoSrc = cov.logoTipo === 'onearth' ? (config.mostraLogo ? '/logo-on-earth/onearth_solo.png' : null)
     : cov.logoTipo === 'custom' ? cov.logoCustomBase64
     : null;
 
@@ -1131,7 +1131,7 @@ function FinalPagePreview({ config }: { config: FormState }) {
   const logoDim = pf.logoDimensione ?? 'medio';
   const logoH = logoDim === 'piccolo' ? 8 : logoDim === 'medio' ? 12 : 18;
   const logoTipo = pf.logoTipo ?? (pf.mostraLogo ? 'onearth' : 'none');
-  const logoSrc = logoTipo === 'onearth' ? '/logo-on-earth/onearth_solo.png'
+  const logoSrc = logoTipo === 'onearth' ? (config.mostraLogo ? '/logo-on-earth/onearth_solo.png' : null)
     : logoTipo === 'custom' ? pf.logoCustomBase64 : null;
 
   const imgStyle: React.CSSProperties = {
@@ -1160,7 +1160,7 @@ function FinalPagePreview({ config }: { config: FormState }) {
 
   const titleEl = pf.titolo ? (
     <div
-      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pf.titoloAllineamento, margin: '0 0 4px', letterSpacing: 0.5 }}
+      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pf.titoloAllineamento, margin: '0 0 4px', letterSpacing: 2 * scale }}
       dangerouslySetInnerHTML={{ __html: pf.titolo }}
     />
   ) : null;
@@ -1311,7 +1311,7 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
   const logoDim = pp.logoDimensione ?? 'medio';
   const logoH = logoDim === 'piccolo' ? 8 : logoDim === 'medio' ? 12 : 18;
   const logoTipo = pp.logoTipo ?? (pp.mostraLogo ? 'onearth' : 'none');
-  const logoSrc = logoTipo === 'onearth' ? '/logo-on-earth/onearth_solo.png'
+  const logoSrc = logoTipo === 'onearth' ? (config.mostraLogo ? '/logo-on-earth/onearth_solo.png' : null)
     : logoTipo === 'custom' ? pp.logoCustomBase64 : null;
 
   const imgStyle: React.CSSProperties = {
@@ -1339,7 +1339,7 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
 
   const titleEl = pp.titolo ? (
     <div
-      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pp.titoloAllineamento, margin: '0 0 4px', letterSpacing: 0.5 }}
+      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pp.titoloAllineamento, margin: '0 0 4px', letterSpacing: 2 * scale }}
       dangerouslySetInnerHTML={{ __html: pp.titolo }}
     />
   ) : null;
