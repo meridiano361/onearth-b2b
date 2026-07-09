@@ -84,50 +84,58 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
     const validEntries = entries.filter((e) => e.valid);
     if (!validEntries.length) return;
 
-    const BATCH_SIZE = 1;
-    const batches: FileEntry[][] = [];
-    for (let i = 0; i < validEntries.length; i += BATCH_SIZE) {
-      batches.push(validEntries.slice(i, i + BATCH_SIZE));
-    }
-
     setIsUploading(true);
     setUploadProgress({ done: 0, total: validEntries.length });
 
-    const aggregate: UploadResult = {
-      uploaded: 0,
-      uploadedLinked: 0,
-      uploadedOrphan: 0,
-      notFound: [],
-      errors: [],
-      nonConforming: [],
-      total: entries.length,
-    };
-
     try {
-      for (const batch of batches) {
-        const formData = new FormData();
-        for (const entry of batch) formData.append('files', entry.file, entry.file.name);
+      // Step 1: ottieni URL firmati da Supabase (richiesta leggera, solo nomi file)
+      const urlRes = await fetch('/api/admin/products/upload-urls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filenames: validEntries.map((e) => e.file.name) }),
+      });
+      if (!urlRes.ok) {
+        const err = await urlRes.json();
+        throw new Error(err.error || 'Errore generazione URL');
+      }
+      const { urls } = await urlRes.json() as {
+        urls: { filename: string; signedUrl: string; path: string }[];
+      };
 
-        const res = await fetch('/api/admin/products/import-images', { method: 'POST', body: formData });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text.slice(0, 120));
+      // Step 2: carica ogni file direttamente su Supabase (bypass Vercel)
+      const completed: { filename: string; path: string }[] = [];
+      for (let i = 0; i < validEntries.length; i++) {
+        const { file } = validEntries[i];
+        const urlEntry = urls.find((u) => u.filename === file.name);
+        if (!urlEntry) continue;
+
+        const uploadRes = await fetch(urlEntry.signedUrl, {
+          method: 'PUT',
+          body: file,
+          headers: { 'Content-Type': file.type || 'image/jpeg' },
+        });
+        if (!uploadRes.ok) {
+          throw new Error(`Upload fallito per ${file.name}: ${uploadRes.status}`);
         }
-        const data: UploadResult = await res.json();
-
-        aggregate.uploaded += data.uploaded;
-        aggregate.uploadedLinked += data.uploadedLinked;
-        aggregate.uploadedOrphan += data.uploadedOrphan;
-        aggregate.notFound.push(...data.notFound);
-        aggregate.errors.push(...data.errors);
-        aggregate.nonConforming.push(...(data.nonConforming ?? []));
-
-        setUploadProgress((prev) => ({ done: (prev?.done ?? 0) + batch.length, total: validEntries.length }));
+        completed.push({ filename: file.name, path: urlEntry.path });
+        setUploadProgress({ done: i + 1, total: validEntries.length });
       }
 
-      setResult(aggregate);
-      if (aggregate.uploaded > 0) {
-        toast.success(`${aggregate.uploaded} foto caricate con successo`);
+      // Step 3: aggiorna il database con i path caricati
+      const linkRes = await fetch('/api/admin/products/link-images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paths: completed }),
+      });
+      if (!linkRes.ok) {
+        const err = await linkRes.json();
+        throw new Error(err.error || 'Errore collegamento prodotti');
+      }
+      const data: UploadResult = await linkRes.json();
+
+      setResult({ ...data, total: entries.length });
+      if (data.uploaded > 0) {
+        toast.success(`${data.uploaded} foto caricate con successo`);
         onSuccess();
       }
     } catch (err: any) {
