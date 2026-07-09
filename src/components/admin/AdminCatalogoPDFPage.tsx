@@ -83,6 +83,7 @@ interface FormState {
     layout: 'full-overlay' | 'half' | 'solo-testo';
     logoTipo: 'onearth' | 'custom' | 'none';
     logoCustomBase64: string | null;
+    logoCustomH: number;
     // ITEM 4: grid logo position
     logoPosX: 'left' | 'center' | 'right';
     logoPosY: 'top' | 'middle' | 'bottom';
@@ -262,6 +263,7 @@ const DEFAULT_STATE: FormState = {
     layout: 'full-overlay',
     logoTipo: 'onearth',
     logoCustomBase64: null,
+    logoCustomH: 28,
     logoPosX: 'left',
     logoPosY: 'top',
     logoPosizione: 'top-left',
@@ -782,7 +784,8 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
 
   // PDF uses COVER_LOGO_H = { piccolo: 18, medio: 28, grande: 42 } pt → scale
   const COVER_LOGO_H_PT: Record<string, number> = { piccolo: 18, medio: 28, grande: 42 };
-  const logoH = Math.round((COVER_LOGO_H_PT[cov.logoDimensione] ?? 28) * S);
+  const rawLogoH = (cov.logoTipo === 'custom' && (cov as any).logoCustomH) ? (cov as any).logoCustomH : (COVER_LOGO_H_PT[cov.logoDimensione] ?? 28);
+  const logoH = Math.round(rawLogoH * S);
 
   const logoSrc = cov.logoTipo === 'onearth' ? '/logo-on-earth/onearth_solo.png'
     : cov.logoTipo === 'custom' ? cov.logoCustomBase64
@@ -2874,15 +2877,38 @@ export default function AdminCatalogoPDFPage() {
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione</label>
-                          <select
-                            value={config.copertina.logoDimensione}
-                            onChange={(e) => setCopertina('logoDimensione', e.target.value)}
-                            className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
-                          >
-                            <option value="piccolo">Piccolo</option>
-                            <option value="medio">Medio</option>
-                            <option value="grande">Grande</option>
-                          </select>
+                          {config.copertina.logoTipo === 'custom' ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="range"
+                                min={8}
+                                max={150}
+                                step={1}
+                                value={config.copertina.logoCustomH ?? 28}
+                                onChange={(e) => setCopertina('logoCustomH', Number(e.target.value))}
+                                className="flex-1 accent-primary h-1"
+                              />
+                              <input
+                                type="number"
+                                min={8}
+                                max={150}
+                                value={config.copertina.logoCustomH ?? 28}
+                                onChange={(e) => setCopertina('logoCustomH', Math.min(150, Math.max(8, Number(e.target.value) || 28)))}
+                                className="w-12 h-8 border border-border rounded px-1.5 text-xs bg-white text-center focus:outline-none"
+                              />
+                              <span className="text-2xs text-gray-400">pt</span>
+                            </div>
+                          ) : (
+                            <select
+                              value={config.copertina.logoDimensione}
+                              onChange={(e) => setCopertina('logoDimensione', e.target.value)}
+                              className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
+                            >
+                              <option value="piccolo">Piccolo</option>
+                              <option value="medio">Medio</option>
+                              <option value="grande">Grande</option>
+                            </select>
+                          )}
                         </div>
                       </div>
                     )}

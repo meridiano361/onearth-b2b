@@ -185,6 +185,7 @@ export type CatalogConfig = {
     layout: 'full-overlay' | 'half' | 'solo-testo';
     logoTipo: 'onearth' | 'custom' | 'none';
     logoCustomBase64: string | null;
+    logoCustomH?: number;
     // New grid-style logo position
     logoPosX?: 'left' | 'center' | 'right';
     logoPosY?: 'top' | 'middle' | 'bottom';
@@ -1104,7 +1105,7 @@ function CoverPage({
   const typo = config.copertinaTypo;
   const { pageW, pageH } = layout;
   const coverLogoBase64 = resolveCoverLogo(cov, config.logoBase64);
-  const logoH = COVER_LOGO_H[cov.logoDimensione] ?? 28;
+  const logoH = (cov.logoTipo === 'custom' && cov.logoCustomH) ? cov.logoCustomH : (COVER_LOGO_H[cov.logoDimensione] ?? 28);
 
   // ITEM 4B: logo grid position
   const posX = cov.logoPosX ?? (
