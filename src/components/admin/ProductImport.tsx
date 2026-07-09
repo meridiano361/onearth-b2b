@@ -112,6 +112,44 @@ const COLUMN_MAP: Record<string, string> = {
   'immagine': 'imageUrl', 'image': 'imageUrl', 'foto': 'imageUrl',
   'url immagine': 'imageUrl', 'imageurl': 'imageUrl', 'image url': 'imageUrl',
   'img': 'imageUrl', 'photo url': 'imageUrl',
+
+  // ── MODA ──────────────────────────────────────────────────────────────────────
+
+  // Colore 1 (alias di colore), Colore 2, Colore 3, Altri colori
+  'colore 1': 'colore', 'color 1': 'colore', 'colour 1': 'colore',
+  'colore 2': 'colore2', 'color 2': 'colore2', 'colour 2': 'colore2', 'colore2': 'colore2', 'colore secondario': 'colore2',
+  'colore 3': 'colore3', 'color 3': 'colore3', 'colour 3': 'colore3', 'colore3': 'colore3',
+  'altri colori': 'altriColori', 'altricolori': 'altriColori', 'other colors': 'altriColori', 'altri col': 'altriColori',
+
+  // Modello
+  'modello': 'modello', 'model': 'modello', 'modello prodotto': 'modello',
+
+  // Dettaglio
+  'dettaglio': 'dettaglio', 'detail': 'dettaglio', 'det': 'dettaglio',
+
+  // Forma
+  'forma': 'forma', 'shape': 'forma',
+
+  // Materiali
+  'materiale 1': 'materiale1', 'materiale1': 'materiale1', 'mat 1': 'materiale1', 'material 1': 'materiale1', 'materiale principale': 'materiale1',
+  'materiale 2': 'materiale2', 'materiale2': 'materiale2', 'mat 2': 'materiale2', 'material 2': 'materiale2',
+  'materiale 3': 'materiale3', 'materiale3': 'materiale3', 'mat 3': 'materiale3', 'material 3': 'materiale3',
+
+  // Composizione, fantasia, lavorazione
+  'composizione': 'composizione', 'composition': 'composizione',
+  'fantasia': 'fantasia', 'pattern': 'fantasia',
+  'lavorazione': 'lavorazione', 'processing': 'lavorazione',
+
+  // Blocco colore
+  'blocco colore': 'bloccoColore', 'bloccocolore': 'bloccoColore', 'color block': 'bloccoColore',
+
+  // Costi MODA (i.e. = normalizzato → ie, senza punti)
+  'costo ie con reso': 'costoIeConReso', 'costo i e con reso': 'costoIeConReso', 'costo con reso': 'costoIeConReso', 'costo ie c reso': 'costoIeConReso',
+  'costo ie senza reso': 'costoIeSenzaReso', 'costo i e senza reso': 'costoIeSenzaReso', 'costo senza reso': 'costoIeSenzaReso', 'costo ie s reso': 'costoIeSenzaReso',
+
+  // Varianti prezzo vendita (normalizzate senza punti)
+  'prezzo vendita i': 'retailPrice', 'prezzo di vendita': 'retailPrice',
+  'prezzo vendita ii inc': 'retailPrice', 'prezzo vendita ii incluso': 'retailPrice',
 };
 
 function normalizeHeader(h: string): string {
@@ -164,7 +202,10 @@ const FIELD_LABELS: Record<string, string> = {
   nomLinea:           'Linea',
   stagione:           'Stagione',
   collezione:         'Collezione',
-  colore:             'Colore',
+  colore:             'Colore 1',
+  colore2:            'Colore 2',
+  colore3:            'Colore 3',
+  altriColori:        'Altri colori',
   temaColore:         'Tema colore',
   tranche:            'Tranche',
   lotSize:            'Confezione',
@@ -176,13 +217,27 @@ const FIELD_LABELS: Record<string, string> = {
   notes:              'Note',
   isActive:           'Attivo',
   imageUrl:           'URL Immagine',
+  // MODA
+  modello:            'Modello',
+  dettaglio:          'Dettaglio',
+  forma:              'Forma',
+  materiale1:         'Materiale 1',
+  materiale2:         'Materiale 2',
+  materiale3:         'Materiale 3',
+  composizione:       'Composizione',
+  fantasia:           'Fantasia',
+  lavorazione:        'Lavorazione',
+  bloccoColore:       'Blocco colore',
+  costoIeConReso:     'Costo i.e. con reso',
+  costoIeSenzaReso:   'Costo i.e. senza reso',
 };
 
 const FIELD_GROUPS: { label: string; fields: string[] }[] = [
   { label: 'Dati base',       fields: ['code', 'name', 'produttore', 'paese', 'misura'] },
-  { label: 'Classificazione', fields: ['gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo', 'nomLinea', 'stagione', 'collezione', 'colore', 'temaColore', 'tranche'] },
+  { label: 'Classificazione', fields: ['gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo', 'nomLinea', 'stagione', 'collezione', 'colore', 'colore2', 'colore3', 'altriColori', 'temaColore', 'tranche'] },
   { label: 'Prezzi',          fields: ['costPrice', 'retailPrice', 'fasciaRicarico', 'fasciaSconto'] },
   { label: 'Logistica',       fields: ['lotSize', 'iva'] },
+  { label: 'MODA',            fields: ['modello', 'dettaglio', 'forma', 'materiale1', 'materiale2', 'materiale3', 'composizione', 'fantasia', 'lavorazione', 'bloccoColore', 'costoIeConReso', 'costoIeSenzaReso'] },
   { label: 'Altro',           fields: ['notes', 'isActive', 'imageUrl'] },
 ];
 
@@ -192,6 +247,7 @@ const PRESETS: { label: string; fields: string[] }[] = [
   { label: 'Solo prezzi',          fields: ['costPrice', 'retailPrice', 'fasciaRicarico', 'fasciaSconto'] },
   { label: 'Solo classificazione', fields: ['gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo', 'nomLinea', 'stagione', 'collezione', 'tranche'] },
   { label: 'Solo logistica',       fields: ['lotSize', 'iva', 'paese', 'produttore'] },
+  { label: 'Solo MODA',            fields: ['modello', 'dettaglio', 'forma', 'materiale1', 'materiale2', 'materiale3', 'composizione', 'colore', 'colore2', 'colore3', 'costoIeConReso', 'costoIeSenzaReso'] },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

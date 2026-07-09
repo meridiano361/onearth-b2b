@@ -88,6 +88,24 @@ function buildFieldValue(campo: string, row: any): unknown {
     case 'imageUrl': return str(row.imageUrl);
     case 'code':
       return row.code !== undefined ? (String(row.code).toUpperCase().trim() || null) : undefined;
+    // ── MODA ──────────────────────────────────────────────────────────────────
+    case 'modello':      return str(row.modello);
+    case 'dettaglio':    return str(row.dettaglio);
+    case 'forma':        return str(row.forma);
+    case 'materiale1':   return str(row.materiale1);
+    case 'materiale2':   return str(row.materiale2);
+    case 'materiale3':   return str(row.materiale3);
+    case 'colore2':      return str(row.colore2);
+    case 'colore3':      return str(row.colore3);
+    case 'altriColori':  return str(row.altriColori);
+    case 'composizione': return str(row.composizione);
+    case 'fantasia':     return str(row.fantasia);
+    case 'lavorazione':  return str(row.lavorazione);
+    case 'bloccoColore': return str(row.bloccoColore);
+    case 'costoIeConReso':
+      return row.costoIeConReso !== undefined ? (parseDecimal(row.costoIeConReso) ?? null) : undefined;
+    case 'costoIeSenzaReso':
+      return row.costoIeSenzaReso !== undefined ? (parseDecimal(row.costoIeSenzaReso) ?? null) : undefined;
     default: return undefined;
   }
 }
@@ -115,8 +133,12 @@ function buildColorFields(row: any): Record<string, string | null> {
 const ALL_CREATE_OPTIONAL = [
   'produttore', 'paese', 'misura', 'gruppoMerceologico', 'famiglia', 'classe',
   'sottoclasse', 'gruppoOmogeneo', 'nomLinea', 'stagione', 'collezione', 'colore',
-  'temaColore', 'tranche', 'lotSize', 'iva', 'fasciaRicarico', 'fasciaSconto',
-  'notes', 'imageUrl',
+  'colore2', 'colore3', 'altriColori', 'temaColore', 'tranche', 'lotSize', 'iva',
+  'fasciaRicarico', 'fasciaSconto', 'notes', 'imageUrl',
+  // MODA
+  'modello', 'dettaglio', 'forma', 'materiale1', 'materiale2', 'materiale3',
+  'composizione', 'fantasia', 'lavorazione', 'bloccoColore',
+  'costoIeConReso', 'costoIeSenzaReso',
 ];
 
 function buildCreateData(
@@ -159,9 +181,15 @@ const PRODUCT_SELECT = {
   id: true, code: true, name: true, produttore: true, paese: true, misura: true,
   gruppoMerceologico: true, famiglia: true, classe: true, sottoclasse: true,
   gruppoOmogeneo: true, nomLinea: true, stagione: true, collezione: true,
-  colore: true, temaColore: true, tranche: true, lotSize: true, iva: true,
+  colore: true, colore2: true, colore3: true, altriColori: true,
+  temaColore: true, tranche: true, lotSize: true, iva: true,
   costPrice: true, retailPrice: true, fasciaRicarico: true, fasciaSconto: true,
   notes: true, isActive: true, imageUrl: true,
+  // MODA
+  modello: true, dettaglio: true, forma: true,
+  materiale1: true, materiale2: true, materiale3: true,
+  composizione: true, fantasia: true, lavorazione: true, bloccoColore: true,
+  costoIeConReso: true, costoIeSenzaReso: true,
 } as const;
 
 const CLASSIFICATION_FIELDS = new Set([
