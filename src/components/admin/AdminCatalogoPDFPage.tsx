@@ -428,6 +428,32 @@ function mergeWithDefaults(saved: any): FormState {
   };
 }
 
+// ── Local storage persistence ─────────────────────────────────────────────────
+
+const LS_PDF_CONFIG = 'catalogo-pdf-config-v1';
+
+function loadConfigFromStorage(): FormState {
+  if (typeof window === 'undefined') return DEFAULT_STATE;
+  try {
+    const raw = localStorage.getItem(LS_PDF_CONFIG);
+    if (raw) return mergeWithDefaults(JSON.parse(raw));
+  } catch {}
+  return DEFAULT_STATE;
+}
+
+function saveConfigToStorage(c: FormState) {
+  try {
+    // Strip large base64 images (re-fetchable via immagineUrl); keep logo base64 (small, no URL)
+    const toSave: FormState = {
+      ...c,
+      copertina: { ...c.copertina, immagineBase64: null },
+      paginaFinale: { ...c.paginaFinale, immagineBase64: null },
+      paginaPenultima: { ...c.paginaPenultima, immagineBase64: null },
+    };
+    localStorage.setItem(LS_PDF_CONFIG, JSON.stringify(toSave));
+  } catch {} // quota exceeded — silently ignore
+}
+
 // ── ON EARTH palette ──────────────────────────────────────────────────────────
 
 const PALETTE = [
@@ -1545,7 +1571,8 @@ function SortableProductRow({ product }: { product: { id: string; code: string; 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function AdminCatalogoPDFPage() {
-  const [config, setConfig] = useState<FormState>(DEFAULT_STATE);
+  const [config, setConfig] = useState<FormState>(loadConfigFromStorage);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -1589,6 +1616,13 @@ export default function AdminCatalogoPDFPage() {
 
   const toggleSection = (k: keyof typeof sections) =>
     setSections((s) => ({ ...s, [k]: !s[k] }));
+
+  // Auto-save config to localStorage (debounced 800ms)
+  useEffect(() => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => saveConfigToStorage(config), 800);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [config]);
 
   // ── Classification data ────────────────────────────────────────────────────
 
