@@ -23,24 +23,81 @@ type FotoFilter = 'all' | 'con-foto' | 'senza-foto' | 'foto-multiple';
 type TemaColorePresenzaFilter = 'all' | 'con-tema' | 'senza-tema';
 type SortField = 'code' | 'name' | 'produttore' | 'collezione' | 'costPrice' | 'retailPrice';
 type SortDir = 'asc' | 'desc';
-type ColKey = 'produttore' | 'collezione' | 'temaColore' | 'costPrice' | 'retailPrice' | 'sconto' | 'ricarico' | 'foto' | 'stato';
+type ColKey =
+  | 'costPrice' | 'costoIeConReso' | 'costoIeSenzaReso' | 'retailPrice' | 'sconto' | 'ricarico' | 'iva' | 'lotSize' | 'stock'
+  | 'produttore' | 'conferente' | 'paese' | 'misura' | 'stagione' | 'tranche' | 'nomLinea' | 'collezione'
+  | 'gruppoMerceologico' | 'famiglia' | 'classe' | 'sottoclasse' | 'gruppoOmogeneo'
+  | 'modello' | 'dettaglio' | 'forma' | 'taglia' | 'materiale1' | 'materiale2' | 'materiale3' | 'composizione' | 'fantasia' | 'lavorazione' | 'bloccoColore'
+  | 'colore' | 'colore2' | 'colore3' | 'altriColori' | 'temaColore'
+  | 'certificazione1' | 'certificazione2' | 'certificazione3'
+  | 'foto' | 'stato';
 
-const ALL_COLS: { key: ColKey; label: string }[] = [
-  { key: 'produttore',  label: 'Produttore'  },
-  { key: 'collezione',  label: 'Collezione'  },
-  { key: 'temaColore',  label: 'Tema colore' },
-  { key: 'costPrice',   label: 'Costo i.e.'  },
-  { key: 'retailPrice', label: 'Vendita i.i.' },
-  { key: 'sconto',      label: '% Sconto'    },
-  { key: 'ricarico',    label: '% Ricarico'  },
-  { key: 'foto',        label: 'Foto'        },
-  { key: 'stato',       label: 'Stato'       },
+const COL_GROUPS: { label: string; cols: { key: ColKey; label: string }[] }[] = [
+  { label: 'Prezzi', cols: [
+    { key: 'costPrice',        label: 'Costo i.e.'       },
+    { key: 'costoIeConReso',   label: 'Con reso'         },
+    { key: 'costoIeSenzaReso', label: 'Senza reso'       },
+    { key: 'retailPrice',      label: 'Vendita i.i.'     },
+    { key: 'sconto',           label: '% Sconto'         },
+    { key: 'ricarico',         label: '% Ricarico'       },
+    { key: 'iva',              label: 'IVA'              },
+    { key: 'lotSize',          label: 'Confezione'       },
+    { key: 'stock',            label: 'Stock'            },
+  ]},
+  { label: 'Anagrafica', cols: [
+    { key: 'produttore',  label: 'Produttore'  },
+    { key: 'conferente',  label: 'Conferente'  },
+    { key: 'paese',       label: 'Paese'       },
+    { key: 'misura',      label: 'Misura'      },
+    { key: 'stagione',    label: 'Stagione'    },
+    { key: 'tranche',     label: 'Tranche'     },
+    { key: 'nomLinea',    label: 'Linea'       },
+    { key: 'collezione',  label: 'Collezione'  },
+  ]},
+  { label: 'Classificazione', cols: [
+    { key: 'gruppoMerceologico', label: 'Gruppo merc.'  },
+    { key: 'famiglia',           label: 'Famiglia'      },
+    { key: 'classe',             label: 'Classe'        },
+    { key: 'sottoclasse',        label: 'Sottoclasse'   },
+    { key: 'gruppoOmogeneo',     label: 'Gr. omogeneo'  },
+  ]},
+  { label: 'MODA / Dettagli', cols: [
+    { key: 'modello',      label: 'Modello'      },
+    { key: 'dettaglio',    label: 'Dettaglio'    },
+    { key: 'forma',        label: 'Forma'        },
+    { key: 'taglia',       label: 'Taglia'       },
+    { key: 'materiale1',   label: 'Materiale 1'  },
+    { key: 'materiale2',   label: 'Materiale 2'  },
+    { key: 'materiale3',   label: 'Materiale 3'  },
+    { key: 'composizione', label: 'Composizione' },
+    { key: 'fantasia',     label: 'Fantasia'     },
+    { key: 'lavorazione',  label: 'Lavorazione'  },
+    { key: 'bloccoColore', label: 'Blocco colore'},
+  ]},
+  { label: 'Colori', cols: [
+    { key: 'colore',      label: 'Colore 1'     },
+    { key: 'colore2',     label: 'Colore 2'     },
+    { key: 'colore3',     label: 'Colore 3'     },
+    { key: 'altriColori', label: 'Altri colori' },
+    { key: 'temaColore',  label: 'Tema colore'  },
+  ]},
+  { label: 'Certificazioni', cols: [
+    { key: 'certificazione1', label: 'Certif. 1' },
+    { key: 'certificazione2', label: 'Certif. 2' },
+    { key: 'certificazione3', label: 'Certif. 3' },
+  ]},
+  { label: 'Stato', cols: [
+    { key: 'foto',  label: 'Foto'  },
+    { key: 'stato', label: 'Stato' },
+  ]},
 ];
+
+const ALL_COLS = COL_GROUPS.flatMap((g) => g.cols);
 const DEFAULT_COLS: ColKey[] = ['produttore', 'collezione', 'costPrice', 'retailPrice', 'sconto', 'ricarico', 'foto', 'stato'];
 
 function loadSavedCols(): Set<ColKey> {
   try {
-    const raw = localStorage.getItem('admin-products-cols');
+    const raw = localStorage.getItem('admin-products-cols-v2');
     if (raw) return new Set(JSON.parse(raw) as ColKey[]);
   } catch {}
   return new Set(DEFAULT_COLS);
@@ -163,6 +220,28 @@ export default function AdminProductsPage() {
   const [filterFasciaSconto, setFilterFasciaSconto] = useState('');
   const [filterFasciaRicarico, setFilterFasciaRicarico] = useState('');
   const [filterPrezzoCosto, setFilterPrezzoCosto] = useState('');
+  // Advanced filters
+  const [filterPaese, setFilterPaese] = useState('');
+  const [filterConferente, setFilterConferente] = useState('');
+  const [filterModello, setFilterModello] = useState('');
+  const [filterDettaglio, setFilterDettaglio] = useState('');
+  const [filterForma, setFilterForma] = useState('');
+  const [filterTaglia, setFilterTaglia] = useState('');
+  const [filterMisura, setFilterMisura] = useState('');
+  const [filterColore2, setFilterColore2] = useState('');
+  const [filterColore3, setFilterColore3] = useState('');
+  const [filterMateriale1, setFilterMateriale1] = useState('');
+  const [filterMateriale2, setFilterMateriale2] = useState('');
+  const [filterMateriale3, setFilterMateriale3] = useState('');
+  const [filterComposizione, setFilterComposizione] = useState('');
+  const [filterFantasia, setFilterFantasia] = useState('');
+  const [filterLavorazione, setFilterLavorazione] = useState('');
+  const [filterBloccoColore, setFilterBloccoColore] = useState('');
+  const [filterIva, setFilterIva] = useState('');
+  const [filterCostoConFascia, setFilterCostoConFascia] = useState('');
+  const [filterCostoSenzaFascia, setFilterCostoSenzaFascia] = useState('');
+  const [filterRetailFascia, setFilterRetailFascia] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // Sort
   const [sortField, setSortField] = useState<SortField | null>(null);
@@ -176,7 +255,7 @@ export default function AdminProductsPage() {
     setVisibleCols((prev) => {
       const next = new Set(prev);
       next.has(k) ? next.delete(k) : next.add(k);
-      try { localStorage.setItem('admin-products-cols', JSON.stringify([...next])); } catch {}
+      try { localStorage.setItem('admin-products-cols-v2', JSON.stringify([...next])); } catch {}
       return next;
     });
   }
@@ -227,6 +306,27 @@ export default function AdminProductsPage() {
   const produttoreOptions = useMemo(() => uniqueSorted(allProducts, 'produttore'), [allProducts]);
   const trancheOptions = useMemo(() => uniqueSorted(allProducts, 'tranche'), [allProducts]);
   const stagioneOptions = useMemo(() => uniqueSorted(allProducts, 'stagione'), [allProducts]);
+  const paeseOptions = useMemo(() => uniqueSorted(allProducts, 'paese' as any), [allProducts]);
+  const conferenteOptions = useMemo(() => uniqueSorted(allProducts, 'conferente' as any), [allProducts]);
+  const modelloOptions = useMemo(() => uniqueSorted(allProducts, 'modello' as any), [allProducts]);
+  const dettaglioOptions = useMemo(() => uniqueSorted(allProducts, 'dettaglio' as any), [allProducts]);
+  const formaOptions = useMemo(() => uniqueSorted(allProducts, 'forma' as any), [allProducts]);
+  const tagliaOptions = useMemo(() => uniqueSorted(allProducts, 'taglia' as any), [allProducts]);
+  const misuraOptions = useMemo(() => uniqueSorted(allProducts, 'misura' as any), [allProducts]);
+  const colore2Options = useMemo(() => uniqueSorted(allProducts, 'colore2' as any), [allProducts]);
+  const colore3Options = useMemo(() => uniqueSorted(allProducts, 'colore3' as any), [allProducts]);
+  const materiale1Options = useMemo(() => uniqueSorted(allProducts, 'materiale1' as any), [allProducts]);
+  const materiale2Options = useMemo(() => uniqueSorted(allProducts, 'materiale2' as any), [allProducts]);
+  const materiale3Options = useMemo(() => uniqueSorted(allProducts, 'materiale3' as any), [allProducts]);
+  const composizioneOptions = useMemo(() => uniqueSorted(allProducts, 'composizione' as any), [allProducts]);
+  const fantasiaOptions = useMemo(() => uniqueSorted(allProducts, 'fantasia' as any), [allProducts]);
+  const lavorazioneOptions = useMemo(() => uniqueSorted(allProducts, 'lavorazione' as any), [allProducts]);
+  const bloccoColoreOptions = useMemo(() => uniqueSorted(allProducts, 'bloccoColore' as any), [allProducts]);
+  const ivaOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of allProducts) { if (p.iva != null) set.add(String(p.iva)); }
+    return Array.from(set).sort((a, b) => Number(a) - Number(b));
+  }, [allProducts]);
 
   function hasTemaColore(p: Product): boolean {
     return !!(p.temaColore || p.temaColore2 || p.temaColore3 || p.temaColore4 || p.temaColore5);
@@ -299,6 +399,49 @@ export default function AdminProductsPage() {
       }
       if (filterTemaColorePresenza === 'con-tema' && !hasTemaColore(p)) return false;
       if (filterTemaColorePresenza === 'senza-tema' && hasTemaColore(p)) return false;
+      // Advanced filters
+      const pa = p as any;
+      if (filterPaese && pa.paese !== filterPaese) return false;
+      if (filterConferente && pa.conferente !== filterConferente) return false;
+      if (filterModello && pa.modello !== filterModello) return false;
+      if (filterDettaglio && pa.dettaglio !== filterDettaglio) return false;
+      if (filterForma && pa.forma !== filterForma) return false;
+      if (filterTaglia && pa.taglia !== filterTaglia) return false;
+      if (filterMisura && pa.misura !== filterMisura) return false;
+      if (filterColore2 && pa.colore2 !== filterColore2) return false;
+      if (filterColore3 && pa.colore3 !== filterColore3) return false;
+      if (filterMateriale1 && pa.materiale1 !== filterMateriale1) return false;
+      if (filterMateriale2 && pa.materiale2 !== filterMateriale2) return false;
+      if (filterMateriale3 && pa.materiale3 !== filterMateriale3) return false;
+      if (filterComposizione && pa.composizione !== filterComposizione) return false;
+      if (filterFantasia && pa.fantasia !== filterFantasia) return false;
+      if (filterLavorazione && pa.lavorazione !== filterLavorazione) return false;
+      if (filterBloccoColore && pa.bloccoColore !== filterBloccoColore) return false;
+      if (filterIva && String(p.iva ?? 22) !== filterIva) return false;
+      if (filterCostoConFascia) {
+        const v = Number(pa.costoIeConReso ?? 0);
+        if (filterCostoConFascia === '0-5' && v >= 5) return false;
+        if (filterCostoConFascia === '5-10' && (v < 5 || v >= 10)) return false;
+        if (filterCostoConFascia === '10-20' && (v < 10 || v >= 20)) return false;
+        if (filterCostoConFascia === '20-50' && (v < 20 || v >= 50)) return false;
+        if (filterCostoConFascia === '50+' && v < 50) return false;
+      }
+      if (filterCostoSenzaFascia) {
+        const v = Number(pa.costoIeSenzaReso ?? 0);
+        if (filterCostoSenzaFascia === '0-5' && v >= 5) return false;
+        if (filterCostoSenzaFascia === '5-10' && (v < 5 || v >= 10)) return false;
+        if (filterCostoSenzaFascia === '10-20' && (v < 10 || v >= 20)) return false;
+        if (filterCostoSenzaFascia === '20-50' && (v < 20 || v >= 50)) return false;
+        if (filterCostoSenzaFascia === '50+' && v < 50) return false;
+      }
+      if (filterRetailFascia) {
+        const v = Number(p.retailPrice);
+        if (filterRetailFascia === '0-20' && v >= 20) return false;
+        if (filterRetailFascia === '20-50' && (v < 20 || v >= 50)) return false;
+        if (filterRetailFascia === '50-100' && (v < 50 || v >= 100)) return false;
+        if (filterRetailFascia === '100-200' && (v < 100 || v >= 200)) return false;
+        if (filterRetailFascia === '200+' && v < 200) return false;
+      }
       return true;
     });
 
@@ -316,7 +459,7 @@ export default function AdminProductsPage() {
     }
 
     return filtered;
-  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterTemaColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterStagione, filterActive, filterFoto, filterFasciaSconto, filterFasciaRicarico, filterPrezzoCosto, filterTemaColorePresenza, sortField, sortDir]);
+  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterTemaColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterStagione, filterActive, filterFoto, filterFasciaSconto, filterFasciaRicarico, filterPrezzoCosto, filterTemaColorePresenza, filterPaese, filterConferente, filterModello, filterDettaglio, filterForma, filterTaglia, filterMisura, filterColore2, filterColore3, filterMateriale1, filterMateriale2, filterMateriale3, filterComposizione, filterFantasia, filterLavorazione, filterBloccoColore, filterIva, filterCostoConFascia, filterCostoSenzaFascia, filterRetailFascia, sortField, sortDir]);
 
   function handleColumnSort(field: SortField) {
     if (sortField === field) {
@@ -335,7 +478,8 @@ export default function AdminProductsPage() {
       : <ChevronDown size={11} className="ml-1 text-accent inline" />;
   }
 
-  const hasFilters = search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterTemaColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterStagione || filterActive !== 'all' || filterFoto !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto || filterTemaColorePresenza !== 'all';
+  const hasFilters = !!(search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterTemaColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterStagione || filterActive !== 'all' || filterFoto !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto || filterTemaColorePresenza !== 'all' || filterPaese || filterConferente || filterModello || filterDettaglio || filterForma || filterTaglia || filterMisura || filterColore2 || filterColore3 || filterMateriale1 || filterMateriale2 || filterMateriale3 || filterComposizione || filterFantasia || filterLavorazione || filterBloccoColore || filterIva || filterCostoConFascia || filterCostoSenzaFascia || filterRetailFascia);
+  const hasAdvancedFilters = !!(filterPaese || filterConferente || filterModello || filterDettaglio || filterForma || filterTaglia || filterMisura || filterColore2 || filterColore3 || filterMateriale1 || filterMateriale2 || filterMateriale3 || filterComposizione || filterFantasia || filterLavorazione || filterBloccoColore || filterIva || filterCostoConFascia || filterCostoSenzaFascia || filterRetailFascia);
 
   function resetFilters() {
     setSearch(''); setFilterGruppo(''); setFilterFamiglia('');
@@ -344,6 +488,12 @@ export default function AdminProductsPage() {
     setFilterProduttore(''); setFilterTranche(''); setFilterStagione('');
     setFilterActive('all'); setFilterFoto('all'); setFilterTemaColorePresenza('all');
     setFilterFasciaSconto(''); setFilterFasciaRicarico(''); setFilterPrezzoCosto('');
+    setFilterPaese(''); setFilterConferente(''); setFilterModello(''); setFilterDettaglio('');
+    setFilterForma(''); setFilterTaglia(''); setFilterMisura('');
+    setFilterColore2(''); setFilterColore3('');
+    setFilterMateriale1(''); setFilterMateriale2(''); setFilterMateriale3('');
+    setFilterComposizione(''); setFilterFantasia(''); setFilterLavorazione(''); setFilterBloccoColore('');
+    setFilterIva(''); setFilterCostoConFascia(''); setFilterCostoSenzaFascia(''); setFilterRetailFascia('');
   }
 
   const allVisibleSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
@@ -689,12 +839,13 @@ export default function AdminProductsPage() {
 
       {/* Filter bar */}
       <div className="mb-4 space-y-2">
+        {/* Base filters */}
         <div className="flex flex-wrap gap-2 items-center">
           <div className="w-56">
             <Input placeholder="Codice, descrizione, produttore..." value={search} onChange={(e) => setSearch(e.target.value)} icon={<Search size={14} />} />
           </div>
           <select value={filterGruppo} onChange={(e) => setFilterGruppo(e.target.value)} className={selectClass}>
-            <option value="">Gruppo merceologico</option>
+            <option value="">Gruppo merc.</option>
             {gruppoOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
           <select value={filterFamiglia} onChange={(e) => setFilterFamiglia(e.target.value)} className={selectClass}>
@@ -710,11 +861,11 @@ export default function AdminProductsPage() {
             {sottoclasseOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
           <select value={filterGruppoOmogeneo} onChange={(e) => setFilterGruppoOmogeneo(e.target.value)} className={selectClass}>
-            <option value="">Gruppo omogeneo</option>
+            <option value="">Gr. omogeneo</option>
             {gruppoOmogeneoOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
           <select value={filterColore} onChange={(e) => setFilterColore(e.target.value)} className={selectClass}>
-            <option value="">Colore</option>
+            <option value="">Colore 1</option>
             {coloreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
           <select value={filterTemaColore} onChange={(e) => setFilterTemaColore(e.target.value)} className={selectClass}>
@@ -723,8 +874,8 @@ export default function AdminProductsPage() {
           </select>
           <select value={filterTemaColorePresenza} onChange={(e) => setFilterTemaColorePresenza(e.target.value as TemaColorePresenzaFilter)} className={selectClass}>
             <option value="all">Tema: Tutti</option>
-            <option value="con-tema">Con tema colore</option>
-            <option value="senza-tema">Senza tema colore</option>
+            <option value="con-tema">Con tema</option>
+            <option value="senza-tema">Senza tema</option>
           </select>
           <select value={filterCollezione} onChange={(e) => setFilterCollezione(e.target.value)} className={selectClass}>
             <option value="">Collezione</option>
@@ -762,7 +913,7 @@ export default function AdminProductsPage() {
             <option value="150+">&gt; 150%</option>
           </select>
           <select value={filterPrezzoCosto} onChange={(e) => setFilterPrezzoCosto(e.target.value)} className={selectClass}>
-            <option value="">Prezzo costo</option>
+            <option value="">Costo i.e.</option>
             <option value="0-5">0–5 €</option>
             <option value="5-10">5–10 €</option>
             <option value="10-20">10–20 €</option>
@@ -778,15 +929,126 @@ export default function AdminProductsPage() {
             <option value="all">Foto: Tutti</option>
             <option value="con-foto">Con foto</option>
             <option value="senza-foto">Senza foto</option>
-            <option value="foto-multiple">Con foto multiple</option>
+            <option value="foto-multiple">Foto multiple</option>
           </select>
+          <button
+            onClick={() => setShowAdvancedFilters((v) => !v)}
+            className={`flex items-center gap-1 h-8 px-2 text-xs border rounded transition-colors ${showAdvancedFilters || hasAdvancedFilters ? 'border-accent text-accent bg-accent/5' : 'border-border text-gray-500 hover:text-primary hover:bg-cream'}`}
+          >
+            {showAdvancedFilters ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+            {hasAdvancedFilters ? `Altri filtri (${[filterPaese,filterConferente,filterModello,filterDettaglio,filterForma,filterTaglia,filterMisura,filterColore2,filterColore3,filterMateriale1,filterMateriale2,filterMateriale3,filterComposizione,filterFantasia,filterLavorazione,filterBloccoColore,filterIva,filterCostoConFascia,filterCostoSenzaFascia,filterRetailFascia].filter(Boolean).length})` : 'Altri filtri'}
+          </button>
           {hasFilters && (
             <button onClick={resetFilters} className="flex items-center gap-1 h-8 px-2 text-xs text-gray-500 hover:text-primary border border-border rounded hover:bg-cream transition-colors">
               <RotateCcw size={11} />
-              Reset filtri
+              Reset
             </button>
           )}
         </div>
+
+        {/* Advanced filters */}
+        {showAdvancedFilters && (
+          <div className="flex flex-wrap gap-2 items-center p-3 bg-gray-50 rounded border border-border">
+            <span className="text-2xs font-semibold uppercase tracking-widest text-gray-400 w-full mb-0.5">Anagrafica</span>
+            <select value={filterConferente} onChange={(e) => setFilterConferente(e.target.value)} className={selectClass}>
+              <option value="">Conferente</option>
+              {conferenteOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterPaese} onChange={(e) => setFilterPaese(e.target.value)} className={selectClass}>
+              <option value="">Paese</option>
+              {paeseOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterMisura} onChange={(e) => setFilterMisura(e.target.value)} className={selectClass}>
+              <option value="">Misura</option>
+              {misuraOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterIva} onChange={(e) => setFilterIva(e.target.value)} className={selectClass}>
+              <option value="">IVA</option>
+              {ivaOptions.map((v) => <option key={v} value={v}>{v}%</option>)}
+            </select>
+            <select value={filterRetailFascia} onChange={(e) => setFilterRetailFascia(e.target.value)} className={selectClass}>
+              <option value="">Prezzo vendita</option>
+              <option value="0-20">0–20 €</option>
+              <option value="20-50">20–50 €</option>
+              <option value="50-100">50–100 €</option>
+              <option value="100-200">100–200 €</option>
+              <option value="200+">&gt; 200 €</option>
+            </select>
+            <select value={filterCostoConFascia} onChange={(e) => setFilterCostoConFascia(e.target.value)} className={selectClass}>
+              <option value="">Con reso</option>
+              <option value="0-5">0–5 €</option>
+              <option value="5-10">5–10 €</option>
+              <option value="10-20">10–20 €</option>
+              <option value="20-50">20–50 €</option>
+              <option value="50+">&gt; 50 €</option>
+            </select>
+            <select value={filterCostoSenzaFascia} onChange={(e) => setFilterCostoSenzaFascia(e.target.value)} className={selectClass}>
+              <option value="">Senza reso</option>
+              <option value="0-5">0–5 €</option>
+              <option value="5-10">5–10 €</option>
+              <option value="10-20">10–20 €</option>
+              <option value="20-50">20–50 €</option>
+              <option value="50+">&gt; 50 €</option>
+            </select>
+
+            <span className="text-2xs font-semibold uppercase tracking-widest text-gray-400 w-full mb-0.5 mt-1">MODA / Dettagli</span>
+            <select value={filterModello} onChange={(e) => setFilterModello(e.target.value)} className={selectClass}>
+              <option value="">Modello</option>
+              {modelloOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterDettaglio} onChange={(e) => setFilterDettaglio(e.target.value)} className={selectClass}>
+              <option value="">Dettaglio</option>
+              {dettaglioOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterForma} onChange={(e) => setFilterForma(e.target.value)} className={selectClass}>
+              <option value="">Forma</option>
+              {formaOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterTaglia} onChange={(e) => setFilterTaglia(e.target.value)} className={selectClass}>
+              <option value="">Taglia</option>
+              {tagliaOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterMateriale1} onChange={(e) => setFilterMateriale1(e.target.value)} className={selectClass}>
+              <option value="">Materiale 1</option>
+              {materiale1Options.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterMateriale2} onChange={(e) => setFilterMateriale2(e.target.value)} className={selectClass}>
+              <option value="">Materiale 2</option>
+              {materiale2Options.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterMateriale3} onChange={(e) => setFilterMateriale3(e.target.value)} className={selectClass}>
+              <option value="">Materiale 3</option>
+              {materiale3Options.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterComposizione} onChange={(e) => setFilterComposizione(e.target.value)} className={selectClass}>
+              <option value="">Composizione</option>
+              {composizioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterFantasia} onChange={(e) => setFilterFantasia(e.target.value)} className={selectClass}>
+              <option value="">Fantasia</option>
+              {fantasiaOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterLavorazione} onChange={(e) => setFilterLavorazione(e.target.value)} className={selectClass}>
+              <option value="">Lavorazione</option>
+              {lavorazioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+
+            <span className="text-2xs font-semibold uppercase tracking-widest text-gray-400 w-full mb-0.5 mt-1">Colori</span>
+            <select value={filterColore2} onChange={(e) => setFilterColore2(e.target.value)} className={selectClass}>
+              <option value="">Colore 2</option>
+              {colore2Options.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterColore3} onChange={(e) => setFilterColore3(e.target.value)} className={selectClass}>
+              <option value="">Colore 3</option>
+              {colore3Options.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filterBloccoColore} onChange={(e) => setFilterBloccoColore(e.target.value)} className={selectClass}>
+              <option value="">Blocco colore</option>
+              {bloccoColoreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+        )}
+
         {hasFilters && (
           <p className="text-xs text-gray-400">{products.length} risultat{products.length === 1 ? 'o' : 'i'} su {allProducts.length}</p>
         )}
@@ -847,31 +1109,38 @@ export default function AdminProductsPage() {
           {showColPicker && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowColPicker(false)} />
-              <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-border rounded shadow-lg p-3 w-44 space-y-1">
-                <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Colonne visibili</p>
-                {ALL_COLS.map(({ key, label }) => (
-                  <label key={key} className="flex items-center gap-2 cursor-pointer hover:text-primary text-xs text-gray-600 py-0.5 select-none">
-                    <input
-                      type="checkbox"
-                      checked={visibleCols.has(key)}
-                      onChange={() => toggleCol(key)}
-                      className="w-3.5 h-3.5 accent-accent cursor-pointer"
-                    />
-                    {label}
-                  </label>
-                ))}
-                <div className="border-t border-border pt-1 mt-1">
+              <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-border rounded shadow-lg w-56 max-h-[70vh] overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-border px-3 py-2 flex items-center justify-between">
+                  <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Colonne</p>
                   <button
                     onClick={() => {
                       const next = new Set(DEFAULT_COLS);
                       setVisibleCols(next);
-                      try { localStorage.setItem('admin-products-cols', JSON.stringify([...next])); } catch {}
+                      try { localStorage.setItem('admin-products-cols-v2', JSON.stringify([...next])); } catch {}
                       setShowColPicker(false);
                     }}
                     className="text-2xs text-accent hover:underline"
                   >
-                    Ripristina predefinite
+                    Predefinite
                   </button>
+                </div>
+                <div className="p-2 space-y-3">
+                  {COL_GROUPS.map((group) => (
+                    <div key={group.label}>
+                      <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-1 px-1">{group.label}</p>
+                      {group.cols.map(({ key, label }) => (
+                        <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 text-xs text-gray-600 px-1 py-0.5 rounded select-none">
+                          <input
+                            type="checkbox"
+                            checked={visibleCols.has(key)}
+                            onChange={() => toggleCol(key)}
+                            className="w-3.5 h-3.5 accent-accent cursor-pointer flex-shrink-0"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  ))}
                 </div>
               </div>
             </>
@@ -888,16 +1157,57 @@ export default function AdminProductsPage() {
                 <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} className="w-3.5 h-3.5 accent-accent cursor-pointer" disabled={products.length === 0} />
               </th>
               <th className="w-24">{thBtn('code', 'Codice')}</th>
-              <th>{thBtn('name', 'Descrizione')}</th>
+              <th className="min-w-[140px]">{thBtn('name', 'Descrizione')}</th>
+              {/* Prezzi */}
+              {visibleCols.has('costPrice')        && <th className="w-24">{thBtn('costPrice', 'Costo i.e.')}</th>}
+              {visibleCols.has('costoIeConReso')   && <th className="w-24">Con reso</th>}
+              {visibleCols.has('costoIeSenzaReso') && <th className="w-24">Senza reso</th>}
+              {visibleCols.has('retailPrice')      && <th className="w-24">{thBtn('retailPrice', 'Vendita')}</th>}
+              {visibleCols.has('sconto')           && <th className="w-16 text-center">% Sc.</th>}
+              {visibleCols.has('ricarico')         && <th className="w-16 text-center">% Ric.</th>}
+              {visibleCols.has('iva')              && <th className="w-14">IVA</th>}
+              {visibleCols.has('lotSize')          && <th className="w-16">Conf.</th>}
+              {visibleCols.has('stock')            && <th className="w-14">Stock</th>}
+              {/* Anagrafica */}
               {visibleCols.has('produttore')  && <th className="w-28">{thBtn('produttore', 'Produttore')}</th>}
+              {visibleCols.has('conferente')  && <th className="w-24">Conferente</th>}
+              {visibleCols.has('paese')       && <th className="w-20">Paese</th>}
+              {visibleCols.has('misura')      && <th className="w-20">Misura</th>}
+              {visibleCols.has('stagione')    && <th className="w-20">Stagione</th>}
+              {visibleCols.has('tranche')     && <th className="w-20">Tranche</th>}
+              {visibleCols.has('nomLinea')    && <th className="w-24">Linea</th>}
               {visibleCols.has('collezione')  && <th className="w-24">{thBtn('collezione', 'Collezione')}</th>}
+              {/* Classificazione */}
+              {visibleCols.has('gruppoMerceologico') && <th className="w-28">Gruppo</th>}
+              {visibleCols.has('famiglia')           && <th className="w-24">Famiglia</th>}
+              {visibleCols.has('classe')             && <th className="w-24">Classe</th>}
+              {visibleCols.has('sottoclasse')        && <th className="w-24">Sottoclasse</th>}
+              {visibleCols.has('gruppoOmogeneo')     && <th className="w-24">Gr. omog.</th>}
+              {/* MODA */}
+              {visibleCols.has('modello')      && <th className="w-24">Modello</th>}
+              {visibleCols.has('dettaglio')    && <th className="w-24">Dettaglio</th>}
+              {visibleCols.has('forma')        && <th className="w-20">Forma</th>}
+              {visibleCols.has('taglia')       && <th className="w-16">Taglia</th>}
+              {visibleCols.has('materiale1')   && <th className="w-24">Mat. 1</th>}
+              {visibleCols.has('materiale2')   && <th className="w-24">Mat. 2</th>}
+              {visibleCols.has('materiale3')   && <th className="w-24">Mat. 3</th>}
+              {visibleCols.has('composizione') && <th className="w-24">Composiz.</th>}
+              {visibleCols.has('fantasia')     && <th className="w-24">Fantasia</th>}
+              {visibleCols.has('lavorazione')  && <th className="w-24">Lavoraz.</th>}
+              {visibleCols.has('bloccoColore') && <th className="w-24">Blocco col.</th>}
+              {/* Colori */}
+              {visibleCols.has('colore')      && <th className="w-20">Colore 1</th>}
+              {visibleCols.has('colore2')     && <th className="w-20">Colore 2</th>}
+              {visibleCols.has('colore3')     && <th className="w-20">Colore 3</th>}
+              {visibleCols.has('altriColori') && <th className="w-24">Altri col.</th>}
               {visibleCols.has('temaColore')  && <th className="w-28">Tema colore</th>}
-              {visibleCols.has('costPrice')   && <th className="w-24">{thBtn('costPrice', 'Costo i.e.')}</th>}
-              {visibleCols.has('retailPrice') && <th className="w-24">{thBtn('retailPrice', 'Vendita i.i.')}</th>}
-              {visibleCols.has('sconto')      && <th className="w-16 text-center">% Sc.</th>}
-              {visibleCols.has('ricarico')    && <th className="w-16 text-center">% Ric.</th>}
-              {visibleCols.has('foto')        && <th className="w-12 text-center">Foto</th>}
-              {visibleCols.has('stato')       && <th className="w-16">Stato</th>}
+              {/* Certificazioni */}
+              {visibleCols.has('certificazione1') && <th className="w-20">Cert. 1</th>}
+              {visibleCols.has('certificazione2') && <th className="w-20">Cert. 2</th>}
+              {visibleCols.has('certificazione3') && <th className="w-20">Cert. 3</th>}
+              {/* Stato */}
+              {visibleCols.has('foto')  && <th className="w-12 text-center">Foto</th>}
+              {visibleCols.has('stato') && <th className="w-16">Stato</th>}
               <th className="w-28 sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]"></th>
             </tr>
           </thead>
@@ -914,24 +1224,18 @@ export default function AdminProductsPage() {
                 const ivaFactor = 1 + (product.iva ?? 22) / 100;
                 const pvn = product.retailPrice / ivaFactor;
                 const ricarico = product.costPrice > 0 ? ((pvn - product.costPrice) / product.costPrice) * 100 : null;
+                const p = product as any;
                 return (
                   <tr key={product.id} className={selectedIds.has(product.id) ? 'bg-accent/5' : undefined}>
                     <td><input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} className="w-3.5 h-3.5 accent-accent cursor-pointer" /></td>
                     <td><span className="font-mono text-xs text-gray-500">{product.code}</span></td>
                     <td className="max-w-[200px]"><p className="font-medium text-primary text-xs truncate" title={product.name}>{product.name}</p></td>
-                    {visibleCols.has('produttore')  && <td><span className="text-xs text-gray-500 truncate block max-w-[110px]">{product.produttore || '—'}</span></td>}
-                    {visibleCols.has('collezione')  && <td><span className="text-xs text-gray-500">{product.collezione || '—'}</span></td>}
-                    {visibleCols.has('temaColore')  && (
-                      <td>
-                        {hasTemaColore(product)
-                          ? <span className="inline-flex items-center gap-1 text-2xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded max-w-[110px] truncate" title={[product.temaColore, product.temaColore2, product.temaColore3, product.temaColore4, product.temaColore5].filter(Boolean).join(', ')}>{product.temaColore}</span>
-                          : <span className="text-xs text-gray-300">—</span>
-                        }
-                      </td>
-                    )}
-                    {visibleCols.has('costPrice')   && <td className="font-medium text-xs">{formatCurrency(product.costPrice)}</td>}
-                    {visibleCols.has('retailPrice') && <td className="text-xs text-gray-500">{formatCurrency(product.retailPrice)}</td>}
-                    {visibleCols.has('sconto')      && (
+                    {/* Prezzi */}
+                    {visibleCols.has('costPrice')        && <td className="font-medium text-xs">{formatCurrency(product.costPrice)}</td>}
+                    {visibleCols.has('costoIeConReso')   && <td className="text-xs">{p.costoIeConReso != null ? formatCurrency(p.costoIeConReso) : <span className="text-gray-300">—</span>}</td>}
+                    {visibleCols.has('costoIeSenzaReso') && <td className="text-xs">{p.costoIeSenzaReso != null ? formatCurrency(p.costoIeSenzaReso) : <span className="text-gray-300">—</span>}</td>}
+                    {visibleCols.has('retailPrice')      && <td className="text-xs text-gray-500">{formatCurrency(product.retailPrice)}</td>}
+                    {visibleCols.has('sconto')           && (
                       <td className="text-xs text-center">
                         {(() => {
                           const sc = computeSconto(product);
@@ -940,7 +1244,7 @@ export default function AdminProductsPage() {
                         })()}
                       </td>
                     )}
-                    {visibleCols.has('ricarico')    && (
+                    {visibleCols.has('ricarico')         && (
                       <td className="text-xs text-center">
                         {ricarico !== null ? (
                           <span className={ricarico >= 0 ? 'text-green-600' : 'text-red-500'}>
@@ -949,6 +1253,54 @@ export default function AdminProductsPage() {
                         ) : <span className="text-gray-300">—</span>}
                       </td>
                     )}
+                    {visibleCols.has('iva')              && <td className="text-xs text-gray-500">{product.iva != null ? `${product.iva}%` : '—'}</td>}
+                    {visibleCols.has('lotSize')          && <td className="text-xs text-gray-500">{product.lotSize > 1 ? product.lotSize : '—'}</td>}
+                    {visibleCols.has('stock')            && <td className="text-xs text-gray-500">{product.stock ?? '—'}</td>}
+                    {/* Anagrafica */}
+                    {visibleCols.has('produttore')  && <td><span className="text-xs text-gray-500 truncate block max-w-[110px]">{product.produttore || '—'}</span></td>}
+                    {visibleCols.has('conferente')  && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.conferente || '—'}</span></td>}
+                    {visibleCols.has('paese')       && <td><span className="text-xs text-gray-500">{p.paese || '—'}</span></td>}
+                    {visibleCols.has('misura')      && <td><span className="text-xs text-gray-500">{p.misura || '—'}</span></td>}
+                    {visibleCols.has('stagione')    && <td><span className="text-xs text-gray-500">{p.stagione || '—'}</span></td>}
+                    {visibleCols.has('tranche')     && <td><span className="text-xs text-gray-500">{p.tranche || '—'}</span></td>}
+                    {visibleCols.has('nomLinea')    && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.nomLinea || '—'}</span></td>}
+                    {visibleCols.has('collezione')  && <td><span className="text-xs text-gray-500">{product.collezione || '—'}</span></td>}
+                    {/* Classificazione */}
+                    {visibleCols.has('gruppoMerceologico') && <td><span className="text-xs text-gray-500 truncate block max-w-[110px]">{p.gruppoMerceologico || '—'}</span></td>}
+                    {visibleCols.has('famiglia')           && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.famiglia || '—'}</span></td>}
+                    {visibleCols.has('classe')             && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.classe || '—'}</span></td>}
+                    {visibleCols.has('sottoclasse')        && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.sottoclasse || '—'}</span></td>}
+                    {visibleCols.has('gruppoOmogeneo')     && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.gruppoOmogeneo || '—'}</span></td>}
+                    {/* MODA */}
+                    {visibleCols.has('modello')      && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.modello || '—'}</span></td>}
+                    {visibleCols.has('dettaglio')    && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.dettaglio || '—'}</span></td>}
+                    {visibleCols.has('forma')        && <td><span className="text-xs text-gray-500">{p.forma || '—'}</span></td>}
+                    {visibleCols.has('taglia')       && <td><span className="text-xs text-gray-500">{p.taglia || '—'}</span></td>}
+                    {visibleCols.has('materiale1')   && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.materiale1 || '—'}</span></td>}
+                    {visibleCols.has('materiale2')   && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.materiale2 || '—'}</span></td>}
+                    {visibleCols.has('materiale3')   && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.materiale3 || '—'}</span></td>}
+                    {visibleCols.has('composizione') && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.composizione || '—'}</span></td>}
+                    {visibleCols.has('fantasia')     && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.fantasia || '—'}</span></td>}
+                    {visibleCols.has('lavorazione')  && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.lavorazione || '—'}</span></td>}
+                    {visibleCols.has('bloccoColore') && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.bloccoColore || '—'}</span></td>}
+                    {/* Colori */}
+                    {visibleCols.has('colore')      && <td><span className="text-xs text-gray-500">{product.colore || '—'}</span></td>}
+                    {visibleCols.has('colore2')     && <td><span className="text-xs text-gray-500">{p.colore2 || '—'}</span></td>}
+                    {visibleCols.has('colore3')     && <td><span className="text-xs text-gray-500">{p.colore3 || '—'}</span></td>}
+                    {visibleCols.has('altriColori') && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.altriColori || '—'}</span></td>}
+                    {visibleCols.has('temaColore')  && (
+                      <td>
+                        {hasTemaColore(product)
+                          ? <span className="inline-flex items-center gap-1 text-2xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded max-w-[110px] truncate" title={[product.temaColore, product.temaColore2, product.temaColore3, product.temaColore4, product.temaColore5].filter(Boolean).join(', ')}>{product.temaColore}</span>
+                          : <span className="text-xs text-gray-300">—</span>
+                        }
+                      </td>
+                    )}
+                    {/* Certificazioni */}
+                    {visibleCols.has('certificazione1') && <td><span className="text-xs text-gray-500">{p.certificazione1 || '—'}</span></td>}
+                    {visibleCols.has('certificazione2') && <td><span className="text-xs text-gray-500">{p.certificazione2 || '—'}</span></td>}
+                    {visibleCols.has('certificazione3') && <td><span className="text-xs text-gray-500">{p.certificazione3 || '—'}</span></td>}
+                    {/* Stato */}
                     {visibleCols.has('foto')        && (
                       <td className="text-center whitespace-nowrap">
                         {(() => {
