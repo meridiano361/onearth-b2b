@@ -958,7 +958,7 @@ export default function AdminProductsPage() {
       </Modal>
 
       {/* Import Modal */}
-      <Modal isOpen={showImport} onClose={() => setShowImport(false)} title="Aggiorna prodotti da Excel" size="xl">
+      <Modal isOpen={showImport} onClose={() => setShowImport(false)} title="Importa / aggiorna prodotti da Excel" size="xl">
         <ProductImport onSuccess={() => { setShowImport(false); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }} />
       </Modal>
 

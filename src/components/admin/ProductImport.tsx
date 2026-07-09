@@ -374,6 +374,12 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
     setAutoMapping(mapping);
     setUnrecognizedHeaders(unrecognized);
     setManualOverrides({});
+    // Auto-select every field found in the file (excluding 'code' which is always required)
+    const detected = new Set(Object.keys(mapping).filter((f) => f !== 'code'));
+    if (detected.size > 0) {
+      setSelectedFields(detected);
+      savePrefs(detected);
+    }
   }
 
   function parseFile(f: File) {
@@ -466,6 +472,10 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
   }
 
   async function loadPreview() {
+    if (modalita !== 'solo-crea' && activeFields.length === 0) {
+      toast.error('Seleziona almeno un campo da importare');
+      return;
+    }
     setIsLoadingPreview(true);
     try {
       const mappedRows = rawRows.map((r) => applyMapping(r, effectiveMapping));
@@ -474,8 +484,9 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rows: mappedRows, campiDaAggiornare: activeFields, dryRun: true, modalita, applicaSelezioneCampiAiNuovi }),
       });
-      if (!res.ok) throw new Error('Errore nel caricamento anteprima');
-      setPreviewData(await res.json());
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Errore nel caricamento anteprima');
+      setPreviewData(data);
       setStep('preview');
     } catch (err: any) {
       toast.error(err.message || 'Errore nel caricamento anteprima');
