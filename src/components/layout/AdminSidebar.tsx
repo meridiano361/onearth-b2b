@@ -97,14 +97,14 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
 
   const linkClass = (active: boolean) =>
     cn(
-      'flex items-center gap-3 px-3 py-2.5 rounded text-xs font-medium transition-all duration-150',
+      'flex items-center gap-3 px-3 py-1.5 rounded text-xs font-medium transition-all duration-150',
       active ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'
     );
 
   return (
     <aside className="w-56 bg-primary flex flex-col h-full flex-shrink-0">
       {/* Brand */}
-      <div className="px-6 py-6 border-b border-white/10 flex items-start justify-between">
+      <div className="px-6 py-4 border-b border-white/10 flex items-start justify-between">
         <div>
           <Image
             src="/logo-on-earth/onearth_solo_bianco.png"
@@ -127,7 +127,7 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-3 py-2 space-y-0 overflow-y-auto">
         {NAV.map((entry) => {
           if (isGroup(entry)) {
             if (!canSee(entry.roles)) return null;
@@ -201,7 +201,7 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
       </nav>
 
       {/* Footer: role badge + logout */}
-      <div className="px-3 py-4 border-t border-white/10 space-y-1">
+      <div className="px-3 py-3 border-t border-white/10 space-y-0.5">
         {role && role !== 'CUSTOMER' && (
           <p className="px-3 text-2xs text-gray-600 uppercase tracking-widest mb-2">{role.replace('_', ' ')}</p>
         )}

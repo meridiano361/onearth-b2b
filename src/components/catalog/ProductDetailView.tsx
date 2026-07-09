@@ -78,6 +78,15 @@ function ProductGallery({ product }: { product: Product }) {
   );
 }
 
+function FieldRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
+      <span className="text-sm text-primary">{value}</span>
+    </div>
+  );
+}
+
 interface Props {
   id: string;
 }
@@ -88,29 +97,59 @@ export default function ProductDetailView({ id }: Props) {
   const [justAdded, setJustAdded] = useState(false);
   const [showSizePanel, setShowSizePanel] = useState(false);
   const tp = useTranslations('product');
-  const tf = useTranslations('filters');
-  const tg = useTranslations('groupings');
   const locale = useLocale();
   const { scheda: ss } = useSettings();
 
-  const classFields: { key: keyof Product; label: string; show?: boolean }[] = [
-    { key: 'gruppoMerceologico', label: tf('gruppoMerceologico') },
-    { key: 'famiglia',           label: tf('famiglia') },
-    { key: 'classe',             label: tf('classe') },
-    { key: 'sottoclasse',        label: tf('sottoclasse') },
-    { key: 'gruppoOmogeneo',     label: tf('gruppoOmogeneo') },
-    { key: 'nomLinea',           label: tg('nomLinea'),    show: ss.linea },
-    { key: 'stagione',           label: tg('stagione') },
-    { key: 'collezione',         label: tg('collezione'), show: ss.collezione },
-    { key: 'colore',             label: tg('colore'),     show: ss.colore },
-    { key: 'temaColore',         label: tg('temaColore'), show: ss.temaColore },
+  const classFields: { key: string; label: string; show?: boolean }[] = [
+    { key: 'gruppoMerceologico', label: 'Gruppo merceologico' },
+    { key: 'famiglia',           label: 'Famiglia' },
+    { key: 'classe',             label: 'Classe' },
+    { key: 'sottoclasse',        label: 'Sottoclasse' },
+    { key: 'gruppoOmogeneo',     label: 'Gruppo omogeneo' },
+    { key: 'stagione',           label: 'Stagione' },
+    { key: 'tranche',            label: 'Tranche' },
+    { key: 'nomLinea',           label: 'Linea',      show: ss.linea },
+    { key: 'collezione',         label: 'Collezione', show: ss.collezione },
   ];
 
-  const detailFields: { key: keyof Product; label: string; show?: boolean }[] = [
-    { key: 'produttore', label: tf('produttore'), show: ss.produttore },
-    { key: 'paese',      label: 'Paese',          show: ss.paese },
-    { key: 'misura',     label: tp('misura'),      show: ss.misure },
-    { key: 'lotSize',    label: tp('lotSizeLabel'), show: ss.confezione },
+  const detailFields: { key: string; label: string; show?: boolean }[] = [
+    { key: 'produttore', label: 'Produttore', show: ss.produttore },
+    { key: 'conferente', label: 'Conferente' },
+    { key: 'paese',      label: 'Paese',      show: ss.paese },
+    { key: 'misura',     label: 'Misura',     show: ss.misure },
+    { key: 'modello',    label: 'Modello' },
+    { key: 'dettaglio',  label: 'Dettaglio' },
+    { key: 'forma',      label: 'Forma' },
+    { key: 'taglia',     label: 'Taglia' },
+    { key: 'lotSize',    label: 'Confezione', show: ss.confezione },
+  ];
+
+  const colorFields: { key: string; label: string; show?: boolean }[] = [
+    { key: 'colore',       label: 'Colore 1',     show: ss.colore },
+    { key: 'colore2',      label: 'Colore 2' },
+    { key: 'colore3',      label: 'Colore 3' },
+    { key: 'bloccoColore', label: 'Blocco colore' },
+    { key: 'altriColori',  label: 'Altri colori' },
+    { key: 'temaColore',   label: 'Tema colore',  show: ss.temaColore },
+    { key: 'temaColore2',  label: 'Tema colore 2' },
+    { key: 'temaColore3',  label: 'Tema colore 3' },
+    { key: 'temaColore4',  label: 'Tema colore 4' },
+    { key: 'temaColore5',  label: 'Tema colore 5' },
+  ];
+
+  const materialFields: { key: string; label: string }[] = [
+    { key: 'materiale1',   label: 'Materiale 1' },
+    { key: 'materiale2',   label: 'Materiale 2' },
+    { key: 'materiale3',   label: 'Materiale 3' },
+    { key: 'composizione', label: 'Composizione' },
+    { key: 'fantasia',     label: 'Fantasia' },
+    { key: 'lavorazione',  label: 'Lavorazione' },
+  ];
+
+  const certFields: { key: string; label: string }[] = [
+    { key: 'certificazione1', label: 'Certificazione 1' },
+    { key: 'certificazione2', label: 'Certificazione 2' },
+    { key: 'certificazione3', label: 'Certificazione 3' },
   ];
 
   const { data, isLoading, isError } = useQuery({
@@ -162,12 +201,16 @@ export default function ProductDetailView({ id }: Props) {
     );
   }
 
-  const activeClassFields = classFields.filter(({ key, show }) => show !== false && product[key]);
+  const p = product as any;
+  const activeClassFields = classFields.filter(({ key, show }) => show !== false && p[key]);
   const activeDetailFields = detailFields.filter(({ key, show }) => {
     if (show === false) return false;
-    const v = product[key];
+    const v = p[key];
     return v !== null && v !== undefined && v !== '' && v !== 1;
   });
+  const activeColorFields = colorFields.filter(({ key, show }) => show !== false && p[key]);
+  const activeMaterialFields = materialFields.filter(({ key }) => p[key]);
+  const activeCertFields = certFields.filter(({ key }) => p[key]);
 
   const localizedDescription = (() => {
     if (locale === 'en' && product.descrizioneEn) return product.descrizioneEn;
@@ -177,14 +220,10 @@ export default function ProductDetailView({ id }: Props) {
     return product.description || null;
   })();
 
-  const guadagnoPotenziale = Number(product.retailPrice) - Number(product.costPrice);
-  const margine = product.retailPrice ? (guadagnoPotenziale / Number(product.retailPrice)) * 100 : 0;
   const hasBusinessInfo =
     (ss.fasciaSconto && product.fasciaSconto != null) ||
     (ss.fasciaRicarico && !!product.fasciaRicarico) ||
-    (ss.iva && product.iva != null) ||
-    ss.guadagnoPotenziale ||
-    ss.margine;
+    (ss.iva && product.iva != null);
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
@@ -348,8 +387,10 @@ export default function ProductDetailView({ id }: Props) {
         </div>
       </div>
 
-      {/* Details sections */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      {/* Detail sections */}
+      <div className="space-y-8">
+
+        {/* Taglie disponibili */}
         {product.sizeVariants && product.sizeVariants.length > 0 && (
           <div>
             <h2 className="label-luxury text-gray-400 mb-3">Taglie disponibili</h2>
@@ -363,83 +404,100 @@ export default function ProductDetailView({ id }: Props) {
           </div>
         )}
 
-        {activeClassFields.length > 0 && (
-          <div>
-            <h2 className="label-luxury text-gray-400 mb-3">{tp('classification')}</h2>
-            <div className="space-y-2">
-              {activeClassFields.map(({ key, label }) => (
-                <div key={key} className="flex items-baseline gap-2">
-                  <span className="text-xs text-gray-400 w-24 sm:w-32 flex-shrink-0">{label}</span>
-                  <span className="text-sm text-primary">{String(product[key])}</span>
+        {/* Classificazione + Dettagli prodotto */}
+        {(activeClassFields.length > 0 || activeDetailFields.length > 0) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {activeClassFields.length > 0 && (
+              <div>
+                <h2 className="label-luxury text-gray-400 mb-3">{tp('classification')}</h2>
+                <div className="space-y-2">
+                  {activeClassFields.map(({ key, label }) => (
+                    <FieldRow key={key} label={label} value={String(p[key])} />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+            {activeDetailFields.length > 0 && (
+              <div>
+                <h2 className="label-luxury text-gray-400 mb-3">{tp('detailsTitle')}</h2>
+                <div className="space-y-2">
+                  {activeDetailFields.map(({ key, label }) => (
+                    <FieldRow
+                      key={key}
+                      label={label}
+                      value={key === 'lotSize' ? `${p[key]} ${tp('lotUnit')}` : String(p[key])}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        <div className="space-y-6">
-          {(activeDetailFields.length > 0 || (ss.note && product.notes)) && (
-            <div>
-              <h2 className="label-luxury text-gray-400 mb-3">{tp('detailsTitle')}</h2>
-              <div className="space-y-2">
-                {activeDetailFields.map(({ key, label }) => (
-                  <div key={key} className="flex items-baseline gap-2">
-                    <span className="text-xs text-gray-400 w-24 sm:w-32 flex-shrink-0">{label}</span>
-                    <span className="text-sm text-primary">
-                      {key === 'lotSize'
-                        ? `${product[key]} ${tp('lotUnit')}`
-                        : String(product[key])}
-                    </span>
-                  </div>
-                ))}
-                {ss.note && product.notes && (
-                  <div className="flex items-start gap-2 pt-1">
-                    <span className="text-xs text-gray-400 w-32 flex-shrink-0">{tp('notesLabel')}</span>
-                    <span className="text-sm text-gray-500 italic">{product.notes}</span>
-                  </div>
-                )}
+        {/* Colori + Materiali */}
+        {(activeColorFields.length > 0 || activeMaterialFields.length > 0) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {activeColorFields.length > 0 && (
+              <div>
+                <h2 className="label-luxury text-gray-400 mb-3">Colori</h2>
+                <div className="space-y-2">
+                  {activeColorFields.map(({ key, label }) => (
+                    <FieldRow key={key} label={label} value={String(p[key])} />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+            {activeMaterialFields.length > 0 && (
+              <div>
+                <h2 className="label-luxury text-gray-400 mb-3">Materiali</h2>
+                <div className="space-y-2">
+                  {activeMaterialFields.map(({ key, label }) => (
+                    <FieldRow key={key} label={label} value={String(p[key])} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
-          {hasBusinessInfo && (
-            <div>
-              <h2 className="label-luxury text-gray-400 mb-3">Informazioni commerciali</h2>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                {ss.fasciaSconto && product.fasciaSconto != null && (
-                  <>
-                    <span className="text-xs text-gray-400">Fascia sconto</span>
-                    <span className="text-xs font-medium text-primary">{Number(product.fasciaSconto)}%</span>
-                  </>
-                )}
-                {ss.fasciaRicarico && product.fasciaRicarico && (
-                  <>
-                    <span className="text-xs text-gray-400">Fascia ricarico</span>
-                    <span className="text-xs font-medium text-primary">{product.fasciaRicarico}</span>
-                  </>
-                )}
-                {ss.iva && product.iva != null && (
-                  <>
-                    <span className="text-xs text-gray-400">IVA</span>
-                    <span className="text-xs font-medium text-primary">{product.iva}%</span>
-                  </>
-                )}
-                {ss.guadagnoPotenziale && (
-                  <>
-                    <span className="text-xs text-gray-400">Guadagno potenziale</span>
-                    <span className="text-xs font-medium text-emerald-600">{formatCurrency(guadagnoPotenziale)}</span>
-                  </>
-                )}
-                {ss.margine && (
-                  <>
-                    <span className="text-xs text-gray-400">Margine</span>
-                    <span className="text-xs font-medium text-primary">{margine.toFixed(1)}%</span>
-                  </>
-                )}
+        {/* Certificazioni + Info commerciali + Note */}
+        {(activeCertFields.length > 0 || hasBusinessInfo || (ss.note && product.notes)) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {activeCertFields.length > 0 && (
+              <div>
+                <h2 className="label-luxury text-gray-400 mb-3">Certificazioni</h2>
+                <div className="space-y-2">
+                  {activeCertFields.map(({ key, label }) => (
+                    <FieldRow key={key} label={label} value={String(p[key])} />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+            {hasBusinessInfo && (
+              <div>
+                <h2 className="label-luxury text-gray-400 mb-3">Informazioni commerciali</h2>
+                <div className="space-y-2">
+                  {ss.fasciaSconto && product.fasciaSconto != null && (
+                    <FieldRow label="Fascia sconto" value={`${Number(product.fasciaSconto)}%`} />
+                  )}
+                  {ss.fasciaRicarico && product.fasciaRicarico && (
+                    <FieldRow label="Fascia ricarico" value={product.fasciaRicarico} />
+                  )}
+                  {ss.iva && product.iva != null && (
+                    <FieldRow label="IVA" value={`${product.iva}%`} />
+                  )}
+                </div>
+              </div>
+            )}
+            {ss.note && product.notes && (
+              <div>
+                <h2 className="label-luxury text-gray-400 mb-3">{tp('notesLabel')}</h2>
+                <p className="text-sm text-gray-500 italic">{product.notes}</p>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   );
