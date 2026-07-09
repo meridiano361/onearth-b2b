@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     ] as const;
     for (const f of filterFields) {
       const v = sp.get(f);
-      if (v) where[f] = v;
+      if (v) where[f] = { equals: v, mode: 'insensitive' };
     }
 
     const products = await prisma.product.findMany({
