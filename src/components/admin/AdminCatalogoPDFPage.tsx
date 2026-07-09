@@ -127,6 +127,7 @@ interface FormState {
     sezioneFinale3FontSize: number;
     sezioneFinale3Colore: string;
     sezioneFinale3Align: 'left' | 'center' | 'right';
+    testoSfondoColore: string;
   };
   paginaPenultima: {
     attiva: boolean;
@@ -152,6 +153,7 @@ interface FormState {
     sezioneFinale3FontSize: number;
     sezioneFinale3Colore: string;
     sezioneFinale3Align: 'left' | 'center' | 'right';
+    testoSfondoColore: string;
   };
   cardFieldStyles: CardFieldStyles;
   separatoreStyle: SeparatorStyle;
@@ -297,6 +299,7 @@ const DEFAULT_STATE: FormState = {
     sezioneFinale3FontSize: 8,
     sezioneFinale3Colore: '#9CA3AF',
     sezioneFinale3Align: 'center',
+    testoSfondoColore: '',
   },
   paginaPenultima: {
     attiva: false,
@@ -320,6 +323,7 @@ const DEFAULT_STATE: FormState = {
     sezioneFinale3FontSize: 8,
     sezioneFinale3Colore: '#9CA3AF',
     sezioneFinale3Align: 'center',
+    testoSfondoColore: '',
   },
   cardFieldStyles: {
     codice:      { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
@@ -1223,6 +1227,7 @@ function FinalPagePreview({ config }: { config: FormState }) {
 
   const PAD_H = 60 * scale;
   const PAD_V = 48 * scale;
+  const textBg = pf.testoSfondoColore || undefined;
 
   const titleEl = pf.titolo ? (
     <div
@@ -1258,7 +1263,7 @@ function FinalPagePreview({ config }: { config: FormState }) {
           </div>
         )}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, backgroundColor: 'rgba(0,0,0,0.55)' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `0 ${PAD_H}px ${PAD_V}px` }}>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `0 ${PAD_H}px ${PAD_V}px`, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1274,7 +1279,7 @@ function FinalPagePreview({ config }: { config: FormState }) {
             <img src={imgSrc} alt="" style={imgPos(W, H)} />
           </div>
         )}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px` }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px`, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1303,7 +1308,7 @@ function FinalPagePreview({ config }: { config: FormState }) {
             <img src={imgSrc} alt="" style={imgPos(imgAreaW, H)} />
           )}
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${32 * scale}px`, position: 'relative' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${32 * scale}px`, position: 'relative', backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1315,7 +1320,7 @@ function FinalPagePreview({ config }: { config: FormState }) {
     const textAreaH = H - imgAreaH;
     inner = (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px` }}>
+        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px`, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1340,7 +1345,7 @@ function FinalPagePreview({ config }: { config: FormState }) {
             <img src={imgSrc} alt="" style={imgPos(W, imgAreaH)} />
           )}
         </div>
-        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px` }}>
+        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px`, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1409,6 +1414,7 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
 
   const PAD_H = 60 * scale;
   const PAD_V = 48 * scale;
+  const textBg = pp.testoSfondoColore || undefined;
 
   const titleEl = pp.titolo ? (
     <div
@@ -1444,7 +1450,7 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
           </div>
         )}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, backgroundColor: 'rgba(0,0,0,0.55)' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `0 ${PAD_H}px ${PAD_V}px` }}>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `0 ${PAD_H}px ${PAD_V}px`, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1460,7 +1466,7 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
             <img src={imgSrc} alt="" style={imgPos(W, H)} />
           </div>
         )}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px` }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px`, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1489,7 +1495,7 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
             <img src={imgSrc} alt="" style={imgPos(imgAreaW, H)} />
           )}
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${32 * scale}px`, position: 'relative' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${32 * scale}px`, position: 'relative', backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1501,7 +1507,7 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
     const textAreaH = H - imgAreaH;
     inner = (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px` }}>
+        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px`, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1526,7 +1532,7 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
             <img src={imgSrc} alt="" style={imgPos(W, imgAreaH)} />
           )}
         </div>
-        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px` }}>
+        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px`, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -3273,6 +3279,16 @@ export default function AdminCatalogoPDFPage() {
                       <MiniColorPicker value={config.paginaPenultimaTypo.testoColor}
                         onChange={(v) => setPaginaPenultimaTypo({ testoColor: v })} />
                     </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Sfondo area testo <span className="text-gray-400 font-normal">(opzionale)</span></label>
+                      <div className="flex items-center gap-2">
+                        <MiniColorPicker value={config.paginaPenultima.testoSfondoColore || '#ffffff'}
+                          onChange={(v) => setPaginaPenultima('testoSfondoColore', v)} />
+                        {config.paginaPenultima.testoSfondoColore && (
+                          <button onClick={() => setPaginaPenultima('testoSfondoColore', '')} className="text-2xs text-gray-400 hover:text-gray-600">rimuovi</button>
+                        )}
+                      </div>
+                    </div>
 
                     {/* Spaziatura */}
                     <p className="text-xs font-semibold text-gray-600 pt-1">Spaziatura</p>
@@ -3624,6 +3640,16 @@ export default function AdminCatalogoPDFPage() {
                       <label className="block text-xs font-medium text-gray-600 mb-1">Colore testo corpo</label>
                       <MiniColorPicker value={config.paginaFinaleTypo.testoColor}
                         onChange={(v) => setPaginaFinaleTypo({ testoColor: v })} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Sfondo area testo <span className="text-gray-400 font-normal">(opzionale)</span></label>
+                      <div className="flex items-center gap-2">
+                        <MiniColorPicker value={config.paginaFinale.testoSfondoColore || '#ffffff'}
+                          onChange={(v) => setPaginaFinale('testoSfondoColore', v)} />
+                        {config.paginaFinale.testoSfondoColore && (
+                          <button onClick={() => setPaginaFinale('testoSfondoColore', '')} className="text-2xs text-gray-400 hover:text-gray-600">rimuovi</button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Spaziatura */}

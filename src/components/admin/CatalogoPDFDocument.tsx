@@ -226,6 +226,7 @@ export type CatalogConfig = {
     sezioneFinale3FontSize?: number;
     sezioneFinale3Colore?: string;
     sezioneFinale3Align?: 'left' | 'center' | 'right';
+    testoSfondoColore?: string;
   };
   paginaPenultima?: {
     attiva: boolean;
@@ -251,6 +252,7 @@ export type CatalogConfig = {
     sezioneFinale3FontSize?: number;
     sezioneFinale3Colore?: string;
     sezioneFinale3Align?: 'left' | 'center' | 'right';
+    testoSfondoColore?: string;
   };
   // Typography customization
   cardFieldStyles: CardFieldStyles;
@@ -447,14 +449,12 @@ function parseHtmlToPdf(html: string): HtmlBlock[] {
         hasExplicitAlign = true;
       }
       const inlines = collectInlines(node);
-      if (inlines.length > 0) {
-        blocks.push({
-          type: tag === 'h1' ? 'h1' : tag === 'h2' ? 'h2' : 'paragraph',
-          align,
-          hasExplicitAlign,
-          inlines,
-        });
-      }
+      blocks.push({
+        type: tag === 'h1' ? 'h1' : tag === 'h2' ? 'h2' : 'paragraph',
+        align,
+        hasExplicitAlign,
+        inlines: inlines.length > 0 ? inlines : [{ text: ' ', bold: false, italic: false }],
+      });
     } else if (tag === 'ul' || tag === 'ol') {
       const items: HtmlInline[][] = [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1477,6 +1477,7 @@ function FinalPage({
 
   const mt = typo.marginTop ?? PAD_V;
   const s1mb = typo.sezione1MarginBottom ?? 0;
+  const textBg = pf.testoSfondoColore || undefined;
 
   // ── full-overlay ─────────────────────────────────────────────────────────────
   if (resolvedLayout === 'full-overlay') {
@@ -1484,7 +1485,7 @@ function FinalPage({
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: '#000000', opacity: 0.55 }} />
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V }}>
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {renderTitleInlines(titleInlines, typo, titleAlign, 8)}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
@@ -1503,7 +1504,7 @@ function FinalPage({
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
@@ -1543,7 +1544,7 @@ function FinalPage({
             <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
           )}
         </View>
-        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingTop: mt, paddingBottom: PAD_V }}>
+        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
@@ -1567,7 +1568,7 @@ function FinalPage({
     const imgTop = (imgAreaH - imgH) / 2 + (imgAreaH * imgOffsetY / 100);
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
-        <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
+        <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
@@ -1602,7 +1603,7 @@ function FinalPage({
           <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
         )}
       </View>
-      <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
+      <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
         {renderTitleInlines(titleInlines, typo, titleAlign)}
         {bodyBlocks.length > 0 ? (
           <View style={{ width: '100%', marginBottom: s1mb }}>
@@ -1691,13 +1692,14 @@ function PenultimaPage({
   const PAD_V = 48;
   const mt = typo.marginTop ?? PAD_V;
   const s1mb = typo.sezione1MarginBottom ?? 0;
+  const textBg = pp.testoSfondoColore || undefined;
 
   if (resolvedLayout === 'full-overlay') {
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: '#000000', opacity: 0.55 }} />
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V }}>
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {renderTitleInlines(titleInlines, typo, titleAlign, 8)}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
@@ -1715,7 +1717,7 @@ function PenultimaPage({
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
@@ -1753,7 +1755,7 @@ function PenultimaPage({
             <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
           )}
         </View>
-        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingTop: mt, paddingBottom: PAD_V }}>
+        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
@@ -1776,7 +1778,7 @@ function PenultimaPage({
     const imgTop = (imgAreaH - imgH) / 2 + (imgAreaH * imgOffsetY / 100);
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
-        <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
+        <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {renderTitleInlines(titleInlines, typo, titleAlign)}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
@@ -1811,7 +1813,7 @@ function PenultimaPage({
           <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
         )}
       </View>
-      <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V }}>
+      <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
         {renderTitleInlines(titleInlines, typo, titleAlign)}
         {bodyBlocks.length > 0 ? (
           <View style={{ width: '100%', marginBottom: s1mb }}>
