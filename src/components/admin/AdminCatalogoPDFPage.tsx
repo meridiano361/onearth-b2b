@@ -431,27 +431,61 @@ function mergeWithDefaults(saved: any): FormState {
 // ── Local storage persistence ─────────────────────────────────────────────────
 
 const LS_PDF_CONFIG = 'catalogo-pdf-config-v1';
+const LS_PDF_LOGOS  = 'catalogo-pdf-logos-v1';
+
+interface StoredLogos {
+  copertinaLogo:     string | null;
+  paginaFinaleLogo:  string | null;
+  paginaPenultimaLogo: string | null;
+}
+
+function loadLogosFromStorage(): StoredLogos {
+  try {
+    const raw = localStorage.getItem(LS_PDF_LOGOS);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { copertinaLogo: null, paginaFinaleLogo: null, paginaPenultimaLogo: null };
+}
+
+function saveLogosToStorage(c: FormState) {
+  try {
+    const logos: StoredLogos = {
+      copertinaLogo:       c.copertina.logoCustomBase64 ?? null,
+      paginaFinaleLogo:    c.paginaFinale.logoCustomBase64 ?? null,
+      paginaPenultimaLogo: c.paginaPenultima.logoCustomBase64 ?? null,
+    };
+    localStorage.setItem(LS_PDF_LOGOS, JSON.stringify(logos));
+  } catch {}
+}
 
 function loadConfigFromStorage(): FormState {
   if (typeof window === 'undefined') return DEFAULT_STATE;
   try {
     const raw = localStorage.getItem(LS_PDF_CONFIG);
-    if (raw) return mergeWithDefaults(JSON.parse(raw));
+    const base = raw ? mergeWithDefaults(JSON.parse(raw)) : { ...DEFAULT_STATE };
+    const logos = loadLogosFromStorage();
+    return {
+      ...base,
+      copertina:      { ...base.copertina,      logoCustomBase64: logos.copertinaLogo },
+      paginaFinale:   { ...base.paginaFinale,   logoCustomBase64: logos.paginaFinaleLogo },
+      paginaPenultima: { ...base.paginaPenultima, logoCustomBase64: logos.paginaPenultimaLogo },
+    };
   } catch {}
   return DEFAULT_STATE;
 }
 
 function saveConfigToStorage(c: FormState) {
   try {
-    // Strip large base64 images (re-fetchable via immagineUrl); keep logo base64 (small, no URL)
+    // Strip all base64 blobs from main config key (logos go to their own key)
     const toSave: FormState = {
       ...c,
-      copertina: { ...c.copertina, immagineBase64: null },
-      paginaFinale: { ...c.paginaFinale, immagineBase64: null },
-      paginaPenultima: { ...c.paginaPenultima, immagineBase64: null },
+      copertina:      { ...c.copertina,      immagineBase64: null, logoCustomBase64: null },
+      paginaFinale:   { ...c.paginaFinale,   immagineBase64: null, logoCustomBase64: null },
+      paginaPenultima: { ...c.paginaPenultima, immagineBase64: null, logoCustomBase64: null },
     };
     localStorage.setItem(LS_PDF_CONFIG, JSON.stringify(toSave));
-  } catch {} // quota exceeded — silently ignore
+  } catch {}
+  saveLogosToStorage(c);
 }
 
 // ── ON EARTH palette ──────────────────────────────────────────────────────────
