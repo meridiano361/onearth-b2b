@@ -432,21 +432,21 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
     config.copertina = {
       ...config.copertina,
       logoCustomBase64:  await normalizeLogoBase64(config.copertina.logoCustomBase64) ?? config.copertina.logoCustomBase64,
-      logo2CustomBase64: await normalizeLogoBase64(config.copertina.logo2CustomBase64),
+      logo2CustomBase64: await normalizeLogoBase64(config.copertina.logo2CustomBase64) ?? config.copertina.logo2CustomBase64,
     };
   }
   if (config.paginaFinale) {
     config.paginaFinale = {
       ...config.paginaFinale,
       logoCustomBase64:  await normalizeLogoBase64((config.paginaFinale as any).logoCustomBase64) ?? (config.paginaFinale as any).logoCustomBase64,
-      logo2CustomBase64: await normalizeLogoBase64((config.paginaFinale as any).logo2CustomBase64),
+      logo2CustomBase64: await normalizeLogoBase64((config.paginaFinale as any).logo2CustomBase64) ?? (config.paginaFinale as any).logo2CustomBase64,
     } as typeof config.paginaFinale;
   }
   if (config.paginaPenultima) {
     config.paginaPenultima = {
       ...config.paginaPenultima,
       logoCustomBase64:  await normalizeLogoBase64((config.paginaPenultima as any).logoCustomBase64) ?? (config.paginaPenultima as any).logoCustomBase64,
-      logo2CustomBase64: await normalizeLogoBase64((config.paginaPenultima as any).logo2CustomBase64),
+      logo2CustomBase64: await normalizeLogoBase64((config.paginaPenultima as any).logo2CustomBase64) ?? (config.paginaPenultima as any).logo2CustomBase64,
     } as typeof config.paginaPenultima;
   }
 
