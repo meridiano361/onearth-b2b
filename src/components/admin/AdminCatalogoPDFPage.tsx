@@ -881,6 +881,12 @@ function CardPreview({ config, scale = 1 }: { config: FormState; scale?: number 
           )}
           {(f.prezzoCosto || f.pvp || f.produttore || f.paese) && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 3, gap: 2 }}>
+              {(f.produttore || f.paese) && (
+                <div style={{ flex: 1 }}>
+                  {f.produttore && <p style={{ ...fieldCSS(cfs.produttore), margin: 0, lineHeight: 1.3 }}>Produttore</p>}
+                  {f.paese && <p style={{ ...fieldCSS(cfs.paese), margin: 0, lineHeight: 1.3 }}>Italia</p>}
+                </div>
+              )}
               {(f.prezzoCosto || f.pvp) && (
                 <div style={{ flex: 1 }}>
                   {f.prezzoCosto && (
@@ -895,12 +901,6 @@ function CardPreview({ config, scale = 1 }: { config: FormState; scale?: number 
                       <span>€29,90</span>
                     </p>
                   )}
-                </div>
-              )}
-              {(f.produttore || f.paese) && (
-                <div style={{ textAlign: 'right' }}>
-                  {f.produttore && <p style={{ ...fieldCSS(cfs.produttore), margin: 0, lineHeight: 1.3 }}>Produttore</p>}
-                  {f.paese && <p style={{ ...fieldCSS(cfs.paese), margin: 0, lineHeight: 1.3 }}>Italia</p>}
                 </div>
               )}
             </div>

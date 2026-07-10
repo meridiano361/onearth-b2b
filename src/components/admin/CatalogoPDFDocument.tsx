@@ -1063,49 +1063,50 @@ function ProductCard({
               {/* Left column: produttore + paese */}
               {(f.produttore || f.paese) && (
                 <View style={[s.priceItem, { justifyContent: 'center' }]}>
-                {f.produttore && product.produttore ? (
-                  <Text style={{ fontSize: cfs.produttore.fontSize, fontFamily: fieldFont(cfs.produttore, config.fontFamiglia), color: cfs.produttore.color, lineHeight: 1.3, marginBottom: 1.5 }}>
-                    {cfs.produttore.uppercase ? product.produttore.toUpperCase() : product.produttore}
-                  </Text>
-                ) : null}
-                {f.paese && product.paese ? (
-                  <Text style={{ fontSize: cfs.paese.fontSize, fontFamily: fieldFont(cfs.paese, config.fontFamiglia), color: cfs.paese.color, lineHeight: 1.3 }}>
-                    {cfs.paese.uppercase ? product.paese.toUpperCase() : product.paese}
-                  </Text>
-                ) : null}
-              </View>
-            )}
-            {/* Right column: prezzoCosto + pvp */}
-            {(f.prezzoCosto || f.pvp) && (
-              <View style={[s.priceItem, { alignItems: 'flex-end', justifyContent: 'center' }]}>
-                {f.prezzoCosto && (() => {
-                  const conReso = Number(product.costoIeConReso);
-                  const senzaReso = Number(product.costoIeSenzaReso);
-                  const hasConReso = conReso > 0;
-                  const hasSenzaReso = senzaReso > 0;
-                  const ls = [s.priceLabel, { fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color }] as any;
-                  if (hasConReso) return (
-                    <>
-                      <Text style={{ marginBottom: 1.5 }}><Text style={ls}>Costo i.e. con reso </Text><Text style={ls}>{euro(conReso)}</Text></Text>
-                      {hasSenzaReso && <Text><Text style={ls}>Senza reso </Text><Text style={ls}>{euro(senzaReso)}</Text></Text>}
-                    </>
-                  );
-                  if (hasSenzaReso) return (
-                    <Text style={{ marginBottom: 1.5 }}><Text style={ls}>Costo i.e. </Text><Text style={ls}>{euro(senzaReso)}</Text></Text>
-                  );
-                  return <Text style={{ marginBottom: 1.5 }}><Text style={ls}>Costo i.e. </Text><Text style={ls}>{euro(product.costPrice)}</Text></Text>;
-                })()}
-                {f.pvp && (() => {
-                  const lp = [s.priceLabel, { fontSize: cfs.pvp.fontSize, fontFamily: fieldFont(cfs.pvp, config.fontFamiglia), color: cfs.pvp.color }] as any;
-                  return (
-                    <Text>
-                      <Text style={lp}>PVP i.i. </Text>
-                      <Text style={lp}>{euro(product.retailPrice)}</Text>
+                  {f.produttore && product.produttore ? (
+                    <Text style={{ fontSize: cfs.produttore.fontSize, fontFamily: fieldFont(cfs.produttore, config.fontFamiglia), color: cfs.produttore.color, lineHeight: 1.3, marginBottom: 1.5, textAlign: cfs.produttore.align }}>
+                      {cfs.produttore.uppercase ? product.produttore.toUpperCase() : product.produttore}
                     </Text>
-                  );
-                })()}
-              </View>
-            )}
+                  ) : null}
+                  {f.paese && product.paese ? (
+                    <Text style={{ fontSize: cfs.paese.fontSize, fontFamily: fieldFont(cfs.paese, config.fontFamiglia), color: cfs.paese.color, lineHeight: 1.3, textAlign: cfs.paese.align }}>
+                      {cfs.paese.uppercase ? product.paese.toUpperCase() : product.paese}
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+              {/* Right column: prezzoCosto + pvp */}
+              {(f.prezzoCosto || f.pvp) && (
+                <View style={[s.priceItem, { justifyContent: 'center' }]}>
+                  {f.prezzoCosto && (() => {
+                    const conReso = Number(product.costoIeConReso);
+                    const senzaReso = Number(product.costoIeSenzaReso);
+                    const hasConReso = conReso > 0;
+                    const hasSenzaReso = senzaReso > 0;
+                    const ls = [s.priceLabel, { fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color }] as any;
+                    const ta = cfs.prezzoCosto.align;
+                    if (hasConReso) return (
+                      <>
+                        <Text style={{ marginBottom: 1.5, textAlign: ta }}><Text style={ls}>Costo i.e. con reso </Text><Text style={ls}>{euro(conReso)}</Text></Text>
+                        {hasSenzaReso && <Text style={{ textAlign: ta }}><Text style={ls}>Senza reso </Text><Text style={ls}>{euro(senzaReso)}</Text></Text>}
+                      </>
+                    );
+                    if (hasSenzaReso) return (
+                      <Text style={{ marginBottom: 1.5, textAlign: ta }}><Text style={ls}>Costo i.e. </Text><Text style={ls}>{euro(senzaReso)}</Text></Text>
+                    );
+                    return <Text style={{ marginBottom: 1.5, textAlign: ta }}><Text style={ls}>Costo i.e. </Text><Text style={ls}>{euro(product.costPrice)}</Text></Text>;
+                  })()}
+                  {f.pvp && (() => {
+                    const lp = [s.priceLabel, { fontSize: cfs.pvp.fontSize, fontFamily: fieldFont(cfs.pvp, config.fontFamiglia), color: cfs.pvp.color }] as any;
+                    return (
+                      <Text style={{ textAlign: cfs.pvp.align }}>
+                        <Text style={lp}>PVP i.i. </Text>
+                        <Text style={lp}>{euro(product.retailPrice)}</Text>
+                      </Text>
+                    );
+                  })()}
+                </View>
+              )}
             </View>
           </View>
         )}
