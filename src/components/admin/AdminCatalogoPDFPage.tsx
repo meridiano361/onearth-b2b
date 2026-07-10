@@ -884,13 +884,13 @@ function CardPreview({ config, scale = 1 }: { config: FormState; scale?: number 
               {(f.prezzoCosto || f.pvp) && (
                 <div style={{ flex: 1 }}>
                   {f.prezzoCosto && (
-                    <p style={{ fontSize: fs2px(5.5), color: cfs.prezzoCosto.color, margin: 0, lineHeight: 1.4, textTransform: 'uppercase', letterSpacing: 0.3 }}>
+                    <p style={{ ...fieldCSS(cfs.prezzoCosto), lineHeight: 1.4, textTransform: 'uppercase', letterSpacing: 0.3 }}>
                       <span>Costo i.e. </span>
                       <span>€12,50</span>
                     </p>
                   )}
                   {f.pvp && (
-                    <p style={{ fontSize: fs2px(5.5), color: cfs.pvp.color, margin: 0, lineHeight: 1.4, textTransform: 'uppercase', letterSpacing: 0.3 }}>
+                    <p style={{ ...fieldCSS(cfs.pvp), lineHeight: 1.4, textTransform: 'uppercase', letterSpacing: 0.3 }}>
                       <span>PVP i.i. </span>
                       <span>€29,90</span>
                     </p>
