@@ -108,13 +108,13 @@ export type CoverTypography = {
   sottotitoloColor: string;
   bgColor: string;
   // Extended fields
-  titoloFontFamily?: 'Helvetica' | 'Times-Roman' | 'Courier';
-  sottotitoloFontFamily?: 'Helvetica' | 'Times-Roman' | 'Courier';
+  titoloFontFamily?: string;
+  sottotitoloFontFamily?: string;
   sottotitolo2FontSize?: number;
   sottotitolo2Bold?: boolean;
   sottotitolo2Italic?: boolean;
   sottotitolo2Color?: string;
-  sottotitolo2FontFamily?: 'Helvetica' | 'Times-Roman' | 'Courier';
+  sottotitolo2FontFamily?: string;
   spacingTitoloSottotitolo?: number;
   spacingSottotitoloSottotitolo2?: number;
 };
@@ -1153,11 +1153,27 @@ function CoverPage({
   const imgOpacity = (cov.imgOpacity ?? 100) / 100;
 
   function coverFont(family: string | undefined, bold: boolean, italic: boolean) {
-    const base = family === 'Times-Roman' ? 'Times' : family === 'Courier' ? 'Courier' : 'Helvetica';
-    if (bold && italic) return base === 'Times' ? 'Times-BoldItalic' : base === 'Courier' ? 'Courier-BoldOblique' : 'Helvetica-BoldOblique';
-    if (bold) return base === 'Times' ? 'Times-Bold' : base === 'Courier' ? 'Courier-Bold' : 'Helvetica-Bold';
-    if (italic) return base === 'Times' ? 'Times-Italic' : base === 'Courier' ? 'Courier-Oblique' : 'Helvetica-Oblique';
-    return base === 'Times' ? 'Times-Roman' : base === 'Courier' ? 'Courier' : 'Helvetica';
+    const f = (family ?? 'helvetica').toLowerCase();
+    if (f === 'times-roman' || f === 'times') {
+      if (bold && italic) return 'Times-BoldItalic';
+      if (bold) return 'Times-Bold';
+      if (italic) return 'Times-Italic';
+      return 'Times-Roman';
+    }
+    if (f === 'courier') {
+      if (bold && italic) return 'Courier-BoldOblique';
+      if (bold) return 'Courier-Bold';
+      if (italic) return 'Courier-Oblique';
+      return 'Courier';
+    }
+    const base = resolveFamily(f); // nova→Nova, inter→Inter, etc., default→Helvetica
+    if (base === 'Helvetica') {
+      if (bold && italic) return 'Helvetica-BoldOblique';
+      if (bold) return 'Helvetica-Bold';
+      if (italic) return 'Helvetica-Oblique';
+      return 'Helvetica';
+    }
+    return bold ? `${base}-Bold` : base;
   }
 
   const titleFont = coverFont(typo.titoloFontFamily, typo.titoloBold, typo.titoloItalic);

@@ -2391,10 +2391,10 @@ export default function AdminCatalogoPDFPage() {
         <div className="flex border-b border-border overflow-x-auto flex-shrink-0 -mb-px">
           {([
             { id: 'generale',  label: 'Generale' },
-            { id: 'scheda',    label: 'Scheda Prodotto' },
             { id: 'copertina', label: 'Copertina' },
-            { id: 'ultima',    label: 'Ultima Pagina' },
+            { id: 'scheda',    label: 'Prodotti' },
             { id: 'penultima', label: 'Penultima Pagina' },
+            { id: 'ultima',    label: 'Ultima Pagina' },
           ] as const).map(tab => (
             <button
               key={tab.id}
@@ -3769,12 +3769,17 @@ export default function AdminCatalogoPDFPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Famiglia font titolo</label>
-                      <select value={config.copertinaTypo.titoloFontFamily ?? 'Helvetica'}
-                        onChange={(e) => setCopertinaTypo({ titoloFontFamily: e.target.value as 'Helvetica' | 'Times-Roman' | 'Courier' })}
+                      <select value={(config.copertinaTypo.titoloFontFamily ?? 'helvetica').toLowerCase()}
+                        onChange={(e) => setCopertinaTypo({ titoloFontFamily: e.target.value })}
                         className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none">
-                        <option value="Helvetica">Helvetica (sans-serif)</option>
-                        <option value="Times-Roman">Times Roman (serif)</option>
-                        <option value="Courier">Courier (monospace)</option>
+                        <option value="helvetica">Helvetica</option>
+                        <option value="nova">Nova Flat</option>
+                        <option value="inter">Inter</option>
+                        <option value="playfair">Playfair Display</option>
+                        <option value="montserrat">Montserrat</option>
+                        <option value="lato">Lato</option>
+                        <option value="times-roman">Times Roman</option>
+                        <option value="courier">Courier</option>
                       </select>
                     </div>
                     <div>
@@ -3798,12 +3803,17 @@ export default function AdminCatalogoPDFPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Famiglia font sottotitolo</label>
-                      <select value={config.copertinaTypo.sottotitoloFontFamily ?? 'Helvetica'}
-                        onChange={(e) => setCopertinaTypo({ sottotitoloFontFamily: e.target.value as 'Helvetica' | 'Times-Roman' | 'Courier' })}
+                      <select value={(config.copertinaTypo.sottotitoloFontFamily ?? 'helvetica').toLowerCase()}
+                        onChange={(e) => setCopertinaTypo({ sottotitoloFontFamily: e.target.value })}
                         className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none">
-                        <option value="Helvetica">Helvetica (sans-serif)</option>
-                        <option value="Times-Roman">Times Roman (serif)</option>
-                        <option value="Courier">Courier (monospace)</option>
+                        <option value="helvetica">Helvetica</option>
+                        <option value="nova">Nova Flat</option>
+                        <option value="inter">Inter</option>
+                        <option value="playfair">Playfair Display</option>
+                        <option value="montserrat">Montserrat</option>
+                        <option value="lato">Lato</option>
+                        <option value="times-roman">Times Roman</option>
+                        <option value="courier">Courier</option>
                       </select>
                     </div>
                     <div>
