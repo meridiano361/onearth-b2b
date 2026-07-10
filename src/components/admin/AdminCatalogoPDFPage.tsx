@@ -476,25 +476,41 @@ const LS_PDF_CONFIG = 'catalogo-pdf-config-v1';
 const LS_PDF_LOGOS  = 'catalogo-pdf-logos-v1';
 
 interface StoredLogos {
-  copertinaLogo:     string | null;
-  paginaFinaleLogo:  string | null;
-  paginaPenultimaLogo: string | null;
+  copertinaLogo:        string | null;
+  paginaFinaleLogo:     string | null;
+  paginaPenultimaLogo:  string | null;
+  copertinaLogo2:       string | null;
+  paginaFinaleLogo2:    string | null;
+  paginaPenultimaLogo2: string | null;
 }
 
 function loadLogosFromStorage(): StoredLogos {
   try {
     const raw = localStorage.getItem(LS_PDF_LOGOS);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        copertinaLogo:        parsed.copertinaLogo        ?? null,
+        paginaFinaleLogo:     parsed.paginaFinaleLogo     ?? null,
+        paginaPenultimaLogo:  parsed.paginaPenultimaLogo  ?? null,
+        copertinaLogo2:       parsed.copertinaLogo2       ?? null,
+        paginaFinaleLogo2:    parsed.paginaFinaleLogo2    ?? null,
+        paginaPenultimaLogo2: parsed.paginaPenultimaLogo2 ?? null,
+      };
+    }
   } catch {}
-  return { copertinaLogo: null, paginaFinaleLogo: null, paginaPenultimaLogo: null };
+  return { copertinaLogo: null, paginaFinaleLogo: null, paginaPenultimaLogo: null, copertinaLogo2: null, paginaFinaleLogo2: null, paginaPenultimaLogo2: null };
 }
 
 function saveLogosToStorage(c: FormState) {
   try {
     const logos: StoredLogos = {
-      copertinaLogo:       c.copertina.logoCustomBase64 ?? null,
-      paginaFinaleLogo:    c.paginaFinale.logoCustomBase64 ?? null,
-      paginaPenultimaLogo: c.paginaPenultima.logoCustomBase64 ?? null,
+      copertinaLogo:        c.copertina.logoCustomBase64       ?? null,
+      paginaFinaleLogo:     c.paginaFinale.logoCustomBase64    ?? null,
+      paginaPenultimaLogo:  c.paginaPenultima.logoCustomBase64 ?? null,
+      copertinaLogo2:       c.copertina.logo2CustomBase64       ?? null,
+      paginaFinaleLogo2:    c.paginaFinale.logo2CustomBase64    ?? null,
+      paginaPenultimaLogo2: c.paginaPenultima.logo2CustomBase64 ?? null,
     };
     localStorage.setItem(LS_PDF_LOGOS, JSON.stringify(logos));
   } catch {}
@@ -508,9 +524,9 @@ function loadConfigFromStorage(): FormState {
     const logos = loadLogosFromStorage();
     return {
       ...base,
-      copertina:      { ...base.copertina,      logoCustomBase64: logos.copertinaLogo },
-      paginaFinale:   { ...base.paginaFinale,   logoCustomBase64: logos.paginaFinaleLogo },
-      paginaPenultima: { ...base.paginaPenultima, logoCustomBase64: logos.paginaPenultimaLogo },
+      copertina:       { ...base.copertina,       logoCustomBase64: logos.copertinaLogo,       logo2CustomBase64: logos.copertinaLogo2 },
+      paginaFinale:    { ...base.paginaFinale,    logoCustomBase64: logos.paginaFinaleLogo,    logo2CustomBase64: logos.paginaFinaleLogo2 },
+      paginaPenultima: { ...base.paginaPenultima, logoCustomBase64: logos.paginaPenultimaLogo, logo2CustomBase64: logos.paginaPenultimaLogo2 },
     };
   } catch {}
   return DEFAULT_STATE;
@@ -518,12 +534,12 @@ function loadConfigFromStorage(): FormState {
 
 function saveConfigToStorage(c: FormState) {
   try {
-    // Strip all base64 blobs from main config key (logos go to their own key)
+    // Strip all base64 blobs from main config key (logos and images go to their own key)
     const toSave: FormState = {
       ...c,
-      copertina:      { ...c.copertina,      immagineBase64: null, logoCustomBase64: null },
-      paginaFinale:   { ...c.paginaFinale,   immagineBase64: null, logoCustomBase64: null },
-      paginaPenultima: { ...c.paginaPenultima, immagineBase64: null, logoCustomBase64: null },
+      copertina:       { ...c.copertina,       immagineBase64: null, logoCustomBase64: null, logo2CustomBase64: null },
+      paginaFinale:    { ...c.paginaFinale,    immagineBase64: null, logoCustomBase64: null, logo2CustomBase64: null },
+      paginaPenultima: { ...c.paginaPenultima, immagineBase64: null, logoCustomBase64: null, logo2CustomBase64: null },
     };
     localStorage.setItem(LS_PDF_CONFIG, JSON.stringify(toSave));
   } catch {}
@@ -3621,13 +3637,23 @@ export default function AdminCatalogoPDFPage() {
                     ))}
                     {config.copertina.logo2Tipo === 'custom' && (
                       <div className="pl-5 space-y-2">
-                        <input ref={copertinaLogo2FileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml"
+                        <input ref={copertinaLogo2FileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast.error('Logo troppo grande (max 5 MB)');
+                              if (copertinaLogo2FileInputRef.current) copertinaLogo2FileInputRef.current.value = '';
+                              return;
+                            }
                             const reader = new FileReader();
                             reader.onload = (ev) => {
-                              setCopertina('logo2CustomBase64', ev.target?.result as string);
+                              const dataUrl = ev.target?.result as string;
+                              setCopertina('logo2CustomBase64', dataUrl);
+                              try {
+                                const logos = loadLogosFromStorage();
+                                localStorage.setItem(LS_PDF_LOGOS, JSON.stringify({ ...logos, copertinaLogo2: dataUrl }));
+                              } catch {}
                               if (copertinaLogo2FileInputRef.current) copertinaLogo2FileInputRef.current.value = '';
                             };
                             reader.readAsDataURL(file);
@@ -3960,13 +3986,23 @@ export default function AdminCatalogoPDFPage() {
                     ))}
                     {config.paginaFinale.logo2Tipo === 'custom' && (
                       <div className="pl-5 space-y-2">
-                        <input ref={finalLogo2FileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml"
+                        <input ref={finalLogo2FileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast.error('Logo troppo grande (max 5 MB)');
+                              if (finalLogo2FileInputRef.current) finalLogo2FileInputRef.current.value = '';
+                              return;
+                            }
                             const reader = new FileReader();
                             reader.onload = (ev) => {
-                              setPaginaFinale('logo2CustomBase64', ev.target?.result as string);
+                              const dataUrl = ev.target?.result as string;
+                              setPaginaFinale('logo2CustomBase64', dataUrl);
+                              try {
+                                const logos = loadLogosFromStorage();
+                                localStorage.setItem(LS_PDF_LOGOS, JSON.stringify({ ...logos, paginaFinaleLogo2: dataUrl }));
+                              } catch {}
                               if (finalLogo2FileInputRef.current) finalLogo2FileInputRef.current.value = '';
                             };
                             reader.readAsDataURL(file);
@@ -4379,13 +4415,23 @@ export default function AdminCatalogoPDFPage() {
                     ))}
                     {config.paginaPenultima.logo2Tipo === 'custom' && (
                       <div className="pl-5 space-y-2">
-                        <input ref={penultimaLogo2FileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml"
+                        <input ref={penultimaLogo2FileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast.error('Logo troppo grande (max 5 MB)');
+                              if (penultimaLogo2FileInputRef.current) penultimaLogo2FileInputRef.current.value = '';
+                              return;
+                            }
                             const reader = new FileReader();
                             reader.onload = (ev) => {
-                              setPaginaPenultima('logo2CustomBase64', ev.target?.result as string);
+                              const dataUrl = ev.target?.result as string;
+                              setPaginaPenultima('logo2CustomBase64', dataUrl);
+                              try {
+                                const logos = loadLogosFromStorage();
+                                localStorage.setItem(LS_PDF_LOGOS, JSON.stringify({ ...logos, paginaPenultimaLogo2: dataUrl }));
+                              } catch {}
                               if (penultimaLogo2FileInputRef.current) penultimaLogo2FileInputRef.current.value = '';
                             };
                             reader.readAsDataURL(file);
