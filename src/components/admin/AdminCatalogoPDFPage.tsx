@@ -16,6 +16,7 @@ import {
   AlignCenter,
   AlignRight,
   Pencil,
+  GripVertical,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type {
@@ -180,6 +181,7 @@ interface FormState {
   trancheOrder: string[];
   includeTrancheSenzaNome: boolean;
   productOrder: string[];
+  fieldOrder: string[];
   separatoreTrancheAttivo: boolean;
   stileSeparatoreTranche: {
     bgColor: string;
@@ -392,6 +394,7 @@ const DEFAULT_STATE: FormState = {
   trancheOrder: [] as string[],
   includeTrancheSenzaNome: false,
   productOrder: [] as string[],
+  fieldOrder: ['codice', 'descrizione', 'misure'] as string[],
   separatoreTrancheAttivo: true,
   stileSeparatoreTranche: {
     bgColor: '#1C1C1C',
@@ -429,6 +432,7 @@ function mergeWithDefaults(saved: any): FormState {
     stileSeparatoreTranche: { ...DEFAULT_STATE.stileSeparatoreTranche, ...saved?.stileSeparatoreTranche },
     trancheOrder: saved?.trancheOrder ?? DEFAULT_STATE.trancheOrder,
     productOrder: saved?.productOrder ?? DEFAULT_STATE.productOrder,
+    fieldOrder: saved?.fieldOrder ?? DEFAULT_STATE.fieldOrder,
   };
 }
 
@@ -734,15 +738,17 @@ function FieldStyleRow({
   label,
   value,
   onChange,
+  showSpacing = false,
 }: {
   label: string;
   value: FieldStyle;
   onChange: (fs: FieldStyle) => void;
+  showSpacing?: boolean;
 }) {
   const upd = (patch: Partial<FieldStyle>) => onChange({ ...value, ...patch });
   return (
     <div className="py-2.5 space-y-1.5">
-      <p className="text-xs font-medium text-gray-700">{label}</p>
+      {label && <p className="text-xs font-medium text-gray-700">{label}</p>}
       <div className="flex flex-wrap items-center gap-1.5">
         <input
           type="number"
@@ -758,13 +764,28 @@ function FieldStyleRow({
         <ToggleBtn active={value.italic} onClick={() => upd({ italic: !value.italic })}><span className="italic">I</span></ToggleBtn>
         <ToggleBtn active={value.uppercase} onClick={() => upd({ uppercase: !value.uppercase })} title="Tutto maiuscolo">AA</ToggleBtn>
         <AlignToggle value={value.align} onChange={(v) => upd({ align: v })} />
+        {showSpacing && (
+          <div className="flex items-center gap-1 ml-auto">
+            <span className="text-2xs text-gray-400">↕</span>
+            <input
+              type="number"
+              min={0}
+              max={20}
+              step={0.5}
+              value={value.marginBottom ?? 0}
+              onChange={(e) => upd({ marginBottom: parseFloat(e.target.value) || 0 })}
+              title="Spaziatura inferiore in pt"
+              className="w-12 h-8 border border-border rounded px-1.5 text-xs bg-white text-center focus:outline-none"
+            />
+          </div>
+        )}
       </div>
       <MiniColorPicker value={value.color} onChange={(v) => upd({ color: v })} />
     </div>
   );
 }
 
-function CardPreview({ config }: { config: FormState }) {
+function CardPreview({ config, scale = 1 }: { config: FormState; scale?: number }) {
   const cfs = config.cardFieldStyles;
   const box = config.cardBoxStyle;
   const f = config.campi;
@@ -785,9 +806,8 @@ function CardPreview({ config }: { config: FormState }) {
     };
   }
 
-  return (
-    <div>
-      <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Anteprima scheda</p>
+  const cardEl = (
+    <div style={{ transformOrigin: 'top left' }}>
       <div
         style={{
           width: 110,
@@ -837,6 +857,12 @@ function CardPreview({ config }: { config: FormState }) {
           )}
         </div>
       </div>
+    </div>
+  );
+  if (scale === 1) return cardEl;
+  return (
+    <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 110 * scale, height: 'auto' }}>
+      {cardEl}
     </div>
   );
 }
@@ -1692,6 +1718,40 @@ function SortableProductRow({ product }: { product: { id: string; code: string; 
   );
 }
 
+// ── SortableFieldStyleRow ─────────────────────────────────────────────────────
+
+const FIELD_ORDER_LABELS: Record<string, string> = {
+  codice: 'Codice prodotto',
+  descrizione: 'Descrizione / Nome',
+  misure: 'Dettagli (misure, linea, ecc.)',
+};
+
+function SortableFieldStyleRow({
+  fieldKey,
+  value,
+  onChange,
+}: {
+  fieldKey: string;
+  value: FieldStyle;
+  onChange: (fs: FieldStyle) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: fieldKey });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <div ref={setNodeRef} style={style} className="border border-border rounded bg-white">
+      <div className="flex items-center gap-2 px-3 pt-2">
+        <button type="button" {...attributes} {...listeners} className="cursor-grab text-gray-300 hover:text-gray-500 flex-shrink-0">
+          <GripVertical size={14} />
+        </button>
+        <span className="text-xs font-semibold text-gray-700">{FIELD_ORDER_LABELS[fieldKey] ?? fieldKey}</span>
+      </div>
+      <div className="px-3 pb-2">
+        <FieldStyleRow label="" value={value} onChange={onChange} showSpacing />
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function AdminCatalogoPDFPage() {
@@ -1704,6 +1764,7 @@ export default function AdminCatalogoPDFPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showTemplates, setShowTemplates] = useState(true);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'generale' | 'scheda' | 'copertina' | 'ultima' | 'penultima'>('generale');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
   const finalImgFileInputRef = useRef<HTMLInputElement>(null);
@@ -2172,8 +2233,10 @@ export default function AdminCatalogoPDFPage() {
   return (
     <div className="flex flex-col lg:flex-row gap-6 p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Left: form */}
-      <div className="flex-1 min-w-0 space-y-4">
-        <div className="flex items-center gap-3 mb-2">
+      <div className="flex-1 min-w-0 flex flex-col gap-3">
+
+        {/* Header */}
+        <div className="flex items-center gap-3">
           <BookOpen size={20} className="text-accent" />
           <div>
             <h1 className="text-lg font-bold text-primary">Generatore Catalogo PDF</h1>
@@ -2181,83 +2244,35 @@ export default function AdminCatalogoPDFPage() {
           </div>
         </div>
 
-        {/* ── Font ── */}
-        <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.font} onToggle={() => toggleSection('font')}>
-            Font
-          </SectionTitle>
-          {sections.font && (
-            <div className="p-4 space-y-2">
-              {[
-                { value: 'helvetica', label: 'Helvetica (predefinito)', sample: 'Sans-serif classico' },
-                { value: 'nova',      label: 'Nova Flat',               sample: 'Geometrico decorativo' },
-                { value: 'inter',     label: 'Inter',                   sample: 'Sans-serif moderno' },
-                { value: 'playfair',  label: 'Playfair Display',        sample: 'Serif elegante' },
-                { value: 'montserrat', label: 'Montserrat',             sample: 'Geometrico pulito' },
-                { value: 'lato',      label: 'Lato',                    sample: 'Umanistico e caldo' },
-              ].map((opt) => (
-                <label
-                  key={opt.value}
-                  className={`flex items-start gap-3 p-2.5 border rounded cursor-pointer transition-colors ${
-                    config.fontFamiglia === opt.value ? 'border-primary bg-cream/30' : 'border-border hover:bg-gray-50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="fontFamiglia"
-                    value={opt.value}
-                    checked={config.fontFamiglia === opt.value}
-                    onChange={() => set('fontFamiglia', opt.value)}
-                    className="mt-0.5 accent-primary"
-                  />
-                  <div>
-                    <p className="text-xs font-medium text-primary">{opt.label}</p>
-                    <p className="text-2xs text-gray-400">{opt.sample}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-          )}
+        {/* Tab navigation */}
+        <div className="flex border-b border-border overflow-x-auto flex-shrink-0 -mb-px">
+          {([
+            { id: 'generale',  label: 'Generale' },
+            { id: 'scheda',    label: 'Scheda Prodotto' },
+            { id: 'copertina', label: 'Copertina' },
+            { id: 'ultima',    label: 'Ultima Pagina' },
+            { id: 'penultima', label: 'Penultima Pagina' },
+          ] as const).map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-3 py-2.5 text-2xs font-semibold tracking-widest uppercase whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
+                activeTab === tab.id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* ── Filtri ── */}
-        <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.filtri} onToggle={() => toggleSection('filtri')}>
-            Filtri prodotti
-          </SectionTitle>
-          {sections.filtri && (
-            <div className="p-4 grid grid-cols-2 gap-3">
-              <SelectField label="Gruppo merceologico" value={config.gruppoMerceologico}
-                onChange={(v) => set('gruppoMerceologico', v)} options={gruppiMerceologici} />
-              <SelectField label="Famiglia" value={config.famiglia}
-                onChange={(v) => set('famiglia', v)} options={famiglie} />
-              <SelectField label="Classe" value={config.classe}
-                onChange={(v) => set('classe', v)} options={classi} />
-              <SelectField label="Sottoclasse" value={config.sottoclasse}
-                onChange={(v) => set('sottoclasse', v)} options={sottoclassi} />
-              <SelectField label="Gruppo omogeneo" value={config.gruppoOmogeneo}
-                onChange={(v) => set('gruppoOmogeneo', v)} options={gruppiOmogenei} />
-              <SelectField label="Linea" value={config.nomLinea}
-                onChange={(v) => set('nomLinea', v)} options={linee} />
-              <SelectField label="Collezione" value={config.collezione}
-                onChange={(v) => set('collezione', v)} options={collezioni} />
-              <SelectField label="Colore" value={config.colore}
-                onChange={(v) => set('colore', v)} options={colori} />
-              <SelectField label="Produttore" value={config.produttore}
-                onChange={(v) => set('produttore', v)} options={produttori} />
-              <SelectField label="Tranche" value={config.tranche}
-                onChange={(v) => set('tranche', v)} options={tranches} />
-              <div className="col-span-2 pt-1">
-                <CheckboxField
-                  label="Solo prodotti attivi"
-                  checked={config.soloAttivi}
-                  onChange={(v) => set('soloAttivi', v)}
-                />
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Tab content */}
+        <div className="space-y-2">
 
+          {/* ══ GENERALE ══ */}
+          {activeTab === 'generale' && <>
         {/* ── Formato pagina ── */}
         <div className="border border-border rounded overflow-hidden">
           <SectionTitle open={sections.formato} onToggle={() => toggleSection('formato')}>
@@ -2325,33 +2340,130 @@ export default function AdminCatalogoPDFPage() {
           )}
         </div>
 
-        {/* ── Stile e colori ── */}
+        {/* ── Intestazione ── */}
         <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.colori} onToggle={() => toggleSection('colori')}>
-            Stile e colori
+          <SectionTitle open={sections.intestazione} onToggle={() => toggleSection('intestazione')}>
+            Intestazione
           </SectionTitle>
-          {sections.colori && (
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <ColorSwatchPicker
-                label="Sfondo pagina"
-                value={config.colori.sfondoPagina}
-                onChange={(v) => setColore('sfondoPagina', v)}
-              />
-              <ColorSwatchPicker
-                label="Sfondo foto"
-                value={config.colori.sfondoFoto}
-                onChange={(v) => setColore('sfondoFoto', v)}
-              />
-              <ColorSwatchPicker
-                label="Testo primario"
-                value={config.colori.testoPrimario}
-                onChange={(v) => setColore('testoPrimario', v)}
-              />
-              <ColorSwatchPicker
-                label="Testo secondario"
-                value={config.colori.testoSecondario}
-                onChange={(v) => setColore('testoSecondario', v)}
-              />
+          {sections.intestazione && (
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Titolo catalogo</label>
+                <input
+                  type="text"
+                  value={config.titolo}
+                  onChange={(e) => set('titolo', e.target.value)}
+                  className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  placeholder="es. Collezione CASA 2027"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <CheckboxField label="Mostra logo ON EARTH" checked={config.mostraLogo} onChange={(v) => set('mostraLogo', v)} />
+                <CheckboxField label="Mostra data generazione" checked={config.mostraData} onChange={(v) => set('mostraData', v)} />
+                <CheckboxField label="Numero di pagina" checked={config.mostraPagina} onChange={(v) => set('mostraPagina', v)} />
+              </div>
+              <div className="border-t border-border pt-3">
+                <p className="text-2xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Stile intestazione</p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione font (pt)</label>
+                      <input type="number" min={5} max={20} value={config.headerStyle.titleFontSize}
+                        onChange={(e) => setHeaderStyle({ titleFontSize: parseFloat(e.target.value) || 8 })}
+                        className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
+                    </div>
+                    <div className="flex items-end gap-1.5">
+                      <ToggleBtn active={config.headerStyle.titleBold} onClick={() => setHeaderStyle({ titleBold: !config.headerStyle.titleBold })}><span className="font-bold">B</span></ToggleBtn>
+                      <ToggleBtn active={config.headerStyle.titleItalic} onClick={() => setHeaderStyle({ titleItalic: !config.headerStyle.titleItalic })}><span className="italic">I</span></ToggleBtn>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-600 w-24">Allineamento</span>
+                    <AlignToggle value={config.headerStyle.titleAlign} onChange={(v) => setHeaderStyle({ titleAlign: v })} />
+                  </div>
+                  <ColorSwatchPicker label="Colore titolo" value={config.headerStyle.titleColor}
+                    onChange={(v) => setHeaderStyle({ titleColor: v })} />
+                  <CheckboxField label="Mostra linea separatrice" checked={config.headerStyle.showSeparator}
+                    onChange={(v) => setHeaderStyle({ showSeparator: v })} />
+                  {config.headerStyle.showSeparator && (
+                    <ColorSwatchPicker label="Colore linea" value={config.headerStyle.separatorColor}
+                      onChange={(v) => setHeaderStyle({ separatorColor: v })} />
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        {/* ── Piè di pagina ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.footerStile} onToggle={() => toggleSection('footerStile')}>
+            Piè di pagina
+          </SectionTitle>
+          {sections.footerStile && (
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione font (pt)</label>
+                  <input type="number" min={5} max={12} value={config.footerStyle.fontSize}
+                    onChange={(e) => setFooterStyle({ fontSize: parseFloat(e.target.value) || 6.5 })}
+                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
+                </div>
+                <div className="flex items-end">
+                  <AlignToggle value={config.footerStyle.align} onChange={(v) => setFooterStyle({ align: v })} />
+                </div>
+              </div>
+              <ColorSwatchPicker label="Colore testo" value={config.footerStyle.color}
+                onChange={(v) => setFooterStyle({ color: v })} />
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Testo personalizzato <span className="text-gray-400 font-normal">(opzionale)</span>
+                </label>
+                <input type="text" value={config.footerStyle.customText}
+                  onChange={(e) => setFooterStyle({ customText: e.target.value })}
+                  placeholder="es. ON EARTH — Catalogo riservato"
+                  className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                <p className="text-2xs text-gray-400 mt-1">Verrà mostrato prima del numero pagina</p>
+              </div>
+              <CheckboxField label="Mostra linea separatrice" checked={config.footerStyle.showSeparator}
+                onChange={(v) => setFooterStyle({ showSeparator: v })} />
+            </div>
+          )}
+        </div>
+
+        {/* ── Filtri ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.filtri} onToggle={() => toggleSection('filtri')}>
+            Filtri prodotti
+          </SectionTitle>
+          {sections.filtri && (
+            <div className="p-4 grid grid-cols-2 gap-3">
+              <SelectField label="Gruppo merceologico" value={config.gruppoMerceologico}
+                onChange={(v) => set('gruppoMerceologico', v)} options={gruppiMerceologici} />
+              <SelectField label="Famiglia" value={config.famiglia}
+                onChange={(v) => set('famiglia', v)} options={famiglie} />
+              <SelectField label="Classe" value={config.classe}
+                onChange={(v) => set('classe', v)} options={classi} />
+              <SelectField label="Sottoclasse" value={config.sottoclasse}
+                onChange={(v) => set('sottoclasse', v)} options={sottoclassi} />
+              <SelectField label="Gruppo omogeneo" value={config.gruppoOmogeneo}
+                onChange={(v) => set('gruppoOmogeneo', v)} options={gruppiOmogenei} />
+              <SelectField label="Linea" value={config.nomLinea}
+                onChange={(v) => set('nomLinea', v)} options={linee} />
+              <SelectField label="Collezione" value={config.collezione}
+                onChange={(v) => set('collezione', v)} options={collezioni} />
+              <SelectField label="Colore" value={config.colore}
+                onChange={(v) => set('colore', v)} options={colori} />
+              <SelectField label="Produttore" value={config.produttore}
+                onChange={(v) => set('produttore', v)} options={produttori} />
+              <SelectField label="Tranche" value={config.tranche}
+                onChange={(v) => set('tranche', v)} options={tranches} />
+              <div className="col-span-2 pt-1">
+                <CheckboxField
+                  label="Solo prodotti attivi"
+                  checked={config.soloAttivi}
+                  onChange={(v) => set('soloAttivi', v)}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -2494,90 +2606,337 @@ export default function AdminCatalogoPDFPage() {
           )}
         </div>
 
-        {/* ── Stile separatori sezioni ── */}
+        {/* ── Stile e separazione ── */}
         <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.separatoreStile} onToggle={() => toggleSection('separatoreStile')}>
-            Stile separatori sezioni
+          <SectionTitle open={sections.colori} onToggle={() => toggleSection('colori')}>
+            Stile e separazione
           </SectionTitle>
-          {sections.separatoreStile && (
-            <div className="p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione font (pt)</label>
-                  <input type="number" min={8} max={40} value={config.separatoreStyle.fontSize}
-                    onChange={(e) => setSeparatoreStyle({ fontSize: parseFloat(e.target.value) || 16 })}
-                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Altezza (pt)</label>
-                  <input type="number" min={20} max={120} value={config.separatoreStyle.height}
-                    onChange={(e) => setSeparatoreStyle({ height: parseInt(e.target.value) || 36 })}
-                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
+          {sections.colori && (
+            <div className="p-4 space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <ColorSwatchPicker label="Sfondo pagina" value={config.colori.sfondoPagina} onChange={(v) => setColore('sfondoPagina', v)} />
+                <ColorSwatchPicker label="Sfondo foto" value={config.colori.sfondoFoto} onChange={(v) => setColore('sfondoFoto', v)} />
+                <ColorSwatchPicker label="Testo primario" value={config.colori.testoPrimario} onChange={(v) => setColore('testoPrimario', v)} />
+                <ColorSwatchPicker label="Testo secondario" value={config.colori.testoSecondario} onChange={(v) => setColore('testoSecondario', v)} />
+              </div>
+              <div className="border-t border-border pt-3">
+                <p className="text-2xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Stile separatori sezioni</p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione font (pt)</label>
+                      <input type="number" min={8} max={40} value={config.separatoreStyle.fontSize}
+                        onChange={(e) => setSeparatoreStyle({ fontSize: parseFloat(e.target.value) || 16 })}
+                        className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Altezza (pt)</label>
+                      <input type="number" min={20} max={120} value={config.separatoreStyle.height}
+                        onChange={(e) => setSeparatoreStyle({ height: parseInt(e.target.value) || 36 })}
+                        className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-gray-500 w-20">Stile testo</span>
+                    <ToggleBtn active={config.separatoreStyle.bold} onClick={() => setSeparatoreStyle({ bold: !config.separatoreStyle.bold })}><span className="font-bold">B</span></ToggleBtn>
+                    <ToggleBtn active={config.separatoreStyle.italic} onClick={() => setSeparatoreStyle({ italic: !config.separatoreStyle.italic })}><span className="italic">I</span></ToggleBtn>
+                    <ToggleBtn active={config.separatoreStyle.uppercase} onClick={() => setSeparatoreStyle({ uppercase: !config.separatoreStyle.uppercase })} title="Tutto maiuscolo">AA</ToggleBtn>
+                    <AlignToggle value={config.separatoreStyle.align} onChange={(v) => setSeparatoreStyle({ align: v })} />
+                  </div>
+                  <ColorSwatchPicker label="Colore testo" value={config.separatoreStyle.color} onChange={(v) => setSeparatoreStyle({ color: v })} />
+                  <ColorSwatchPicker label="Colore sfondo" value={config.separatoreStyle.bgColor} onChange={(v) => setSeparatoreStyle({ bgColor: v })} />
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-gray-500 w-20">Stile testo</span>
-                <ToggleBtn active={config.separatoreStyle.bold} onClick={() => setSeparatoreStyle({ bold: !config.separatoreStyle.bold })}><span className="font-bold">B</span></ToggleBtn>
-                <ToggleBtn active={config.separatoreStyle.italic} onClick={() => setSeparatoreStyle({ italic: !config.separatoreStyle.italic })}><span className="italic">I</span></ToggleBtn>
-                <ToggleBtn active={config.separatoreStyle.uppercase} onClick={() => setSeparatoreStyle({ uppercase: !config.separatoreStyle.uppercase })} title="Tutto maiuscolo">AA</ToggleBtn>
-                <AlignToggle value={config.separatoreStyle.align} onChange={(v) => setSeparatoreStyle({ align: v })} />
-              </div>
-              <ColorSwatchPicker label="Colore testo" value={config.separatoreStyle.color}
-                onChange={(v) => setSeparatoreStyle({ color: v })} />
-              <ColorSwatchPicker label="Colore sfondo" value={config.separatoreStyle.bgColor}
-                onChange={(v) => setSeparatoreStyle({ bgColor: v })} />
             </div>
           )}
         </div>
-
-        {/* ── Informazioni da mostrare ── */}
+        {/* ── Struttura sezioni personalizzata ── */}
         <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.campi} onToggle={() => toggleSection('campi')}>
-            Informazioni da mostrare
+          <SectionTitle open={sections.sezioniPersonalizzate} onToggle={() => toggleSection('sezioniPersonalizzate')}>
+            Struttura sezioni personalizzata
           </SectionTitle>
-          {sections.campi && (
-            <div className="p-4 space-y-3">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <CheckboxField label="Foto prodotto" checked={config.campi.foto} onChange={(v) => setField('foto', v)} />
-                <CheckboxField label="Codice" checked={config.campi.codice} onChange={(v) => setField('codice', v)} />
-                <CheckboxField label="Descrizione" checked={config.campi.descrizione} onChange={(v) => setField('descrizione', v)} />
-                <CheckboxField label="Misure" checked={config.campi.misure} onChange={(v) => setField('misure', v)} />
-                <CheckboxField label="Produttore" checked={config.campi.produttore} onChange={(v) => setField('produttore', v)} />
-                <CheckboxField label="Paese" checked={config.campi.paese} onChange={(v) => setField('paese', v)} />
-                <CheckboxField label="Prezzo costo i.e." checked={config.campi.prezzoCosto} onChange={(v) => setField('prezzoCosto', v)} />
-                <CheckboxField label="PVP i.i." checked={config.campi.pvp} onChange={(v) => setField('pvp', v)} />
-                <CheckboxField label="Linea" checked={config.campi.linea} onChange={(v) => setField('linea', v)} />
-                <CheckboxField label="Collezione" checked={config.campi.collezione} onChange={(v) => setField('collezione', v)} />
-                <CheckboxField label="Confezione" checked={config.campi.confezione} onChange={(v) => setField('confezione', v)} />
-                <CheckboxField label="IVA" checked={config.campi.iva} onChange={(v) => setField('iva', v)} />
-              </div>
-              {config.campi.descrizione && (
-                <div className="pt-1 border-t border-border">
-                  <p className="text-xs font-medium text-gray-600 mb-1.5">Campo nome</p>
-                  <div className="flex gap-4">
-                    {([
-                      { value: 'descrizione', label: 'Descrizione (preferita)' },
-                      { value: 'nome', label: 'Nome (codice interno)' },
-                    ] as const).map((opt) => (
-                      <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+          {sections.sezioniPersonalizzate && (
+            <div className="p-4 space-y-4">
+              <CheckboxField
+                label="Usa struttura sezioni personalizzata"
+                checked={config.useSezioniPersonalizzate}
+                onChange={(v) => set('useSezioniPersonalizzate', v)}
+              />
+              {config.useSezioniPersonalizzate && (
+                <div className="space-y-3 pl-2 border-l-2 border-border">
+                  {/* DnD list of sections */}
+                  {config.sezioniPersonalizzate.length > 0 && (
+                    <DndContext
+                      collisionDetection={closestCenter}
+                      onDragEnd={({ active, over }) => {
+                        if (!over || active.id === over.id) return;
+                        const oldIdx = config.sezioniPersonalizzate.findIndex(s => s.id === active.id);
+                        const newIdx = config.sezioniPersonalizzate.findIndex(s => s.id === over.id);
+                        setSezioniPersonalizzate(arrayMove(config.sezioniPersonalizzate, oldIdx, newIdx));
+                      }}
+                    >
+                      <SortableContext items={config.sezioniPersonalizzate.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-2">
+                          {config.sezioniPersonalizzate.map((sezione, idx) => (
+                            <SortableSection
+                              key={sezione.id}
+                              sezione={sezione}
+                              index={idx}
+                              onEdit={() => setEditingSection(sezione)}
+                              onDelete={() => setSezioniPersonalizzate(config.sezioniPersonalizzate.filter(s => s.id !== sezione.id))}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  )}
+
+                  {/* Add section button */}
+                  <button
+                    type="button"
+                    onClick={() => setEditingSection({ id: crypto.randomUUID(), isNew: true, ...EMPTY_SECTION })}
+                    className="w-full h-8 border border-dashed border-border rounded text-xs text-gray-500 hover:border-primary hover:text-primary transition-colors"
+                  >
+                    + Nuova sezione
+                  </button>
+
+                  {/* Section editor */}
+                  {editingSection && (
+                    <div className="border border-primary/20 rounded p-3 space-y-3 bg-primary/5">
+                      <p className="text-xs font-semibold text-primary">{editingSection.isNew ? 'Nuova sezione' : `Modifica: ${editingSection.nome}`}</p>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Nome sezione *</label>
                         <input
-                          type="radio"
-                          name="campoNome"
-                          value={opt.value}
-                          checked={(config.campi.campoNome ?? 'descrizione') === opt.value}
-                          onChange={() => setConfig((c) => ({ ...c, campi: { ...c.campi, campoNome: opt.value } }))}
-                          className="accent-primary"
+                          type="text"
+                          value={editingSection.nome}
+                          onChange={(e) => setEditingSection({ ...editingSection, nome: e.target.value })}
+                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none"
+                          placeholder="es. Cucina, Bagno, Outdoor…"
                         />
-                        <span className="text-xs text-gray-700">{opt.label}</span>
-                      </label>
-                    ))}
-                  </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Descrizione <span className="text-gray-400 font-normal">(opzionale)</span></label>
+                        <input
+                          type="text"
+                          value={editingSection.descrizione ?? ''}
+                          onChange={(e) => setEditingSection({ ...editingSection, descrizione: e.target.value })}
+                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-600 mb-2">Criteri (OR — basta uno)</p>
+                        <div className="space-y-2">
+                          <MultiSelectCriteria label="Classe" options={classi} selected={editingSection.criteri.classe}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, classe: v } })} />
+                          <MultiSelectCriteria label="Sottoclasse" options={sottoclassi} selected={editingSection.criteri.sottoclasse}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, sottoclasse: v } })} />
+                          <MultiSelectCriteria label="Famiglia" options={famiglie} selected={editingSection.criteri.famiglia}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, famiglia: v } })} />
+                          <MultiSelectCriteria label="Gruppo omogeneo" options={gruppiOmogenei} selected={editingSection.criteri.gruppoOmogeneo}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, gruppoOmogeneo: v } })} />
+                          <MultiSelectCriteria label="Linea" options={linee} selected={editingSection.criteri.nomLinea}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, nomLinea: v } })} />
+                          <MultiSelectCriteria label="Colore" options={colori} selected={editingSection.criteri.colore}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, colore: v } })} />
+                          <MultiSelectCriteria label="Produttore" options={produttori} selected={editingSection.criteri.produttore}
+                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, produttore: v } })} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Ordinamento</label>
+                          <select
+                            value={editingSection.ordinamento}
+                            onChange={(e) => setEditingSection({ ...editingSection, ordinamento: e.target.value as CustomSection['ordinamento'] })}
+                            className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none"
+                          >
+                            <option value="code">Codice A→Z</option>
+                            <option value="name">Descrizione A→Z</option>
+                            <option value="costPrice_asc">Prezzo crescente</option>
+                            <option value="costPrice_desc">Prezzo decrescente</option>
+                            <option value="nomLinea">Linea</option>
+                          </select>
+                        </div>
+                        <div className="flex items-end pb-0.5">
+                          <CheckboxField
+                            label="Mostra sottosezioni"
+                            checked={editingSection.mostraSottosezioni}
+                            onChange={(v) => setEditingSection({ ...editingSection, mostraSottosezioni: v })}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={!editingSection.nome.trim()}
+                          onClick={() => {
+                            if (!editingSection.nome.trim()) return;
+                            const { isNew, ...sez } = editingSection;
+                            if (isNew) {
+                              setSezioniPersonalizzate([...config.sezioniPersonalizzate, sez]);
+                            } else {
+                              setSezioniPersonalizzate(config.sezioniPersonalizzate.map(s => s.id === sez.id ? sez : s));
+                            }
+                            setEditingSection(null);
+                          }}
+                          className="flex-1 h-8 rounded text-xs font-medium bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                        >
+                          Salva sezione
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingSection(null)}
+                          className="px-3 h-8 rounded text-xs border border-border text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                          Annulla
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <CheckboxField
+                    label="Includi prodotti non assegnati a nessuna sezione"
+                    checked={config.includiProdottiNonAssegnati}
+                    onChange={(v) => set('includiProdottiNonAssegnati', v)}
+                  />
                 </div>
               )}
             </div>
           )}
         </div>
 
+        {/* ── Suddivisione per tranche ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.tranche} onToggle={() => toggleSection('tranche')}>
+            Suddivisione per tranche
+          </SectionTitle>
+          {sections.tranche && (
+            <div className="p-4 space-y-4">
+              <CheckboxField
+                label="Suddividi il catalogo per tranche"
+                checked={config.suddividiPerTranche}
+                onChange={(v) => set('suddividiPerTranche', v)}
+              />
+              {config.suddividiPerTranche && (
+                <div className="space-y-3 pl-2 border-l-2 border-border">
+                  <CheckboxField
+                    label="Includi prodotti senza tranche assegnata"
+                    checked={config.includeTrancheSenzaNome}
+                    onChange={(v) => set('includeTrancheSenzaNome', v)}
+                  />
+                  <CheckboxField
+                    label="Mostra pagina separatrice per ogni tranche"
+                    checked={config.separatoreTrancheAttivo}
+                    onChange={(v) => set('separatoreTrancheAttivo', v)}
+                  />
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Ordine tranche</label>
+                    <select
+                      value={config.ordineTranche}
+                      onChange={(e) => set('ordineTranche', e.target.value as 'az' | 'za' | 'custom')}
+                      className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    >
+                      <option value="az">Alfabetico A→Z</option>
+                      <option value="za">Alfabetico Z→A</option>
+                      <option value="custom">Personalizzato (drag &amp; drop)</option>
+                    </select>
+                  </div>
+                  {config.ordineTranche === 'custom' && tranches.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-2xs text-gray-500 mb-1">Trascina per riordinare</p>
+                      {(() => {
+                        const list = config.trancheOrder.length > 0 ? config.trancheOrder : [...tranches].sort();
+                        return (
+                          <DndContext
+                            collisionDetection={closestCenter}
+                            onDragEnd={({ active, over }) => {
+                              if (!over || active.id === over.id) return;
+                              const oldIdx = list.indexOf(active.id as string);
+                              const newIdx = list.indexOf(over.id as string);
+                              if (oldIdx >= 0 && newIdx >= 0) set('trancheOrder', arrayMove(list, oldIdx, newIdx));
+                            }}
+                          >
+                            <SortableContext items={list} strategy={verticalListSortingStrategy}>
+                              <div className="space-y-1">
+                                {list.map((t) => (
+                                  <SortableTranche key={t} id={t} label={t} />
+                                ))}
+                              </div>
+                            </SortableContext>
+                          </DndContext>
+                        );
+                      })()}
+                    </div>
+                  )}
+                  {config.separatoreTrancheAttivo && (
+                    <div className="border-t border-border pt-3">
+                      <p className="text-2xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Stile separatore tranche</p>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione font (pt)</label>
+                          <input type="number" min={16} max={60} value={config.stileSeparatoreTranche.fontSize}
+                            onChange={(e) => setSepTranche({ fontSize: parseFloat(e.target.value) || 36 })}
+                            className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-gray-500 w-20">Stile testo</span>
+                          <ToggleBtn active={config.stileSeparatoreTranche.bold} onClick={() => setSepTranche({ bold: !config.stileSeparatoreTranche.bold })}><span className="font-bold">B</span></ToggleBtn>
+                          <ToggleBtn active={config.stileSeparatoreTranche.uppercase} onClick={() => setSepTranche({ uppercase: !config.stileSeparatoreTranche.uppercase })} title="Tutto maiuscolo">AA</ToggleBtn>
+                        </div>
+                        <CheckboxField label="Mostra numero prodotti" checked={config.stileSeparatoreTranche.mostraNProdotti} onChange={(v) => setSepTranche({ mostraNProdotti: v })} />
+                        <ColorSwatchPicker label="Colore sfondo" value={config.stileSeparatoreTranche.bgColor} onChange={(v) => setSepTranche({ bgColor: v })} />
+                        <ColorSwatchPicker label="Colore testo" value={config.stileSeparatoreTranche.color} onChange={(v) => setSepTranche({ color: v })} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        {/* ── Font ── */}
+        <div className="border border-border rounded overflow-hidden">
+          <SectionTitle open={sections.font} onToggle={() => toggleSection('font')}>
+            Font
+          </SectionTitle>
+          {sections.font && (
+            <div className="p-4 space-y-2">
+              {[
+                { value: 'helvetica', label: 'Helvetica (predefinito)', sample: 'Sans-serif classico' },
+                { value: 'nova',      label: 'Nova Flat',               sample: 'Geometrico decorativo' },
+                { value: 'inter',     label: 'Inter',                   sample: 'Sans-serif moderno' },
+                { value: 'playfair',  label: 'Playfair Display',        sample: 'Serif elegante' },
+                { value: 'montserrat', label: 'Montserrat',             sample: 'Geometrico pulito' },
+                { value: 'lato',      label: 'Lato',                    sample: 'Umanistico e caldo' },
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex items-start gap-3 p-2.5 border rounded cursor-pointer transition-colors ${
+                    config.fontFamiglia === opt.value ? 'border-primary bg-cream/30' : 'border-border hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="fontFamiglia"
+                    value={opt.value}
+                    checked={config.fontFamiglia === opt.value}
+                    onChange={() => set('fontFamiglia', opt.value)}
+                    className="mt-0.5 accent-primary"
+                  />
+                  <div>
+                    <p className="text-xs font-medium text-primary">{opt.label}</p>
+                    <p className="text-2xs text-gray-400">{opt.sample}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+          </>}
+
+          {/* ══ SCHEDA PRODOTTO ══ */}
+          {activeTab === 'scheda' && <>
         {/* ── Foto prodotto ── */}
         {config.campi.foto && (
           <div className="border border-border rounded overflow-hidden">
@@ -2651,41 +3010,50 @@ export default function AdminCatalogoPDFPage() {
           </div>
         )}
 
-        {/* ── Tipografia campi scheda ── */}
+        {/* ── Informazioni da mostrare ── */}
         <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.campiStile} onToggle={() => toggleSection('campiStile')}>
-            Tipografia campi scheda
+          <SectionTitle open={sections.campi} onToggle={() => toggleSection('campi')}>
+            Informazioni da mostrare
           </SectionTitle>
-          {sections.campiStile && (
-            <div className="p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="divide-y divide-border/50">
-                  {config.campi.codice && (
-                    <FieldStyleRow label="Codice" value={config.cardFieldStyles.codice}
-                      onChange={(fs) => setCardFieldStyle('codice', fs)} />
-                  )}
-                  {config.campi.descrizione && (
-                    <FieldStyleRow label="Descrizione" value={config.cardFieldStyles.descrizione}
-                      onChange={(fs) => setCardFieldStyle('descrizione', fs)} />
-                  )}
-                  {(config.campi.misure || config.campi.produttore || config.campi.paese ||
-                    config.campi.linea || config.campi.collezione || config.campi.confezione || config.campi.iva) && (
-                    <FieldStyleRow label="Dettagli (misure, produttore, paese…)" value={config.cardFieldStyles.misure}
-                      onChange={(fs) => setCardFieldStyle('misure', fs)} />
-                  )}
-                  {config.campi.prezzoCosto && (
-                    <FieldStyleRow label="Prezzo costo" value={config.cardFieldStyles.prezzoCosto}
-                      onChange={(fs) => setCardFieldStyle('prezzoCosto', fs)} />
-                  )}
-                  {config.campi.pvp && (
-                    <FieldStyleRow label="PVP" value={config.cardFieldStyles.pvp}
-                      onChange={(fs) => setCardFieldStyle('pvp', fs)} />
-                  )}
-                </div>
-                <div className="hidden">
-                  {/* CardPreview moved to side panel */}
-                </div>
+          {sections.campi && (
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <CheckboxField label="Foto prodotto" checked={config.campi.foto} onChange={(v) => setField('foto', v)} />
+                <CheckboxField label="Codice" checked={config.campi.codice} onChange={(v) => setField('codice', v)} />
+                <CheckboxField label="Descrizione" checked={config.campi.descrizione} onChange={(v) => setField('descrizione', v)} />
+                <CheckboxField label="Misure" checked={config.campi.misure} onChange={(v) => setField('misure', v)} />
+                <CheckboxField label="Produttore" checked={config.campi.produttore} onChange={(v) => setField('produttore', v)} />
+                <CheckboxField label="Paese" checked={config.campi.paese} onChange={(v) => setField('paese', v)} />
+                <CheckboxField label="Prezzo costo i.e." checked={config.campi.prezzoCosto} onChange={(v) => setField('prezzoCosto', v)} />
+                <CheckboxField label="PVP i.i." checked={config.campi.pvp} onChange={(v) => setField('pvp', v)} />
+                <CheckboxField label="Linea" checked={config.campi.linea} onChange={(v) => setField('linea', v)} />
+                <CheckboxField label="Collezione" checked={config.campi.collezione} onChange={(v) => setField('collezione', v)} />
+                <CheckboxField label="Confezione" checked={config.campi.confezione} onChange={(v) => setField('confezione', v)} />
+                <CheckboxField label="IVA" checked={config.campi.iva} onChange={(v) => setField('iva', v)} />
               </div>
+              {config.campi.descrizione && (
+                <div className="pt-1 border-t border-border">
+                  <p className="text-xs font-medium text-gray-600 mb-1.5">Campo nome</p>
+                  <div className="flex gap-4">
+                    {([
+                      { value: 'descrizione', label: 'Descrizione (preferita)' },
+                      { value: 'nome', label: 'Nome (codice interno)' },
+                    ] as const).map((opt) => (
+                      <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="campoNome"
+                          value={opt.value}
+                          checked={(config.campi.campoNome ?? 'descrizione') === opt.value}
+                          onChange={() => setConfig((c) => ({ ...c, campi: { ...c.campi, campoNome: opt.value } }))}
+                          className="accent-primary"
+                        />
+                        <span className="text-xs text-gray-700">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2739,103 +3107,125 @@ export default function AdminCatalogoPDFPage() {
           )}
         </div>
 
-        {/* ── Intestazione ── */}
+        {/* ── Tipografia ── */}
         <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.intestazione} onToggle={() => toggleSection('intestazione')}>
-            Intestazione catalogo
+          <SectionTitle open={sections.campiStile} onToggle={() => toggleSection('campiStile')}>
+            Tipografia
           </SectionTitle>
-          {sections.intestazione && (
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Titolo catalogo</label>
-                <input
-                  type="text"
-                  value={config.titolo}
-                  onChange={(e) => set('titolo', e.target.value)}
-                  className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-                  placeholder="es. Collezione CASA 2027"
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <CheckboxField label="Mostra logo ON EARTH" checked={config.mostraLogo} onChange={(v) => set('mostraLogo', v)} />
-                <CheckboxField label="Mostra data generazione" checked={config.mostraData} onChange={(v) => set('mostraData', v)} />
-                <CheckboxField label="Numero di pagina" checked={config.mostraPagina} onChange={(v) => set('mostraPagina', v)} />
-              </div>
+          {sections.campiStile && (
+            <div className="p-4 space-y-3">
+              {(() => {
+                const reorderableKeys = ['codice', 'descrizione', 'misure'];
+                const enabledReorderable = (config.fieldOrder ?? reorderableKeys).filter(k => {
+                  if (k === 'codice') return config.campi.codice;
+                  if (k === 'descrizione') return config.campi.descrizione;
+                  if (k === 'misure') return config.campi.misure || config.campi.linea || config.campi.collezione || config.campi.confezione || config.campi.iva;
+                  return false;
+                });
+                if (enabledReorderable.length === 0) return null;
+                return (
+                  <>
+                    <p className="text-2xs text-gray-400">Trascina ⠿ per riordinare i campi nel riquadro. ↕ = spaziatura inferiore in pt.</p>
+                    <DndContext
+                      collisionDetection={closestCenter}
+                      onDragEnd={({ active, over }) => {
+                        if (!over || active.id === over.id) return;
+                        const base = config.fieldOrder ?? reorderableKeys;
+                        const oldIdx = base.indexOf(active.id as string);
+                        const newIdx = base.indexOf(over.id as string);
+                        if (oldIdx >= 0 && newIdx >= 0) set('fieldOrder', arrayMove(base, oldIdx, newIdx));
+                      }}
+                    >
+                      <SortableContext items={enabledReorderable} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-2">
+                          {enabledReorderable.map(k => (
+                            <SortableFieldStyleRow
+                              key={k}
+                              fieldKey={k}
+                              value={config.cardFieldStyles[k as keyof typeof config.cardFieldStyles]}
+                              onChange={(fs) => setCardFieldStyle(k as keyof typeof config.cardFieldStyles, fs)}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  </>
+                );
+              })()}
+              {(config.campi.prezzoCosto || config.campi.pvp || config.campi.produttore || config.campi.paese) && (
+                <div className="border-t border-border pt-3">
+                  <p className="text-2xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Prezzi e fornitore (sempre in fondo)</p>
+                  <div className="divide-y divide-border/50">
+                    {config.campi.prezzoCosto && (
+                      <FieldStyleRow label="Prezzo costo" value={config.cardFieldStyles.prezzoCosto}
+                        onChange={(fs) => setCardFieldStyle('prezzoCosto', fs)} showSpacing />
+                    )}
+                    {config.campi.pvp && (
+                      <FieldStyleRow label="PVP" value={config.cardFieldStyles.pvp}
+                        onChange={(fs) => setCardFieldStyle('pvp', fs)} showSpacing />
+                    )}
+                    {config.campi.produttore && (
+                      <FieldStyleRow label="Produttore" value={config.cardFieldStyles.produttore}
+                        onChange={(fs) => setCardFieldStyle('produttore', fs)} showSpacing />
+                    )}
+                    {config.campi.paese && (
+                      <FieldStyleRow label="Paese" value={config.cardFieldStyles.paese}
+                        onChange={(fs) => setCardFieldStyle('paese', fs)} showSpacing />
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
-
-        {/* ── Stile intestazione pagina ── */}
+        {/* ── Badge NUOVO ── */}
         <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.headerStile} onToggle={() => toggleSection('headerStile')}>
-            Stile intestazione pagina
+          <SectionTitle open={sections.nuovoBadge} onToggle={() => toggleSection('nuovoBadge')}>
+            Badge NUOVO
           </SectionTitle>
-          {sections.headerStile && (
-            <div className="p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione font (pt)</label>
-                  <input type="number" min={5} max={20} value={config.headerStyle.titleFontSize}
-                    onChange={(e) => setHeaderStyle({ titleFontSize: parseFloat(e.target.value) || 8 })}
-                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
+          {sections.nuovoBadge && (
+            <div className="p-4 space-y-3">
+              <CheckboxField
+                label="Mostra badge su tutti i prodotti"
+                checked={config.nuovoBadge.attivo}
+                onChange={(v) => setNuovoBadge({ attivo: v })}
+              />
+              {config.nuovoBadge.attivo && (
+                <div className="space-y-3 pl-2 border-l-2 border-border">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Testo badge</label>
+                    <input
+                      type="text"
+                      value={config.nuovoBadge.testo}
+                      onChange={(e) => setNuovoBadge({ testo: e.target.value })}
+                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      placeholder="es. NUOVO"
+                      maxLength={20}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Posizione nel PDF</label>
+                    <select
+                      value={config.nuovoBadge.posizione}
+                      onChange={(e) => setNuovoBadge({ posizione: e.target.value as 'image-top-right' | 'next-to-code' })}
+                      className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none"
+                    >
+                      <option value="image-top-right">In alto a destra sull&apos;immagine</option>
+                      <option value="next-to-code">Accanto al codice prodotto</option>
+                    </select>
+                  </div>
+                  <ColorSwatchPicker label="Colore sfondo badge" value={config.nuovoBadge.bgColor} onChange={(v) => setNuovoBadge({ bgColor: v })} />
+                  <ColorSwatchPicker label="Colore testo badge" value={config.nuovoBadge.textColor} onChange={(v) => setNuovoBadge({ textColor: v })} />
                 </div>
-                <div className="flex items-end gap-1.5">
-                  <ToggleBtn active={config.headerStyle.titleBold} onClick={() => setHeaderStyle({ titleBold: !config.headerStyle.titleBold })}><span className="font-bold">B</span></ToggleBtn>
-                  <ToggleBtn active={config.headerStyle.titleItalic} onClick={() => setHeaderStyle({ titleItalic: !config.headerStyle.titleItalic })}><span className="italic">I</span></ToggleBtn>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-600 w-24">Allineamento</span>
-                <AlignToggle value={config.headerStyle.titleAlign} onChange={(v) => setHeaderStyle({ titleAlign: v })} />
-              </div>
-              <ColorSwatchPicker label="Colore titolo" value={config.headerStyle.titleColor}
-                onChange={(v) => setHeaderStyle({ titleColor: v })} />
-              <CheckboxField label="Mostra linea separatrice" checked={config.headerStyle.showSeparator}
-                onChange={(v) => setHeaderStyle({ showSeparator: v })} />
-              {config.headerStyle.showSeparator && (
-                <ColorSwatchPicker label="Colore linea" value={config.headerStyle.separatorColor}
-                  onChange={(v) => setHeaderStyle({ separatorColor: v })} />
               )}
             </div>
           )}
         </div>
 
-        {/* ── Stile piè di pagina ── */}
-        <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.footerStile} onToggle={() => toggleSection('footerStile')}>
-            Stile piè di pagina
-          </SectionTitle>
-          {sections.footerStile && (
-            <div className="p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione font (pt)</label>
-                  <input type="number" min={5} max={12} value={config.footerStyle.fontSize}
-                    onChange={(e) => setFooterStyle({ fontSize: parseFloat(e.target.value) || 6.5 })}
-                    className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
-                </div>
-                <div className="flex items-end">
-                  <AlignToggle value={config.footerStyle.align} onChange={(v) => setFooterStyle({ align: v })} />
-                </div>
-              </div>
-              <ColorSwatchPicker label="Colore testo" value={config.footerStyle.color}
-                onChange={(v) => setFooterStyle({ color: v })} />
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Testo personalizzato <span className="text-gray-400 font-normal">(opzionale)</span>
-                </label>
-                <input type="text" value={config.footerStyle.customText}
-                  onChange={(e) => setFooterStyle({ customText: e.target.value })}
-                  placeholder="es. ON EARTH — Catalogo riservato"
-                  className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30" />
-                <p className="text-2xs text-gray-400 mt-1">Verrà mostrato prima del numero pagina</p>
-              </div>
-              <CheckboxField label="Mostra linea separatrice" checked={config.footerStyle.showSeparator}
-                onChange={(v) => setFooterStyle({ showSeparator: v })} />
-            </div>
-          )}
-        </div>
+          </>}
 
+          {/* ══ COPERTINA ══ */}
+          {activeTab === 'copertina' && <>
         {/* ── Copertina ── */}
         <div className="border border-border rounded overflow-hidden">
           <SectionTitle open={sections.copertina} onToggle={() => toggleSection('copertina')}>
@@ -3258,368 +3648,10 @@ export default function AdminCatalogoPDFPage() {
           )}
         </div>
 
-        {/* ── Penultima pagina ── */}
-        <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.paginaPenultima} onToggle={() => toggleSection('paginaPenultima')}>
-            Penultima pagina
-          </SectionTitle>
-          {sections.paginaPenultima && (
-            <div className="p-4 space-y-4">
-              <CheckboxField
-                label="Includi penultima pagina"
-                checked={config.paginaPenultima.attiva}
-                onChange={(v) => setPaginaPenultima('attiva', v)}
-              />
-              {config.paginaPenultima.attiva && (
-                <div className="space-y-3 pl-2 border-l-2 border-border">
-                  {/* Titolo */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-gray-600">
-                        Titolo pagina <span className="text-gray-400 font-normal">(opzionale)</span>
-                      </label>
-                      <AlignToggle value={config.paginaPenultima.titoloAllineamento} onChange={(v) => setPaginaPenultima('titoloAllineamento', v)} />
-                    </div>
-                    <MiniRichTextEditor
-                      content={config.paginaPenultima.titolo}
-                      onChange={(html) => setPaginaPenultima('titolo', html)}
-                      placeholder="es. Scopri la collezione completa"
-                    />
-                  </div>
+          </>}
 
-                  {/* Testo libero */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Testo libero</label>
-                    <RichTextEditor
-                      content={config.paginaPenultima.testo}
-                      onChange={(html) => setPaginaPenultima('testo', html)}
-                      placeholder="Testo da mostrare nella penultima pagina del catalogo…"
-                    />
-                  </div>
-
-                  {/* Tipografia */}
-                  <div className="space-y-3 pt-1">
-                    <p className="text-xs font-semibold text-gray-600">Tipografia</p>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Font titolo (pt)</label>
-                      <input type="number" min={10} max={48} value={config.paginaPenultimaTypo.titoloFontSize}
-                        onChange={(e) => setPaginaPenultimaTypo({ titoloFontSize: parseFloat(e.target.value) || 20 })}
-                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore titolo</label>
-                      <MiniColorPicker value={config.paginaPenultimaTypo.titoloColor}
-                        onChange={(v) => setPaginaPenultimaTypo({ titoloColor: v })} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Font testo corpo (pt)</label>
-                      <input type="number" min={6} max={24} value={config.paginaPenultimaTypo.testoFontSize}
-                        onChange={(e) => setPaginaPenultimaTypo({ testoFontSize: parseFloat(e.target.value) || 10 })}
-                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore testo corpo</label>
-                      <MiniColorPicker value={config.paginaPenultimaTypo.testoColor}
-                        onChange={(v) => setPaginaPenultimaTypo({ testoColor: v })} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Sfondo area testo <span className="text-gray-400 font-normal">(opzionale)</span></label>
-                      <div className="flex items-center gap-2">
-                        <MiniColorPicker value={config.paginaPenultima.testoSfondoColore || '#ffffff'}
-                          onChange={(v) => setPaginaPenultima('testoSfondoColore', v)} />
-                        {config.paginaPenultima.testoSfondoColore && (
-                          <button onClick={() => setPaginaPenultima('testoSfondoColore', '')} className="text-2xs text-gray-400 hover:text-gray-600">rimuovi</button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Spaziatura */}
-                    <p className="text-xs font-semibold text-gray-600 pt-1">Spaziatura</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Margine superiore (pt)</label>
-                        <input type="range" min={0} max={80} value={config.paginaPenultimaTypo.marginTop ?? 20}
-                          onChange={(e) => setPaginaPenultimaTypo({ marginTop: parseInt(e.target.value) })}
-                          className="w-full" />
-                        <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.marginTop ?? 20}pt</span>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo titolo (pt)</label>
-                        <input type="range" min={0} max={40} value={config.paginaPenultimaTypo.titoloMarginBottom ?? 12}
-                          onChange={(e) => setPaginaPenultimaTypo({ titoloMarginBottom: parseInt(e.target.value) })}
-                          className="w-full" />
-                        <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.titoloMarginBottom ?? 12}pt</span>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo sez. 1 (pt)</label>
-                        <input type="range" min={0} max={40} value={config.paginaPenultimaTypo.sezione1MarginBottom ?? 16}
-                          onChange={(e) => setPaginaPenultimaTypo({ sezione1MarginBottom: parseInt(e.target.value) })}
-                          className="w-full" />
-                        <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.sezione1MarginBottom ?? 16}pt</span>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo sez. 2 (pt)</label>
-                        <input type="range" min={0} max={40} value={config.paginaPenultimaTypo.sezione2MarginBottom ?? 16}
-                          onChange={(e) => setPaginaPenultimaTypo({ sezione2MarginBottom: parseInt(e.target.value) })}
-                          className="w-full" />
-                        <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.sezione2MarginBottom ?? 16}pt</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Sezione in fondo (sezione 3) */}
-                  <div className="space-y-3 pt-1">
-                    <p className="text-xs font-semibold text-gray-600">Sezione in fondo alla pagina</p>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={config.paginaPenultima.sezioneFinale3Attiva}
-                        onChange={(e) => setPaginaPenultima('sezioneFinale3Attiva', e.target.checked)}
-                        className="accent-primary" />
-                      <span className="text-xs text-gray-700">Includi sezione in fondo</span>
-                    </label>
-                    {config.paginaPenultima.sezioneFinale3Attiva && (
-                      <div className="space-y-2 pl-2 border-l-2 border-border">
-                        <RichTextEditor
-                          content={config.paginaPenultima.sezioneFinale3Html}
-                          onChange={(html) => setPaginaPenultima('sezioneFinale3Html', html)}
-                          placeholder="es. www.on-earth.it | info@on-earth.it | Tel. +39 XXX"
-                        />
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Font (pt)</label>
-                            <input type="range" min={8} max={20} value={config.paginaPenultima.sezioneFinale3FontSize}
-                              onChange={(e) => setPaginaPenultima('sezioneFinale3FontSize', parseInt(e.target.value))}
-                              className="w-full" />
-                            <span className="text-2xs text-gray-400">{config.paginaPenultima.sezioneFinale3FontSize}pt</span>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Allineamento</label>
-                            <AlignToggle value={config.paginaPenultima.sezioneFinale3Align} onChange={(v) => setPaginaPenultima('sezioneFinale3Align', v)} />
-                          </div>
-                        </div>
-                        <ColorSwatchPicker label="Colore testo" value={config.paginaPenultima.sezioneFinale3Colore} onChange={(v) => setPaginaPenultima('sezioneFinale3Colore', v)} />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Immagine */}
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold text-gray-600">Immagine</p>
-                    <div>
-                      <p className="text-2xs text-gray-400 mb-2">
-                        Carica sul server (consigliato) o solo per la sessione corrente (max 10 MB).
-                      </p>
-                      <div className="flex items-center gap-2 mb-1">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            if (file.size > 10 * 1024 * 1024) { toast.error('Immagine troppo grande (max 10 MB)'); e.target.value = ''; return; }
-                            const fd = new FormData();
-                            fd.append('file', file);
-                            try {
-                              const res = await fetch('/api/admin/catalogo-pdf/upload-cover', { method: 'POST', body: fd });
-                              if (!res.ok) throw new Error((await res.json()).error);
-                              const { url } = await res.json();
-                              setPaginaPenultima('immagineUrl', url);
-                              const reader = new FileReader();
-                              reader.onload = (ev) => setPaginaPenultima('immagineBase64', ev.target?.result as string);
-                              reader.readAsDataURL(file);
-                              e.target.value = '';
-                              toast.success('Immagine caricata sul server');
-                            } catch (err: unknown) {
-                              toast.error(err instanceof Error ? err.message : 'Errore upload');
-                              e.target.value = '';
-                            }
-                          }}
-                          className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                        />
-                        <span className="text-2xs text-gray-400 flex-shrink-0">Carica sul server</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          ref={penultimaImgFileInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            if (file.size > 10 * 1024 * 1024) { toast.error('Immagine troppo grande (max 10 MB)'); e.target.value = ''; return; }
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              setPaginaPenultima('immagineBase64', ev.target?.result as string);
-                              if (penultimaImgFileInputRef.current) penultimaImgFileInputRef.current.value = '';
-                            };
-                            reader.readAsDataURL(file);
-                          }}
-                          className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-600 hover:file:bg-gray-200 cursor-pointer"
-                        />
-                        <span className="text-2xs text-gray-400 flex-shrink-0">Solo sessione</span>
-                      </div>
-                      {(config.paginaPenultima.immagineUrl || config.paginaPenultima.immagineBase64) && (
-                        <div className="mt-2 flex items-center gap-3">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={config.paginaPenultima.immagineBase64 ?? config.paginaPenultima.immagineUrl ?? ''}
-                            alt="Anteprima"
-                            className="h-12 w-20 object-cover rounded border border-border"
-                          />
-                          <div className="space-y-1">
-                            {config.paginaPenultima.immagineUrl && (
-                              <p className="text-2xs text-green-600">Salvata sul server</p>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => { setPaginaPenultima('immagineBase64', null); setPaginaPenultima('immagineUrl', null); if (penultimaImgFileInputRef.current) penultimaImgFileInputRef.current.value = ''; }}
-                              className="text-2xs text-red-500 hover:text-red-700 underline"
-                            >
-                              Rimuovi immagine
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Layout */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Layout penultima pagina</label>
-                      <select
-                        value={config.paginaPenultima.layout ?? 'img-top'}
-                        onChange={(e) => setPaginaPenultima('layout', e.target.value)}
-                        className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                      >
-                        <option value="img-top">Immagine in alto, testo in basso</option>
-                        <option value="img-bottom">Immagine in basso, testo in alto</option>
-                        <option value="img-left">Immagine a sinistra, testo a destra</option>
-                        <option value="full-overlay">Immagine piena con testo sovrapposto</option>
-                        <option value="background">Immagine a sfondo intera pagina</option>
-                        <option value="img-only">Solo immagine (nessun testo)</option>
-                      </select>
-                    </div>
-
-                    {/* Image controls */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-gray-600">Posizione e scala immagine</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Offset X (%)</label>
-                          <input type="range" min={-100} max={100} value={config.paginaPenultima.imgOffsetX ?? 0}
-                            onChange={(e) => setPaginaPenultima('imgOffsetX', parseInt(e.target.value))}
-                            className="w-full" />
-                          <span className="text-2xs text-gray-400">{config.paginaPenultima.imgOffsetX ?? 0}%</span>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Offset Y (%)</label>
-                          <input type="range" min={-100} max={100} value={config.paginaPenultima.imgOffsetY ?? 0}
-                            onChange={(e) => setPaginaPenultima('imgOffsetY', parseInt(e.target.value))}
-                            className="w-full" />
-                          <span className="text-2xs text-gray-400">{config.paginaPenultima.imgOffsetY ?? 0}%</span>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Scala (%)</label>
-                          <input type="range" min={50} max={200} value={config.paginaPenultima.imgScale ?? 100}
-                            onChange={(e) => setPaginaPenultima('imgScale', parseInt(e.target.value))}
-                            className="w-full" />
-                          <span className="text-2xs text-gray-400">{config.paginaPenultima.imgScale ?? 100}%</span>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Opacità (%)</label>
-                          <input type="range" min={10} max={100} value={config.paginaPenultima.imgOpacity ?? 100}
-                            onChange={(e) => setPaginaPenultima('imgOpacity', parseInt(e.target.value))}
-                            className="w-full" />
-                          <span className="text-2xs text-gray-400">{config.paginaPenultima.imgOpacity ?? 100}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Logo */}
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-gray-600">Logo</p>
-                    {(
-                      [
-                        { value: 'onearth', label: 'Logo ON EARTH (automatico)' },
-                        { value: 'custom', label: 'Carica logo personalizzato' },
-                        { value: 'none', label: 'Nessun logo' },
-                      ] as const
-                    ).map((opt) => (
-                      <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="paginaPenultimaLogoTipo"
-                          value={opt.value}
-                          checked={(config.paginaPenultima.logoTipo ?? (config.paginaPenultima.mostraLogo ? 'onearth' : 'none')) === opt.value}
-                          onChange={() => setPaginaPenultima('logoTipo', opt.value)}
-                          className="accent-primary"
-                        />
-                        <span className="text-xs text-gray-700">{opt.label}</span>
-                      </label>
-                    ))}
-
-                    {config.paginaPenultima.logoTipo === 'custom' && (
-                      <div className="pl-5 space-y-2">
-                        <input
-                          ref={penultimaLogoFileInputRef}
-                          type="file"
-                          accept="image/png,image/jpeg,image/svg+xml"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              const dataUrl = ev.target?.result as string;
-                              setPaginaPenultima('logoCustomBase64', dataUrl);
-                              if (penultimaLogoFileInputRef.current) penultimaLogoFileInputRef.current.value = '';
-                              try { const l = loadLogosFromStorage(); localStorage.setItem(LS_PDF_LOGOS, JSON.stringify({ ...l, paginaPenultimaLogo: dataUrl })); } catch {}
-                            };
-                            reader.readAsDataURL(file);
-                          }}
-                          className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                        />
-                        {config.paginaPenultima.logoCustomBase64 && (
-                          <div className="flex items-center gap-3">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={config.paginaPenultima.logoCustomBase64} alt="Logo" className="h-8 object-contain border border-border rounded bg-white px-2" />
-                            <button type="button" onClick={() => { setPaginaPenultima('logoCustomBase64', null); if (penultimaLogoFileInputRef.current) penultimaLogoFileInputRef.current.value = ''; }} className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {(config.paginaPenultima.logoTipo ?? 'onearth') !== 'none' && (
-                      <div className="pl-5 space-y-2">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Posizione logo</label>
-                          <LogoPosGrid
-                            posX={config.paginaPenultima.logoPosX ?? 'center'}
-                            posY={config.paginaPenultima.logoPosY ?? 'bottom'}
-                            onChange={(x, y) => { setPaginaPenultima('logoPosX', x); setPaginaPenultima('logoPosY', y); }}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione logo</label>
-                          <select
-                            value={config.paginaPenultima.logoDimensione ?? 'medio'}
-                            onChange={(e) => setPaginaPenultima('logoDimensione', e.target.value)}
-                            className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
-                          >
-                            <option value="piccolo">Piccolo</option>
-                            <option value="medio">Medio</option>
-                            <option value="grande">Grande</option>
-                          </select>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Preview moved to side panel */}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
+          {/* ══ ULTIMA PAGINA ══ */}
+          {activeTab === 'ultima' && <>
         {/* ── Pagina finale ── */}
         <div className="border border-border rounded overflow-hidden">
           <SectionTitle open={sections.paginaFinale} onToggle={() => toggleSection('paginaFinale')}>
@@ -3982,303 +4014,377 @@ export default function AdminCatalogoPDFPage() {
           )}
         </div>
 
-        {/* ── Badge NUOVO ── */}
+          </>}
+
+          {/* ══ PENULTIMA PAGINA ══ */}
+          {activeTab === 'penultima' && <>
+        {/* ── Penultima pagina ── */}
         <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.nuovoBadge} onToggle={() => toggleSection('nuovoBadge')}>
-            Badge NUOVO (prodotti CA27)
+          <SectionTitle open={sections.paginaPenultima} onToggle={() => toggleSection('paginaPenultima')}>
+            Penultima pagina
           </SectionTitle>
-          {sections.nuovoBadge && (
-            <div className="p-4 space-y-3">
+          {sections.paginaPenultima && (
+            <div className="p-4 space-y-4">
               <CheckboxField
-                label="Mostra badge NUOVO sui prodotti della collezione CA27"
-                checked={config.nuovoBadge.attivo}
-                onChange={(v) => setNuovoBadge({ attivo: v })}
+                label="Includi penultima pagina"
+                checked={config.paginaPenultima.attiva}
+                onChange={(v) => setPaginaPenultima('attiva', v)}
               />
-              {config.nuovoBadge.attivo && (
+              {config.paginaPenultima.attiva && (
                 <div className="space-y-3 pl-2 border-l-2 border-border">
+                  {/* Titolo */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Testo badge</label>
-                    <input
-                      type="text"
-                      value={config.nuovoBadge.testo}
-                      onChange={(e) => setNuovoBadge({ testo: e.target.value })}
-                      className="w-full h-9 border border-border rounded px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-                      placeholder="es. NUOVO"
-                      maxLength={20}
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-gray-600">
+                        Titolo pagina <span className="text-gray-400 font-normal">(opzionale)</span>
+                      </label>
+                      <AlignToggle value={config.paginaPenultima.titoloAllineamento} onChange={(v) => setPaginaPenultima('titoloAllineamento', v)} />
+                    </div>
+                    <MiniRichTextEditor
+                      content={config.paginaPenultima.titolo}
+                      onChange={(html) => setPaginaPenultima('titolo', html)}
+                      placeholder="es. Scopri la collezione completa"
                     />
                   </div>
+
+                  {/* Testo libero */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Posizione nel PDF</label>
-                    <select
-                      value={config.nuovoBadge.posizione}
-                      onChange={(e) => setNuovoBadge({ posizione: e.target.value as 'image-top-right' | 'next-to-code' })}
-                      className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none"
-                    >
-                      <option value="image-top-right">In alto a destra sull&apos;immagine</option>
-                      <option value="next-to-code">Accanto al codice prodotto</option>
-                    </select>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Testo libero</label>
+                    <RichTextEditor
+                      content={config.paginaPenultima.testo}
+                      onChange={(html) => setPaginaPenultima('testo', html)}
+                      placeholder="Testo da mostrare nella penultima pagina del catalogo…"
+                    />
                   </div>
-                  <ColorSwatchPicker label="Colore sfondo badge" value={config.nuovoBadge.bgColor} onChange={(v) => setNuovoBadge({ bgColor: v })} />
-                  <ColorSwatchPicker label="Colore testo badge" value={config.nuovoBadge.textColor} onChange={(v) => setNuovoBadge({ textColor: v })} />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
 
-        {/* ── Struttura sezioni personalizzata ── */}
-        <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.sezioniPersonalizzate} onToggle={() => toggleSection('sezioniPersonalizzate')}>
-            Struttura sezioni personalizzata
-          </SectionTitle>
-          {sections.sezioniPersonalizzate && (
-            <div className="p-4 space-y-4">
-              <CheckboxField
-                label="Usa struttura sezioni personalizzata"
-                checked={config.useSezioniPersonalizzate}
-                onChange={(v) => set('useSezioniPersonalizzate', v)}
-              />
-              {config.useSezioniPersonalizzate && (
-                <div className="space-y-3 pl-2 border-l-2 border-border">
-                  {/* DnD list of sections */}
-                  {config.sezioniPersonalizzate.length > 0 && (
-                    <DndContext
-                      collisionDetection={closestCenter}
-                      onDragEnd={({ active, over }) => {
-                        if (!over || active.id === over.id) return;
-                        const oldIdx = config.sezioniPersonalizzate.findIndex(s => s.id === active.id);
-                        const newIdx = config.sezioniPersonalizzate.findIndex(s => s.id === over.id);
-                        setSezioniPersonalizzate(arrayMove(config.sezioniPersonalizzate, oldIdx, newIdx));
-                      }}
-                    >
-                      <SortableContext items={config.sezioniPersonalizzate.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                        <div className="space-y-2">
-                          {config.sezioniPersonalizzate.map((sezione, idx) => (
-                            <SortableSection
-                              key={sezione.id}
-                              sezione={sezione}
-                              index={idx}
-                              onEdit={() => setEditingSection(sezione)}
-                              onDelete={() => setSezioniPersonalizzate(config.sezioniPersonalizzate.filter(s => s.id !== sezione.id))}
-                            />
-                          ))}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-                  )}
+                  {/* Tipografia */}
+                  <div className="space-y-3 pt-1">
+                    <p className="text-xs font-semibold text-gray-600">Tipografia</p>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Font titolo (pt)</label>
+                      <input type="number" min={10} max={48} value={config.paginaPenultimaTypo.titoloFontSize}
+                        onChange={(e) => setPaginaPenultimaTypo({ titoloFontSize: parseFloat(e.target.value) || 20 })}
+                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore titolo</label>
+                      <MiniColorPicker value={config.paginaPenultimaTypo.titoloColor}
+                        onChange={(v) => setPaginaPenultimaTypo({ titoloColor: v })} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Font testo corpo (pt)</label>
+                      <input type="number" min={6} max={24} value={config.paginaPenultimaTypo.testoFontSize}
+                        onChange={(e) => setPaginaPenultimaTypo({ testoFontSize: parseFloat(e.target.value) || 10 })}
+                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore testo corpo</label>
+                      <MiniColorPicker value={config.paginaPenultimaTypo.testoColor}
+                        onChange={(v) => setPaginaPenultimaTypo({ testoColor: v })} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Sfondo area testo <span className="text-gray-400 font-normal">(opzionale)</span></label>
+                      <div className="flex items-center gap-2">
+                        <MiniColorPicker value={config.paginaPenultima.testoSfondoColore || '#ffffff'}
+                          onChange={(v) => setPaginaPenultima('testoSfondoColore', v)} />
+                        {config.paginaPenultima.testoSfondoColore && (
+                          <button onClick={() => setPaginaPenultima('testoSfondoColore', '')} className="text-2xs text-gray-400 hover:text-gray-600">rimuovi</button>
+                        )}
+                      </div>
+                    </div>
 
-                  {/* Add section button */}
-                  <button
-                    type="button"
-                    onClick={() => setEditingSection({ id: crypto.randomUUID(), isNew: true, ...EMPTY_SECTION })}
-                    className="w-full h-8 border border-dashed border-border rounded text-xs text-gray-500 hover:border-primary hover:text-primary transition-colors"
-                  >
-                    + Nuova sezione
-                  </button>
-
-                  {/* Section editor */}
-                  {editingSection && (
-                    <div className="border border-primary/20 rounded p-3 space-y-3 bg-primary/5">
-                      <p className="text-xs font-semibold text-primary">{editingSection.isNew ? 'Nuova sezione' : `Modifica: ${editingSection.nome}`}</p>
+                    {/* Spaziatura */}
+                    <p className="text-xs font-semibold text-gray-600 pt-1">Spaziatura</p>
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Nome sezione *</label>
-                        <input
-                          type="text"
-                          value={editingSection.nome}
-                          onChange={(e) => setEditingSection({ ...editingSection, nome: e.target.value })}
-                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none"
-                          placeholder="es. Cucina, Bagno, Outdoor…"
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Margine superiore (pt)</label>
+                        <input type="range" min={0} max={80} value={config.paginaPenultimaTypo.marginTop ?? 20}
+                          onChange={(e) => setPaginaPenultimaTypo({ marginTop: parseInt(e.target.value) })}
+                          className="w-full" />
+                        <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.marginTop ?? 20}pt</span>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo titolo (pt)</label>
+                        <input type="range" min={0} max={40} value={config.paginaPenultimaTypo.titoloMarginBottom ?? 12}
+                          onChange={(e) => setPaginaPenultimaTypo({ titoloMarginBottom: parseInt(e.target.value) })}
+                          className="w-full" />
+                        <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.titoloMarginBottom ?? 12}pt</span>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo sez. 1 (pt)</label>
+                        <input type="range" min={0} max={40} value={config.paginaPenultimaTypo.sezione1MarginBottom ?? 16}
+                          onChange={(e) => setPaginaPenultimaTypo({ sezione1MarginBottom: parseInt(e.target.value) })}
+                          className="w-full" />
+                        <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.sezione1MarginBottom ?? 16}pt</span>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo sez. 2 (pt)</label>
+                        <input type="range" min={0} max={40} value={config.paginaPenultimaTypo.sezione2MarginBottom ?? 16}
+                          onChange={(e) => setPaginaPenultimaTypo({ sezione2MarginBottom: parseInt(e.target.value) })}
+                          className="w-full" />
+                        <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.sezione2MarginBottom ?? 16}pt</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sezione in fondo (sezione 3) */}
+                  <div className="space-y-3 pt-1">
+                    <p className="text-xs font-semibold text-gray-600">Sezione in fondo alla pagina</p>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={config.paginaPenultima.sezioneFinale3Attiva}
+                        onChange={(e) => setPaginaPenultima('sezioneFinale3Attiva', e.target.checked)}
+                        className="accent-primary" />
+                      <span className="text-xs text-gray-700">Includi sezione in fondo</span>
+                    </label>
+                    {config.paginaPenultima.sezioneFinale3Attiva && (
+                      <div className="space-y-2 pl-2 border-l-2 border-border">
+                        <RichTextEditor
+                          content={config.paginaPenultima.sezioneFinale3Html}
+                          onChange={(html) => setPaginaPenultima('sezioneFinale3Html', html)}
+                          placeholder="es. www.on-earth.it | info@on-earth.it | Tel. +39 XXX"
                         />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Descrizione <span className="text-gray-400 font-normal">(opzionale)</span></label>
-                        <input
-                          type="text"
-                          value={editingSection.descrizione ?? ''}
-                          onChange={(e) => setEditingSection({ ...editingSection, descrizione: e.target.value })}
-                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-gray-600 mb-2">Criteri (OR — basta uno)</p>
-                        <div className="space-y-2">
-                          <MultiSelectCriteria label="Classe" options={classi} selected={editingSection.criteri.classe}
-                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, classe: v } })} />
-                          <MultiSelectCriteria label="Sottoclasse" options={sottoclassi} selected={editingSection.criteri.sottoclasse}
-                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, sottoclasse: v } })} />
-                          <MultiSelectCriteria label="Famiglia" options={famiglie} selected={editingSection.criteri.famiglia}
-                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, famiglia: v } })} />
-                          <MultiSelectCriteria label="Gruppo omogeneo" options={gruppiOmogenei} selected={editingSection.criteri.gruppoOmogeneo}
-                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, gruppoOmogeneo: v } })} />
-                          <MultiSelectCriteria label="Linea" options={linee} selected={editingSection.criteri.nomLinea}
-                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, nomLinea: v } })} />
-                          <MultiSelectCriteria label="Colore" options={colori} selected={editingSection.criteri.colore}
-                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, colore: v } })} />
-                          <MultiSelectCriteria label="Produttore" options={produttori} selected={editingSection.criteri.produttore}
-                            onChange={(v) => setEditingSection({ ...editingSection, criteri: { ...editingSection.criteri, produttore: v } })} />
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Font (pt)</label>
+                            <input type="range" min={8} max={20} value={config.paginaPenultima.sezioneFinale3FontSize}
+                              onChange={(e) => setPaginaPenultima('sezioneFinale3FontSize', parseInt(e.target.value))}
+                              className="w-full" />
+                            <span className="text-2xs text-gray-400">{config.paginaPenultima.sezioneFinale3FontSize}pt</span>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Allineamento</label>
+                            <AlignToggle value={config.paginaPenultima.sezioneFinale3Align} onChange={(v) => setPaginaPenultima('sezioneFinale3Align', v)} />
+                          </div>
                         </div>
+                        <ColorSwatchPicker label="Colore testo" value={config.paginaPenultima.sezioneFinale3Colore} onChange={(v) => setPaginaPenultima('sezioneFinale3Colore', v)} />
                       </div>
+                    )}
+                  </div>
+
+                  {/* Immagine */}
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-gray-600">Immagine</p>
+                    <div>
+                      <p className="text-2xs text-gray-400 mb-2">
+                        Carica sul server (consigliato) o solo per la sessione corrente (max 10 MB).
+                      </p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 10 * 1024 * 1024) { toast.error('Immagine troppo grande (max 10 MB)'); e.target.value = ''; return; }
+                            const fd = new FormData();
+                            fd.append('file', file);
+                            try {
+                              const res = await fetch('/api/admin/catalogo-pdf/upload-cover', { method: 'POST', body: fd });
+                              if (!res.ok) throw new Error((await res.json()).error);
+                              const { url } = await res.json();
+                              setPaginaPenultima('immagineUrl', url);
+                              const reader = new FileReader();
+                              reader.onload = (ev) => setPaginaPenultima('immagineBase64', ev.target?.result as string);
+                              reader.readAsDataURL(file);
+                              e.target.value = '';
+                              toast.success('Immagine caricata sul server');
+                            } catch (err: unknown) {
+                              toast.error(err instanceof Error ? err.message : 'Errore upload');
+                              e.target.value = '';
+                            }
+                          }}
+                          className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                        />
+                        <span className="text-2xs text-gray-400 flex-shrink-0">Carica sul server</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          ref={penultimaImgFileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 10 * 1024 * 1024) { toast.error('Immagine troppo grande (max 10 MB)'); e.target.value = ''; return; }
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              setPaginaPenultima('immagineBase64', ev.target?.result as string);
+                              if (penultimaImgFileInputRef.current) penultimaImgFileInputRef.current.value = '';
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                          className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-600 hover:file:bg-gray-200 cursor-pointer"
+                        />
+                        <span className="text-2xs text-gray-400 flex-shrink-0">Solo sessione</span>
+                      </div>
+                      {(config.paginaPenultima.immagineUrl || config.paginaPenultima.immagineBase64) && (
+                        <div className="mt-2 flex items-center gap-3">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={config.paginaPenultima.immagineBase64 ?? config.paginaPenultima.immagineUrl ?? ''}
+                            alt="Anteprima"
+                            className="h-12 w-20 object-cover rounded border border-border"
+                          />
+                          <div className="space-y-1">
+                            {config.paginaPenultima.immagineUrl && (
+                              <p className="text-2xs text-green-600">Salvata sul server</p>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => { setPaginaPenultima('immagineBase64', null); setPaginaPenultima('immagineUrl', null); if (penultimaImgFileInputRef.current) penultimaImgFileInputRef.current.value = ''; }}
+                              className="text-2xs text-red-500 hover:text-red-700 underline"
+                            >
+                              Rimuovi immagine
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Layout */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Layout penultima pagina</label>
+                      <select
+                        value={config.paginaPenultima.layout ?? 'img-top'}
+                        onChange={(e) => setPaginaPenultima('layout', e.target.value)}
+                        className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      >
+                        <option value="img-top">Immagine in alto, testo in basso</option>
+                        <option value="img-bottom">Immagine in basso, testo in alto</option>
+                        <option value="img-left">Immagine a sinistra, testo a destra</option>
+                        <option value="full-overlay">Immagine piena con testo sovrapposto</option>
+                        <option value="background">Immagine a sfondo intera pagina</option>
+                        <option value="img-only">Solo immagine (nessun testo)</option>
+                      </select>
+                    </div>
+
+                    {/* Image controls */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-gray-600">Posizione e scala immagine</p>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Ordinamento</label>
-                          <select
-                            value={editingSection.ordinamento}
-                            onChange={(e) => setEditingSection({ ...editingSection, ordinamento: e.target.value as CustomSection['ordinamento'] })}
-                            className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none"
-                          >
-                            <option value="code">Codice A→Z</option>
-                            <option value="name">Descrizione A→Z</option>
-                            <option value="costPrice_asc">Prezzo crescente</option>
-                            <option value="costPrice_desc">Prezzo decrescente</option>
-                            <option value="nomLinea">Linea</option>
-                          </select>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Offset X (%)</label>
+                          <input type="range" min={-100} max={100} value={config.paginaPenultima.imgOffsetX ?? 0}
+                            onChange={(e) => setPaginaPenultima('imgOffsetX', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.paginaPenultima.imgOffsetX ?? 0}%</span>
                         </div>
-                        <div className="flex items-end pb-0.5">
-                          <CheckboxField
-                            label="Mostra sottosezioni"
-                            checked={editingSection.mostraSottosezioni}
-                            onChange={(v) => setEditingSection({ ...editingSection, mostraSottosezioni: v })}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Offset Y (%)</label>
+                          <input type="range" min={-100} max={100} value={config.paginaPenultima.imgOffsetY ?? 0}
+                            onChange={(e) => setPaginaPenultima('imgOffsetY', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.paginaPenultima.imgOffsetY ?? 0}%</span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Scala (%)</label>
+                          <input type="range" min={50} max={200} value={config.paginaPenultima.imgScale ?? 100}
+                            onChange={(e) => setPaginaPenultima('imgScale', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.paginaPenultima.imgScale ?? 100}%</span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Opacità (%)</label>
+                          <input type="range" min={10} max={100} value={config.paginaPenultima.imgOpacity ?? 100}
+                            onChange={(e) => setPaginaPenultima('imgOpacity', parseInt(e.target.value))}
+                            className="w-full" />
+                          <span className="text-2xs text-gray-400">{config.paginaPenultima.imgOpacity ?? 100}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Logo */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-gray-600">Logo</p>
+                    {(
+                      [
+                        { value: 'onearth', label: 'Logo ON EARTH (automatico)' },
+                        { value: 'custom', label: 'Carica logo personalizzato' },
+                        { value: 'none', label: 'Nessun logo' },
+                      ] as const
+                    ).map((opt) => (
+                      <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="paginaPenultimaLogoTipo"
+                          value={opt.value}
+                          checked={(config.paginaPenultima.logoTipo ?? (config.paginaPenultima.mostraLogo ? 'onearth' : 'none')) === opt.value}
+                          onChange={() => setPaginaPenultima('logoTipo', opt.value)}
+                          className="accent-primary"
+                        />
+                        <span className="text-xs text-gray-700">{opt.label}</span>
+                      </label>
+                    ))}
+
+                    {config.paginaPenultima.logoTipo === 'custom' && (
+                      <div className="pl-5 space-y-2">
+                        <input
+                          ref={penultimaLogoFileInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/svg+xml"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              const dataUrl = ev.target?.result as string;
+                              setPaginaPenultima('logoCustomBase64', dataUrl);
+                              if (penultimaLogoFileInputRef.current) penultimaLogoFileInputRef.current.value = '';
+                              try { const l = loadLogosFromStorage(); localStorage.setItem(LS_PDF_LOGOS, JSON.stringify({ ...l, paginaPenultimaLogo: dataUrl })); } catch {}
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                          className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                        />
+                        {config.paginaPenultima.logoCustomBase64 && (
+                          <div className="flex items-center gap-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={config.paginaPenultima.logoCustomBase64} alt="Logo" className="h-8 object-contain border border-border rounded bg-white px-2" />
+                            <button type="button" onClick={() => { setPaginaPenultima('logoCustomBase64', null); if (penultimaLogoFileInputRef.current) penultimaLogoFileInputRef.current.value = ''; }} className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {(config.paginaPenultima.logoTipo ?? 'onearth') !== 'none' && (
+                      <div className="pl-5 space-y-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Posizione logo</label>
+                          <LogoPosGrid
+                            posX={config.paginaPenultima.logoPosX ?? 'center'}
+                            posY={config.paginaPenultima.logoPosY ?? 'bottom'}
+                            onChange={(x, y) => { setPaginaPenultima('logoPosX', x); setPaginaPenultima('logoPosY', y); }}
                           />
                         </div>
-                      </div>
-                      <div className="flex gap-2 pt-1">
-                        <button
-                          type="button"
-                          disabled={!editingSection.nome.trim()}
-                          onClick={() => {
-                            if (!editingSection.nome.trim()) return;
-                            const { isNew, ...sez } = editingSection;
-                            if (isNew) {
-                              setSezioniPersonalizzate([...config.sezioniPersonalizzate, sez]);
-                            } else {
-                              setSezioniPersonalizzate(config.sezioniPersonalizzate.map(s => s.id === sez.id ? sez : s));
-                            }
-                            setEditingSection(null);
-                          }}
-                          className="flex-1 h-8 rounded text-xs font-medium bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
-                        >
-                          Salva sezione
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditingSection(null)}
-                          className="px-3 h-8 rounded text-xs border border-border text-gray-600 hover:bg-gray-50 transition-colors"
-                        >
-                          Annulla
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <CheckboxField
-                    label="Includi prodotti non assegnati a nessuna sezione"
-                    checked={config.includiProdottiNonAssegnati}
-                    onChange={(v) => set('includiProdottiNonAssegnati', v)}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ── Suddivisione per tranche ── */}
-        <div className="border border-border rounded overflow-hidden">
-          <SectionTitle open={sections.tranche} onToggle={() => toggleSection('tranche')}>
-            Suddivisione per tranche
-          </SectionTitle>
-          {sections.tranche && (
-            <div className="p-4 space-y-4">
-              <CheckboxField
-                label="Suddividi il catalogo per tranche"
-                checked={config.suddividiPerTranche}
-                onChange={(v) => set('suddividiPerTranche', v)}
-              />
-              {config.suddividiPerTranche && (
-                <div className="space-y-3 pl-2 border-l-2 border-border">
-                  <CheckboxField
-                    label="Includi prodotti senza tranche assegnata"
-                    checked={config.includeTrancheSenzaNome}
-                    onChange={(v) => set('includeTrancheSenzaNome', v)}
-                  />
-                  <CheckboxField
-                    label="Mostra pagina separatrice per ogni tranche"
-                    checked={config.separatoreTrancheAttivo}
-                    onChange={(v) => set('separatoreTrancheAttivo', v)}
-                  />
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Ordine tranche</label>
-                    <select
-                      value={config.ordineTranche}
-                      onChange={(e) => set('ordineTranche', e.target.value as 'az' | 'za' | 'custom')}
-                      className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                    >
-                      <option value="az">Alfabetico A→Z</option>
-                      <option value="za">Alfabetico Z→A</option>
-                      <option value="custom">Personalizzato (drag &amp; drop)</option>
-                    </select>
-                  </div>
-                  {config.ordineTranche === 'custom' && tranches.length > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-2xs text-gray-500 mb-1">Trascina per riordinare</p>
-                      {(() => {
-                        const list = config.trancheOrder.length > 0 ? config.trancheOrder : [...tranches].sort();
-                        return (
-                          <DndContext
-                            collisionDetection={closestCenter}
-                            onDragEnd={({ active, over }) => {
-                              if (!over || active.id === over.id) return;
-                              const oldIdx = list.indexOf(active.id as string);
-                              const newIdx = list.indexOf(over.id as string);
-                              if (oldIdx >= 0 && newIdx >= 0) set('trancheOrder', arrayMove(list, oldIdx, newIdx));
-                            }}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione logo</label>
+                          <select
+                            value={config.paginaPenultima.logoDimensione ?? 'medio'}
+                            onChange={(e) => setPaginaPenultima('logoDimensione', e.target.value)}
+                            className="w-full h-8 border border-border rounded px-2 text-xs bg-white text-gray-800 focus:outline-none"
                           >
-                            <SortableContext items={list} strategy={verticalListSortingStrategy}>
-                              <div className="space-y-1">
-                                {list.map((t) => (
-                                  <SortableTranche key={t} id={t} label={t} />
-                                ))}
-                              </div>
-                            </SortableContext>
-                          </DndContext>
-                        );
-                      })()}
-                    </div>
-                  )}
+                            <option value="piccolo">Piccolo</option>
+                            <option value="medio">Medio</option>
+                            <option value="grande">Grande</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Preview moved to side panel */}
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* ── Stile separatore tranche ── */}
-        {config.suddividiPerTranche && config.separatoreTrancheAttivo && (
-          <div className="border border-border rounded overflow-hidden">
-            <SectionTitle open={sections.stileSeparatoreTrancheSection} onToggle={() => toggleSection('stileSeparatoreTrancheSection')}>
-              Stile separatore tranche
-            </SectionTitle>
-            {sections.stileSeparatoreTrancheSection && (
-              <div className="p-4 space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione font (pt)</label>
-                    <input type="number" min={16} max={60} value={config.stileSeparatoreTranche.fontSize}
-                      onChange={(e) => setSepTranche({ fontSize: parseFloat(e.target.value) || 36 })}
-                      className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none" />
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-gray-500 w-20">Stile testo</span>
-                  <ToggleBtn active={config.stileSeparatoreTranche.bold} onClick={() => setSepTranche({ bold: !config.stileSeparatoreTranche.bold })}><span className="font-bold">B</span></ToggleBtn>
-                  <ToggleBtn active={config.stileSeparatoreTranche.uppercase} onClick={() => setSepTranche({ uppercase: !config.stileSeparatoreTranche.uppercase })} title="Tutto maiuscolo">AA</ToggleBtn>
-                </div>
-                <CheckboxField label="Mostra numero prodotti" checked={config.stileSeparatoreTranche.mostraNProdotti} onChange={(v) => setSepTranche({ mostraNProdotti: v })} />
-                <ColorSwatchPicker label="Colore sfondo" value={config.stileSeparatoreTranche.bgColor} onChange={(v) => setSepTranche({ bgColor: v })} />
-                <ColorSwatchPicker label="Colore testo" value={config.stileSeparatoreTranche.color} onChange={(v) => setSepTranche({ color: v })} />
-              </div>
-            )}
-          </div>
-        )}
+          </>}
 
+        </div>
+
+        {/* Salva configurazione — always visible */}
         {/* ── Salva configurazione ── */}
         <div className="border border-border rounded p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -4352,52 +4458,61 @@ export default function AdminCatalogoPDFPage() {
         </div>
       </div>
 
-      {/* Right: actions + templates */}
-      <div className="w-full lg:w-80 flex-shrink-0 space-y-4">
-        {/* Action box */}
-        <div className="border border-border rounded p-5 space-y-3 bg-gray-50/50 sticky top-4">
-          <p className="text-xs font-semibold tracking-widest uppercase text-gray-500">Generazione</p>
+      {/* Right: contextual preview + generate + templates */}
+      <div className="w-full lg:w-80 flex-shrink-0 space-y-3">
 
-          {/* Preview */}
+        {/* ── Contextual preview ── */}
+        <div className="border border-border rounded overflow-hidden sticky top-4">
+          <div className="px-4 py-2.5 bg-gray-50 border-b border-border flex items-center justify-between">
+            <p className="text-2xs font-semibold tracking-widest uppercase text-gray-500">Anteprima live</p>
+            <span className="text-2xs text-gray-400 bg-white border border-border px-2 py-0.5 rounded-full">
+              {activeTab === 'copertina' ? 'Copertina' : activeTab === 'ultima' ? 'Ultima pag.' : activeTab === 'penultima' ? 'Penultima pag.' : 'Scheda'}
+            </span>
+          </div>
+          <div className="p-4 flex flex-col items-start gap-2 bg-white min-h-[180px]">
+            {(activeTab === 'generale' || activeTab === 'scheda') && (
+              <div style={{ transform: 'scale(1.5)', transformOrigin: 'top left', marginBottom: `${110 * 0.5}px` }}>
+                <CardPreview config={config} />
+              </div>
+            )}
+            {activeTab === 'copertina' && (
+              config.copertina.attiva
+                ? <CoverPreview config={config} />
+                : <div className="w-full py-10 text-center"><p className="text-2xs text-gray-400">Copertina non attiva</p><p className="text-2xs text-gray-300 mt-1">Attivala in questa sezione</p></div>
+            )}
+            {activeTab === 'ultima' && (
+              config.paginaFinale.attiva
+                ? <FinalPagePreview config={config} />
+                : <div className="w-full py-10 text-center"><p className="text-2xs text-gray-400">Pagina finale non attiva</p><p className="text-2xs text-gray-300 mt-1">Attivala in questa sezione</p></div>
+            )}
+            {activeTab === 'penultima' && (
+              config.paginaPenultima.attiva
+                ? <PenultimaPagePreview config={config} />
+                : <div className="w-full py-10 text-center"><p className="text-2xs text-gray-400">Pagina non attiva</p><p className="text-2xs text-gray-300 mt-1">Attivala in questa sezione</p></div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Generate ── */}
+        <div className="border border-border rounded p-4 space-y-3 bg-gray-50/50">
+          <p className="text-2xs font-semibold tracking-widest uppercase text-gray-500">Generazione</p>
           <button
             type="button"
             onClick={handlePreview}
             disabled={isPreviewing}
-            className="flex items-center justify-center gap-2 w-full h-10 rounded border border-border bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            className="flex items-center justify-center gap-2 w-full h-9 rounded border border-border bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
           >
-            {isPreviewing ? (
-              <><Loader2 size={13} className="animate-spin" /> Calcolo in corso…</>
-            ) : (
-              <><Eye size={13} /> Anteprima</>
-            )}
+            {isPreviewing ? <><Loader2 size={13} className="animate-spin" /> Calcolo…</> : <><Eye size={13} /> Anteprima</>}
           </button>
-
-          {/* Preview result */}
           {preview && (
-            <div className="bg-white border border-border rounded px-4 py-3 space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-500">Prodotti trovati</span>
-                <span className="font-semibold text-primary">{preview.count}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-500">Pagine prodotti</span>
-                <span className="font-semibold text-primary">~{preview.productPages}</span>
-              </div>
-              {preview.groupPages > 0 && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Pagine separatore sezioni</span>
-                  <span className="font-semibold text-primary">{preview.groupPages}</span>
-                </div>
-              )}
-              {(preview.trancheSepPages ?? 0) > 0 && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Pagine separatore tranche</span>
-                  <span className="font-semibold text-primary">{preview.trancheSepPages}</span>
-                </div>
-              )}
+            <div className="bg-white border border-border rounded px-3 py-2.5 space-y-1">
+              <div className="flex justify-between text-xs"><span className="text-gray-500">Prodotti trovati</span><span className="font-semibold text-primary">{preview.count}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-gray-500">Pagine prodotti</span><span className="font-semibold text-primary">~{preview.productPages}</span></div>
+              {preview.groupPages > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Pag. sep. sezioni</span><span className="font-semibold text-primary">{preview.groupPages}</span></div>}
+              {(preview.trancheSepPages ?? 0) > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Pag. sep. tranche</span><span className="font-semibold text-primary">{preview.trancheSepPages}</span></div>}
               {preview.trancheStats && preview.trancheStats.length > 0 && (
-                <div className="border-t border-border pt-1 mt-1 space-y-1">
-                  <p className="text-2xs text-gray-400 font-medium uppercase tracking-wide">{preview.trancheStats.length} tranche trovate</p>
+                <div className="border-t border-border pt-1 mt-1 space-y-0.5">
+                  <p className="text-2xs text-gray-400 font-medium uppercase tracking-wide">{preview.trancheStats.length} tranche</p>
                   {preview.trancheStats.map((ts) => (
                     <div key={ts.tranche} className="flex justify-between text-xs">
                       <span className="text-gray-500 truncate mr-2">{ts.tranche}</span>
@@ -4411,94 +4526,29 @@ export default function AdminCatalogoPDFPage() {
                 <span className="font-bold text-primary">{preview.pages}</span>
               </div>
               {preview.fotoStats && (
-                <div className="border-t border-border pt-1 mt-1 space-y-1">
+                <div className="border-t border-border pt-1 mt-1 space-y-0.5">
                   <p className="text-2xs text-gray-400 font-medium uppercase tracking-wide">Foto</p>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-500">Con 2+ foto</span>
-                    <span className="font-semibold text-primary">{preview.fotoStats.multiple}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-500">Con 1 foto</span>
-                    <span className="font-semibold text-primary">{preview.fotoStats.una}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-500">Senza foto</span>
-                    <span className={`font-semibold ${preview.fotoStats.senza > 0 ? 'text-amber-500' : 'text-primary'}`}>{preview.fotoStats.senza}</span>
-                  </div>
+                  <div className="flex justify-between text-xs"><span className="text-gray-500">Con 2+ foto</span><span className="font-semibold text-primary">{preview.fotoStats.multiple}</span></div>
+                  <div className="flex justify-between text-xs"><span className="text-gray-500">Con 1 foto</span><span className="font-semibold text-primary">{preview.fotoStats.una}</span></div>
+                  <div className="flex justify-between text-xs"><span className="text-gray-500">Senza foto</span><span className={`font-semibold ${preview.fotoStats.senza > 0 ? 'text-amber-500' : 'text-primary'}`}>{preview.fotoStats.senza}</span></div>
                 </div>
               )}
-              {preview.count === 0 && (
-                <p className="text-xs text-amber-600 mt-1">
-                  Nessun prodotto corrisponde ai filtri selezionati
-                </p>
-              )}
+              {preview.count === 0 && <p className="text-xs text-amber-600 mt-1">Nessun prodotto con i filtri selezionati</p>}
             </div>
           )}
-
-          {/* Generate PDF */}
           <button
             type="button"
             onClick={handleGeneraPDF}
             disabled={isGenerating || !preview || preview.count === 0}
-            className="flex items-center justify-center gap-2 w-full h-10 rounded bg-primary text-white text-xs font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center justify-center gap-2 w-full h-9 rounded bg-primary text-white text-xs font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isGenerating ? (
-              <><Loader2 size={13} className="animate-spin" /> Generazione in corso…</>
-            ) : (
-              <><Download size={13} /> Genera PDF</>
-            )}
+            {isGenerating ? <><Loader2 size={13} className="animate-spin" /> Generazione…</> : <><Download size={13} /> Genera PDF</>}
           </button>
-
-          {isGenerating && (
-            <p className="text-2xs text-gray-400 text-center">
-              Elaborazione immagini in corso, potrebbe richiedere alcuni minuti…
-            </p>
-          )}
-
-          {!preview && (
-            <p className="text-2xs text-gray-400 text-center">
-              Esegui prima l&apos;anteprima per stimare il numero di pagine
-            </p>
-          )}
+          {isGenerating && <p className="text-2xs text-gray-400 text-center">Elaborazione immagini in corso, potrebbe richiedere alcuni minuti…</p>}
+          {!preview && <p className="text-2xs text-gray-400 text-center">Esegui prima l&apos;anteprima per stimare il numero di pagine</p>}
         </div>
 
-        {/* Live previews panel */}
-        <div className="border border-border rounded overflow-hidden">
-          <p className="px-4 py-3 bg-gray-50 text-xs font-semibold tracking-widest uppercase text-gray-500">Anteprime live</p>
-          <div className="p-4 space-y-4 bg-white">
-            {/* Card preview */}
-            <CardPreview config={config} />
-            {/* Cover preview */}
-            {config.copertina.attiva && (
-              <div>
-                <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Copertina</p>
-                <div style={{ transform: 'scale(0.88)', transformOrigin: 'top left', marginBottom: -24 }}>
-                  <CoverPreview config={config} />
-                </div>
-              </div>
-            )}
-            {/* Penultima page preview */}
-            {config.paginaPenultima.attiva && (
-              <div>
-                <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Pagina penultima</p>
-                <div style={{ transform: 'scale(0.88)', transformOrigin: 'top left', marginBottom: -24 }}>
-                  <PenultimaPagePreview config={config} />
-                </div>
-              </div>
-            )}
-            {/* Final page preview */}
-            {config.paginaFinale.attiva && (
-              <div>
-                <p className="text-2xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Pagina finale</p>
-                <div style={{ transform: 'scale(0.88)', transformOrigin: 'top left', marginBottom: -24 }}>
-                  <FinalPagePreview config={config} />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Templates */}
+        {/* ── Templates ── */}
         <div className="border border-border rounded overflow-hidden">
           <button
             type="button"
@@ -4509,77 +4559,31 @@ export default function AdminCatalogoPDFPage() {
               <FolderOpen size={13} />
               Configurazioni salvate
               {templates.length > 0 && (
-                <span className="bg-primary text-white text-2xs px-1.5 py-0.5 rounded-full">
-                  {templates.length}
-                </span>
+                <span className="bg-primary text-white text-2xs px-1.5 py-0.5 rounded-full">{templates.length}</span>
               )}
             </span>
             {showTemplates ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
-
           {showTemplates && (
             <div className="divide-y divide-border">
               {templates.length === 0 ? (
-                <p className="px-4 py-5 text-xs text-gray-400 text-center">
-                  Nessuna configurazione salvata
-                </p>
+                <p className="px-4 py-5 text-xs text-gray-400 text-center">Nessuna configurazione salvata</p>
               ) : (
                 templates.map((t) => (
                   <div key={t.id} className="px-4 py-3 hover:bg-gray-50/50">
                     <div className="flex items-center gap-2">
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-primary truncate">{t.nome}</p>
-                        <p className="text-2xs text-gray-400">
-                          {new Date(t.createdAt).toLocaleDateString('it-IT')}
-                        </p>
+                        <p className="text-2xs text-gray-400">{new Date(t.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleLoadTemplate(t)}
-                        title="Carica configurazione"
-                        className="flex items-center gap-1 px-2 py-1 text-2xs font-medium border border-border rounded hover:bg-white hover:text-primary transition-colors text-gray-600"
-                      >
-                        <FolderOpen size={11} />
-                        Carica
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleEditTemplate(t)}
-                        title="Modifica configurazione"
-                        className={`flex items-center gap-1 px-2 py-1 text-2xs font-medium border rounded transition-colors ${
-                          editingTemplateId === t.id
-                            ? 'border-amber-400 bg-amber-50 text-amber-700'
-                            : 'border-border hover:bg-white hover:text-primary text-gray-600'
-                        }`}
-                      >
-                        <Pencil size={11} />
-                        Modifica
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteTemplate(t.id, t.nome)}
-                        title="Elimina configurazione"
-                        className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      <button type="button" onClick={() => handleLoadTemplate(t)} title="Carica configurazione" className="p-1.5 rounded text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"><FolderOpen size={12} /></button>
+                      <button type="button" onClick={() => handleEditTemplate(t)} title="Modifica template" className="p-1.5 rounded text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"><Pencil size={12} /></button>
+                      <button type="button" onClick={() => handleDeleteTemplate(t.id, t.nome)} title="Elimina configurazione" className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={12} /></button>
                     </div>
                     <div className="flex gap-1.5 mt-1.5">
-                      <button
-                        type="button"
-                        onClick={() => handleRenameTemplate(t.id, t.nome)}
-                        className="text-2xs text-gray-500 hover:text-primary underline"
-                      >
-                        Rinomina
-                      </button>
+                      <button type="button" onClick={() => handleRenameTemplate(t.id, t.nome)} className="text-2xs text-gray-500 hover:text-primary underline">Rinomina</button>
                       <span className="text-2xs text-gray-300">·</span>
-                      <button
-                        type="button"
-                        onClick={() => handleDuplicateTemplate(t)}
-                        className="text-2xs text-gray-500 hover:text-primary underline"
-                      >
-                        Duplica
-                      </button>
+                      <button type="button" onClick={() => handleDuplicateTemplate(t)} className="text-2xs text-gray-500 hover:text-primary underline">Duplica</button>
                     </div>
                   </div>
                 ))
@@ -4588,20 +4592,6 @@ export default function AdminCatalogoPDFPage() {
           )}
         </div>
 
-        {/* Layout info */}
-        <div className="border border-border rounded p-4 bg-blue-50/50">
-          <p className="text-2xs font-semibold uppercase tracking-widest text-blue-500 mb-2">Formato PDF</p>
-          <ul className="space-y-1 text-2xs text-gray-500">
-            <li>• {config.formato === 'A4-P' ? 'A4 verticale (595 × 842 pt)' :
-                   config.formato === 'A4-L' ? 'A4 orizzontale (842 × 595 pt)' :
-                   config.formato === 'A3-P' ? 'A3 verticale (842 × 1191 pt)' :
-                   'A3 orizzontale (1191 × 842 pt)'}</li>
-            <li>• {config.colonne} colonne × {config.righe} righe = <strong>{config.colonne * config.righe}</strong> prodotti/pagina</li>
-            <li>• Margini {config.margine === 'stretto' ? '10' : config.margine === 'normale' ? '20' : '30'} pt</li>
-            <li>• Header con logo, titolo, data</li>
-            <li>• Footer con numero pagina</li>
-          </ul>
-        </div>
       </div>
     </div>
   );
