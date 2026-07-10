@@ -1,16 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { Grid3x3, Heart, ShoppingCart, Package2, Palette, HelpCircle, ArrowLeft, ChevronRight, Clock, Lock, Layout } from 'lucide-react';
+import { Grid3x3, Heart, ShoppingCart, Package2, Palette, ArrowLeft, ChevronRight, Clock, Lock, Layout } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useSession } from 'next-auth/react';
+import { isAdminRole } from '@/lib/roles';
 
-const COLLECTION_ITEMS = [
-  { href: '/moda/catalogo',        icon: Grid3x3,     label: 'Catalogo',        description: 'Sfoglia tutti i prodotti PE27' },
-  { href: '/moda/preferiti',       icon: Heart,        label: 'Preferiti',       description: 'I tuoi prodotti preferiti'     },
-  { href: '/moda/ruota-cromatica', icon: Palette,      label: 'Ruota Cromatica', description: 'Abbinamenti cromatici e visual merchandising' },
-  { href: '/moda/pareti',          icon: Layout,       label: 'Visual',            description: 'Simula l\'esposizione in negozio' },
-  { href: '/moda/carrelli',        icon: ShoppingCart, label: 'Carrelli',        description: 'I tuoi carrelli attivi'        },
-  { href: '/moda/ordini',          icon: Package2,     label: 'Ordini',          description: 'I tuoi ordini PE27'            },
+const CUSTOMER_ITEMS = [
+  { href: '/moda/catalogo',  icon: Grid3x3,     label: 'Catalogo',  description: 'Sfoglia e ordina tutta la bigiotteria PE27' },
+  { href: '/moda/preferiti', icon: Heart,        label: 'Preferiti', description: 'I tuoi prodotti preferiti'                  },
+  { href: '/moda/carrelli',  icon: ShoppingCart, label: 'Carrelli',  description: 'I tuoi carrelli attivi'                    },
+  { href: '/moda/ordini',    icon: Package2,     label: 'Ordini',    description: 'I tuoi ordini bigiotteria PE27'             },
+];
+
+const ADMIN_ITEMS = [
+  { href: '/moda/ruota-cromatica', icon: Palette, label: 'Ruota Cromatica', description: 'Abbinamenti cromatici e visual merchandising' },
+  { href: '/moda/pareti',          icon: Layout,  label: 'Visual',           description: 'Simula l\'esposizione in negozio'             },
 ];
 
 function decodeCollezione(code: string): string {
@@ -23,13 +28,32 @@ function decodeCollezione(code: string): string {
 }
 
 function formatDeadline(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function NavItem({ href, icon: Icon, label, description }: { href: string; icon: React.ElementType; label: string; description: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-4 p-4 rounded-2xl border border-border hover:border-primary/30 bg-white hover:bg-cream transition-all duration-200 group shadow-sm"
+    >
+      <div className="w-10 h-10 rounded-xl bg-cream flex items-center justify-center flex-shrink-0">
+        <Icon size={16} className="text-gray-500" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-primary leading-none">{label}</p>
+        <p className="text-xs text-gray-400 mt-1">{description}</p>
+      </div>
+      <ChevronRight size={15} className="text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" />
+    </Link>
+  );
 }
 
 export default function ModaHome() {
   const stagione = decodeCollezione('PE27');
   const { collections } = useSettings();
+  const { data: session } = useSession();
+  const isAdmin = isAdminRole(session?.user?.role);
   const deadline = collections.moda.bookingDeadline;
   const isExpired = deadline ? new Date(deadline) < new Date() : false;
 
@@ -62,43 +86,10 @@ export default function ModaHome() {
 
       <div className="mx-5 h-px bg-border" />
 
-      {/* Collection nav */}
+      {/* Navigation */}
       <div className="px-5 py-6 space-y-2">
-        {COLLECTION_ITEMS.map(({ href, icon: Icon, label, description }) => (
-          <Link
-            key={href}
-            href={href}
-            className="flex items-center gap-4 p-4 rounded-2xl border border-border hover:border-primary/30 bg-white hover:bg-cream transition-all duration-200 group shadow-sm"
-          >
-            <div className="w-10 h-10 rounded-xl bg-cream flex items-center justify-center flex-shrink-0">
-              <Icon size={16} className="text-gray-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-primary leading-none">{label}</p>
-              <p className="text-xs text-gray-400 mt-1">{description}</p>
-            </div>
-            <ChevronRight size={15} className="text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" />
-          </Link>
-        ))}
-      </div>
-
-      <div className="mx-5 h-px bg-border" />
-
-      {/* Aiuto */}
-      <div className="px-5 py-4">
-        <Link
-          href="/catalog/assistenza"
-          className="flex items-center gap-4 p-4 rounded-2xl border border-border hover:border-primary/30 bg-white hover:bg-cream transition-all duration-200 group shadow-sm"
-        >
-          <div className="w-10 h-10 rounded-xl bg-cream flex items-center justify-center flex-shrink-0">
-            <HelpCircle size={16} className="text-gray-500" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-primary leading-none">Aiuto</p>
-            <p className="text-xs text-gray-400 mt-1">Guide e supporto</p>
-          </div>
-          <ChevronRight size={15} className="text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" />
-        </Link>
+        {CUSTOMER_ITEMS.map((item) => <NavItem key={item.href} {...item} />)}
+        {isAdmin && ADMIN_ITEMS.map((item) => <NavItem key={item.href} {...item} />)}
       </div>
     </div>
   );
