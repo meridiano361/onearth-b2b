@@ -880,6 +880,7 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
   const logoTopPx = posY === 'top' ? 28 * S : posY === 'middle' ? H / 2 - logoH / 2 : H - logoH - 28 * S;
 
   // Image transforms — same formula as PDF
+  const imgSrc      = cov.immagineBase64 ?? cov.immagineUrl ?? null;
   const imgScalePct = cov.imgScale ?? 100;
   const imgOffsetX  = cov.imgOffsetX ?? 0;
   const imgOffsetY  = cov.imgOffsetY ?? 0;
@@ -920,9 +921,9 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
 
     inner = (
       <>
-        {cov.immagineBase64 && (
+        {imgSrc && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={cov.immagineBase64} alt="" style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgHH, objectFit: 'cover', opacity: imgOpacity }} />
+          <img src={imgSrc} alt="" style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgHH, objectFit: 'cover', opacity: imgOpacity }} />
         )}
         {logoSrc && (
           <div style={{ position: 'absolute', top: logoTopPx, left: 32 * S, right: 32 * S, display: 'flex', justifyContent: justifyLogo }}>
@@ -948,9 +949,9 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
       <>
         {/* Top half: image */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: halfH, overflow: 'hidden', backgroundColor: config.colori.sfondoPagina }}>
-          {cov.immagineBase64 && (
+          {imgSrc && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={cov.immagineBase64} alt="" style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgHH, objectFit: 'cover', opacity: imgOpacity }} />
+            <img src={imgSrc} alt="" style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgHH, objectFit: 'cover', opacity: imgOpacity }} />
           )}
         </div>
         {/* Bottom half: typo.bgColor + logo + text */}
@@ -2080,7 +2081,14 @@ export default function AdminCatalogoPDFPage() {
   }
 
   function handleLoadTemplate(t: Template) {
-    setConfig(mergeWithDefaults(t.configurazione));
+    const base = mergeWithDefaults(t.configurazione);
+    const logos = loadLogosFromStorage();
+    setConfig({
+      ...base,
+      copertina:       { ...base.copertina,       logoCustomBase64: logos.copertinaLogo },
+      paginaFinale:    { ...base.paginaFinale,     logoCustomBase64: logos.paginaFinaleLogo },
+      paginaPenultima: { ...base.paginaPenultima,  logoCustomBase64: logos.paginaPenultimaLogo },
+    });
     setPreview(null);
     toast.success(`Template "${t.nome}" caricato`);
   }
@@ -2120,7 +2128,14 @@ export default function AdminCatalogoPDFPage() {
   }
 
   function handleEditTemplate(t: Template) {
-    setConfig(mergeWithDefaults(t.configurazione));
+    const base = mergeWithDefaults(t.configurazione);
+    const logos = loadLogosFromStorage();
+    setConfig({
+      ...base,
+      copertina:       { ...base.copertina,       logoCustomBase64: logos.copertinaLogo },
+      paginaFinale:    { ...base.paginaFinale,     logoCustomBase64: logos.paginaFinaleLogo },
+      paginaPenultima: { ...base.paginaPenultima,  logoCustomBase64: logos.paginaPenultimaLogo },
+    });
     setEditingTemplateId(t.id);
     setTemplateName(t.nome);
     setPreview(null);
