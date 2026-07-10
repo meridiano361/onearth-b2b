@@ -163,7 +163,7 @@ const s = StyleSheet.create({
 });
 
 function euro(n: number) {
-  return '€' + n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return '€ ' + n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 function isoToItalian(iso: string) {

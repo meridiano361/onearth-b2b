@@ -4761,7 +4761,7 @@ export default function AdminCatalogoPDFPage() {
       <div className="w-full lg:w-80 flex-shrink-0 space-y-3">
 
         {/* ── Contextual preview ── */}
-        <div className="border border-border rounded overflow-hidden sticky top-4">
+        {activeTab !== 'generale' && <div className="border border-border rounded overflow-hidden sticky top-4">
           <div className="px-4 py-2.5 bg-gray-50 border-b border-border flex items-center justify-between">
             <p className="text-2xs font-semibold tracking-widest uppercase text-gray-500">Anteprima live</p>
             <span className="text-2xs text-gray-400 bg-white border border-border px-2 py-0.5 rounded-full">
@@ -4769,7 +4769,7 @@ export default function AdminCatalogoPDFPage() {
             </span>
           </div>
           <div className="p-4 flex flex-col items-start gap-2 bg-white min-h-[180px]">
-            {(activeTab === 'generale' || activeTab === 'scheda') && (
+            {activeTab === 'scheda' && (
               <div style={{ transform: 'scale(1.5)', transformOrigin: 'top left', marginBottom: `${110 * 0.5}px` }}>
                 <CardPreview config={config} />
               </div>
@@ -4790,7 +4790,7 @@ export default function AdminCatalogoPDFPage() {
                 : <div className="w-full py-10 text-center"><p className="text-2xs text-gray-400">Pagina non attiva</p><p className="text-2xs text-gray-300 mt-1">Attivala in questa sezione</p></div>
             )}
           </div>
-        </div>
+        </div>}
 
         {/* ── Generate ── */}
         <div className="border border-border rounded p-4 space-y-3 bg-gray-50/50">

@@ -737,7 +737,7 @@ const s = StyleSheet.create({
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function euro(n: number) {
-  return '€' + n.toFixed(2).replace('.', ',');
+  return '€ ' + n.toFixed(2).replace('.', ',');
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────

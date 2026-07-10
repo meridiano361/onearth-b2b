@@ -504,7 +504,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
   const guadagnoConReso = pvn > 0 && costoConReso > 0 ? pvn - costoConReso : null;
 
   const fmtPct  = (v: number | null) => v === null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
-  const fmtEuro = (v: number | null) => v === null ? '—' : `€ ${v.toFixed(2)}`;
+  const fmtEuro = (v: number | null) => v === null ? '—' : `€ ${v.toFixed(2).replace('.', ',')}`;
 
   // ── Register refs ─────────────────────────────────────────────────────────
   const costPriceReg      = register('costPrice');

@@ -263,9 +263,13 @@ export default function CatalogView({
 
   // ── Products ─────────────────────────────────────────────────
   const { data: productsData, isLoading: productsLoading } = useQuery({
-    queryKey: ['products'],
+    queryKey: ['products', lockedFamiglia ?? null, lockedCollezione ?? null, lockedGruppoMerceologico ?? null, excludeGruppoMerceologico ?? null],
     queryFn: async () => {
-      const res = await fetch('/api/products?active=true&limit=500');
+      const params = new URLSearchParams({ active: 'true', limit: '2000' });
+      if (lockedFamiglia) params.set('famiglia', lockedFamiglia);
+      if (lockedCollezione) params.set('collezione', lockedCollezione);
+      if (lockedGruppoMerceologico) params.set('gruppoMerceologico', lockedGruppoMerceologico);
+      const res = await fetch(`/api/products?${params}`);
       if (!res.ok) throw new Error('Failed to fetch products');
       return (await res.json()).data as Product[];
     },
