@@ -997,9 +997,8 @@ function ProductCard({
             </View>
           );
           if (fieldKey === 'descrizione' && f.descrizione) return (
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            <View key="descrizione" style={{ height: layout.DESC_H, marginBottom: cfs.descrizione.marginBottom ?? layout.ROW_GAP, overflow: 'hidden', alignItems: alignToFlex(cfs.descrizione.align) }}>
-              <Text style={{ fontSize: cfs.descrizione.fontSize, fontFamily: fieldFont(cfs.descrizione, config.fontFamiglia), color: cfs.descrizione.color, lineHeight: 1.25, overflow: 'hidden' }} {...({ numberOfLines: 2 } as any)}>
+            <View key="descrizione" style={{ marginBottom: cfs.descrizione.marginBottom ?? layout.ROW_GAP, alignItems: alignToFlex(cfs.descrizione.align) }}>
+              <Text style={{ fontSize: cfs.descrizione.fontSize, fontFamily: fieldFont(cfs.descrizione, config.fontFamiglia), color: cfs.descrizione.color, lineHeight: 1.35 }}>
                 {(() => { const raw = f.campoNome === 'nome' ? product.name : (product.description || product.name); return cfs.descrizione.uppercase ? raw.toUpperCase() : raw; })()}
               </Text>
             </View>
