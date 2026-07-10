@@ -4777,42 +4777,10 @@ export default function AdminCatalogoPDFPage() {
         </div>
       </div>
 
-      {/* Right: contextual preview + generate + templates */}
+      {/* Right: generate + contextual preview or templates */}
       <div className="w-full lg:w-80 flex-shrink-0 space-y-3 lg:self-start lg:sticky lg:top-4">
 
-        {/* ── Contextual preview ── */}
-        {activeTab !== 'generale' && <div className="border border-border rounded overflow-hidden">
-          <div className="px-4 py-2.5 bg-gray-50 border-b border-border flex items-center justify-between">
-            <p className="text-2xs font-semibold tracking-widest uppercase text-gray-500">Anteprima live</p>
-            <span className="text-2xs text-gray-400 bg-white border border-border px-2 py-0.5 rounded-full">
-              {activeTab === 'copertina' ? 'Copertina' : activeTab === 'ultima' ? 'Ultima pag.' : activeTab === 'penultima' ? 'Penultima pag.' : 'Scheda'}
-            </span>
-          </div>
-          <div className="p-4 flex flex-col items-start gap-2 bg-white min-h-[180px]">
-            {activeTab === 'scheda' && (
-              <div style={{ transform: 'scale(1.5)', transformOrigin: 'top left', marginBottom: `${110 * 0.5}px` }}>
-                <CardPreview config={config} />
-              </div>
-            )}
-            {activeTab === 'copertina' && (
-              config.copertina.attiva
-                ? <CoverPreview config={config} />
-                : <div className="w-full py-10 text-center"><p className="text-2xs text-gray-400">Copertina non attiva</p><p className="text-2xs text-gray-300 mt-1">Attivala in questa sezione</p></div>
-            )}
-            {activeTab === 'ultima' && (
-              config.paginaFinale.attiva
-                ? <FinalPagePreview config={config} />
-                : <div className="w-full py-10 text-center"><p className="text-2xs text-gray-400">Pagina finale non attiva</p><p className="text-2xs text-gray-300 mt-1">Attivala in questa sezione</p></div>
-            )}
-            {activeTab === 'penultima' && (
-              config.paginaPenultima.attiva
-                ? <PenultimaPagePreview config={config} />
-                : <div className="w-full py-10 text-center"><p className="text-2xs text-gray-400">Pagina non attiva</p><p className="text-2xs text-gray-300 mt-1">Attivala in questa sezione</p></div>
-            )}
-          </div>
-        </div>}
-
-        {/* ── Generate ── */}
+        {/* ── Generate — always at top ── */}
         <div className="border border-border rounded p-4 space-y-3 bg-gray-50/50">
           <p className="text-2xs font-semibold tracking-widest uppercase text-gray-500">Generazione</p>
           <button
@@ -4867,49 +4835,85 @@ export default function AdminCatalogoPDFPage() {
           {!preview && <p className="text-2xs text-gray-400 text-center">Esegui prima l&apos;anteprima per stimare il numero di pagine</p>}
         </div>
 
-        {/* ── Templates ── */}
-        <div className="border border-border rounded overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setShowTemplates((s) => !s)}
-            className="flex items-center justify-between w-full px-4 py-3 bg-gray-50 text-xs font-semibold tracking-widest uppercase text-gray-500 hover:bg-gray-100 transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <FolderOpen size={13} />
-              Configurazioni salvate
-              {templates.length > 0 && (
-                <span className="bg-primary text-white text-2xs px-1.5 py-0.5 rounded-full">{templates.length}</span>
-              )}
-            </span>
-            {showTemplates ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-          {showTemplates && (
-            <div className="divide-y divide-border">
-              {templates.length === 0 ? (
-                <p className="px-4 py-5 text-xs text-gray-400 text-center">Nessuna configurazione salvata</p>
-              ) : (
-                templates.map((t) => (
-                  <div key={t.id} className="px-4 py-3 hover:bg-gray-50/50">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-primary truncate">{t.nome}</p>
-                        <p className="text-2xs text-gray-400">{new Date(t.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+        {/* ── Configurazioni salvate — solo su tab Generale ── */}
+        {activeTab === 'generale' && (
+          <div className="border border-border rounded overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowTemplates((s) => !s)}
+              className="flex items-center justify-between w-full px-4 py-3 bg-gray-50 text-xs font-semibold tracking-widest uppercase text-gray-500 hover:bg-gray-100 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <FolderOpen size={13} />
+                Configurazioni salvate
+                {templates.length > 0 && (
+                  <span className="bg-primary text-white text-2xs px-1.5 py-0.5 rounded-full">{templates.length}</span>
+                )}
+              </span>
+              {showTemplates ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+            {showTemplates && (
+              <div className="divide-y divide-border">
+                {templates.length === 0 ? (
+                  <p className="px-4 py-5 text-xs text-gray-400 text-center">Nessuna configurazione salvata</p>
+                ) : (
+                  templates.map((t) => (
+                    <div key={t.id} className="px-4 py-3 hover:bg-gray-50/50">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-primary truncate">{t.nome}</p>
+                          <p className="text-2xs text-gray-400">{new Date(t.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                        </div>
+                        <button type="button" onClick={() => handleLoadTemplate(t)} title="Carica configurazione" className="p-1.5 rounded text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"><FolderOpen size={12} /></button>
+                        <button type="button" onClick={() => handleEditTemplate(t)} title="Modifica template" className="p-1.5 rounded text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"><Pencil size={12} /></button>
+                        <button type="button" onClick={() => handleDeleteTemplate(t.id, t.nome)} title="Elimina configurazione" className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={12} /></button>
                       </div>
-                      <button type="button" onClick={() => handleLoadTemplate(t)} title="Carica configurazione" className="p-1.5 rounded text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"><FolderOpen size={12} /></button>
-                      <button type="button" onClick={() => handleEditTemplate(t)} title="Modifica template" className="p-1.5 rounded text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"><Pencil size={12} /></button>
-                      <button type="button" onClick={() => handleDeleteTemplate(t.id, t.nome)} title="Elimina configurazione" className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={12} /></button>
+                      <div className="flex gap-1.5 mt-1.5">
+                        <button type="button" onClick={() => handleRenameTemplate(t.id, t.nome)} className="text-2xs text-gray-500 hover:text-primary underline">Rinomina</button>
+                        <span className="text-2xs text-gray-300">·</span>
+                        <button type="button" onClick={() => handleDuplicateTemplate(t)} className="text-2xs text-gray-500 hover:text-primary underline">Duplica</button>
+                      </div>
                     </div>
-                    <div className="flex gap-1.5 mt-1.5">
-                      <button type="button" onClick={() => handleRenameTemplate(t.id, t.nome)} className="text-2xs text-gray-500 hover:text-primary underline">Rinomina</button>
-                      <span className="text-2xs text-gray-300">·</span>
-                      <button type="button" onClick={() => handleDuplicateTemplate(t)} className="text-2xs text-gray-500 hover:text-primary underline">Duplica</button>
-                    </div>
-                  </div>
-                ))
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Anteprima live — sulle altre schede, flottante grazie allo sticky della colonna ── */}
+        {activeTab !== 'generale' && (
+          <div className="border border-border rounded overflow-hidden">
+            <div className="px-4 py-2.5 bg-gray-50 border-b border-border flex items-center justify-between">
+              <p className="text-2xs font-semibold tracking-widest uppercase text-gray-500">Anteprima live</p>
+              <span className="text-2xs text-gray-400 bg-white border border-border px-2 py-0.5 rounded-full">
+                {activeTab === 'copertina' ? 'Copertina' : activeTab === 'ultima' ? 'Ultima pag.' : activeTab === 'penultima' ? 'Penultima pag.' : 'Scheda'}
+              </span>
+            </div>
+            <div className="p-4 flex flex-col items-start gap-2 bg-white min-h-[180px]">
+              {activeTab === 'scheda' && (
+                <div style={{ transform: 'scale(1.5)', transformOrigin: 'top left', marginBottom: `${110 * 0.5}px` }}>
+                  <CardPreview config={config} />
+                </div>
+              )}
+              {activeTab === 'copertina' && (
+                config.copertina.attiva
+                  ? <CoverPreview config={config} />
+                  : <div className="w-full py-10 text-center"><p className="text-2xs text-gray-400">Copertina non attiva</p><p className="text-2xs text-gray-300 mt-1">Attivala in questa sezione</p></div>
+              )}
+              {activeTab === 'ultima' && (
+                config.paginaFinale.attiva
+                  ? <FinalPagePreview config={config} />
+                  : <div className="w-full py-10 text-center"><p className="text-2xs text-gray-400">Pagina finale non attiva</p><p className="text-2xs text-gray-300 mt-1">Attivala in questa sezione</p></div>
+              )}
+              {activeTab === 'penultima' && (
+                config.paginaPenultima.attiva
+                  ? <PenultimaPagePreview config={config} />
+                  : <div className="w-full py-10 text-center"><p className="text-2xs text-gray-400">Pagina non attiva</p><p className="text-2xs text-gray-300 mt-1">Attivala in questa sezione</p></div>
               )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
       </div>
     </div>
