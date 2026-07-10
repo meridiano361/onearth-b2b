@@ -3569,7 +3569,10 @@ export default function AdminCatalogoPDFPage() {
                           <div className="flex items-center gap-3">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={config.copertina.logoCustomBase64} alt="Logo" className="h-8 object-contain border border-border rounded bg-white px-2" />
-                            <button type="button" onClick={() => { setCopertina('logoCustomBase64', null); if (logoFileInputRef.current) logoFileInputRef.current.value = ''; }} className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                            <div className="space-y-0.5">
+                              <p className="text-2xs text-blue-600">Logo caricato in locale</p>
+                              <button type="button" onClick={() => { setCopertina('logoCustomBase64', null); if (logoFileInputRef.current) logoFileInputRef.current.value = ''; }} className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -3679,8 +3682,11 @@ export default function AdminCatalogoPDFPage() {
                           <div className="flex items-center gap-3">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={config.copertina.logo2CustomBase64} alt="Logo2" className="h-8 object-contain border border-border rounded bg-white px-2" />
-                            <button type="button" onClick={() => { setCopertina('logo2CustomBase64', null); if (copertinaLogo2FileInputRef.current) copertinaLogo2FileInputRef.current.value = ''; }}
-                              className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                            <div className="space-y-0.5">
+                              <p className="text-2xs text-blue-600">Logo caricato in locale</p>
+                              <button type="button" onClick={() => { setCopertina('logo2CustomBase64', null); if (copertinaLogo2FileInputRef.current) copertinaLogo2FileInputRef.current.value = ''; }}
+                                className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                            </div>
                           </div>
                         )}
                         <div className="grid grid-cols-2 gap-3">
@@ -3986,8 +3992,11 @@ export default function AdminCatalogoPDFPage() {
                           <div className="flex items-center gap-3">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={config.paginaFinale.logo2CustomBase64} alt="Logo" className="h-8 object-contain border border-border rounded bg-white px-2" />
-                            <button type="button" onClick={() => { setPaginaFinale('logo2CustomBase64', null); if (finalLogo2FileInputRef.current) finalLogo2FileInputRef.current.value = ''; }}
-                              className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                            <div className="space-y-0.5">
+                              <p className="text-2xs text-blue-600">Logo caricato in locale</p>
+                              <button type="button" onClick={() => { setPaginaFinale('logo2CustomBase64', null); if (finalLogo2FileInputRef.current) finalLogo2FileInputRef.current.value = ''; }}
+                                className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                            </div>
                           </div>
                         )}
                         <div className="grid grid-cols-2 gap-3">
@@ -4233,7 +4242,10 @@ export default function AdminCatalogoPDFPage() {
                           <div className="flex items-center gap-3">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={config.paginaFinale.logoCustomBase64} alt="Logo" className="h-8 object-contain border border-border rounded bg-white px-2" />
-                            <button type="button" onClick={() => { setPaginaFinale('logoCustomBase64', null); if (finalLogoFileInputRef.current) finalLogoFileInputRef.current.value = ''; }} className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                            <div className="space-y-0.5">
+                              <p className="text-2xs text-blue-600">Logo caricato in locale</p>
+                              <button type="button" onClick={() => { setPaginaFinale('logoCustomBase64', null); if (finalLogoFileInputRef.current) finalLogoFileInputRef.current.value = ''; }} className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -4415,8 +4427,11 @@ export default function AdminCatalogoPDFPage() {
                           <div className="flex items-center gap-3">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={config.paginaPenultima.logo2CustomBase64} alt="Logo" className="h-8 object-contain border border-border rounded bg-white px-2" />
-                            <button type="button" onClick={() => { setPaginaPenultima('logo2CustomBase64', null); if (penultimaLogo2FileInputRef.current) penultimaLogo2FileInputRef.current.value = ''; }}
-                              className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                            <div className="space-y-0.5">
+                              <p className="text-2xs text-blue-600">Logo caricato in locale</p>
+                              <button type="button" onClick={() => { setPaginaPenultima('logo2CustomBase64', null); if (penultimaLogo2FileInputRef.current) penultimaLogo2FileInputRef.current.value = ''; }}
+                                className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                            </div>
                           </div>
                         )}
                         <div className="grid grid-cols-2 gap-3">
@@ -4662,7 +4677,10 @@ export default function AdminCatalogoPDFPage() {
                           <div className="flex items-center gap-3">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={config.paginaPenultima.logoCustomBase64} alt="Logo" className="h-8 object-contain border border-border rounded bg-white px-2" />
-                            <button type="button" onClick={() => { setPaginaPenultima('logoCustomBase64', null); if (penultimaLogoFileInputRef.current) penultimaLogoFileInputRef.current.value = ''; }} className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                            <div className="space-y-0.5">
+                              <p className="text-2xs text-blue-600">Logo caricato in locale</p>
+                              <button type="button" onClick={() => { setPaginaPenultima('logoCustomBase64', null); if (penultimaLogoFileInputRef.current) penultimaLogoFileInputRef.current.value = ''; }} className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                            </div>
                           </div>
                         )}
                       </div>
