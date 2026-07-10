@@ -1060,8 +1060,8 @@ function ProductCard({
             );
             if (fieldKey === 'misure' && anyDetail) return (
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              <View key="misure" style={{ height: layout.DETAIL_H, marginBottom: misureStyle.marginBottom ?? layout.ROW_GAP, overflow: 'hidden', alignItems: alignToFlex(misureStyle.align) }}>
-                <Text style={{ fontSize: misureStyle.fontSize, fontFamily: fieldFont(misureStyle, config.fontFamiglia), color: misureStyle.color, overflow: 'hidden' }} {...({ numberOfLines: 1 } as any)}>
+              <View key="misure" style={{ height: layout.DETAIL_H, marginBottom: misureStyle.marginBottom ?? layout.ROW_GAP, overflow: 'hidden' }}>
+                <Text style={{ fontSize: misureStyle.fontSize, fontFamily: fieldFont(misureStyle, config.fontFamiglia), color: misureStyle.color, textAlign: misureStyle.align }} {...({ numberOfLines: 1 } as any)}>
                   {detailText}
                 </Text>
               </View>
