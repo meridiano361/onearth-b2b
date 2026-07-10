@@ -890,16 +890,16 @@ function CardPreview({ config, scale = 1 }: { config: FormState; scale?: number 
               {(f.prezzoCosto || f.pvp) && (
                 <div style={{ flex: 1 }}>
                   {f.prezzoCosto && (
-                    <p style={{ ...fieldCSS(cfs.prezzoCosto), lineHeight: 1.4, textTransform: 'uppercase', letterSpacing: 0.3 }}>
-                      <span>Costo i.e. </span>
-                      <span>€12,50</span>
-                    </p>
+                    <>
+                      <p style={{ fontSize: fs2px(5), margin: 0, lineHeight: 1.3, textTransform: 'uppercase', letterSpacing: 0.3, color: cfs.prezzoCosto.color, textAlign: cfs.prezzoCosto.align }}>COSTO I.E.</p>
+                      <p style={{ ...fieldCSS(cfs.prezzoCosto), margin: 0, marginBottom: f.pvp ? 2 : 0, lineHeight: 1.2 }}>€12,50</p>
+                    </>
                   )}
                   {f.pvp && (
-                    <p style={{ ...fieldCSS(cfs.pvp), lineHeight: 1.4, textTransform: 'uppercase', letterSpacing: 0.3 }}>
-                      <span>PVP i.i. </span>
-                      <span>€29,90</span>
-                    </p>
+                    <>
+                      <p style={{ fontSize: fs2px(5), margin: 0, lineHeight: 1.3, textTransform: 'uppercase', letterSpacing: 0.3, color: cfs.pvp.color, textAlign: cfs.pvp.align }}>PVP I.I.</p>
+                      <p style={{ ...fieldCSS(cfs.pvp), margin: 0, lineHeight: 1.2 }}>€29,90</p>
+                    </>
                   )}
                 </div>
               )}

@@ -634,43 +634,66 @@ function computeLayout(config: CatalogConfig): Layout {
 
   const TEXT_PAD = config.cardBoxStyle?.padding ?? 4;
   const CODE_H = 10;
-  const descFontSize = config.cardFieldStyles?.descrizione?.fontSize ?? 8;
-  const DESC_H = Math.ceil(descFontSize * 1.5 * 2) + 4; // 2 lines, lineHeight 1.5 + descender buffer
   const DETAIL_H = 10;
   const ROW_GAP = 2;
 
   const TEXT_AREA_H = CARD_H - IMG_H - (config.cardBoxStyle?.borderWidth ?? 0) * 2;
 
-  // Calculate which text blocks are enabled
   const anyDetail = f.misure || f.linea || f.collezione || f.confezione || f.iva;
-  const anyPrice = f.prezzoCosto || f.pvp || f.produttore || f.paese;
+  const anyPrice  = f.prezzoCosto || f.pvp || f.produttore || f.paese;
 
-  // PRICES_H must grow with the configured font sizes.
-  // Left col: 1 line prezzoCosto + 1 line pvp (prezzoCosto is 1 line for most products)
-  // Right col: produttore (1 line) + paese (1 line)
-  const priceFs  = Math.max(
+  // ── PRICES_H ─────────────────────────────────────────────────────────────────
+  // Each price field (prezzoCosto / pvp) renders as TWO lines:
+  //   line 1 — label at fixed 5 pt  (always fits in column width)
+  //   line 2 — value at configured fontSize  (just "€XX,XX", always fits)
+  // This prevents the label+value combined text from wrapping unpredictably.
+  const PRICE_LABEL_FS = 5;
+  const PRICE_LABEL_LINE_H = Math.ceil(PRICE_LABEL_FS * 1.4); // ~7 pt
+
+  const priceValueFs = Math.max(
     f.prezzoCosto ? (config.cardFieldStyles?.prezzoCosto?.fontSize ?? 8) : 0,
     f.pvp         ? (config.cardFieldStyles?.pvp?.fontSize ?? 8)         : 0,
   );
+  const priceValueLineH = priceValueFs > 0 ? Math.ceil(priceValueFs * 1.4) : 0;
+  const priceFieldCount = (f.prezzoCosto ? 1 : 0) + (f.pvp ? 1 : 0);
+  // +1 pt gap between label and value per field
+  const priceColH = priceFieldCount > 0
+    ? priceFieldCount * (PRICE_LABEL_LINE_H + priceValueLineH + 1)
+    : 0;
+
   const supplierFs = Math.max(
     f.produttore ? (config.cardFieldStyles?.produttore?.fontSize ?? 6.5) : 0,
     f.paese      ? (config.cardFieldStyles?.paese?.fontSize ?? 6.5)      : 0,
   );
-  const priceColLines    = (f.prezzoCosto ? 1 : 0) + (f.pvp ? 1 : 0);
   const supplierColLines = (f.produttore ? 1 : 0) + (f.paese ? 1 : 0);
-  const PRICES_H = anyPrice
-    ? Math.max(
-        priceColLines    > 0 ? Math.ceil(priceFs    * 1.4 * priceColLines)    + 2 : 0,
-        supplierColLines > 0 ? Math.ceil(supplierFs * 1.4 * supplierColLines) + 2 : 0,
-        14, // minimum sensible height
-      )
+  const supplierColH = supplierColLines > 0
+    ? supplierColLines * Math.ceil(supplierFs * 1.4)
     : 0;
 
-  let usedTextH = TEXT_PAD * 2;
-  if (f.codice) usedTextH += CODE_H + ROW_GAP;
+  const PRICES_H = anyPrice ? Math.max(priceColH, supplierColH, 14) : 0;
+
+  // ── DESC_H (adaptive) ─────────────────────────────────────────────────────────
+  // Reserve 2 lines for description if the card has room; else 1 line.
+  const descFontSize = config.cardFieldStyles?.descrizione?.fontSize ?? 8;
+  const desc2LineH = Math.ceil(descFontSize * 1.5 * 2) + 4;
+  const desc1LineH = Math.ceil(descFontSize * 1.5) + 2;
+
+  const bottomPad = anyPrice ? PRICES_H + TEXT_PAD : TEXT_PAD;
+  const availForDesc = TEXT_AREA_H
+    - TEXT_PAD                                       // paddingTop
+    - bottomPad                                      // paddingBottom (prices reserved)
+    - (f.codice   ? CODE_H   + ROW_GAP : 0)
+    - (anyDetail  ? DETAIL_H + ROW_GAP : 0)
+    - ROW_GAP;                                       // marginBottom of description itself
+
+  const DESC_H = f.descrizione
+    ? (availForDesc >= desc2LineH ? desc2LineH : desc1LineH)
+    : 0;
+
+  let usedTextH = TEXT_PAD + bottomPad;
+  if (f.codice)    usedTextH += CODE_H   + ROW_GAP;
   if (f.descrizione) usedTextH += DESC_H + ROW_GAP;
-  if (anyDetail) usedTextH += DETAIL_H + ROW_GAP;
-  if (anyPrice) usedTextH += PRICES_H;
+  if (anyDetail)   usedTextH += DETAIL_H + ROW_GAP;
 
   const SPACER_H = Math.max(0, TEXT_AREA_H - usedTextH);
 
@@ -1074,34 +1097,51 @@ function ProductCard({
                   ) : null}
                 </View>
               )}
-              {/* Right column: prezzoCosto + pvp */}
+              {/* Right column: prezzoCosto + pvp — label on own line (5pt), value on own line (configured size) */}
               {(f.prezzoCosto || f.pvp) && (
                 <View style={[s.priceItem, { justifyContent: 'center' }]}>
                   {f.prezzoCosto && (() => {
-                    const conReso = Number(product.costoIeConReso);
+                    const conReso   = Number(product.costoIeConReso);
                     const senzaReso = Number(product.costoIeSenzaReso);
-                    const hasConReso = conReso > 0;
+                    const hasConReso   = conReso   > 0;
                     const hasSenzaReso = senzaReso > 0;
-                    const ls = [s.priceLabel, { fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color }] as any;
-                    const ta = cfs.prezzoCosto.align;
+                    const ta  = cfs.prezzoCosto.align;
+                    const lbl = { fontSize: 5, color: cfs.prezzoCosto.color, textTransform: 'uppercase' as const, letterSpacing: 0.3, textAlign: ta };
+                    const val = { fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color, textAlign: ta };
                     if (hasConReso) return (
                       <>
-                        <Text style={{ marginBottom: 1.5, textAlign: ta }}><Text style={ls}>Costo i.e. con reso </Text><Text style={ls}>{euro(conReso)}</Text></Text>
-                        {hasSenzaReso && <Text style={{ textAlign: ta }}><Text style={ls}>Senza reso </Text><Text style={ls}>{euro(senzaReso)}</Text></Text>}
+                        <Text style={lbl}>COSTO I.E. CON RESO</Text>
+                        <Text style={[val, { marginBottom: 1.5 }]}>{euro(conReso)}</Text>
+                        {hasSenzaReso && (
+                          <>
+                            <Text style={lbl}>SENZA RESO</Text>
+                            <Text style={val}>{euro(senzaReso)}</Text>
+                          </>
+                        )}
                       </>
                     );
                     if (hasSenzaReso) return (
-                      <Text style={{ marginBottom: 1.5, textAlign: ta }}><Text style={ls}>Costo i.e. </Text><Text style={ls}>{euro(senzaReso)}</Text></Text>
+                      <>
+                        <Text style={lbl}>COSTO I.E.</Text>
+                        <Text style={val}>{euro(senzaReso)}</Text>
+                      </>
                     );
-                    return <Text style={{ marginBottom: 1.5, textAlign: ta }}><Text style={ls}>Costo i.e. </Text><Text style={ls}>{euro(product.costPrice)}</Text></Text>;
+                    return (
+                      <>
+                        <Text style={lbl}>COSTO I.E.</Text>
+                        <Text style={[val, { marginBottom: f.pvp ? 1.5 : 0 }]}>{euro(product.costPrice)}</Text>
+                      </>
+                    );
                   })()}
                   {f.pvp && (() => {
-                    const lp = [s.priceLabel, { fontSize: cfs.pvp.fontSize, fontFamily: fieldFont(cfs.pvp, config.fontFamiglia), color: cfs.pvp.color }] as any;
+                    const ta  = cfs.pvp.align;
+                    const lbl = { fontSize: 5, color: cfs.pvp.color, textTransform: 'uppercase' as const, letterSpacing: 0.3, textAlign: ta };
+                    const val = { fontSize: cfs.pvp.fontSize, fontFamily: fieldFont(cfs.pvp, config.fontFamiglia), color: cfs.pvp.color, textAlign: ta };
                     return (
-                      <Text style={{ textAlign: cfs.pvp.align }}>
-                        <Text style={lp}>PVP i.i. </Text>
-                        <Text style={lp}>{euro(product.retailPrice)}</Text>
-                      </Text>
+                      <>
+                        <Text style={lbl}>PVP I.I.</Text>
+                        <Text style={val}>{euro(product.retailPrice)}</Text>
+                      </>
                     );
                   })()}
                 </View>
