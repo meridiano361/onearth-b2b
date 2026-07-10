@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
+import { canAccessModa } from '@/lib/modaAccess';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
@@ -107,8 +108,8 @@ export async function GET(req: NextRequest) {
       if (active === 'true') where.isActive = true;
     }
 
-    // Non-admin users cannot see MODA products
-    if (!isAdmin) {
+    // Non-admin users cannot see MODA products unless they have moda access
+    if (!canAccessModa(session.user.role, session.user.email)) {
       where.NOT = [{ gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' } }];
     }
     if (categoryId) where.categoryId = categoryId;
