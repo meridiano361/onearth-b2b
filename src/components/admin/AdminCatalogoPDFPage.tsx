@@ -466,7 +466,7 @@ function mergeWithDefaults(saved: any): FormState {
     stileSeparatoreTranche: { ...DEFAULT_STATE.stileSeparatoreTranche, ...saved?.stileSeparatoreTranche },
     trancheOrder: saved?.trancheOrder ?? DEFAULT_STATE.trancheOrder,
     productOrder: saved?.productOrder ?? DEFAULT_STATE.productOrder,
-    fieldOrder: saved?.fieldOrder ?? DEFAULT_STATE.fieldOrder,
+    fieldOrder: (() => { const fo = saved?.fieldOrder ?? DEFAULT_STATE.fieldOrder; return fo.includes('misure') ? fo : [...fo, 'misure']; })(),
   };
 }
 

@@ -1049,7 +1049,7 @@ function ProductCard({
               )}
             </View>
           )}
-          {(config.fieldOrder ?? ['codice', 'descrizione', 'misure']).filter((k) => k !== 'codice').map((fieldKey) => {
+          {((() => { const fo = config.fieldOrder ?? ['codice', 'descrizione', 'misure']; return fo.includes('misure') ? fo : [...fo, 'misure']; })()).filter((k) => k !== 'codice').map((fieldKey) => {
             if (fieldKey === 'descrizione' && f.descrizione) return (
               // Fixed height = 2 lines; alignItems omitted so Text stretches to full width and wraps
               <View key="descrizione" style={{ height: layout.DESC_H, marginBottom: cfs.descrizione.marginBottom ?? layout.ROW_GAP, overflow: 'hidden' }}>
