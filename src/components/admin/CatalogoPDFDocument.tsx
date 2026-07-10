@@ -981,24 +981,26 @@ function ProductCard({
           height: layout.TEXT_AREA_H,
         }]}
       >
-        {(config.fieldOrder ?? ['codice', 'descrizione', 'misure']).map((fieldKey) => {
-          if (fieldKey === 'codice' && f.codice) return (
-            <View key="codice" style={{ height: layout.CODE_H, marginBottom: cfs.codice.marginBottom ?? layout.ROW_GAP, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-              <Link src={`${APP_BASE_URL}/catalog/${product.id}`}>
-                <Text style={{ fontSize: cfs.codice.fontSize, fontFamily: fieldFont(cfs.codice, config.fontFamiglia), color: cfs.codice.color, letterSpacing: 0.3, overflow: 'hidden' }}>
-                  {cfs.codice.uppercase ? product.code.toUpperCase() : product.code}
-                </Text>
-              </Link>
-              {config.nuovoBadge?.attivo && config.nuovoBadge.posizione === 'next-to-code' && (
-                <View style={{ backgroundColor: config.nuovoBadge.bgColor, paddingHorizontal: 3, paddingVertical: 1, borderRadius: 2 }}>
-                  <Text style={{ fontSize: 4.5, color: config.nuovoBadge.textColor, fontFamily: 'Helvetica-Bold' }}>{config.nuovoBadge.testo}</Text>
-                </View>
-              )}
-            </View>
-          );
+        {/* Codice always pinned first — ensures it's never pushed off-screen by a long description */}
+        {f.codice && (
+          <View style={{ minHeight: layout.CODE_H, marginBottom: cfs.codice.marginBottom ?? layout.ROW_GAP, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+            <Link src={`${APP_BASE_URL}/catalog/${product.id}`}>
+              <Text style={{ fontSize: cfs.codice.fontSize, fontFamily: fieldFont(cfs.codice, config.fontFamiglia), color: cfs.codice.color, letterSpacing: 0.3 }}>
+                {cfs.codice.uppercase ? product.code.toUpperCase() : product.code}
+              </Text>
+            </Link>
+            {config.nuovoBadge?.attivo && config.nuovoBadge.posizione === 'next-to-code' && (
+              <View style={{ backgroundColor: config.nuovoBadge.bgColor, paddingHorizontal: 3, paddingVertical: 1, borderRadius: 2 }}>
+                <Text style={{ fontSize: 4.5, color: config.nuovoBadge.textColor, fontFamily: 'Helvetica-Bold' }}>{config.nuovoBadge.testo}</Text>
+              </View>
+            )}
+          </View>
+        )}
+        {(config.fieldOrder ?? ['codice', 'descrizione', 'misure']).filter((k) => k !== 'codice').map((fieldKey) => {
           if (fieldKey === 'descrizione' && f.descrizione) return (
-            <View key="descrizione" style={{ marginBottom: cfs.descrizione.marginBottom ?? layout.ROW_GAP, alignItems: alignToFlex(cfs.descrizione.align) }}>
-              <Text style={{ fontSize: cfs.descrizione.fontSize, fontFamily: fieldFont(cfs.descrizione, config.fontFamiglia), color: cfs.descrizione.color, lineHeight: 1.35 }}>
+            <View key="descrizione" style={{ marginBottom: cfs.descrizione.marginBottom ?? layout.ROW_GAP, overflow: 'hidden', alignItems: alignToFlex(cfs.descrizione.align) }}>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              <Text style={{ fontSize: cfs.descrizione.fontSize, fontFamily: fieldFont(cfs.descrizione, config.fontFamiglia), color: cfs.descrizione.color, lineHeight: 1.35 }} {...({ numberOfLines: 3 } as any)}>
                 {(() => { const raw = f.campoNome === 'nome' ? product.name : (product.description || product.name); return cfs.descrizione.uppercase ? raw.toUpperCase() : raw; })()}
               </Text>
             </View>
@@ -1219,7 +1221,7 @@ function CoverPage({
           </View>
         )}
 
-        {/* Dark gradient overlay */}
+        {/* Dark gradient overlay — rgba avoids PDF transparency-group issues */}
         <View
           style={{
             position: 'absolute',
@@ -1227,8 +1229,7 @@ function CoverPage({
             left: 0,
             right: 0,
             height: 160,
-            backgroundColor: '#000000',
-            opacity: 0.55,
+            backgroundColor: 'rgba(0,0,0,0.55)',
           }}
         />
         {/* Text on top of overlay */}
@@ -1545,7 +1546,7 @@ function FinalPage({
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: '#000000', opacity: 0.55 }} />
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: 'rgba(0,0,0,0.55)' }} />
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {logo2Above}
           {renderTitleInlines(titleInlines, typo, titleAlign, 8)}
@@ -1764,7 +1765,7 @@ function PenultimaPage({
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: '#000000', opacity: 0.55 }} />
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: 'rgba(0,0,0,0.55)' }} />
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {logo2Above}
           {renderTitleInlines(titleInlines, typo, titleAlign, 8)}
