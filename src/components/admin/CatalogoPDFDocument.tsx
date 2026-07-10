@@ -1208,10 +1208,11 @@ function CoverPage({
 
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia) }}>
-        {/* Background image — wrapped in overflow:hidden View so objectFit's Form XObject is isolated and doesn't corrupt sibling Text rendering */}
+        {/* Background image — overflow:hidden isolates the objectFit clipping context */}
         {cov.immagineBase64 && (
           <View style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, overflow: 'hidden' }}>
-            <Image src={cov.immagineBase64} style={{ width: imgW, height: imgH }} />
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            <Image src={cov.immagineBase64} style={{ width: imgW, height: imgH, objectFit: 'cover' as any }} />
           </View>
         )}
 
@@ -1527,13 +1528,12 @@ function FinalPage({
     </View>
   ) : null;
 
-  function fullImgStyle(areaW: number, areaH: number) {
-    const imgW = areaW * imgScale / 100;
-    const imgH = areaH * imgScale / 100;
-    const left = (areaW - imgW) / 2 + (areaW * imgOffsetX / 100);
-    const top = (areaH - imgH) / 2 + (areaH * imgOffsetY / 100);
-    return { position: 'absolute' as const, top, left, width: imgW, height: imgH, objectFit: 'cover' as any }; // eslint-disable-line @typescript-eslint/no-explicit-any
-  }
+  const bgW = pageW * imgScale / 100;
+  const bgH = pageH * imgScale / 100;
+  const bgLeft = (pageW - bgW) / 2 + (pageW * imgOffsetX / 100);
+  const bgTop = (pageH - bgH) / 2 + (pageH * imgOffsetY / 100);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bgImg = imgSrc ? <View style={{ position: 'absolute' as const, top: bgTop, left: bgLeft, width: bgW, height: bgH, overflow: 'hidden' }}><Image src={imgSrc} style={{ width: bgW, height: bgH, objectFit: 'cover' as any }} /></View> : null;
 
   const PAD_H = 60;
   const PAD_V = 48;
@@ -1550,7 +1550,7 @@ function FinalPage({
   if (resolvedLayout === 'full-overlay') {
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
-        {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
+        {bgImg}
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: 'rgba(0,0,0,0.55)' }} />
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {logo2Above}
@@ -1572,7 +1572,7 @@ function FinalPage({
   if (resolvedLayout === 'background') {
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
-        {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
+        {bgImg}
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {logo2Above}
           {renderTitleInlines(titleInlines, typo, titleAlign)}
@@ -1593,7 +1593,7 @@ function FinalPage({
   if (resolvedLayout === 'img-only') {
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
-        {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
+        {bgImg}
         {logoView}
         {renderSezione3(pf, PAD_H)}
       </Page>
@@ -1746,13 +1746,12 @@ function PenultimaPage({
     </View>
   ) : null;
 
-  function fullImgStyle(areaW: number, areaH: number) {
-    const imgW = areaW * imgScale / 100;
-    const imgH = areaH * imgScale / 100;
-    const left = (areaW - imgW) / 2 + (areaW * imgOffsetX / 100);
-    const top = (areaH - imgH) / 2 + (areaH * imgOffsetY / 100);
-    return { position: 'absolute' as const, top, left, width: imgW, height: imgH, objectFit: 'cover' as any }; // eslint-disable-line @typescript-eslint/no-explicit-any
-  }
+  const bgW = pageW * imgScale / 100;
+  const bgH = pageH * imgScale / 100;
+  const bgLeft = (pageW - bgW) / 2 + (pageW * imgOffsetX / 100);
+  const bgTop = (pageH - bgH) / 2 + (pageH * imgOffsetY / 100);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bgImg = imgSrc ? <View style={{ position: 'absolute' as const, top: bgTop, left: bgLeft, width: bgW, height: bgH, overflow: 'hidden' }}><Image src={imgSrc} style={{ width: bgW, height: bgH, objectFit: 'cover' as any }} /></View> : null;
 
   const PAD_H = 60;
   const PAD_V = 48;
@@ -1768,7 +1767,7 @@ function PenultimaPage({
   if (resolvedLayout === 'full-overlay') {
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
-        {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
+        {bgImg}
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: 'rgba(0,0,0,0.55)' }} />
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {logo2Above}
@@ -1790,7 +1789,7 @@ function PenultimaPage({
   if (resolvedLayout === 'background') {
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
-        {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
+        {bgImg}
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
           {logo2Above}
           {renderTitleInlines(titleInlines, typo, titleAlign)}
@@ -1811,7 +1810,7 @@ function PenultimaPage({
   if (resolvedLayout === 'img-only') {
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
-        {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
+        {bgImg}
         {logoView}
         {renderSezione3(pp, PAD_H)}
       </Page>
