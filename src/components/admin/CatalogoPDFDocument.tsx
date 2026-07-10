@@ -637,7 +637,6 @@ function computeLayout(config: CatalogConfig): Layout {
   const descFontSize = config.cardFieldStyles?.descrizione?.fontSize ?? 8;
   const DESC_H = Math.ceil(descFontSize * 1.5 * 2) + 4; // 2 lines, lineHeight 1.5 + descender buffer
   const DETAIL_H = 10;
-  const PRICES_H = 24;
   const ROW_GAP = 2;
 
   const TEXT_AREA_H = CARD_H - IMG_H - (config.cardBoxStyle?.borderWidth ?? 0) * 2;
@@ -645,6 +644,27 @@ function computeLayout(config: CatalogConfig): Layout {
   // Calculate which text blocks are enabled
   const anyDetail = f.misure || f.linea || f.collezione || f.confezione || f.iva;
   const anyPrice = f.prezzoCosto || f.pvp || f.produttore || f.paese;
+
+  // PRICES_H must grow with the configured font sizes.
+  // Left col: prezzoCosto (up to 2 lines: con reso + senza reso) + pvp (1 line)
+  // Right col: produttore (1 line) + paese (1 line)
+  const priceFs  = Math.max(
+    f.prezzoCosto ? (config.cardFieldStyles?.prezzoCosto?.fontSize ?? 8) : 0,
+    f.pvp         ? (config.cardFieldStyles?.pvp?.fontSize ?? 8)         : 0,
+  );
+  const supplierFs = Math.max(
+    f.produttore ? (config.cardFieldStyles?.produttore?.fontSize ?? 6.5) : 0,
+    f.paese      ? (config.cardFieldStyles?.paese?.fontSize ?? 6.5)      : 0,
+  );
+  const priceColLines    = (f.prezzoCosto ? 2 : 0) + (f.pvp ? 1 : 0);
+  const supplierColLines = (f.produttore ? 1 : 0) + (f.paese ? 1 : 0);
+  const PRICES_H = anyPrice
+    ? Math.max(
+        priceColLines    > 0 ? Math.ceil(priceFs    * 1.4 * priceColLines)    + 2 : 0,
+        supplierColLines > 0 ? Math.ceil(supplierFs * 1.4 * supplierColLines) + 2 : 0,
+        14, // minimum sensible height
+      )
+    : 0;
 
   let usedTextH = TEXT_PAD * 2;
   if (f.codice) usedTextH += CODE_H + ROW_GAP;
