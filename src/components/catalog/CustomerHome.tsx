@@ -133,14 +133,17 @@ export default function CustomerHome() {
             <p className="text-2xs tracking-[0.2em] uppercase text-white/50">Collezione</p>
             <h2 className="font-display text-3xl font-light tracking-widest text-white mt-0.5">{info.titolo}</h2>
             {info.sottotitolo && <p className="text-xs text-white/60 mt-0.5">{info.sottotitolo}</p>}
-            {deadline && (
-              <div className={`mt-2 flex items-center gap-1.5 text-2xs ${expired ? 'text-white/40' : 'text-amber-300'}`}>
-                {expired ? <Lock size={10} /> : <Clock size={10} />}
-                {expired
-                  ? `Prenotazione chiusa il ${formatDeadline(deadline)}`
-                  : `Prenotazioni aperte fino al ${formatDeadline(deadline)}`}
+            {expired ? (
+              <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded bg-white/10 text-white/70 text-2xs tracking-widest uppercase font-medium">
+                <Lock size={9} />
+                Prenotazione chiusa
               </div>
-            )}
+            ) : deadline ? (
+              <div className="mt-2 flex items-center gap-1.5 text-2xs text-amber-300">
+                <Clock size={10} />
+                {`Prenotazioni aperte fino al ${formatDeadline(deadline)}`}
+              </div>
+            ) : null}
           </div>
           <ChevronRight size={20} className="text-white/30 group-hover:text-white transition-colors flex-shrink-0" />
         </div>
