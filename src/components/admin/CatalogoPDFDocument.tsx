@@ -117,6 +117,8 @@ export type CoverTypography = {
   sottotitolo2FontFamily?: string;
   spacingTitoloSottotitolo?: number;
   spacingSottotitoloSottotitolo2?: number;
+  titoloLetterSpacing?: number;
+  sottotitoloLetterSpacing?: number;
 };
 
 export type FinalPageTypography = {
@@ -1187,6 +1189,8 @@ function CoverPage({
   const subtitle2Align = cov.sottotitolo2Allineamento ?? 'center';
   const spacingTS = typo.spacingTitoloSottotitolo ?? 6;
   const spacingS2 = typo.spacingSottotitoloSottotitolo2 ?? 4;
+  const titoloLS = typo.titoloLetterSpacing ?? 3;
+  const sottotitoloLS = typo.sottotitoloLetterSpacing ?? 1;
 
   if (cov.layout === 'full-overlay') {
     const imgW = pageW * imgScale / 100;
@@ -1246,16 +1250,16 @@ function CoverPage({
           }}
         >
           <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: spacingTS }}>
-            {renderCoverLines(titoloText, { fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 3 })}
+            {renderCoverLines(titoloText, { fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: titoloLS })}
           </View>
           {cov.sottotitolo ? (
             <View style={{ width: '100%', alignItems: alignToFlex(subtitleAlign), marginBottom: subtitle2 ? spacingS2 : 0 }}>
-              {renderCoverLines(cov.sottotitolo, { fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: typo.sottotitoloColor, letterSpacing: 1, opacity: 0.85 })}
+              {renderCoverLines(cov.sottotitolo, { fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: typo.sottotitoloColor, letterSpacing: sottotitoloLS, opacity: 0.85 })}
             </View>
           ) : null}
           {subtitle2 ? (
             <View style={{ width: '100%', alignItems: alignToFlex(subtitle2Align) }}>
-              {renderCoverLines(subtitle2, { fontSize: typo.sottotitolo2FontSize ?? 11, fontFamily: subtitle2Font, color: typo.sottotitolo2Color ?? typo.sottotitoloColor, letterSpacing: 1, opacity: 0.75 })}
+              {renderCoverLines(subtitle2, { fontSize: typo.sottotitolo2FontSize ?? 11, fontFamily: subtitle2Font, color: typo.sottotitolo2Color ?? typo.sottotitoloColor, letterSpacing: sottotitoloLS, opacity: 0.75 })}
             </View>
           ) : null}
         </View>
@@ -1311,16 +1315,16 @@ function CoverPage({
             </View>
           )}
           <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: spacingTS }}>
-            {renderCoverLines(titoloText, { fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 3 })}
+            {renderCoverLines(titoloText, { fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: titoloLS })}
           </View>
           {cov.sottotitolo ? (
             <View style={{ width: '100%', alignItems: alignToFlex(subtitleAlign), marginBottom: subtitle2 ? spacingS2 : 0 }}>
-              {renderCoverLines(cov.sottotitolo, { fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: typo.sottotitoloColor, letterSpacing: 1 })}
+              {renderCoverLines(cov.sottotitolo, { fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: typo.sottotitoloColor, letterSpacing: sottotitoloLS })}
             </View>
           ) : null}
           {subtitle2 ? (
             <View style={{ width: '100%', alignItems: alignToFlex(subtitle2Align) }}>
-              {renderCoverLines(subtitle2, { fontSize: typo.sottotitolo2FontSize ?? 11, fontFamily: subtitle2Font, color: typo.sottotitolo2Color ?? typo.sottotitoloColor, letterSpacing: 1 })}
+              {renderCoverLines(subtitle2, { fontSize: typo.sottotitolo2FontSize ?? 11, fontFamily: subtitle2Font, color: typo.sottotitolo2Color ?? typo.sottotitoloColor, letterSpacing: sottotitoloLS })}
             </View>
           ) : null}
         </View>
@@ -1357,16 +1361,16 @@ function CoverPage({
         }}
       />
       <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: spacingTS }}>
-        {renderCoverLines(titoloText, { fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: 4 })}
+        {renderCoverLines(titoloText, { fontSize: typo.titoloFontSize, fontFamily: titleFont, color: typo.titoloColor, letterSpacing: titoloLS })}
       </View>
       {cov.sottotitolo ? (
         <View style={{ width: '100%', alignItems: alignToFlex(subtitleAlign), marginBottom: subtitle2 ? spacingS2 : 0 }}>
-          {renderCoverLines(cov.sottotitolo, { fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: typo.sottotitoloColor, letterSpacing: 1.5 })}
+          {renderCoverLines(cov.sottotitolo, { fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: typo.sottotitoloColor, letterSpacing: sottotitoloLS })}
         </View>
       ) : null}
       {subtitle2 ? (
         <View style={{ width: '100%', alignItems: alignToFlex(subtitle2Align) }}>
-          {renderCoverLines(subtitle2, { fontSize: typo.sottotitolo2FontSize ?? 11, fontFamily: subtitle2Font, color: typo.sottotitolo2Color ?? typo.sottotitoloColor, letterSpacing: 1.5 })}
+          {renderCoverLines(subtitle2, { fontSize: typo.sottotitolo2FontSize ?? 11, fontFamily: subtitle2Font, color: typo.sottotitolo2Color ?? typo.sottotitoloColor, letterSpacing: sottotitoloLS })}
         </View>
       ) : null}
       {renderCoverLogo2(cov, pageW, pageH)}

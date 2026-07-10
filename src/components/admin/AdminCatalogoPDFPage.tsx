@@ -1822,12 +1822,14 @@ function TypoToolbar({
   showAlign = true,
   minSize = 6,
   maxSize = 72,
+  showTimesRomanCourier = false,
 }: {
   value: TypoBlockProps;
   onChange: (patch: Partial<TypoBlockProps>) => void;
   showAlign?: boolean;
   minSize?: number;
   maxSize?: number;
+  showTimesRomanCourier?: boolean;
 }) {
   const btnCls = (active?: boolean) =>
     `h-6 w-6 text-xs rounded flex items-center justify-center hover:bg-gray-200 flex-shrink-0 ${active ? 'bg-gray-300 text-gray-900' : 'text-gray-500'}`;
@@ -1844,6 +1846,8 @@ function TypoToolbar({
         <option value="montserrat">Montserrat</option>
         <option value="playfair">Playfair</option>
         <option value="nova">Nova</option>
+        {showTimesRomanCourier && <option value="times-roman">Times Roman</option>}
+        {showTimesRomanCourier && <option value="courier">Courier</option>}
       </select>
       <input
         type="number" min={minSize} max={maxSize} value={value.fontSize}
@@ -1918,15 +1922,15 @@ export default function AdminCatalogoPDFPage() {
   // Section open/close
   const [sections, setSections] = useState({
     font: false,
-    filtri: true,
-    formato: true,
+    filtri: false,
+    formato: false,
     colori: false,
-    raggruppamento: true,
+    raggruppamento: false,
     separatoreStile: false,
-    campi: true,
+    campi: false,
     campiStile: false,
     riquadro: false,
-    intestazione: true,
+    intestazione: false,
     headerStile: false,
     footerStile: false,
     copertina: false,
@@ -3690,154 +3694,90 @@ export default function AdminCatalogoPDFPage() {
                     )}
                   </div>
 
-                  {/* Titolo */}
+                  {/* Titolo copertina */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-gray-600">Titolo copertina</label>
-                      <AlignToggle value={config.copertina.titoloAllineamento} onChange={(v) => setCopertina('titoloAllineamento', v)} />
-                    </div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Titolo copertina</label>
+                    <TypoToolbar
+                      value={{ fontFamily: config.copertinaTypo.titoloFontFamily ?? 'helvetica', fontSize: config.copertinaTypo.titoloFontSize, bold: config.copertinaTypo.titoloBold, italic: config.copertinaTypo.titoloItalic, underline: false, uppercase: config.copertinaTypo.titoloUppercase, color: config.copertinaTypo.titoloColor, highlight: '', align: config.copertina.titoloAllineamento }}
+                      onChange={(v) => {
+                        if (v.fontFamily !== undefined) setCopertinaTypo({ titoloFontFamily: v.fontFamily });
+                        if (v.fontSize !== undefined) setCopertinaTypo({ titoloFontSize: v.fontSize });
+                        if (v.bold !== undefined) setCopertinaTypo({ titoloBold: v.bold });
+                        if (v.italic !== undefined) setCopertinaTypo({ titoloItalic: v.italic });
+                        if (v.uppercase !== undefined) setCopertinaTypo({ titoloUppercase: v.uppercase });
+                        if (v.color !== undefined) setCopertinaTypo({ titoloColor: v.color });
+                        if (v.align !== undefined) setCopertina('titoloAllineamento', v.align);
+                      }}
+                      showAlign showTimesRomanCourier minSize={10} maxSize={60}
+                    />
                     <textarea
                       rows={3}
                       value={config.copertina.titolo}
                       onChange={(e) => setCopertina('titolo', e.target.value)}
-                      className="w-full border border-border rounded px-3 py-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-vertical"
+                      className="w-full border border-border border-t-0 rounded-b px-3 py-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-vertical"
                       placeholder={"es. Collezione\nCASA 2027\n(Invio per andare a capo)"}
                     />
                   </div>
 
                   {/* Sottotitolo */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-gray-600">
-                        Sottotitolo <span className="text-gray-400 font-normal">(opzionale)</span>
-                      </label>
-                      <AlignToggle value={config.copertina.sottotitoloAllineamento} onChange={(v) => setCopertina('sottotitoloAllineamento', v)} />
-                    </div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Sottotitolo <span className="text-gray-400 font-normal">(opzionale)</span>
+                    </label>
+                    <TypoToolbar
+                      value={{ fontFamily: config.copertinaTypo.sottotitoloFontFamily ?? 'helvetica', fontSize: config.copertinaTypo.sottotitoloFontSize, bold: config.copertinaTypo.sottotitoloBold, italic: config.copertinaTypo.sottotitoloItalic, underline: false, uppercase: false, color: config.copertinaTypo.sottotitoloColor, highlight: '', align: config.copertina.sottotitoloAllineamento }}
+                      onChange={(v) => {
+                        if (v.fontFamily !== undefined) setCopertinaTypo({ sottotitoloFontFamily: v.fontFamily });
+                        if (v.fontSize !== undefined) setCopertinaTypo({ sottotitoloFontSize: v.fontSize });
+                        if (v.bold !== undefined) setCopertinaTypo({ sottotitoloBold: v.bold });
+                        if (v.italic !== undefined) setCopertinaTypo({ sottotitoloItalic: v.italic });
+                        if (v.color !== undefined) setCopertinaTypo({ sottotitoloColor: v.color });
+                        if (v.align !== undefined) setCopertina('sottotitoloAllineamento', v.align);
+                      }}
+                      showAlign showTimesRomanCourier minSize={8} maxSize={32}
+                    />
                     <textarea
                       rows={2}
                       value={config.copertina.sottotitolo}
                       onChange={(e) => setCopertina('sottotitolo', e.target.value)}
-                      className="w-full border border-border rounded px-3 py-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-vertical"
+                      className="w-full border border-border border-t-0 rounded-b px-3 py-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-vertical"
                       placeholder={"es. Primavera / Estate 2027\n(Invio per andare a capo)"}
                     />
                   </div>
 
                   {/* Sottotitolo 2 */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-gray-600">
-                        Sottotitolo 2 <span className="text-gray-400 font-normal">(opzionale)</span>
-                      </label>
-                      <AlignToggle value={config.copertina.sottotitolo2Allineamento ?? 'center'} onChange={(v) => setCopertina('sottotitolo2Allineamento', v)} />
-                    </div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Sottotitolo 2 <span className="text-gray-400 font-normal">(opzionale)</span>
+                    </label>
+                    <TypoToolbar
+                      value={{ fontFamily: config.copertinaTypo.sottotitolo2FontFamily ?? 'helvetica', fontSize: config.copertinaTypo.sottotitolo2FontSize ?? 11, bold: config.copertinaTypo.sottotitolo2Bold ?? false, italic: config.copertinaTypo.sottotitolo2Italic ?? false, underline: false, uppercase: false, color: config.copertinaTypo.sottotitolo2Color ?? config.copertinaTypo.sottotitoloColor, highlight: '', align: config.copertina.sottotitolo2Allineamento ?? 'center' }}
+                      onChange={(v) => {
+                        if (v.fontFamily !== undefined) setCopertinaTypo({ sottotitolo2FontFamily: v.fontFamily });
+                        if (v.fontSize !== undefined) setCopertinaTypo({ sottotitolo2FontSize: v.fontSize });
+                        if (v.bold !== undefined) setCopertinaTypo({ sottotitolo2Bold: v.bold });
+                        if (v.italic !== undefined) setCopertinaTypo({ sottotitolo2Italic: v.italic });
+                        if (v.color !== undefined) setCopertinaTypo({ sottotitolo2Color: v.color });
+                        if (v.align !== undefined) setCopertina('sottotitolo2Allineamento', v.align);
+                      }}
+                      showAlign showTimesRomanCourier minSize={8} maxSize={32}
+                    />
                     <textarea
                       rows={2}
                       value={config.copertina.sottotitolo2 ?? ''}
                       onChange={(e) => setCopertina('sottotitolo2', e.target.value)}
-                      className="w-full border border-border rounded px-3 py-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-vertical"
+                      className="w-full border border-border border-t-0 rounded-b px-3 py-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 resize-vertical"
                       placeholder={"es. Showroom Milano · Aprile 2027\n(Invio per andare a capo)"}
                     />
                   </div>
 
-                  {/* Tipografia copertina */}
-                  <div className="space-y-3 pt-1">
-                    <p className="text-xs font-semibold text-gray-600">Tipografia</p>
-
-                    {/* Titolo */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Titolo — font (pt)</label>
-                        <input type="number" min={10} max={60} value={config.copertinaTypo.titoloFontSize}
-                          onChange={(e) => setCopertinaTypo({ titoloFontSize: parseFloat(e.target.value) || 28 })}
-                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
-                      </div>
-                      <div className="flex items-end gap-1">
-                        <ToggleBtn active={config.copertinaTypo.titoloBold} onClick={() => setCopertinaTypo({ titoloBold: !config.copertinaTypo.titoloBold })}><span className="font-bold">B</span></ToggleBtn>
-                        <ToggleBtn active={config.copertinaTypo.titoloItalic} onClick={() => setCopertinaTypo({ titoloItalic: !config.copertinaTypo.titoloItalic })}><span className="italic">I</span></ToggleBtn>
-                        <ToggleBtn active={config.copertinaTypo.titoloUppercase} onClick={() => setCopertinaTypo({ titoloUppercase: !config.copertinaTypo.titoloUppercase })} title="Tutto maiuscolo">AA</ToggleBtn>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Famiglia font titolo</label>
-                      <select value={(config.copertinaTypo.titoloFontFamily ?? 'helvetica').toLowerCase()}
-                        onChange={(e) => setCopertinaTypo({ titoloFontFamily: e.target.value })}
-                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none">
-                        <option value="helvetica">Helvetica</option>
-                        <option value="nova">Nova Flat</option>
-                        <option value="inter">Inter</option>
-                        <option value="playfair">Playfair Display</option>
-                        <option value="montserrat">Montserrat</option>
-                        <option value="lato">Lato</option>
-                        <option value="times-roman">Times Roman</option>
-                        <option value="courier">Courier</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore titolo</label>
-                      <MiniColorPicker value={config.copertinaTypo.titoloColor}
-                        onChange={(v) => setCopertinaTypo({ titoloColor: v })} />
-                    </div>
-
-                    {/* Sottotitolo */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Sottotitolo — font (pt)</label>
-                        <input type="number" min={8} max={32} value={config.copertinaTypo.sottotitoloFontSize}
-                          onChange={(e) => setCopertinaTypo({ sottotitoloFontSize: parseFloat(e.target.value) || 13 })}
-                          className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
-                      </div>
-                      <div className="flex items-end gap-1">
-                        <ToggleBtn active={config.copertinaTypo.sottotitoloBold} onClick={() => setCopertinaTypo({ sottotitoloBold: !config.copertinaTypo.sottotitoloBold })}><span className="font-bold">B</span></ToggleBtn>
-                        <ToggleBtn active={config.copertinaTypo.sottotitoloItalic} onClick={() => setCopertinaTypo({ sottotitoloItalic: !config.copertinaTypo.sottotitoloItalic })}><span className="italic">I</span></ToggleBtn>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Famiglia font sottotitolo</label>
-                      <select value={(config.copertinaTypo.sottotitoloFontFamily ?? 'helvetica').toLowerCase()}
-                        onChange={(e) => setCopertinaTypo({ sottotitoloFontFamily: e.target.value })}
-                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none">
-                        <option value="helvetica">Helvetica</option>
-                        <option value="nova">Nova Flat</option>
-                        <option value="inter">Inter</option>
-                        <option value="playfair">Playfair Display</option>
-                        <option value="montserrat">Montserrat</option>
-                        <option value="lato">Lato</option>
-                        <option value="times-roman">Times Roman</option>
-                        <option value="courier">Courier</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore sottotitolo</label>
-                      <MiniColorPicker value={config.copertinaTypo.sottotitoloColor}
-                        onChange={(v) => setCopertinaTypo({ sottotitoloColor: v })} />
-                    </div>
-
-                    {/* Sottotitolo 2 */}
-                    {config.copertina.sottotitolo2 && (
-                      <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Sottotitolo 2 — font (pt)</label>
-                            <input type="number" min={8} max={32} value={config.copertinaTypo.sottotitolo2FontSize ?? 11}
-                              onChange={(e) => setCopertinaTypo({ sottotitolo2FontSize: parseFloat(e.target.value) || 11 })}
-                              className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
-                          </div>
-                          <div className="flex items-end gap-1">
-                            <ToggleBtn active={config.copertinaTypo.sottotitolo2Bold ?? false} onClick={() => setCopertinaTypo({ sottotitolo2Bold: !(config.copertinaTypo.sottotitolo2Bold ?? false) })}><span className="font-bold">B</span></ToggleBtn>
-                            <ToggleBtn active={config.copertinaTypo.sottotitolo2Italic ?? false} onClick={() => setCopertinaTypo({ sottotitolo2Italic: !(config.copertinaTypo.sottotitolo2Italic ?? false) })}><span className="italic">I</span></ToggleBtn>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Colore sottotitolo 2</label>
-                          <MiniColorPicker value={config.copertinaTypo.sottotitolo2Color ?? config.copertinaTypo.sottotitoloColor}
-                            onChange={(v) => setCopertinaTypo({ sottotitolo2Color: v })} />
-                        </div>
-                      </>
-                    )}
-
-                    {/* Spacing sliders */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-gray-600">Spaziatura</p>
+                  {/* Spaziatura e margini */}
+                  <details className="group">
+                    <summary className="cursor-pointer text-xs font-semibold text-gray-600 flex items-center gap-1 select-none">
+                      <ChevronDown size={12} className="group-open:rotate-180 transition-transform" />
+                      Spaziatura e margini
+                    </summary>
+                    <div className="space-y-2 mt-2">
                       <div>
                         <label className="block text-2xs text-gray-500 mb-0.5">Titolo → Sottotitolo ({config.copertinaTypo.spacingTitoloSottotitolo ?? 6} pt)</label>
                         <input type="range" min={0} max={40} value={config.copertinaTypo.spacingTitoloSottotitolo ?? 6}
@@ -3852,13 +3792,25 @@ export default function AdminCatalogoPDFPage() {
                             className="w-full" />
                         </div>
                       )}
+                      <div>
+                        <label className="block text-2xs text-gray-500 mb-0.5">Spaziatura lettere — titolo ({config.copertinaTypo.titoloLetterSpacing ?? 3} pt)</label>
+                        <input type="range" min={0} max={12} step={0.5} value={config.copertinaTypo.titoloLetterSpacing ?? 3}
+                          onChange={(e) => setCopertinaTypo({ titoloLetterSpacing: parseFloat(e.target.value) })}
+                          className="w-full" />
+                      </div>
+                      <div>
+                        <label className="block text-2xs text-gray-500 mb-0.5">Spaziatura lettere — sottotitolo ({config.copertinaTypo.sottotitoloLetterSpacing ?? 1} pt)</label>
+                        <input type="range" min={0} max={12} step={0.5} value={config.copertinaTypo.sottotitoloLetterSpacing ?? 1}
+                          onChange={(e) => setCopertinaTypo({ sottotitoloLetterSpacing: parseFloat(e.target.value) })}
+                          className="w-full" />
+                      </div>
                     </div>
+                  </details>
 
-                    {config.copertina.layout !== 'full-overlay' && (
-                      <ColorSwatchPicker label="Colore sfondo (layout testo / metà)" value={config.copertinaTypo.bgColor}
-                        onChange={(v) => setCopertinaTypo({ bgColor: v })} />
-                    )}
-                  </div>
+                  {config.copertina.layout !== 'full-overlay' && (
+                    <ColorSwatchPicker label="Colore sfondo (layout testo / metà)" value={config.copertinaTypo.bgColor}
+                      onChange={(v) => setCopertinaTypo({ bgColor: v })} />
+                  )}
 
                   {/* Preview moved to side panel */}
                 </div>
