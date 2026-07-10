@@ -627,7 +627,8 @@ function computeLayout(config: CatalogConfig): Layout {
 
   const TEXT_PAD = config.cardBoxStyle?.padding ?? 4;
   const CODE_H = 10;
-  const DESC_H = 18;
+  const descFontSize = config.cardFieldStyles?.descrizione?.fontSize ?? 8;
+  const DESC_H = Math.ceil(descFontSize * 1.35 * 2) + 2; // 2 lines max
   const DETAIL_H = 10;
   const PRICES_H = 24;
   const ROW_GAP = 2;
@@ -1000,9 +1001,9 @@ function ProductCard({
         )}
         {(config.fieldOrder ?? ['codice', 'descrizione', 'misure']).filter((k) => k !== 'codice').map((fieldKey) => {
           if (fieldKey === 'descrizione' && f.descrizione) return (
-            <View key="descrizione" style={{ marginBottom: cfs.descrizione.marginBottom ?? layout.ROW_GAP, overflow: 'hidden', alignItems: alignToFlex(cfs.descrizione.align) }}>
+            <View key="descrizione" style={{ maxHeight: layout.DESC_H, marginBottom: cfs.descrizione.marginBottom ?? layout.ROW_GAP, overflow: 'hidden', alignItems: alignToFlex(cfs.descrizione.align) }}>
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <Text style={{ fontSize: cfs.descrizione.fontSize, fontFamily: fieldFont(cfs.descrizione, config.fontFamiglia), color: cfs.descrizione.color, lineHeight: 1.35 }} {...({ numberOfLines: 3 } as any)}>
+              <Text style={{ fontSize: cfs.descrizione.fontSize, fontFamily: fieldFont(cfs.descrizione, config.fontFamiglia), color: cfs.descrizione.color, lineHeight: 1.35 }} {...({ numberOfLines: 2 } as any)}>
                 {(() => { const raw = f.campoNome === 'nome' ? product.name : (product.description || product.name); return cfs.descrizione.uppercase ? raw.toUpperCase() : raw; })()}
               </Text>
             </View>
@@ -1025,9 +1026,24 @@ function ProductCard({
 
         {anyPriceRow && (
           <View style={[s.priceRow, { height: layout.PRICES_H }]}>
-            {/* Left column: prezzoCosto + pvp (inline label+value per row) */}
-            {(f.prezzoCosto || f.pvp) && (
+            {/* Left column: produttore + paese */}
+            {(f.produttore || f.paese) && (
               <View style={[s.priceItem, { justifyContent: 'center' }]}>
+                {f.produttore && product.produttore ? (
+                  <Text style={{ fontSize: cfs.produttore.fontSize, fontFamily: fieldFont(cfs.produttore, config.fontFamiglia), color: cfs.produttore.color, lineHeight: 1.3, marginBottom: 1.5 }}>
+                    {cfs.produttore.uppercase ? product.produttore.toUpperCase() : product.produttore}
+                  </Text>
+                ) : null}
+                {f.paese && product.paese ? (
+                  <Text style={{ fontSize: cfs.paese.fontSize, fontFamily: fieldFont(cfs.paese, config.fontFamiglia), color: cfs.paese.color, lineHeight: 1.3 }}>
+                    {cfs.paese.uppercase ? product.paese.toUpperCase() : product.paese}
+                  </Text>
+                ) : null}
+              </View>
+            )}
+            {/* Right column: prezzoCosto + pvp */}
+            {(f.prezzoCosto || f.pvp) && (
+              <View style={[s.priceItem, { alignItems: 'flex-end', justifyContent: 'center' }]}>
                 {f.prezzoCosto && (() => {
                   const conReso = Number(product.costoIeConReso);
                   const senzaReso = Number(product.costoIeSenzaReso);
@@ -1051,21 +1067,6 @@ function ProductCard({
                     <Text style={[s.priceLabel, { color: cfs.pvp.color }]}>{euro(product.retailPrice)}</Text>
                   </Text>
                 )}
-              </View>
-            )}
-            {/* Right column: produttore + paese */}
-            {(f.produttore || f.paese) && (
-              <View style={[s.priceItem, { alignItems: 'flex-end', justifyContent: 'center' }]}>
-                {f.produttore && product.produttore ? (
-                  <Text style={{ fontSize: cfs.produttore.fontSize, fontFamily: fieldFont(cfs.produttore, config.fontFamiglia), color: cfs.produttore.color, lineHeight: 1.3, marginBottom: 1.5 }}>
-                    {cfs.produttore.uppercase ? product.produttore.toUpperCase() : product.produttore}
-                  </Text>
-                ) : null}
-                {f.paese && product.paese ? (
-                  <Text style={{ fontSize: cfs.paese.fontSize, fontFamily: fieldFont(cfs.paese, config.fontFamiglia), color: cfs.paese.color, lineHeight: 1.3 }}>
-                    {cfs.paese.uppercase ? product.paese.toUpperCase() : product.paese}
-                  </Text>
-                ) : null}
               </View>
             )}
           </View>

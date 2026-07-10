@@ -977,6 +977,23 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
   const titoloText = typo.titoloUppercase ? (cov.titolo ?? '').toUpperCase() : cov.titolo;
   const subtitle2  = cov.sottotitolo2 ?? '';
 
+  // Logo2
+  const FINAL_LOGO_H_PT: Record<string, number> = { piccolo: 16, medio: 22, grande: 32 };
+  const logo2Src = (cov.logo2Tipo ?? 'none') === 'custom' ? (cov.logo2CustomBase64 ?? null) : null;
+  const logo2H = Math.round((FINAL_LOGO_H_PT[cov.logo2Dimensione ?? 'medio'] ?? 22) * S);
+  const logo2PosX = cov.logo2PosX ?? 'right';
+  const logo2PosY = cov.logo2PosY ?? 'bottom';
+  const justifyLogo2 = logo2PosX === 'left' ? 'flex-start' : logo2PosX === 'center' ? 'center' : 'flex-end';
+  const MARGIN = 30 * S;
+  const logo2Top = logo2PosY === 'top' ? MARGIN : logo2PosY === 'middle' ? H / 2 - logo2H / 2 : H - logo2H - MARGIN;
+  const logo2El = logo2Src ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <div style={{ position: 'absolute', top: logo2Top, left: MARGIN, right: MARGIN, display: 'flex', justifyContent: justifyLogo2 }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={logo2Src} alt="logo2" style={{ height: logo2H, objectFit: 'contain' }} />
+    </div>
+  ) : null;
+
   // Shared text block — subOpacity/sub2Opacity for full-overlay (PDF: 0.85/0.75), subLS for subtitle letterSpacing (solo-testo uses 1.5)
   const textBlock = (ls: number, subOpacity = 1, sub2Opacity = 1, subLS = 1 * S) => (
     <>
@@ -1012,6 +1029,7 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: overlayH, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: `0 ${40 * S}px ${44 * S}px` }}>
           {textBlock(3 * S, 0.85, 0.75)}
         </div>
+        {logo2El}
       </>
     );
   } else if (cov.layout === 'half') {
@@ -1040,22 +1058,26 @@ function CoverPreview({ config }: { config: { copertina: FormState['copertina'];
           )}
           {textBlock(3 * S)}
         </div>
+        {logo2El}
       </>
     );
   } else {
     // solo-testo — PDF uses typo.bgColor as full background
     inner = (
-      <div style={{ position: 'absolute', inset: 0, backgroundColor: typo.bgColor ?? config.colori.sfondoPagina, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `0 ${60 * S}px` }}>
-        {logoSrc && (
-          <div style={{ display: 'flex', justifyContent: justifyLogo, marginBottom: 24 * S }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
-          </div>
-        )}
-        {/* Accent line — 50×1.5pt in PDF */}
-        <div style={{ width: 50 * S, height: Math.max(1, 1.5 * S), backgroundColor: '#8B7355', alignSelf: 'center', marginBottom: 20 * S, flexShrink: 0 }} />
-        {textBlock(4 * S, 1, 1, 1.5 * S)}
-      </div>
+      <>
+        <div style={{ position: 'absolute', inset: 0, backgroundColor: typo.bgColor ?? config.colori.sfondoPagina, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `0 ${60 * S}px` }}>
+          {logoSrc && (
+            <div style={{ display: 'flex', justifyContent: justifyLogo, marginBottom: 24 * S }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoSrc} alt="logo" style={{ height: logoH, objectFit: 'contain' }} />
+            </div>
+          )}
+          {/* Accent line — 50×1.5pt in PDF */}
+          <div style={{ width: 50 * S, height: Math.max(1, 1.5 * S), backgroundColor: '#8B7355', alignSelf: 'center', marginBottom: 20 * S, flexShrink: 0 }} />
+          {textBlock(4 * S, 1, 1, 1.5 * S)}
+        </div>
+        {logo2El}
+      </>
     );
   }
 
@@ -4756,10 +4778,10 @@ export default function AdminCatalogoPDFPage() {
       </div>
 
       {/* Right: contextual preview + generate + templates */}
-      <div className="w-full lg:w-80 flex-shrink-0 space-y-3">
+      <div className="w-full lg:w-80 flex-shrink-0 space-y-3 lg:self-start lg:sticky lg:top-4">
 
         {/* ── Contextual preview ── */}
-        {activeTab !== 'generale' && <div className="border border-border rounded overflow-hidden sticky top-4">
+        {activeTab !== 'generale' && <div className="border border-border rounded overflow-hidden">
           <div className="px-4 py-2.5 bg-gray-50 border-b border-border flex items-center justify-between">
             <p className="text-2xs font-semibold tracking-widest uppercase text-gray-500">Anteprima live</p>
             <span className="text-2xs text-gray-400 bg-white border border-border px-2 py-0.5 rounded-full">
