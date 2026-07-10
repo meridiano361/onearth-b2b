@@ -9,6 +9,6 @@ export const metadata: Metadata = { title: 'Visual — Moda PE27' };
 
 export default async function ModaParetiPage() {
   const session = await getServerSession(authOptions);
-  if (!session || !canAccessModa(session.user?.role)) redirect('/home');
+  if (!session || !canAccessModa(session.user?.role, session.user?.email)) redirect('/home');
   return <ModaPareti />;
 }

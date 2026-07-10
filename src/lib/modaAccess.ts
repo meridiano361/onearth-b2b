@@ -12,7 +12,11 @@ export const CASA_BRANCH_ID = 'casa27' as const;
 
 export type CatalogBranchId = typeof MODA_BRANCH_ID | typeof CASA_BRANCH_ID;
 
-/** Returns true only for admin roles (SUPER_ADMIN, ADMIN, COMMERCIALE, MAGAZZINO). */
-export function canAccessModa(role: string | null | undefined): boolean {
-  return isAdminRole(role);
+// Email allowlist for non-admin access during testing
+const MODA_ALLOWED_EMAILS = new Set(['cremona@meridiano361.it']);
+
+/** Returns true for admin roles or emails in the testing allowlist. */
+export function canAccessModa(role: string | null | undefined, email?: string | null): boolean {
+  if (isAdminRole(role)) return true;
+  return !!email && MODA_ALLOWED_EMAILS.has(email);
 }

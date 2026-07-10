@@ -8,6 +8,7 @@ export default withAuth(
     const token = req.nextauth.token;
     const pathname = req.nextUrl.pathname;
     const role = token?.role as string ?? '';
+    const email = token?.email as string | null ?? null;
 
     // Admin area guards
     if (pathname.startsWith('/admin')) {
@@ -21,7 +22,7 @@ export default withAuth(
 
     // Moda PE27 and Casa hub — exclusive access while experimental
     if (pathname.startsWith('/moda') || pathname.startsWith('/casa')) {
-      if (!canAccessModa(role)) {
+      if (!canAccessModa(role, email)) {
         return NextResponse.redirect(new URL('/home', req.url));
       }
     }

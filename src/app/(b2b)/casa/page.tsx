@@ -9,6 +9,6 @@ export const metadata: Metadata = { title: 'Casa 2027 — ON EARTH B2B' };
 
 export default async function CasaPage() {
   const session = await getServerSession(authOptions);
-  if (!session || !canAccessModa(session.user?.role)) redirect('/home');
+  if (!session || !canAccessModa(session.user?.role, session.user?.email)) redirect('/home');
   return <CasaHome />;
 }

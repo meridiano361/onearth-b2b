@@ -9,6 +9,6 @@ export const metadata: Metadata = { title: 'Outfit Espositivo — Moda PE27' };
 
 export default async function ModaOutfitDetailPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session || !canAccessModa(session.user?.role)) redirect('/home');
+  if (!session || !canAccessModa(session.user?.role, session.user?.email)) redirect('/home');
   return <ModaOutfitDetail outfitId={params.id} />;
 }

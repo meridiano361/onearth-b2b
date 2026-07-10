@@ -14,6 +14,6 @@ import type { Session } from 'next-auth';
  */
 export async function requireModaSession(): Promise<Session | null> {
   const session = await getServerSession(authOptions);
-  if (!session || !canAccessModa(session.user?.role)) return null;
+  if (!session || !canAccessModa(session.user?.role, session.user?.email)) return null;
   return session;
 }
