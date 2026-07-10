@@ -1056,7 +1056,7 @@ function ProductCard({
                   const senzaReso = Number(product.costoIeSenzaReso);
                   const hasConReso = conReso > 0;
                   const hasSenzaReso = senzaReso > 0;
-                  const ls = [s.priceLabel, { color: cfs.prezzoCosto.color }] as any;
+                  const ls = [s.priceLabel, { fontSize: cfs.prezzoCosto.fontSize, fontFamily: fieldFont(cfs.prezzoCosto, config.fontFamiglia), color: cfs.prezzoCosto.color }] as any;
                   if (hasConReso) return (
                     <>
                       <Text style={{ marginBottom: 1.5 }}><Text style={ls}>Costo i.e. con reso </Text><Text style={ls}>{euro(conReso)}</Text></Text>
@@ -1068,12 +1068,15 @@ function ProductCard({
                   );
                   return <Text style={{ marginBottom: 1.5 }}><Text style={ls}>Costo i.e. </Text><Text style={ls}>{euro(product.costPrice)}</Text></Text>;
                 })()}
-                {f.pvp && (
-                  <Text>
-                    <Text style={[s.priceLabel, { color: cfs.pvp.color }]}>PVP i.i. </Text>
-                    <Text style={[s.priceLabel, { color: cfs.pvp.color }]}>{euro(product.retailPrice)}</Text>
-                  </Text>
-                )}
+                {f.pvp && (() => {
+                  const lp = [s.priceLabel, { fontSize: cfs.pvp.fontSize, fontFamily: fieldFont(cfs.pvp, config.fontFamiglia), color: cfs.pvp.color }] as any;
+                  return (
+                    <Text>
+                      <Text style={lp}>PVP i.i. </Text>
+                      <Text style={lp}>{euro(product.retailPrice)}</Text>
+                    </Text>
+                  );
+                })()}
               </View>
             )}
           </View>
