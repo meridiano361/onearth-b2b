@@ -97,6 +97,11 @@ interface FormState {
     imgOffsetY: number;
     imgScale: number;
     imgOpacity: number;
+    logo2Tipo?: 'custom' | 'none';
+    logo2CustomBase64?: string | null;
+    logo2PosX?: 'left' | 'center' | 'right';
+    logo2PosY?: 'top' | 'middle' | 'bottom';
+    logo2Dimensione?: 'piccolo' | 'medio' | 'grande';
   };
   // ITEM 6: custom sections
   useSezioniPersonalizzate: boolean;
@@ -129,6 +134,11 @@ interface FormState {
     sezioneFinale3Colore: string;
     sezioneFinale3Align: 'left' | 'center' | 'right';
     testoSfondoColore: string;
+    logo2Tipo: 'custom' | 'none';
+    logo2CustomBase64: string | null;
+    logo2PosX: 'left' | 'center' | 'right';
+    logo2Posizione: 'above-title' | 'between' | 'below-text';
+    logo2Dimensione: 'piccolo' | 'medio' | 'grande';
   };
   paginaPenultima: {
     attiva: boolean;
@@ -155,6 +165,11 @@ interface FormState {
     sezioneFinale3Colore: string;
     sezioneFinale3Align: 'left' | 'center' | 'right';
     testoSfondoColore: string;
+    logo2Tipo: 'custom' | 'none';
+    logo2CustomBase64: string | null;
+    logo2PosX: 'left' | 'center' | 'right';
+    logo2Posizione: 'above-title' | 'between' | 'below-text';
+    logo2Dimensione: 'piccolo' | 'medio' | 'grande';
   };
   cardFieldStyles: CardFieldStyles;
   separatoreStyle: SeparatorStyle;
@@ -278,6 +293,11 @@ const DEFAULT_STATE: FormState = {
     imgOffsetY: 0,
     imgScale: 100,
     imgOpacity: 100,
+    logo2Tipo: 'none' as const,
+    logo2CustomBase64: null,
+    logo2PosX: 'right' as const,
+    logo2PosY: 'bottom' as const,
+    logo2Dimensione: 'medio' as const,
   },
   paginaFinale: {
     attiva: false,
@@ -302,6 +322,11 @@ const DEFAULT_STATE: FormState = {
     sezioneFinale3Colore: '#9CA3AF',
     sezioneFinale3Align: 'center',
     testoSfondoColore: '',
+    logo2Tipo: 'none' as const,
+    logo2CustomBase64: null,
+    logo2PosX: 'center' as const,
+    logo2Posizione: 'below-text' as const,
+    logo2Dimensione: 'medio' as const,
   },
   paginaPenultima: {
     attiva: false,
@@ -326,6 +351,11 @@ const DEFAULT_STATE: FormState = {
     sezioneFinale3Colore: '#9CA3AF',
     sezioneFinale3Align: 'center',
     testoSfondoColore: '',
+    logo2Tipo: 'none' as const,
+    logo2CustomBase64: null,
+    logo2PosX: 'center' as const,
+    logo2Posizione: 'below-text' as const,
+    logo2Dimensione: 'medio' as const,
   },
   cardFieldStyles: {
     codice:      { fontSize: 6.5, bold: false, italic: false, color: '#9CA3AF', align: 'left', uppercase: false },
@@ -366,12 +396,16 @@ const DEFAULT_STATE: FormState = {
   },
   paginaFinaleTypo: {
     titoloFontSize: 20, titoloBold: true, titoloItalic: false, titoloColor: '#1C1C1C',
+    titoloFontFamily: 'helvetica', titoloUppercase: false, titoloUnderline: false, titoloHighlight: '',
     testoFontSize: 10, testoColor: '#9CA3AF',
+    testoFontFamily: 'helvetica', testoBold: false, testoItalic: false, testoUnderline: false, testoUppercase: false,
     titoloMarginBottom: 12, sezione1MarginBottom: 16, sezione2MarginBottom: 16, marginTop: 20,
   },
   paginaPenultimaTypo: {
     titoloFontSize: 20, titoloBold: true, titoloItalic: false, titoloColor: '#1C1C1C',
+    titoloFontFamily: 'helvetica', titoloUppercase: false, titoloUnderline: false, titoloHighlight: '',
     testoFontSize: 10, testoColor: '#9CA3AF',
+    testoFontFamily: 'helvetica', testoBold: false, testoItalic: false, testoUnderline: false, testoUppercase: false,
     titoloMarginBottom: 12, sezione1MarginBottom: 16, sezione2MarginBottom: 16, marginTop: 20,
   },
   useSezioniPersonalizzate: false,
@@ -1752,6 +1786,96 @@ function SortableFieldStyleRow({
   );
 }
 
+// ── TypoToolbar ───────────────────────────────────────────────────────────────
+
+interface TypoBlockProps {
+  fontFamily?: string;
+  fontSize: number;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  uppercase?: boolean;
+  color: string;
+  highlight?: string;
+  align?: 'left' | 'center' | 'right';
+}
+
+function TypoToolbar({
+  value,
+  onChange,
+  showAlign = true,
+  minSize = 6,
+  maxSize = 72,
+}: {
+  value: TypoBlockProps;
+  onChange: (patch: Partial<TypoBlockProps>) => void;
+  showAlign?: boolean;
+  minSize?: number;
+  maxSize?: number;
+}) {
+  const btnCls = (active?: boolean) =>
+    `h-6 w-6 text-xs rounded flex items-center justify-center hover:bg-gray-200 flex-shrink-0 ${active ? 'bg-gray-300 text-gray-900' : 'text-gray-500'}`;
+  return (
+    <div className="flex items-center gap-0.5 flex-wrap bg-gray-50 border border-border rounded-t px-1.5 py-0.5">
+      <select
+        value={value.fontFamily ?? 'helvetica'}
+        onChange={(e) => onChange({ fontFamily: e.target.value })}
+        className="h-6 text-2xs border border-border rounded px-1 bg-white max-w-[80px] focus:outline-none"
+      >
+        <option value="helvetica">Helvetica</option>
+        <option value="inter">Inter</option>
+        <option value="lato">Lato</option>
+        <option value="montserrat">Montserrat</option>
+        <option value="playfair">Playfair</option>
+        <option value="nova">Nova</option>
+      </select>
+      <input
+        type="number" min={minSize} max={maxSize} value={value.fontSize}
+        onChange={(e) => onChange({ fontSize: parseFloat(e.target.value) || minSize })}
+        className="w-10 h-6 text-2xs border border-border rounded px-1 text-center bg-white focus:outline-none"
+      />
+      <div className="w-px h-4 bg-border mx-0.5 flex-shrink-0" />
+      <button type="button" onClick={() => onChange({ bold: !value.bold })} title="Grassetto" className={btnCls(value.bold)}>
+        <span className="font-bold">B</span>
+      </button>
+      <button type="button" onClick={() => onChange({ italic: !value.italic })} title="Corsivo" className={btnCls(value.italic)}>
+        <span className="italic">I</span>
+      </button>
+      <button type="button" onClick={() => onChange({ underline: !value.underline })} title="Sottolineato" className={btnCls(value.underline)}>
+        <span className="underline">U</span>
+      </button>
+      <button type="button" onClick={() => onChange({ uppercase: !value.uppercase })} title="Maiuscolo"
+        className={`h-6 px-1 text-2xs font-semibold rounded flex items-center justify-center hover:bg-gray-200 flex-shrink-0 ${value.uppercase ? 'bg-gray-300 text-gray-900' : 'text-gray-500'}`}>
+        AA
+      </button>
+      <div className="w-px h-4 bg-border mx-0.5 flex-shrink-0" />
+      <label className="relative flex flex-col items-center cursor-pointer flex-shrink-0" title="Colore testo">
+        <span className="text-xs font-bold leading-none" style={{ color: value.color }}>A</span>
+        <div className="h-1 w-5 rounded-sm" style={{ backgroundColor: value.color }} />
+        <input type="color" value={value.color} onChange={(e) => onChange({ color: e.target.value })}
+          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+      </label>
+      <div className="flex items-center gap-0.5 flex-shrink-0" title="Sfondo / evidenziatore">
+        <label className="relative flex flex-col items-center cursor-pointer">
+          <span className="text-2xs leading-none px-0.5 rounded-sm" style={{ backgroundColor: value.highlight || 'transparent', color: value.highlight ? '#000' : '#9CA3AF' }}>ab</span>
+          <div className="h-1 w-5 rounded-sm" style={{ backgroundColor: value.highlight || '#E5E7EB' }} />
+          <input type="color" value={value.highlight || '#ffffff'} onChange={(e) => onChange({ highlight: e.target.value })}
+            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+        </label>
+        {value.highlight && (
+          <button type="button" onClick={() => onChange({ highlight: '' })} className="text-2xs text-red-400 hover:text-red-600 leading-none">✕</button>
+        )}
+      </div>
+      {showAlign && (
+        <>
+          <div className="w-px h-4 bg-border mx-0.5 flex-shrink-0" />
+          <AlignToggle value={value.align ?? 'center'} onChange={(v) => onChange({ align: v })} />
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function AdminCatalogoPDFPage() {
@@ -1767,10 +1891,13 @@ export default function AdminCatalogoPDFPage() {
   const [activeTab, setActiveTab] = useState<'generale' | 'scheda' | 'copertina' | 'ultima' | 'penultima'>('generale');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
+  const copertinaLogo2FileInputRef = useRef<HTMLInputElement>(null);
   const finalImgFileInputRef = useRef<HTMLInputElement>(null);
   const finalLogoFileInputRef = useRef<HTMLInputElement>(null);
+  const finalLogo2FileInputRef = useRef<HTMLInputElement>(null);
   const penultimaImgFileInputRef = useRef<HTMLInputElement>(null);
   const penultimaLogoFileInputRef = useRef<HTMLInputElement>(null);
+  const penultimaLogo2FileInputRef = useRef<HTMLInputElement>(null);
 
   // Section open/close
   const [sections, setSections] = useState({
@@ -3481,6 +3608,72 @@ export default function AdminCatalogoPDFPage() {
                     )}
                   </div>
 
+                  {/* Logo aggiuntivo copertina */}
+                  <div className="space-y-2 pt-1">
+                    <p className="text-xs font-semibold text-gray-600">Logo aggiuntivo</p>
+                    {(['none', 'custom'] as const).map((v) => (
+                      <label key={v} className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="copertina-logo2tipo" value={v}
+                          checked={(config.copertina.logo2Tipo ?? 'none') === v}
+                          onChange={() => setCopertina('logo2Tipo', v)} className="accent-primary" />
+                        <span className="text-xs text-gray-700">{v === 'none' ? 'Nessun logo aggiuntivo' : 'Carica logo aggiuntivo'}</span>
+                      </label>
+                    ))}
+                    {config.copertina.logo2Tipo === 'custom' && (
+                      <div className="pl-5 space-y-2">
+                        <input ref={copertinaLogo2FileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              setCopertina('logo2CustomBase64', ev.target?.result as string);
+                              if (copertinaLogo2FileInputRef.current) copertinaLogo2FileInputRef.current.value = '';
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                          className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer" />
+                        {config.copertina.logo2CustomBase64 && (
+                          <div className="flex items-center gap-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={config.copertina.logo2CustomBase64} alt="Logo2" className="h-8 object-contain border border-border rounded bg-white px-2" />
+                            <button type="button" onClick={() => { setCopertina('logo2CustomBase64', null); if (copertinaLogo2FileInputRef.current) copertinaLogo2FileInputRef.current.value = ''; }}
+                              className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Posizione X</label>
+                            <select value={config.copertina.logo2PosX ?? 'right'} onChange={(e) => setCopertina('logo2PosX', e.target.value)}
+                              className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none">
+                              <option value="left">Sinistra</option>
+                              <option value="center">Centro</option>
+                              <option value="right">Destra</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Posizione Y</label>
+                            <select value={config.copertina.logo2PosY ?? 'bottom'} onChange={(e) => setCopertina('logo2PosY', e.target.value)}
+                              className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none">
+                              <option value="top">In alto</option>
+                              <option value="middle">A metà</option>
+                              <option value="bottom">In basso</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione</label>
+                            <select value={config.copertina.logo2Dimensione ?? 'medio'} onChange={(e) => setCopertina('logo2Dimensione', e.target.value)}
+                              className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none">
+                              <option value="piccolo">Piccolo</option>
+                              <option value="medio">Medio</option>
+                              <option value="grande">Grande</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Titolo */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
@@ -3666,14 +3859,28 @@ export default function AdminCatalogoPDFPage() {
               />
               {config.paginaFinale.attiva && (
                 <div className="space-y-3 pl-2 border-l-2 border-border">
-                  {/* Titolo */}
+                  {/* Titolo con toolbar Word-like */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-gray-600">
-                        Titolo pagina <span className="text-gray-400 font-normal">(opzionale)</span>
-                      </label>
-                      <AlignToggle value={config.paginaFinale.titoloAllineamento} onChange={(v) => setPaginaFinale('titoloAllineamento', v)} />
-                    </div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Titolo pagina <span className="text-gray-400 font-normal">(opzionale)</span>
+                    </label>
+                    <TypoToolbar
+                      value={{ fontFamily: config.paginaFinaleTypo.titoloFontFamily, fontSize: config.paginaFinaleTypo.titoloFontSize, bold: config.paginaFinaleTypo.titoloBold, italic: config.paginaFinaleTypo.titoloItalic, underline: config.paginaFinaleTypo.titoloUnderline, uppercase: config.paginaFinaleTypo.titoloUppercase, color: config.paginaFinaleTypo.titoloColor, highlight: config.paginaFinaleTypo.titoloHighlight || '', align: config.paginaFinale.titoloAllineamento }}
+                      onChange={(v) => {
+                        if (v.fontFamily !== undefined) setPaginaFinaleTypo({ titoloFontFamily: v.fontFamily });
+                        if (v.fontSize !== undefined) setPaginaFinaleTypo({ titoloFontSize: v.fontSize });
+                        if (v.bold !== undefined) setPaginaFinaleTypo({ titoloBold: v.bold });
+                        if (v.italic !== undefined) setPaginaFinaleTypo({ titoloItalic: v.italic });
+                        if (v.underline !== undefined) setPaginaFinaleTypo({ titoloUnderline: v.underline });
+                        if (v.uppercase !== undefined) setPaginaFinaleTypo({ titoloUppercase: v.uppercase });
+                        if (v.color !== undefined) setPaginaFinaleTypo({ titoloColor: v.color });
+                        if (v.highlight !== undefined) setPaginaFinaleTypo({ titoloHighlight: v.highlight });
+                        if (v.align !== undefined) setPaginaFinale('titoloAllineamento', v.align);
+                      }}
+                      showAlign
+                      minSize={8}
+                      maxSize={72}
+                    />
                     <MiniRichTextEditor
                       content={config.paginaFinale.titolo}
                       onChange={(html) => setPaginaFinale('titolo', html)}
@@ -3681,9 +3888,24 @@ export default function AdminCatalogoPDFPage() {
                     />
                   </div>
 
-                  {/* Testo libero */}
+                  {/* Testo libero con toolbar Word-like */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Testo libero</label>
+                    <TypoToolbar
+                      value={{ fontFamily: config.paginaFinaleTypo.testoFontFamily, fontSize: config.paginaFinaleTypo.testoFontSize, bold: config.paginaFinaleTypo.testoBold, italic: config.paginaFinaleTypo.testoItalic, underline: config.paginaFinaleTypo.testoUnderline, uppercase: config.paginaFinaleTypo.testoUppercase, color: config.paginaFinaleTypo.testoColor, highlight: config.paginaFinale.testoSfondoColore || '', align: config.paginaFinale.testoAllineamento }}
+                      onChange={(v) => {
+                        if (v.fontFamily !== undefined) setPaginaFinaleTypo({ testoFontFamily: v.fontFamily });
+                        if (v.fontSize !== undefined) setPaginaFinaleTypo({ testoFontSize: v.fontSize });
+                        if (v.bold !== undefined) setPaginaFinaleTypo({ testoBold: v.bold });
+                        if (v.italic !== undefined) setPaginaFinaleTypo({ testoItalic: v.italic });
+                        if (v.underline !== undefined) setPaginaFinaleTypo({ testoUnderline: v.underline });
+                        if (v.uppercase !== undefined) setPaginaFinaleTypo({ testoUppercase: v.uppercase });
+                        if (v.color !== undefined) setPaginaFinaleTypo({ testoColor: v.color });
+                        if (v.highlight !== undefined) setPaginaFinale('testoSfondoColore', v.highlight);
+                        if (v.align !== undefined) setPaginaFinale('testoAllineamento', v.align);
+                      }}
+                      showAlign
+                    />
                     <RichTextEditor
                       content={config.paginaFinale.testo}
                       onChange={(html) => setPaginaFinale('testo', html)}
@@ -3691,74 +3913,104 @@ export default function AdminCatalogoPDFPage() {
                     />
                   </div>
 
-                  {/* Tipografia pagina finale */}
-                  <div className="space-y-3 pt-1">
-                    <p className="text-xs font-semibold text-gray-600">Tipografia</p>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Font titolo (pt)</label>
-                      <input type="number" min={10} max={48} value={config.paginaFinaleTypo.titoloFontSize}
-                        onChange={(e) => setPaginaFinaleTypo({ titoloFontSize: parseFloat(e.target.value) || 20 })}
-                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore titolo</label>
-                      <MiniColorPicker value={config.paginaFinaleTypo.titoloColor}
-                        onChange={(v) => setPaginaFinaleTypo({ titoloColor: v })} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Font testo corpo (pt)</label>
-                      <input type="number" min={6} max={24} value={config.paginaFinaleTypo.testoFontSize}
-                        onChange={(e) => setPaginaFinaleTypo({ testoFontSize: parseFloat(e.target.value) || 10 })}
-                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore testo corpo</label>
-                      <MiniColorPicker value={config.paginaFinaleTypo.testoColor}
-                        onChange={(v) => setPaginaFinaleTypo({ testoColor: v })} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Sfondo area testo <span className="text-gray-400 font-normal">(opzionale)</span></label>
-                      <div className="flex items-center gap-2">
-                        <MiniColorPicker value={config.paginaFinale.testoSfondoColore || '#ffffff'}
-                          onChange={(v) => setPaginaFinale('testoSfondoColore', v)} />
-                        {config.paginaFinale.testoSfondoColore && (
-                          <button onClick={() => setPaginaFinale('testoSfondoColore', '')} className="text-2xs text-gray-400 hover:text-gray-600">rimuovi</button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Spaziatura */}
-                    <p className="text-xs font-semibold text-gray-600 pt-1">Spaziatura</p>
-                    <div className="grid grid-cols-2 gap-3">
+                  {/* Spaziatura */}
+                  <details className="group">
+                    <summary className="cursor-pointer text-xs font-semibold text-gray-600 flex items-center gap-1 select-none">
+                      <ChevronDown size={12} className="group-open:rotate-180 transition-transform" />
+                      Spaziatura
+                    </summary>
+                    <div className="grid grid-cols-2 gap-3 mt-2">
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Margine superiore (pt)</label>
                         <input type="range" min={0} max={80} value={config.paginaFinaleTypo.marginTop ?? 20}
-                          onChange={(e) => setPaginaFinaleTypo({ marginTop: parseInt(e.target.value) })}
-                          className="w-full" />
+                          onChange={(e) => setPaginaFinaleTypo({ marginTop: parseInt(e.target.value) })} className="w-full" />
                         <span className="text-2xs text-gray-400">{config.paginaFinaleTypo.marginTop ?? 20}pt</span>
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo titolo (pt)</label>
                         <input type="range" min={0} max={40} value={config.paginaFinaleTypo.titoloMarginBottom ?? 12}
-                          onChange={(e) => setPaginaFinaleTypo({ titoloMarginBottom: parseInt(e.target.value) })}
-                          className="w-full" />
+                          onChange={(e) => setPaginaFinaleTypo({ titoloMarginBottom: parseInt(e.target.value) })} className="w-full" />
                         <span className="text-2xs text-gray-400">{config.paginaFinaleTypo.titoloMarginBottom ?? 12}pt</span>
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo sez. 1 (pt)</label>
                         <input type="range" min={0} max={40} value={config.paginaFinaleTypo.sezione1MarginBottom ?? 16}
-                          onChange={(e) => setPaginaFinaleTypo({ sezione1MarginBottom: parseInt(e.target.value) })}
-                          className="w-full" />
+                          onChange={(e) => setPaginaFinaleTypo({ sezione1MarginBottom: parseInt(e.target.value) })} className="w-full" />
                         <span className="text-2xs text-gray-400">{config.paginaFinaleTypo.sezione1MarginBottom ?? 16}pt</span>
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo sez. 2 (pt)</label>
                         <input type="range" min={0} max={40} value={config.paginaFinaleTypo.sezione2MarginBottom ?? 16}
-                          onChange={(e) => setPaginaFinaleTypo({ sezione2MarginBottom: parseInt(e.target.value) })}
-                          className="w-full" />
+                          onChange={(e) => setPaginaFinaleTypo({ sezione2MarginBottom: parseInt(e.target.value) })} className="w-full" />
                         <span className="text-2xs text-gray-400">{config.paginaFinaleTypo.sezione2MarginBottom ?? 16}pt</span>
                       </div>
                     </div>
+                  </details>
+
+                  {/* Logo aggiuntivo */}
+                  <div className="space-y-2 pt-1">
+                    <p className="text-xs font-semibold text-gray-600">Logo aggiuntivo</p>
+                    {(['none', 'custom'] as const).map((v) => (
+                      <label key={v} className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="finale-logo2tipo" value={v}
+                          checked={(config.paginaFinale.logo2Tipo ?? 'none') === v}
+                          onChange={() => setPaginaFinale('logo2Tipo', v)} className="accent-primary" />
+                        <span className="text-xs text-gray-700">{v === 'none' ? 'Nessun logo aggiuntivo' : 'Carica logo aggiuntivo'}</span>
+                      </label>
+                    ))}
+                    {config.paginaFinale.logo2Tipo === 'custom' && (
+                      <div className="pl-5 space-y-2">
+                        <input ref={finalLogo2FileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              setPaginaFinale('logo2CustomBase64', ev.target?.result as string);
+                              if (finalLogo2FileInputRef.current) finalLogo2FileInputRef.current.value = '';
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                          className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer" />
+                        {config.paginaFinale.logo2CustomBase64 && (
+                          <div className="flex items-center gap-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={config.paginaFinale.logo2CustomBase64} alt="Logo" className="h-8 object-contain border border-border rounded bg-white px-2" />
+                            <button type="button" onClick={() => { setPaginaFinale('logo2CustomBase64', null); if (finalLogo2FileInputRef.current) finalLogo2FileInputRef.current.value = ''; }}
+                              className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Posizione nel layout</label>
+                            <select value={config.paginaFinale.logo2Posizione ?? 'below-text'} onChange={(e) => setPaginaFinale('logo2Posizione', e.target.value)}
+                              className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none">
+                              <option value="above-title">Sopra il titolo</option>
+                              <option value="between">Tra titolo e testo</option>
+                              <option value="below-text">Sotto il testo</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Allineamento</label>
+                            <select value={config.paginaFinale.logo2PosX ?? 'center'} onChange={(e) => setPaginaFinale('logo2PosX', e.target.value)}
+                              className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none">
+                              <option value="left">Sinistra</option>
+                              <option value="center">Centro</option>
+                              <option value="right">Destra</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione</label>
+                            <select value={config.paginaFinale.logo2Dimensione ?? 'medio'} onChange={(e) => setPaginaFinale('logo2Dimensione', e.target.value)}
+                              className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none">
+                              <option value="piccolo">Piccolo</option>
+                              <option value="medio">Medio</option>
+                              <option value="grande">Grande</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Sezione in fondo (sezione 3) */}
@@ -3899,38 +4151,34 @@ export default function AdminCatalogoPDFPage() {
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Offset X (%)</label>
                           <input type="range" min={-100} max={100} value={config.paginaFinale.imgOffsetX ?? 0}
-                            onChange={(e) => setPaginaFinale('imgOffsetX', parseInt(e.target.value))}
-                            className="w-full" />
+                            onChange={(e) => setPaginaFinale('imgOffsetX', parseInt(e.target.value))} className="w-full" />
                           <span className="text-2xs text-gray-400">{config.paginaFinale.imgOffsetX ?? 0}%</span>
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Offset Y (%)</label>
                           <input type="range" min={-100} max={100} value={config.paginaFinale.imgOffsetY ?? 0}
-                            onChange={(e) => setPaginaFinale('imgOffsetY', parseInt(e.target.value))}
-                            className="w-full" />
+                            onChange={(e) => setPaginaFinale('imgOffsetY', parseInt(e.target.value))} className="w-full" />
                           <span className="text-2xs text-gray-400">{config.paginaFinale.imgOffsetY ?? 0}%</span>
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Scala (%)</label>
                           <input type="range" min={50} max={200} value={config.paginaFinale.imgScale ?? 100}
-                            onChange={(e) => setPaginaFinale('imgScale', parseInt(e.target.value))}
-                            className="w-full" />
+                            onChange={(e) => setPaginaFinale('imgScale', parseInt(e.target.value))} className="w-full" />
                           <span className="text-2xs text-gray-400">{config.paginaFinale.imgScale ?? 100}%</span>
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Opacità (%)</label>
                           <input type="range" min={10} max={100} value={config.paginaFinale.imgOpacity ?? 100}
-                            onChange={(e) => setPaginaFinale('imgOpacity', parseInt(e.target.value))}
-                            className="w-full" />
+                            onChange={(e) => setPaginaFinale('imgOpacity', parseInt(e.target.value))} className="w-full" />
                           <span className="text-2xs text-gray-400">{config.paginaFinale.imgOpacity ?? 100}%</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Logo */}
+                  {/* Logo principale */}
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-gray-600">Logo</p>
+                    <p className="text-xs font-semibold text-gray-600">Logo principale</p>
                     {(
                       [
                         { value: 'onearth', label: 'Logo ON EARTH (automatico)' },
@@ -4006,8 +4254,6 @@ export default function AdminCatalogoPDFPage() {
                       </div>
                     )}
                   </div>
-
-                  {/* Preview moved to side panel */}
                 </div>
               )}
             </div>
@@ -4032,14 +4278,28 @@ export default function AdminCatalogoPDFPage() {
               />
               {config.paginaPenultima.attiva && (
                 <div className="space-y-3 pl-2 border-l-2 border-border">
-                  {/* Titolo */}
+                  {/* Titolo con toolbar Word-like */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-gray-600">
-                        Titolo pagina <span className="text-gray-400 font-normal">(opzionale)</span>
-                      </label>
-                      <AlignToggle value={config.paginaPenultima.titoloAllineamento} onChange={(v) => setPaginaPenultima('titoloAllineamento', v)} />
-                    </div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Titolo pagina <span className="text-gray-400 font-normal">(opzionale)</span>
+                    </label>
+                    <TypoToolbar
+                      value={{ fontFamily: config.paginaPenultimaTypo.titoloFontFamily, fontSize: config.paginaPenultimaTypo.titoloFontSize, bold: config.paginaPenultimaTypo.titoloBold, italic: config.paginaPenultimaTypo.titoloItalic, underline: config.paginaPenultimaTypo.titoloUnderline, uppercase: config.paginaPenultimaTypo.titoloUppercase, color: config.paginaPenultimaTypo.titoloColor, highlight: config.paginaPenultimaTypo.titoloHighlight || '', align: config.paginaPenultima.titoloAllineamento }}
+                      onChange={(v) => {
+                        if (v.fontFamily !== undefined) setPaginaPenultimaTypo({ titoloFontFamily: v.fontFamily });
+                        if (v.fontSize !== undefined) setPaginaPenultimaTypo({ titoloFontSize: v.fontSize });
+                        if (v.bold !== undefined) setPaginaPenultimaTypo({ titoloBold: v.bold });
+                        if (v.italic !== undefined) setPaginaPenultimaTypo({ titoloItalic: v.italic });
+                        if (v.underline !== undefined) setPaginaPenultimaTypo({ titoloUnderline: v.underline });
+                        if (v.uppercase !== undefined) setPaginaPenultimaTypo({ titoloUppercase: v.uppercase });
+                        if (v.color !== undefined) setPaginaPenultimaTypo({ titoloColor: v.color });
+                        if (v.highlight !== undefined) setPaginaPenultimaTypo({ titoloHighlight: v.highlight });
+                        if (v.align !== undefined) setPaginaPenultima('titoloAllineamento', v.align);
+                      }}
+                      showAlign
+                      minSize={8}
+                      maxSize={72}
+                    />
                     <MiniRichTextEditor
                       content={config.paginaPenultima.titolo}
                       onChange={(html) => setPaginaPenultima('titolo', html)}
@@ -4047,9 +4307,24 @@ export default function AdminCatalogoPDFPage() {
                     />
                   </div>
 
-                  {/* Testo libero */}
+                  {/* Testo libero con toolbar Word-like */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Testo libero</label>
+                    <TypoToolbar
+                      value={{ fontFamily: config.paginaPenultimaTypo.testoFontFamily, fontSize: config.paginaPenultimaTypo.testoFontSize, bold: config.paginaPenultimaTypo.testoBold, italic: config.paginaPenultimaTypo.testoItalic, underline: config.paginaPenultimaTypo.testoUnderline, uppercase: config.paginaPenultimaTypo.testoUppercase, color: config.paginaPenultimaTypo.testoColor, highlight: config.paginaPenultima.testoSfondoColore || '', align: config.paginaPenultima.testoAllineamento }}
+                      onChange={(v) => {
+                        if (v.fontFamily !== undefined) setPaginaPenultimaTypo({ testoFontFamily: v.fontFamily });
+                        if (v.fontSize !== undefined) setPaginaPenultimaTypo({ testoFontSize: v.fontSize });
+                        if (v.bold !== undefined) setPaginaPenultimaTypo({ testoBold: v.bold });
+                        if (v.italic !== undefined) setPaginaPenultimaTypo({ testoItalic: v.italic });
+                        if (v.underline !== undefined) setPaginaPenultimaTypo({ testoUnderline: v.underline });
+                        if (v.uppercase !== undefined) setPaginaPenultimaTypo({ testoUppercase: v.uppercase });
+                        if (v.color !== undefined) setPaginaPenultimaTypo({ testoColor: v.color });
+                        if (v.highlight !== undefined) setPaginaPenultima('testoSfondoColore', v.highlight);
+                        if (v.align !== undefined) setPaginaPenultima('testoAllineamento', v.align);
+                      }}
+                      showAlign
+                    />
                     <RichTextEditor
                       content={config.paginaPenultima.testo}
                       onChange={(html) => setPaginaPenultima('testo', html)}
@@ -4057,74 +4332,104 @@ export default function AdminCatalogoPDFPage() {
                     />
                   </div>
 
-                  {/* Tipografia */}
-                  <div className="space-y-3 pt-1">
-                    <p className="text-xs font-semibold text-gray-600">Tipografia</p>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Font titolo (pt)</label>
-                      <input type="number" min={10} max={48} value={config.paginaPenultimaTypo.titoloFontSize}
-                        onChange={(e) => setPaginaPenultimaTypo({ titoloFontSize: parseFloat(e.target.value) || 20 })}
-                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore titolo</label>
-                      <MiniColorPicker value={config.paginaPenultimaTypo.titoloColor}
-                        onChange={(v) => setPaginaPenultimaTypo({ titoloColor: v })} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Font testo corpo (pt)</label>
-                      <input type="number" min={6} max={24} value={config.paginaPenultimaTypo.testoFontSize}
-                        onChange={(e) => setPaginaPenultimaTypo({ testoFontSize: parseFloat(e.target.value) || 10 })}
-                        className="w-full h-8 border border-border rounded px-2 text-xs bg-white focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Colore testo corpo</label>
-                      <MiniColorPicker value={config.paginaPenultimaTypo.testoColor}
-                        onChange={(v) => setPaginaPenultimaTypo({ testoColor: v })} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Sfondo area testo <span className="text-gray-400 font-normal">(opzionale)</span></label>
-                      <div className="flex items-center gap-2">
-                        <MiniColorPicker value={config.paginaPenultima.testoSfondoColore || '#ffffff'}
-                          onChange={(v) => setPaginaPenultima('testoSfondoColore', v)} />
-                        {config.paginaPenultima.testoSfondoColore && (
-                          <button onClick={() => setPaginaPenultima('testoSfondoColore', '')} className="text-2xs text-gray-400 hover:text-gray-600">rimuovi</button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Spaziatura */}
-                    <p className="text-xs font-semibold text-gray-600 pt-1">Spaziatura</p>
-                    <div className="grid grid-cols-2 gap-3">
+                  {/* Spaziatura */}
+                  <details className="group">
+                    <summary className="cursor-pointer text-xs font-semibold text-gray-600 flex items-center gap-1 select-none">
+                      <ChevronDown size={12} className="group-open:rotate-180 transition-transform" />
+                      Spaziatura
+                    </summary>
+                    <div className="grid grid-cols-2 gap-3 mt-2">
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Margine superiore (pt)</label>
                         <input type="range" min={0} max={80} value={config.paginaPenultimaTypo.marginTop ?? 20}
-                          onChange={(e) => setPaginaPenultimaTypo({ marginTop: parseInt(e.target.value) })}
-                          className="w-full" />
+                          onChange={(e) => setPaginaPenultimaTypo({ marginTop: parseInt(e.target.value) })} className="w-full" />
                         <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.marginTop ?? 20}pt</span>
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo titolo (pt)</label>
                         <input type="range" min={0} max={40} value={config.paginaPenultimaTypo.titoloMarginBottom ?? 12}
-                          onChange={(e) => setPaginaPenultimaTypo({ titoloMarginBottom: parseInt(e.target.value) })}
-                          className="w-full" />
+                          onChange={(e) => setPaginaPenultimaTypo({ titoloMarginBottom: parseInt(e.target.value) })} className="w-full" />
                         <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.titoloMarginBottom ?? 12}pt</span>
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo sez. 1 (pt)</label>
                         <input type="range" min={0} max={40} value={config.paginaPenultimaTypo.sezione1MarginBottom ?? 16}
-                          onChange={(e) => setPaginaPenultimaTypo({ sezione1MarginBottom: parseInt(e.target.value) })}
-                          className="w-full" />
+                          onChange={(e) => setPaginaPenultimaTypo({ sezione1MarginBottom: parseInt(e.target.value) })} className="w-full" />
                         <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.sezione1MarginBottom ?? 16}pt</span>
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Spazio dopo sez. 2 (pt)</label>
                         <input type="range" min={0} max={40} value={config.paginaPenultimaTypo.sezione2MarginBottom ?? 16}
-                          onChange={(e) => setPaginaPenultimaTypo({ sezione2MarginBottom: parseInt(e.target.value) })}
-                          className="w-full" />
+                          onChange={(e) => setPaginaPenultimaTypo({ sezione2MarginBottom: parseInt(e.target.value) })} className="w-full" />
                         <span className="text-2xs text-gray-400">{config.paginaPenultimaTypo.sezione2MarginBottom ?? 16}pt</span>
                       </div>
                     </div>
+                  </details>
+
+                  {/* Logo aggiuntivo */}
+                  <div className="space-y-2 pt-1">
+                    <p className="text-xs font-semibold text-gray-600">Logo aggiuntivo</p>
+                    {(['none', 'custom'] as const).map((v) => (
+                      <label key={v} className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="penultima-logo2tipo" value={v}
+                          checked={(config.paginaPenultima.logo2Tipo ?? 'none') === v}
+                          onChange={() => setPaginaPenultima('logo2Tipo', v)} className="accent-primary" />
+                        <span className="text-xs text-gray-700">{v === 'none' ? 'Nessun logo aggiuntivo' : 'Carica logo aggiuntivo'}</span>
+                      </label>
+                    ))}
+                    {config.paginaPenultima.logo2Tipo === 'custom' && (
+                      <div className="pl-5 space-y-2">
+                        <input ref={penultimaLogo2FileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              setPaginaPenultima('logo2CustomBase64', ev.target?.result as string);
+                              if (penultimaLogo2FileInputRef.current) penultimaLogo2FileInputRef.current.value = '';
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                          className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer" />
+                        {config.paginaPenultima.logo2CustomBase64 && (
+                          <div className="flex items-center gap-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={config.paginaPenultima.logo2CustomBase64} alt="Logo" className="h-8 object-contain border border-border rounded bg-white px-2" />
+                            <button type="button" onClick={() => { setPaginaPenultima('logo2CustomBase64', null); if (penultimaLogo2FileInputRef.current) penultimaLogo2FileInputRef.current.value = ''; }}
+                              className="text-2xs text-red-500 hover:text-red-700 underline">Rimuovi</button>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Posizione nel layout</label>
+                            <select value={config.paginaPenultima.logo2Posizione ?? 'below-text'} onChange={(e) => setPaginaPenultima('logo2Posizione', e.target.value)}
+                              className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none">
+                              <option value="above-title">Sopra il titolo</option>
+                              <option value="between">Tra titolo e testo</option>
+                              <option value="below-text">Sotto il testo</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Allineamento</label>
+                            <select value={config.paginaPenultima.logo2PosX ?? 'center'} onChange={(e) => setPaginaPenultima('logo2PosX', e.target.value)}
+                              className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none">
+                              <option value="left">Sinistra</option>
+                              <option value="center">Centro</option>
+                              <option value="right">Destra</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Dimensione</label>
+                            <select value={config.paginaPenultima.logo2Dimensione ?? 'medio'} onChange={(e) => setPaginaPenultima('logo2Dimensione', e.target.value)}
+                              className="w-full h-9 border border-border rounded px-2.5 text-xs bg-white focus:outline-none">
+                              <option value="piccolo">Piccolo</option>
+                              <option value="medio">Medio</option>
+                              <option value="grande">Grande</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Sezione in fondo (sezione 3) */}
@@ -4265,38 +4570,34 @@ export default function AdminCatalogoPDFPage() {
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Offset X (%)</label>
                           <input type="range" min={-100} max={100} value={config.paginaPenultima.imgOffsetX ?? 0}
-                            onChange={(e) => setPaginaPenultima('imgOffsetX', parseInt(e.target.value))}
-                            className="w-full" />
+                            onChange={(e) => setPaginaPenultima('imgOffsetX', parseInt(e.target.value))} className="w-full" />
                           <span className="text-2xs text-gray-400">{config.paginaPenultima.imgOffsetX ?? 0}%</span>
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Offset Y (%)</label>
                           <input type="range" min={-100} max={100} value={config.paginaPenultima.imgOffsetY ?? 0}
-                            onChange={(e) => setPaginaPenultima('imgOffsetY', parseInt(e.target.value))}
-                            className="w-full" />
+                            onChange={(e) => setPaginaPenultima('imgOffsetY', parseInt(e.target.value))} className="w-full" />
                           <span className="text-2xs text-gray-400">{config.paginaPenultima.imgOffsetY ?? 0}%</span>
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Scala (%)</label>
                           <input type="range" min={50} max={200} value={config.paginaPenultima.imgScale ?? 100}
-                            onChange={(e) => setPaginaPenultima('imgScale', parseInt(e.target.value))}
-                            className="w-full" />
+                            onChange={(e) => setPaginaPenultima('imgScale', parseInt(e.target.value))} className="w-full" />
                           <span className="text-2xs text-gray-400">{config.paginaPenultima.imgScale ?? 100}%</span>
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Opacità (%)</label>
                           <input type="range" min={10} max={100} value={config.paginaPenultima.imgOpacity ?? 100}
-                            onChange={(e) => setPaginaPenultima('imgOpacity', parseInt(e.target.value))}
-                            className="w-full" />
+                            onChange={(e) => setPaginaPenultima('imgOpacity', parseInt(e.target.value))} className="w-full" />
                           <span className="text-2xs text-gray-400">{config.paginaPenultima.imgOpacity ?? 100}%</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Logo */}
+                  {/* Logo principale */}
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-gray-600">Logo</p>
+                    <p className="text-xs font-semibold text-gray-600">Logo principale</p>
                     {(
                       [
                         { value: 'onearth', label: 'Logo ON EARTH (automatico)' },
@@ -4372,8 +4673,6 @@ export default function AdminCatalogoPDFPage() {
                       </div>
                     )}
                   </div>
-
-                  {/* Preview moved to side panel */}
                 </div>
               )}
             </div>

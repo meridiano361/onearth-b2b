@@ -124,8 +124,18 @@ export type FinalPageTypography = {
   titoloBold: boolean;
   titoloItalic: boolean;
   titoloColor: string;
+  titoloFontFamily?: string;
+  titoloUppercase?: boolean;
+  titoloUnderline?: boolean;
+  titoloHighlight?: string;
   testoFontSize: number;
   testoColor: string;
+  testoFontFamily?: string;
+  testoBold?: boolean;
+  testoItalic?: boolean;
+  testoUnderline?: boolean;
+  testoUppercase?: boolean;
+  testoHighlight?: string;
   // Spaziatura
   titoloMarginBottom?: number;
   sezione1MarginBottom?: number;
@@ -200,6 +210,12 @@ export type CatalogConfig = {
     imgOffsetY?: number;
     imgScale?: number;
     imgOpacity?: number;
+    // Second logo
+    logo2Tipo?: 'custom' | 'none';
+    logo2CustomBase64?: string | null;
+    logo2PosX?: 'left' | 'center' | 'right';
+    logo2PosY?: 'top' | 'middle' | 'bottom';
+    logo2Dimensione?: 'piccolo' | 'medio' | 'grande';
   };
   paginaFinale: {
     attiva: boolean;
@@ -228,6 +244,12 @@ export type CatalogConfig = {
     sezioneFinale3Colore?: string;
     sezioneFinale3Align?: 'left' | 'center' | 'right';
     testoSfondoColore?: string;
+    // Second logo
+    logo2Tipo?: 'custom' | 'none';
+    logo2CustomBase64?: string | null;
+    logo2PosX?: 'left' | 'center' | 'right';
+    logo2Posizione?: 'above-title' | 'between' | 'below-text';
+    logo2Dimensione?: 'piccolo' | 'medio' | 'grande';
   };
   paginaPenultima?: {
     attiva: boolean;
@@ -254,6 +276,12 @@ export type CatalogConfig = {
     sezioneFinale3Colore?: string;
     sezioneFinale3Align?: 'left' | 'center' | 'right';
     testoSfondoColore?: string;
+    // Second logo
+    logo2Tipo?: 'custom' | 'none';
+    logo2CustomBase64?: string | null;
+    logo2PosX?: 'left' | 'center' | 'right';
+    logo2Posizione?: 'above-title' | 'between' | 'below-text';
+    logo2Dimensione?: 'piccolo' | 'medio' | 'grande';
   };
   // Typography customization
   cardFieldStyles: CardFieldStyles;
@@ -487,22 +515,34 @@ function getBlockAlign(block: HtmlBlock, defaultAlign: 'left' | 'center' | 'righ
 
 function renderHtmlBlocks(
   blocks: HtmlBlock[],
-  opts: { fontSize: number; color: string; defaultAlign: 'left' | 'center' | 'right' },
+  opts: { fontSize: number; color: string; defaultAlign: 'left' | 'center' | 'right'; bold?: boolean; italic?: boolean; underline?: boolean; uppercase?: boolean; fontFamily?: string },
 ): React.ReactNode[] {
   const { fontSize, color, defaultAlign } = opts;
+  const globalBold = opts.bold ?? false;
+  const globalItalic = opts.italic ?? false;
+  const globalUnderline = opts.underline ?? false;
+  const globalUppercase = opts.uppercase ?? false;
+  const baseFam = resolveFamily(opts.fontFamily ?? 'helvetica');
   return blocks.map((block, i) => {
     const blockAlign = getBlockAlign(block, defaultAlign);
 
     const inlineText = (inlines: HtmlInline[], c: string) =>
       inlines.map((seg, j) => {
-        const decoration = seg.underline ? 'underline' : seg.strike ? 'line-through' : undefined;
+        const bold = globalBold || seg.bold;
+        const italic = globalItalic || seg.italic;
+        const underline = globalUnderline || seg.underline;
+        const decoration = underline ? 'underline' : seg.strike ? 'line-through' : undefined;
+        const fam = baseFam === 'Helvetica'
+          ? ((bold && italic) ? 'Helvetica-BoldOblique' : bold ? 'Helvetica-Bold' : italic ? 'Helvetica-Oblique' : 'Helvetica')
+          : (bold ? `${baseFam}-Bold` : baseFam);
+        const text = globalUppercase ? seg.text.toUpperCase() : seg.text;
         return (
           <Text key={j} style={{
-            fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique' : seg.bold ? 'Helvetica-Bold' : seg.italic ? 'Helvetica-Oblique' : 'Helvetica',
+            fontFamily: fam,
             color: c,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ...(decoration ? { textDecoration: decoration as any } : {}),
-          }}>{seg.text}</Text>
+          }}>{text}</Text>
         );
       });
 
@@ -1203,6 +1243,7 @@ function CoverPage({
             </View>
           ) : null}
         </View>
+        {renderCoverLogo2(cov, pageW, pageH)}
       </Page>
     );
   }
@@ -1267,6 +1308,7 @@ function CoverPage({
             </View>
           ) : null}
         </View>
+        {renderCoverLogo2(cov, pageW, pageH)}
       </Page>
     );
   }
@@ -1311,6 +1353,7 @@ function CoverPage({
           {renderCoverLines(subtitle2, { fontSize: typo.sottotitolo2FontSize ?? 11, fontFamily: subtitle2Font, color: typo.sottotitolo2Color ?? typo.sottotitoloColor, letterSpacing: 1.5 })}
         </View>
       ) : null}
+      {renderCoverLogo2(cov, pageW, pageH)}
     </Page>
   );
 }
@@ -1330,18 +1373,26 @@ function parseTitleInlines(titolo: string, typo: { titoloBold: boolean; titoloIt
   return [{ text: titolo, bold: typo.titoloBold, italic: typo.titoloItalic }];
 }
 
-function renderTitleInlines(inlines: HtmlInline[], typo: { titoloFontSize: number; titoloColor: string; titoloMarginBottom?: number }, titleAlign: 'left' | 'center' | 'right', mb = 18) {
+function renderTitleInlines(inlines: HtmlInline[], typo: FinalPageTypography, titleAlign: 'left' | 'center' | 'right', mb = 18) {
   if (inlines.length === 0) return null;
   const marginBottom = typo.titoloMarginBottom ?? mb;
+  const baseFam = resolveFamily(typo.titoloFontFamily ?? 'helvetica');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const decoration: any = typo.titoloUnderline ? 'underline' : undefined;
   return (
-    <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom }}>
-      <Text style={{ fontSize: typo.titoloFontSize, color: typo.titoloColor, letterSpacing: 2 }}>
-        {inlines.map((seg, i) => (
-          <Text key={i} style={{
-            fontFamily: (seg.bold && seg.italic) ? 'Helvetica-BoldOblique' : seg.bold ? 'Helvetica-Bold' : seg.italic ? 'Helvetica-Oblique' : 'Helvetica',
-            color: typo.titoloColor,
-          }}>{seg.text}</Text>
-        ))}
+    <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom, ...(typo.titoloHighlight ? { backgroundColor: typo.titoloHighlight } : {}) }}>
+      <Text style={{ fontSize: typo.titoloFontSize, color: typo.titoloColor, letterSpacing: 2, ...(decoration ? { textDecoration: decoration } : {}) }}>
+        {inlines.map((seg, i) => {
+          const bold = typo.titoloBold || seg.bold;
+          const italic = typo.titoloItalic || seg.italic;
+          const fam = baseFam === 'Helvetica'
+            ? ((bold && italic) ? 'Helvetica-BoldOblique' : bold ? 'Helvetica-Bold' : italic ? 'Helvetica-Oblique' : 'Helvetica')
+            : (bold ? `${baseFam}-Bold` : baseFam);
+          const text = typo.titoloUppercase ? seg.text.toUpperCase() : seg.text;
+          return (
+            <Text key={i} style={{ fontFamily: fam, color: typo.titoloColor }}>{text}</Text>
+          );
+        })}
       </Text>
     </View>
   );
@@ -1355,6 +1406,45 @@ function resolveFinalLogo(pf: CatalogConfig['paginaFinale'], headerLogoBase64: s
 }
 
 const FINAL_LOGO_H: Record<string, number> = { piccolo: 14, medio: 22, grande: 34 };
+
+function renderLogo2Inline(
+  page: { logo2Tipo?: string; logo2CustomBase64?: string | null; logo2PosX?: string; logo2Dimensione?: string },
+) {
+  if (!page.logo2Tipo || page.logo2Tipo === 'none') return null;
+  const src = page.logo2CustomBase64;
+  if (!src) return null;
+  const h = FINAL_LOGO_H[page.logo2Dimensione ?? 'medio'] ?? 22;
+  const justify: 'flex-start' | 'center' | 'flex-end' =
+    page.logo2PosX === 'center' ? 'center' : page.logo2PosX === 'right' ? 'flex-end' : 'flex-start';
+  return (
+    <View style={{ width: '100%', flexDirection: 'row', justifyContent: justify, marginBottom: 10 }}>
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <Image src={src} style={{ height: h, objectFit: 'contain' as any }} />
+    </View>
+  );
+}
+
+function renderCoverLogo2(
+  cov: { logo2Tipo?: string; logo2CustomBase64?: string | null; logo2PosX?: string; logo2PosY?: string; logo2Dimensione?: string },
+  pageW: number,
+  pageH: number,
+) {
+  if (!cov.logo2Tipo || cov.logo2Tipo === 'none') return null;
+  const src = cov.logo2CustomBase64;
+  if (!src) return null;
+  const h = FINAL_LOGO_H[cov.logo2Dimensione ?? 'medio'] ?? 22;
+  const justify: 'flex-start' | 'center' | 'flex-end' =
+    (cov.logo2PosX ?? 'right') === 'center' ? 'center' : (cov.logo2PosX ?? 'right') === 'right' ? 'flex-end' : 'flex-start';
+  const MARGIN = 30;
+  const posY = cov.logo2PosY ?? 'bottom';
+  const top = posY === 'top' ? MARGIN : posY === 'middle' ? pageH / 2 - h / 2 : pageH - h - MARGIN;
+  return (
+    <View style={{ position: 'absolute', top, left: MARGIN, right: MARGIN, flexDirection: 'row', justifyContent: justify }}>
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <Image src={src} style={{ height: h, objectFit: 'contain' as any }} />
+    </View>
+  );
+}
 
 function renderSezione3(page: { sezioneFinale3Attiva?: boolean; sezioneFinale3Html?: string; sezioneFinale3FontSize?: number; sezioneFinale3Colore?: string; sezioneFinale3Align?: 'left' | 'center' | 'right' }, padH: number) {
   if (!page.sezioneFinale3Attiva || !page.sezioneFinale3Html?.trim()) return null;
@@ -1386,22 +1476,16 @@ function FinalPage({
 
   const imgSrc = pf.immagineBase64 ?? null;
 
-  // Resolve layout — new field takes precedence, fall back to legacy immaginePosition
   const legacyLayoutMap: Record<string, string> = {
-    top: 'img-top',
-    center: 'img-top',
-    bottom: 'img-bottom',
-    background: 'background',
+    top: 'img-top', center: 'img-top', bottom: 'img-bottom', background: 'background',
   };
   const resolvedLayout: string = pf.layout ?? legacyLayoutMap[pf.immaginePosition ?? ''] ?? 'img-top';
 
-  // Image transform parameters
   const imgScale = pf.imgScale ?? 100;
   const imgOffsetX = pf.imgOffsetX ?? 0;
   const imgOffsetY = pf.imgOffsetY ?? 0;
   const imgOpacity = (pf.imgOpacity ?? 100) / 100;
 
-  // Logo parameters
   const finalLogoBase64 = resolveFinalLogo(pf, config.logoBase64);
   const logoDim = pf.logoDimensione ?? 'medio';
   const logoH = FINAL_LOGO_H[logoDim] ?? 22;
@@ -1411,30 +1495,17 @@ function FinalPage({
     logoPosX === 'center' ? 'center' : logoPosX === 'right' ? 'flex-end' : 'flex-start';
   const LOGO_MARGIN = 30;
   const logoVertical: Record<string, number> = {
-    top: LOGO_MARGIN,
-    middle: pageH / 2 - logoH / 2,
-    bottom: pageH - logoH - LOGO_MARGIN,
+    top: LOGO_MARGIN, middle: pageH / 2 - logoH / 2, bottom: pageH - logoH - LOGO_MARGIN,
   };
   const logoTop = logoVertical[logoPosY] ?? (pageH - logoH - LOGO_MARGIN);
 
-  // Helper: render logo absolutely positioned
   const logoView = finalLogoBase64 ? (
-    <View
-      style={{
-        position: 'absolute',
-        top: logoTop,
-        left: LOGO_MARGIN,
-        right: LOGO_MARGIN,
-        flexDirection: 'row',
-        justifyContent: logoJustify,
-      }}
-    >
+    <View style={{ position: 'absolute', top: logoTop, left: LOGO_MARGIN, right: LOGO_MARGIN, flexDirection: 'row', justifyContent: logoJustify }}>
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <Image src={finalLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
     </View>
   ) : null;
 
-  // Helper: compute img position/size for absolute placement (full-area img)
   function fullImgStyle(areaW: number, areaH: number) {
     const imgW = areaW * imgScale / 100;
     const imgH = areaH * imgScale / 100;
@@ -1445,24 +1516,31 @@ function FinalPage({
 
   const PAD_H = 60;
   const PAD_V = 48;
-
   const mt = typo.marginTop ?? PAD_V;
   const s1mb = typo.sezione1MarginBottom ?? 0;
   const textBg = pf.testoSfondoColore || undefined;
 
-  // ── full-overlay ─────────────────────────────────────────────────────────────
+  // logo2 inline elements
+  const logo2Pos = pf.logo2Posizione ?? 'below-text';
+  const logo2Above = logo2Pos === 'above-title' ? renderLogo2Inline(pf) : null;
+  const logo2Between = logo2Pos === 'between' ? renderLogo2Inline(pf) : null;
+  const logo2Below = logo2Pos === 'below-text' ? renderLogo2Inline(pf) : null;
+
   if (resolvedLayout === 'full-overlay') {
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: '#000000', opacity: 0.55 }} />
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V, backgroundColor: textBg }}>
+          {logo2Above}
           {renderTitleInlines(titleInlines, typo, titleAlign, 8)}
+          {logo2Between}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
-              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign, bold: typo.testoBold, italic: typo.testoItalic, underline: typo.testoUnderline, uppercase: typo.testoUppercase, fontFamily: typo.testoFontFamily })}
             </View>
           ) : null}
+          {logo2Below}
         </View>
         {logoView}
         {renderSezione3(pf, PAD_H)}
@@ -1470,18 +1548,20 @@ function FinalPage({
     );
   }
 
-  // ── background ───────────────────────────────────────────────────────────────
   if (resolvedLayout === 'background') {
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
+          {logo2Above}
           {renderTitleInlines(titleInlines, typo, titleAlign)}
+          {logo2Between}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
-              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign, bold: typo.testoBold, italic: typo.testoItalic, underline: typo.testoUnderline, uppercase: typo.testoUppercase, fontFamily: typo.testoFontFamily })}
             </View>
           ) : null}
+          {logo2Below}
         </View>
         {logoView}
         {renderSezione3(pf, PAD_H)}
@@ -1489,7 +1569,6 @@ function FinalPage({
     );
   }
 
-  // ── img-only ─────────────────────────────────────────────────────────────────
   if (resolvedLayout === 'img-only') {
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
@@ -1500,7 +1579,6 @@ function FinalPage({
     );
   }
 
-  // ── img-left ─────────────────────────────────────────────────────────────────
   if (resolvedLayout === 'img-left') {
     const imgAreaW = pageW * 0.45;
     const imgW = imgAreaW * imgScale / 100;
@@ -1516,12 +1594,15 @@ function FinalPage({
           )}
         </View>
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
+          {logo2Above}
           {renderTitleInlines(titleInlines, typo, titleAlign)}
+          {logo2Between}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
-              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign, bold: typo.testoBold, italic: typo.testoItalic, underline: typo.testoUnderline, uppercase: typo.testoUppercase, fontFamily: typo.testoFontFamily })}
             </View>
           ) : null}
+          {logo2Below}
         </View>
         {logoView}
         {renderSezione3(pf, 32)}
@@ -1529,7 +1610,6 @@ function FinalPage({
     );
   }
 
-  // ── img-bottom ───────────────────────────────────────────────────────────────
   if (resolvedLayout === 'img-bottom') {
     const imgAreaH = pageH * 0.4;
     const textAreaH = pageH - imgAreaH;
@@ -1540,12 +1620,15 @@ function FinalPage({
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
+          {logo2Above}
           {renderTitleInlines(titleInlines, typo, titleAlign)}
+          {logo2Between}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
-              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign, bold: typo.testoBold, italic: typo.testoItalic, underline: typo.testoUnderline, uppercase: typo.testoUppercase, fontFamily: typo.testoFontFamily })}
             </View>
           ) : null}
+          {logo2Below}
         </View>
         <View style={{ height: imgAreaH, overflow: 'hidden' }}>
           {imgSrc && (
@@ -1559,7 +1642,7 @@ function FinalPage({
     );
   }
 
-  // ── img-top (default) ────────────────────────────────────────────────────────
+  // img-top (default)
   const imgAreaH = pageH * 0.4;
   const textAreaH = pageH - imgAreaH;
   const imgW = pageW * imgScale / 100;
@@ -1575,12 +1658,15 @@ function FinalPage({
         )}
       </View>
       <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
+        {logo2Above}
         {renderTitleInlines(titleInlines, typo, titleAlign)}
+        {logo2Between}
         {bodyBlocks.length > 0 ? (
           <View style={{ width: '100%', marginBottom: s1mb }}>
-            {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+            {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign, bold: typo.testoBold, italic: typo.testoItalic, underline: typo.testoUnderline, uppercase: typo.testoUppercase, fontFamily: typo.testoFontFamily })}
           </View>
         ) : null}
+        {logo2Below}
       </View>
       {logoView}
       {renderSezione3(pf, PAD_H)}
@@ -1629,23 +1715,12 @@ function PenultimaPage({
     logoPosX === 'center' ? 'center' : logoPosX === 'right' ? 'flex-end' : 'flex-start';
   const LOGO_MARGIN = 30;
   const logoVertical: Record<string, number> = {
-    top: LOGO_MARGIN,
-    middle: pageH / 2 - logoH / 2,
-    bottom: pageH - logoH - LOGO_MARGIN,
+    top: LOGO_MARGIN, middle: pageH / 2 - logoH / 2, bottom: pageH - logoH - LOGO_MARGIN,
   };
   const logoTop = logoVertical[logoPosY] ?? (pageH - logoH - LOGO_MARGIN);
 
   const logoView = penultimaLogoBase64 ? (
-    <View
-      style={{
-        position: 'absolute',
-        top: logoTop,
-        left: LOGO_MARGIN,
-        right: LOGO_MARGIN,
-        flexDirection: 'row',
-        justifyContent: logoJustify,
-      }}
-    >
+    <View style={{ position: 'absolute', top: logoTop, left: LOGO_MARGIN, right: LOGO_MARGIN, flexDirection: 'row', justifyContent: logoJustify }}>
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <Image src={penultimaLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
     </View>
@@ -1665,18 +1740,26 @@ function PenultimaPage({
   const s1mb = typo.sezione1MarginBottom ?? 0;
   const textBg = pp.testoSfondoColore || undefined;
 
+  const logo2Pos = pp.logo2Posizione ?? 'below-text';
+  const logo2Above = logo2Pos === 'above-title' ? renderLogo2Inline(pp) : null;
+  const logo2Between = logo2Pos === 'between' ? renderLogo2Inline(pp) : null;
+  const logo2Below = logo2Pos === 'below-text' ? renderLogo2Inline(pp) : null;
+
   if (resolvedLayout === 'full-overlay') {
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, backgroundColor: '#000000', opacity: 0.55 }} />
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: pageH * 0.45, justifyContent: 'flex-end', paddingHorizontal: PAD_H, paddingBottom: PAD_V, backgroundColor: textBg }}>
+          {logo2Above}
           {renderTitleInlines(titleInlines, typo, titleAlign, 8)}
+          {logo2Between}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
-              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign, bold: typo.testoBold, italic: typo.testoItalic, underline: typo.testoUnderline, uppercase: typo.testoUppercase, fontFamily: typo.testoFontFamily })}
             </View>
           ) : null}
+          {logo2Below}
         </View>
         {logoView}
         {renderSezione3(pp, PAD_H)}
@@ -1689,12 +1772,15 @@ function PenultimaPage({
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         {imgSrc && <Image src={imgSrc} style={fullImgStyle(pageW, pageH)} />}
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
+          {logo2Above}
           {renderTitleInlines(titleInlines, typo, titleAlign)}
+          {logo2Between}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
-              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign, bold: typo.testoBold, italic: typo.testoItalic, underline: typo.testoUnderline, uppercase: typo.testoUppercase, fontFamily: typo.testoFontFamily })}
             </View>
           ) : null}
+          {logo2Below}
         </View>
         {logoView}
         {renderSezione3(pp, PAD_H)}
@@ -1727,12 +1813,15 @@ function PenultimaPage({
           )}
         </View>
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
+          {logo2Above}
           {renderTitleInlines(titleInlines, typo, titleAlign)}
+          {logo2Between}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
-              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign, bold: typo.testoBold, italic: typo.testoItalic, underline: typo.testoUnderline, uppercase: typo.testoUppercase, fontFamily: typo.testoFontFamily })}
             </View>
           ) : null}
+          {logo2Below}
         </View>
         {logoView}
         {renderSezione3(pp, 32)}
@@ -1750,12 +1839,15 @@ function PenultimaPage({
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia), backgroundColor: config.colori.sfondoPagina }}>
         <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
+          {logo2Above}
           {renderTitleInlines(titleInlines, typo, titleAlign)}
+          {logo2Between}
           {bodyBlocks.length > 0 ? (
             <View style={{ width: '100%', marginBottom: s1mb }}>
-              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+              {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign, bold: typo.testoBold, italic: typo.testoItalic, underline: typo.testoUnderline, uppercase: typo.testoUppercase, fontFamily: typo.testoFontFamily })}
             </View>
           ) : null}
+          {logo2Below}
         </View>
         <View style={{ height: imgAreaH, overflow: 'hidden' }}>
           {imgSrc && (
@@ -1785,12 +1877,15 @@ function PenultimaPage({
         )}
       </View>
       <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
+        {logo2Above}
         {renderTitleInlines(titleInlines, typo, titleAlign)}
+        {logo2Between}
         {bodyBlocks.length > 0 ? (
           <View style={{ width: '100%', marginBottom: s1mb }}>
-            {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign })}
+            {renderHtmlBlocks(bodyBlocks, { fontSize: typo.testoFontSize, color: typo.testoColor, defaultAlign: textAlign, bold: typo.testoBold, italic: typo.testoItalic, underline: typo.testoUnderline, uppercase: typo.testoUppercase, fontFamily: typo.testoFontFamily })}
           </View>
         ) : null}
+        {logo2Below}
       </View>
       {logoView}
       {renderSezione3(pp, PAD_H)}
