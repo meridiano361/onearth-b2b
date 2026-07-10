@@ -83,6 +83,7 @@ export default function CustomerHome() {
   const { social: ss, collections } = useSettings();
   const { data: session } = useSession();
   const isAdmin = canAccessModa(session?.user?.role);
+  const canSeeModa = canAccessModa(session?.user?.role, session?.user?.email);
   const searchParams = useSearchParams();
   const devPreview = searchParams.get('devPreview') === '1';
 
@@ -160,9 +161,9 @@ export default function CustomerHome() {
         )}
 
         {/* Collection cards */}
-        {devPreview ? (
+        {(devPreview || canSeeModa) ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <CollectionCard info={casaInfo} href="/catalog/products" compact />
+            <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} compact />
             <CollectionCard info={modaInfo} href="/moda" compact />
           </div>
         ) : (
