@@ -2244,10 +2244,12 @@ export default function AdminCatalogoPDFPage() {
     }
     setIsSaving(true);
     try {
-      // Exclude large images from saved config
+      // Strip only background images (can be 1-2 MB); logos stay in the template
       const configToSave = {
         ...config,
-        copertina: { ...config.copertina, immagineBase64: null, logoCustomBase64: null },
+        copertina:       { ...config.copertina,       immagineBase64: null },
+        paginaFinale:    { ...config.paginaFinale,    immagineBase64: null },
+        paginaPenultima: { ...config.paginaPenultima, immagineBase64: null },
       };
       const trimmedName = templateName.trim();
 
@@ -2285,14 +2287,7 @@ export default function AdminCatalogoPDFPage() {
   }
 
   function handleLoadTemplate(t: Template) {
-    const base = mergeWithDefaults(t.configurazione);
-    const logos = loadLogosFromStorage();
-    setConfig({
-      ...base,
-      copertina:       { ...base.copertina,       logoCustomBase64: logos.copertinaLogo },
-      paginaFinale:    { ...base.paginaFinale,     logoCustomBase64: logos.paginaFinaleLogo },
-      paginaPenultima: { ...base.paginaPenultima,  logoCustomBase64: logos.paginaPenultimaLogo },
-    });
+    setConfig(mergeWithDefaults(t.configurazione));
     setPreview(null);
     toast.success(`Template "${t.nome}" caricato`);
   }
@@ -2332,14 +2327,7 @@ export default function AdminCatalogoPDFPage() {
   }
 
   function handleEditTemplate(t: Template) {
-    const base = mergeWithDefaults(t.configurazione);
-    const logos = loadLogosFromStorage();
-    setConfig({
-      ...base,
-      copertina:       { ...base.copertina,       logoCustomBase64: logos.copertinaLogo },
-      paginaFinale:    { ...base.paginaFinale,     logoCustomBase64: logos.paginaFinaleLogo },
-      paginaPenultima: { ...base.paginaPenultima,  logoCustomBase64: logos.paginaPenultimaLogo },
-    });
+    setConfig(mergeWithDefaults(t.configurazione));
     setEditingTemplateId(t.id);
     setTemplateName(t.nome);
     setPreview(null);
@@ -2353,7 +2341,9 @@ export default function AdminCatalogoPDFPage() {
     try {
       const configToSave = {
         ...config,
-        copertina: { ...config.copertina, immagineBase64: null, logoCustomBase64: null },
+        copertina:       { ...config.copertina,       immagineBase64: null },
+        paginaFinale:    { ...config.paginaFinale,    immagineBase64: null },
+        paginaPenultima: { ...config.paginaPenultima, immagineBase64: null },
       };
       const res = await fetch(`/api/admin/catalogo-pdf/templates/${editingTemplateId}`, {
         method: 'PATCH',
