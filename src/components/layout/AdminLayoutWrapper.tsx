@@ -10,7 +10,7 @@ export default function AdminLayoutWrapper({ children }: { children: React.React
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="h-screen flex bg-background overflow-hidden">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
