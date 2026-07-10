@@ -1004,58 +1004,65 @@ function ProductCard({
         );
       })()}
 
-      {/* Text area */}
-      <View
-        style={[s.textArea, {
+      {/* Text area — prices pinned to absolute bottom so description can use 2 lines freely */}
+      <View style={{ height: layout.TEXT_AREA_H, overflow: 'hidden' }}>
+        {/* Top content: flows from top, paddingBottom reserves room for the pinned prices */}
+        <View style={{
           padding: box.padding,
-          height: layout.TEXT_AREA_H,
-        }]}
-      >
-        {/* Codice always pinned first — ensures it's never pushed off-screen by a long description */}
-        {f.codice && (
-          <View style={{ minHeight: layout.CODE_H, marginBottom: cfs.codice.marginBottom ?? layout.ROW_GAP, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-            <Link src={`${APP_BASE_URL}/catalog/${product.id}`}>
-              <Text style={{ fontSize: cfs.codice.fontSize, fontFamily: fieldFont(cfs.codice, config.fontFamiglia), color: cfs.codice.color, letterSpacing: 0.3 }}>
-                {cfs.codice.uppercase ? product.code.toUpperCase() : product.code}
-              </Text>
-            </Link>
-            {config.nuovoBadge?.attivo && config.nuovoBadge.posizione === 'next-to-code' && (
-              <View style={{ backgroundColor: config.nuovoBadge.bgColor, paddingHorizontal: 3, paddingVertical: 1, borderRadius: 2 }}>
-                <Text style={{ fontSize: 4.5, color: config.nuovoBadge.textColor, fontFamily: 'Helvetica-Bold' }}>{config.nuovoBadge.testo}</Text>
+          paddingBottom: anyPriceRow ? layout.PRICES_H + box.padding : box.padding,
+        }}>
+          {/* Codice */}
+          {f.codice && (
+            <View style={{ minHeight: layout.CODE_H, marginBottom: cfs.codice.marginBottom ?? layout.ROW_GAP, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+              <Link src={`${APP_BASE_URL}/catalog/${product.id}`}>
+                <Text style={{ fontSize: cfs.codice.fontSize, fontFamily: fieldFont(cfs.codice, config.fontFamiglia), color: cfs.codice.color, letterSpacing: 0.3 }}>
+                  {cfs.codice.uppercase ? product.code.toUpperCase() : product.code}
+                </Text>
+              </Link>
+              {config.nuovoBadge?.attivo && config.nuovoBadge.posizione === 'next-to-code' && (
+                <View style={{ backgroundColor: config.nuovoBadge.bgColor, paddingHorizontal: 3, paddingVertical: 1, borderRadius: 2 }}>
+                  <Text style={{ fontSize: 4.5, color: config.nuovoBadge.textColor, fontFamily: 'Helvetica-Bold' }}>{config.nuovoBadge.testo}</Text>
+                </View>
+              )}
+            </View>
+          )}
+          {(config.fieldOrder ?? ['codice', 'descrizione', 'misure']).filter((k) => k !== 'codice').map((fieldKey) => {
+            if (fieldKey === 'descrizione' && f.descrizione) return (
+              // Natural height — numberOfLines: 2 truncates at 2 lines without a fixed container height
+              <View key="descrizione" style={{ marginBottom: cfs.descrizione.marginBottom ?? layout.ROW_GAP, overflow: 'hidden', alignItems: alignToFlex(cfs.descrizione.align) }}>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <Text style={{ fontSize: cfs.descrizione.fontSize, fontFamily: fieldFont(cfs.descrizione, config.fontFamiglia), color: cfs.descrizione.color, lineHeight: 1.5 }} {...({ numberOfLines: 2 } as any)}>
+                  {(() => { const raw = f.campoNome === 'nome' ? product.name : (product.description || product.name); return cfs.descrizione.uppercase ? raw.toUpperCase() : raw; })()}
+                </Text>
               </View>
-            )}
-          </View>
-        )}
-        {(config.fieldOrder ?? ['codice', 'descrizione', 'misure']).filter((k) => k !== 'codice').map((fieldKey) => {
-          if (fieldKey === 'descrizione' && f.descrizione) return (
-            <View key="descrizione" style={{ height: layout.DESC_H, marginBottom: cfs.descrizione.marginBottom ?? layout.ROW_GAP, alignItems: alignToFlex(cfs.descrizione.align) }}>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <Text style={{ fontSize: cfs.descrizione.fontSize, fontFamily: fieldFont(cfs.descrizione, config.fontFamiglia), color: cfs.descrizione.color, lineHeight: 1.5 }} {...({ numberOfLines: 2 } as any)}>
-                {(() => { const raw = f.campoNome === 'nome' ? product.name : (product.description || product.name); return cfs.descrizione.uppercase ? raw.toUpperCase() : raw; })()}
-              </Text>
-            </View>
-          );
-          if (fieldKey === 'misure' && anyDetail) return (
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            <View key="misure" style={{ height: layout.DETAIL_H, marginBottom: misureStyle.marginBottom ?? layout.ROW_GAP, overflow: 'hidden', alignItems: alignToFlex(misureStyle.align) }}>
-              <Text style={{ fontSize: misureStyle.fontSize, fontFamily: fieldFont(misureStyle, config.fontFamiglia), color: misureStyle.color, overflow: 'hidden' }} {...({ numberOfLines: 1 } as any)}>
-                {detailText}
-              </Text>
-            </View>
-          );
-          return null;
-        })}
+            );
+            if (fieldKey === 'misure' && anyDetail) return (
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              <View key="misure" style={{ height: layout.DETAIL_H, marginBottom: misureStyle.marginBottom ?? layout.ROW_GAP, overflow: 'hidden', alignItems: alignToFlex(misureStyle.align) }}>
+                <Text style={{ fontSize: misureStyle.fontSize, fontFamily: fieldFont(misureStyle, config.fontFamiglia), color: misureStyle.color, overflow: 'hidden' }} {...({ numberOfLines: 1 } as any)}>
+                  {detailText}
+                </Text>
+              </View>
+            );
+            return null;
+          })}
+        </View>
 
-        {/* Spacer to push prices to bottom */}
-        {layout.SPACER_H > 0 && (
-          <View style={{ height: layout.SPACER_H }} />
-        )}
-
+        {/* Prices: absolutely pinned to the bottom of the text area — always visible */}
         {anyPriceRow && (
-          <View style={[s.priceRow, { height: layout.PRICES_H }]}>
-            {/* Left column: produttore + paese */}
-            {(f.produttore || f.paese) && (
-              <View style={[s.priceItem, { justifyContent: 'center' }]}>
+          <View style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: layout.PRICES_H + box.padding,
+            paddingHorizontal: box.padding,
+            paddingBottom: box.padding,
+          }}>
+            <View style={s.priceRow}>
+              {/* Left column: produttore + paese */}
+              {(f.produttore || f.paese) && (
+                <View style={[s.priceItem, { justifyContent: 'center' }]}>
                 {f.produttore && product.produttore ? (
                   <Text style={{ fontSize: cfs.produttore.fontSize, fontFamily: fieldFont(cfs.produttore, config.fontFamiglia), color: cfs.produttore.color, lineHeight: 1.3, marginBottom: 1.5 }}>
                     {cfs.produttore.uppercase ? product.produttore.toUpperCase() : product.produttore}
@@ -1099,6 +1106,7 @@ function ProductCard({
                 })()}
               </View>
             )}
+            </View>
           </View>
         )}
       </View>
