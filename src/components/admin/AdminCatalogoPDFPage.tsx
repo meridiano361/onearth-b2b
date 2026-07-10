@@ -3561,7 +3561,7 @@ export default function AdminCatalogoPDFPage() {
                         <input
                           ref={logoFileInputRef}
                           type="file"
-                          accept="image/png,image/jpeg,image/svg+xml"
+                          accept="image/png,image/jpeg"
                           onChange={handleLogoUpload}
                           className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                         />
@@ -3653,7 +3653,7 @@ export default function AdminCatalogoPDFPage() {
                     ))}
                     {config.copertina.logo2Tipo === 'custom' && (
                       <div className="pl-5 space-y-2">
-                        <input ref={copertinaLogo2FileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        <input ref={copertinaLogo2FileInputRef} type="file" accept="image/png,image/jpeg"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
@@ -3960,7 +3960,7 @@ export default function AdminCatalogoPDFPage() {
                     ))}
                     {config.paginaFinale.logo2Tipo === 'custom' && (
                       <div className="pl-5 space-y-2">
-                        <input ref={finalLogo2FileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        <input ref={finalLogo2FileInputRef} type="file" accept="image/png,image/jpeg"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
@@ -4214,7 +4214,7 @@ export default function AdminCatalogoPDFPage() {
                         <input
                           ref={finalLogoFileInputRef}
                           type="file"
-                          accept="image/png,image/jpeg,image/svg+xml"
+                          accept="image/png,image/jpeg"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
@@ -4389,7 +4389,7 @@ export default function AdminCatalogoPDFPage() {
                     ))}
                     {config.paginaPenultima.logo2Tipo === 'custom' && (
                       <div className="pl-5 space-y-2">
-                        <input ref={penultimaLogo2FileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        <input ref={penultimaLogo2FileInputRef} type="file" accept="image/png,image/jpeg"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
@@ -4643,7 +4643,7 @@ export default function AdminCatalogoPDFPage() {
                         <input
                           ref={penultimaLogoFileInputRef}
                           type="file"
-                          accept="image/png,image/jpeg,image/svg+xml"
+                          accept="image/png,image/jpeg"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;

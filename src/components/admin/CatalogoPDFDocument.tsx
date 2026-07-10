@@ -1462,7 +1462,8 @@ function renderCoverLogo2(
   const top = posY === 'top' ? MARGIN : posY === 'middle' ? pageH / 2 - h / 2 : pageH - h - MARGIN;
   return (
     <View style={{ position: 'absolute', top, left: MARGIN, right: MARGIN, flexDirection: 'row', justifyContent: justify }}>
-      <Image src={src} style={{ height: h }} />
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <Image src={src} style={{ height: h, objectFit: 'contain' as any }} />
     </View>
   );
 }

@@ -45,6 +45,21 @@ const RAGGRUPPAMENTO_FIELD: Record<string, keyof ProductForPDF> = {
   paese: 'paese',
 };
 
+// Converts any base64 data-URL logo to PNG so react-pdf can render it.
+// react-pdf v3 supports JPEG, PNG, GIF, BMP — NOT SVG or WEBP.
+async function normalizeLogoBase64(dataUrl: string | null | undefined): Promise<string | null> {
+  if (!dataUrl) return null;
+  const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
+  if (!m) return null;
+  const [, mime, b64] = m;
+  if (mime === 'image/png' || mime === 'image/jpeg' || mime === 'image/gif' || mime === 'image/bmp') return dataUrl;
+  try {
+    const buf = Buffer.from(b64, 'base64');
+    const png = await sharp(buf).png().toBuffer();
+    return `data:image/png;base64,${png.toString('base64')}`;
+  } catch { return null; }
+}
+
 async function fetchImageAsJpegBase64(url: string): Promise<string | null> {
   try {
     const controller = new AbortController();
@@ -410,6 +425,29 @@ async function buildGroupsAndConfig(opts: FetchProductsOptions & {
     if (fetched) {
       config.paginaPenultima = { ...config.paginaPenultima, immagineBase64: fetched };
     }
+  }
+
+  // Normalize all logo base64 to formats supported by react-pdf (PNG/JPEG only — no SVG/WEBP)
+  if (config.copertina) {
+    config.copertina = {
+      ...config.copertina,
+      logoCustomBase64:  await normalizeLogoBase64(config.copertina.logoCustomBase64) ?? config.copertina.logoCustomBase64,
+      logo2CustomBase64: await normalizeLogoBase64(config.copertina.logo2CustomBase64),
+    };
+  }
+  if (config.paginaFinale) {
+    config.paginaFinale = {
+      ...config.paginaFinale,
+      logoCustomBase64:  await normalizeLogoBase64((config.paginaFinale as any).logoCustomBase64) ?? (config.paginaFinale as any).logoCustomBase64,
+      logo2CustomBase64: await normalizeLogoBase64((config.paginaFinale as any).logo2CustomBase64),
+    } as typeof config.paginaFinale;
+  }
+  if (config.paginaPenultima) {
+    config.paginaPenultima = {
+      ...config.paginaPenultima,
+      logoCustomBase64:  await normalizeLogoBase64((config.paginaPenultima as any).logoCustomBase64) ?? (config.paginaPenultima as any).logoCustomBase64,
+      logo2CustomBase64: await normalizeLogoBase64((config.paginaPenultima as any).logo2CustomBase64),
+    } as typeof config.paginaPenultima;
   }
 
   return { groups, config };
