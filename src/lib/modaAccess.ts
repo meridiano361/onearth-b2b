@@ -12,11 +12,20 @@ export const CASA_BRANCH_ID = 'casa27' as const;
 
 export type CatalogBranchId = typeof MODA_BRANCH_ID | typeof CASA_BRANCH_ID;
 
-// Email allowlist for non-admin access during testing
-const MODA_ALLOWED_EMAILS = new Set(['cremona@meridiano361.it']);
+// Apertura pubblica: martedì 14 luglio 2026 ore 8:30 ora italiana (CEST = UTC+2)
+const MODA_OPENS_AT = new Date('2026-07-14T08:30:00+02:00');
 
-/** Returns true for admin roles or emails in the testing allowlist. */
+// Tester con accesso anticipato (solo prima dell'apertura pubblica)
+const MODA_EARLY_ACCESS_EMAILS = new Set(['cremona@meridiano361.it']);
+
+/**
+ * Returns true when the user can access the Moda PE27 catalog:
+ * - always: admin roles
+ * - before MODA_OPENS_AT: only emails in MODA_EARLY_ACCESS_EMAILS
+ * - from MODA_OPENS_AT onward: all authenticated users
+ */
 export function canAccessModa(role: string | null | undefined, email?: string | null): boolean {
   if (isAdminRole(role)) return true;
-  return !!email && MODA_ALLOWED_EMAILS.has(email);
+  if (Date.now() >= MODA_OPENS_AT.getTime()) return true;
+  return !!email && MODA_EARLY_ACCESS_EMAILS.has(email);
 }
