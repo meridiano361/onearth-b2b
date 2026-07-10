@@ -1028,10 +1028,9 @@ function ProductCard({
           )}
           {(config.fieldOrder ?? ['codice', 'descrizione', 'misure']).filter((k) => k !== 'codice').map((fieldKey) => {
             if (fieldKey === 'descrizione' && f.descrizione) return (
-              // Natural height — numberOfLines: 2 truncates at 2 lines without a fixed container height
-              <View key="descrizione" style={{ marginBottom: cfs.descrizione.marginBottom ?? layout.ROW_GAP, overflow: 'hidden', alignItems: alignToFlex(cfs.descrizione.align) }}>
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <Text style={{ fontSize: cfs.descrizione.fontSize, fontFamily: fieldFont(cfs.descrizione, config.fontFamiglia), color: cfs.descrizione.color, lineHeight: 1.5 }} {...({ numberOfLines: 2 } as any)}>
+              // Fixed height = 2 lines; alignItems omitted so Text stretches to full width and wraps
+              <View key="descrizione" style={{ height: layout.DESC_H, marginBottom: cfs.descrizione.marginBottom ?? layout.ROW_GAP, overflow: 'hidden' }}>
+                <Text style={{ fontSize: cfs.descrizione.fontSize, fontFamily: fieldFont(cfs.descrizione, config.fontFamiglia), color: cfs.descrizione.color, lineHeight: 1.5, textAlign: cfs.descrizione.align }}>
                   {(() => { const raw = f.campoNome === 'nome' ? product.name : (product.description || product.name); return cfs.descrizione.uppercase ? raw.toUpperCase() : raw; })()}
                 </Text>
               </View>
