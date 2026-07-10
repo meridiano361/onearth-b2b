@@ -63,9 +63,16 @@ export default function Header({ session }: HeaderProps) {
       </Link>
 
       {/* Nav links — desktop */}
-      {!isHome && (
-        <nav className="hidden md:flex items-center gap-1">
-          {isInModa
+      <nav className="hidden md:flex items-center gap-1">
+        {isHome && (
+          <Link
+            href="/catalog/assistenza"
+            className="text-xs px-3 py-1.5 rounded transition-colors text-gray-400 hover:text-primary hover:bg-cream"
+          >
+            Aiuto
+          </Link>
+        )}
+        {!isHome && (isInModa
             ? <>
                 {MODA_NAV.map(({ key, href, label, isActive }) => (
                   <Link
@@ -124,9 +131,8 @@ export default function Header({ session }: HeaderProps) {
                       {label}
                     </Link>
                   );
-                })}
+                }))}
         </nav>
-      )}
 
       {/* Spacer */}
       <div className="flex-1" />
