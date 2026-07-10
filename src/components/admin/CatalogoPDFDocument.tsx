@@ -1236,33 +1236,24 @@ function CoverPage({
 
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia) }}>
-        {/* Top half: image */}
-        {cov.immagineBase64 ? (
-          <Image
-            src={cov.immagineBase64}
-            style={{
-              position: 'absolute',
-              top: imgTopH,
-              left: imgLeftH,
-              width: imgWh,
-              height: imgHh,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              objectFit: 'cover' as any,
-              opacity: imgOpacity,
-            }}
-          />
-        ) : (
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: pageW,
-              height: halfH,
-              backgroundColor: config.colori.sfondoPagina,
-            }}
-          />
-        )}
+        {/* Top half: image clipped to half height */}
+        <View style={{ position: 'absolute', top: 0, left: 0, width: pageW, height: halfH, overflow: 'hidden', backgroundColor: config.colori.sfondoPagina }}>
+          {cov.immagineBase64 ? (
+            <Image
+              src={cov.immagineBase64}
+              style={{
+                position: 'absolute',
+                top: imgTopH,
+                left: imgLeftH,
+                width: imgWh,
+                height: imgHh,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                objectFit: 'cover' as any,
+                opacity: imgOpacity,
+              }}
+            />
+          ) : null}
+        </View>
         {/* Bottom half: logo + title + subtitle */}
         <View
           style={{

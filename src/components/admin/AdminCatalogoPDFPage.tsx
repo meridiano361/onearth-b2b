@@ -843,6 +843,20 @@ function CardPreview({ config }: { config: FormState }) {
 
 const PREVIEW_SCALE = 200 / 595; // PDF A4 = 595pt wide
 
+// CSS that resets browser default styles inside preview text containers to match PDF renderHtmlBlocks output
+const S = PREVIEW_SCALE;
+const PDF_TEXT_PREVIEW_CSS = `
+  .pdf-text-preview p { margin: 0 0 ${(3 * S).toFixed(2)}px 0; line-height: 1.6; }
+  .pdf-text-preview h1 { margin: 0 0 ${(6 * S).toFixed(2)}px 0; font-size: 1.6em; font-weight: bold; line-height: 1.4; }
+  .pdf-text-preview h2 { margin: 0 0 ${(4 * S).toFixed(2)}px 0; font-size: 1.3em; font-weight: bold; line-height: 1.4; }
+  .pdf-text-preview ul, .pdf-text-preview ol { margin: 0 0 ${(3 * S).toFixed(2)}px 0; padding-left: ${(12 * S).toFixed(2)}px; }
+  .pdf-text-preview li { margin-bottom: ${(2 * S).toFixed(2)}px; }
+  .pdf-text-preview strong { font-weight: bold; }
+  .pdf-text-preview em { font-style: italic; }
+  .pdf-text-preview u { text-decoration: underline; }
+  .pdf-text-preview s { text-decoration: line-through; }
+`;
+
 function CoverPreview({ config }: { config: { copertina: FormState['copertina']; colori: FormState['colori']; copertinaTypo: FormState['copertinaTypo']; mostraLogo: boolean } }) {
   const cov = config.copertina;
   const typo = config.copertinaTypo;
@@ -1227,18 +1241,20 @@ function FinalPagePreview({ config }: { config: FormState }) {
 
   const PAD_H = 60 * scale;
   const PAD_V = 48 * scale;
+  const mt = (typo.marginTop ?? 48) * scale;
   const textBg = pf.testoSfondoColore || undefined;
 
   const titleEl = pf.titolo ? (
     <div
-      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pf.titoloAllineamento, margin: `0 0 ${4 * scale}px`, letterSpacing: 2 * scale }}
+      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pf.titoloAllineamento, marginBottom: (typo.titoloMarginBottom ?? 12) * scale, letterSpacing: 2 * scale }}
       dangerouslySetInnerHTML={{ __html: pf.titolo }}
     />
   ) : null;
 
   const textEl = pf.testo ? (
     <div
-      style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, lineHeight: 1.5, textAlign: pf.testoAllineamento ?? 'center' }}
+      className="pdf-text-preview"
+      style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, lineHeight: 1.6, textAlign: pf.testoAllineamento ?? 'center' }}
       dangerouslySetInnerHTML={{ __html: pf.testo }}
     />
   ) : null;
@@ -1256,6 +1272,7 @@ function FinalPagePreview({ config }: { config: FormState }) {
     const overlayH = H * 0.45;
     inner = (
       <>
+        <style>{PDF_TEXT_PREVIEW_CSS}</style>
         {imgSrc && (
           <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1273,13 +1290,14 @@ function FinalPagePreview({ config }: { config: FormState }) {
   } else if (layout === 'background') {
     inner = (
       <>
+        <style>{PDF_TEXT_PREVIEW_CSS}</style>
         {imgSrc && (
           <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imgSrc} alt="" style={imgPos(W, H)} />
           </div>
         )}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px`, backgroundColor: textBg }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: mt, paddingBottom: PAD_V, paddingLeft: PAD_H, paddingRight: PAD_H, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1302,13 +1320,14 @@ function FinalPagePreview({ config }: { config: FormState }) {
     const imgAreaW = W * 0.45;
     inner = (
       <div style={{ display: 'flex', height: '100%' }}>
+        <style>{PDF_TEXT_PREVIEW_CSS}</style>
         <div style={{ width: imgAreaW, height: H, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
           {imgSrc && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={imgSrc} alt="" style={imgPos(imgAreaW, H)} />
           )}
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${32 * scale}px`, position: 'relative', backgroundColor: textBg }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: mt, paddingBottom: PAD_V, paddingLeft: 32 * scale, paddingRight: 32 * scale, position: 'relative', backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1320,7 +1339,8 @@ function FinalPagePreview({ config }: { config: FormState }) {
     const textAreaH = H - imgAreaH;
     inner = (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px`, backgroundColor: textBg }}>
+        <style>{PDF_TEXT_PREVIEW_CSS}</style>
+        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: mt, paddingBottom: PAD_V, paddingLeft: PAD_H, paddingRight: PAD_H, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1339,13 +1359,14 @@ function FinalPagePreview({ config }: { config: FormState }) {
     const textAreaH = H - imgAreaH;
     inner = (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <style>{PDF_TEXT_PREVIEW_CSS}</style>
         <div style={{ height: imgAreaH, overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
           {imgSrc && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={imgSrc} alt="" style={imgPos(W, imgAreaH)} />
           )}
         </div>
-        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px`, backgroundColor: textBg }}>
+        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: mt, paddingBottom: PAD_V, paddingLeft: PAD_H, paddingRight: PAD_H, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1414,18 +1435,20 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
 
   const PAD_H = 60 * scale;
   const PAD_V = 48 * scale;
+  const mt = (typo.marginTop ?? 48) * scale;
   const textBg = pp.testoSfondoColore || undefined;
 
   const titleEl = pp.titolo ? (
     <div
-      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pp.titoloAllineamento, margin: `0 0 ${4 * scale}px`, letterSpacing: 2 * scale }}
+      style={{ fontSize: typo.titoloFontSize * scale, color: typo.titoloColor, textAlign: pp.titoloAllineamento, marginBottom: (typo.titoloMarginBottom ?? 12) * scale, letterSpacing: 2 * scale }}
       dangerouslySetInnerHTML={{ __html: pp.titolo }}
     />
   ) : null;
 
   const textEl = pp.testo ? (
     <div
-      style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, lineHeight: 1.5, textAlign: pp.testoAllineamento ?? 'center' }}
+      className="pdf-text-preview"
+      style={{ fontSize: typo.testoFontSize * scale, color: typo.testoColor, lineHeight: 1.6, textAlign: pp.testoAllineamento ?? 'center' }}
       dangerouslySetInnerHTML={{ __html: pp.testo }}
     />
   ) : null;
@@ -1443,6 +1466,7 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
     const overlayH = H * 0.45;
     inner = (
       <>
+        <style>{PDF_TEXT_PREVIEW_CSS}</style>
         {imgSrc && (
           <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1460,13 +1484,14 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
   } else if (layout === 'background') {
     inner = (
       <>
+        <style>{PDF_TEXT_PREVIEW_CSS}</style>
         {imgSrc && (
           <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imgSrc} alt="" style={imgPos(W, H)} />
           </div>
         )}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px`, backgroundColor: textBg }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: mt, paddingBottom: PAD_V, paddingLeft: PAD_H, paddingRight: PAD_H, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1489,13 +1514,14 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
     const imgAreaW = W * 0.45;
     inner = (
       <div style={{ display: 'flex', height: '100%' }}>
+        <style>{PDF_TEXT_PREVIEW_CSS}</style>
         <div style={{ width: imgAreaW, height: H, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
           {imgSrc && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={imgSrc} alt="" style={imgPos(imgAreaW, H)} />
           )}
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${32 * scale}px`, position: 'relative', backgroundColor: textBg }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: mt, paddingBottom: PAD_V, paddingLeft: 32 * scale, paddingRight: 32 * scale, position: 'relative', backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1507,7 +1533,8 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
     const textAreaH = H - imgAreaH;
     inner = (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px`, backgroundColor: textBg }}>
+        <style>{PDF_TEXT_PREVIEW_CSS}</style>
+        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: mt, paddingBottom: PAD_V, paddingLeft: PAD_H, paddingRight: PAD_H, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
@@ -1526,13 +1553,14 @@ function PenultimaPagePreview({ config }: { config: FormState }) {
     const textAreaH = H - imgAreaH;
     inner = (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <style>{PDF_TEXT_PREVIEW_CSS}</style>
         <div style={{ height: imgAreaH, overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
           {imgSrc && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={imgSrc} alt="" style={imgPos(W, imgAreaH)} />
           )}
         </div>
-        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${PAD_V}px ${PAD_H}px`, backgroundColor: textBg }}>
+        <div style={{ height: textAreaH, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: mt, paddingBottom: PAD_V, paddingLeft: PAD_H, paddingRight: PAD_H, backgroundColor: textBg }}>
           {titleEl}
           {textEl}
         </div>
