@@ -1208,15 +1208,14 @@ function CoverPage({
 
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia) }}>
+        {/* Background image — wrapped in overflow:hidden View so objectFit's Form XObject is isolated and doesn't corrupt sibling Text rendering */}
         {cov.immagineBase64 && (
-          <Image
-            src={cov.immagineBase64}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any }}
-          />
+          <View style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, overflow: 'hidden' }}>
+            <Image src={cov.immagineBase64} style={{ width: imgW, height: imgH }} />
+          </View>
         )}
 
-        {/* Logo — position from grid */}
+        {/* Logo — objectFit removed (height-only Image auto-maintains aspect ratio in react-pdf; no Form XObject created) */}
         {coverLogoBase64 && (
           <View
             style={{
@@ -1228,8 +1227,7 @@ function CoverPage({
               justifyContent: logoJustify,
             }}
           >
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            <Image src={coverLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
+            <Image src={coverLogoBase64} style={{ height: logoH }} />
           </View>
         )}
 
@@ -1317,8 +1315,7 @@ function CoverPage({
         >
           {coverLogoBase64 && (
             <View style={{ flexDirection: 'row', justifyContent: logoJustify, marginBottom: 16 }}>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <Image src={coverLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
+              <Image src={coverLogoBase64} style={{ height: logoH }} />
             </View>
           )}
           <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: spacingTS }}>
@@ -1353,8 +1350,7 @@ function CoverPage({
     >
       {coverLogoBase64 && (
         <View style={{ flexDirection: 'row', justifyContent: logoJustify, marginBottom: 24 }}>
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <Image src={coverLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
+          <Image src={coverLogoBase64} style={{ height: logoH }} />
         </View>
       )}
       {/* Accent line */}
@@ -1445,8 +1441,7 @@ function renderLogo2Inline(
     page.logo2PosX === 'center' ? 'center' : page.logo2PosX === 'right' ? 'flex-end' : 'flex-start';
   return (
     <View style={{ width: '100%', flexDirection: 'row', justifyContent: justify, marginBottom: 10 }}>
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <Image src={src} style={{ height: h, objectFit: 'contain' as any }} />
+      <Image src={src} style={{ height: h }} />
     </View>
   );
 }
@@ -1467,8 +1462,7 @@ function renderCoverLogo2(
   const top = posY === 'top' ? MARGIN : posY === 'middle' ? pageH / 2 - h / 2 : pageH - h - MARGIN;
   return (
     <View style={{ position: 'absolute', top, left: MARGIN, right: MARGIN, flexDirection: 'row', justifyContent: justify }}>
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <Image src={src} style={{ height: h, objectFit: 'contain' as any }} />
+      <Image src={src} style={{ height: h }} />
     </View>
   );
 }
@@ -1528,8 +1522,7 @@ function FinalPage({
 
   const logoView = finalLogoBase64 ? (
     <View style={{ position: 'absolute', top: logoTop, left: LOGO_MARGIN, right: LOGO_MARGIN, flexDirection: 'row', justifyContent: logoJustify }}>
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <Image src={finalLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
+      <Image src={finalLogoBase64} style={{ height: logoH }} />
     </View>
   ) : null;
 
@@ -1748,8 +1741,7 @@ function PenultimaPage({
 
   const logoView = penultimaLogoBase64 ? (
     <View style={{ position: 'absolute', top: logoTop, left: LOGO_MARGIN, right: LOGO_MARGIN, flexDirection: 'row', justifyContent: logoJustify }}>
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <Image src={penultimaLogoBase64} style={{ height: logoH, objectFit: 'contain' as any }} />
+      <Image src={penultimaLogoBase64} style={{ height: logoH }} />
     </View>
   ) : null;
 
