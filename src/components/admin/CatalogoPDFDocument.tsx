@@ -646,7 +646,7 @@ function computeLayout(config: CatalogConfig): Layout {
   const anyPrice = f.prezzoCosto || f.pvp || f.produttore || f.paese;
 
   // PRICES_H must grow with the configured font sizes.
-  // Left col: prezzoCosto (up to 2 lines: con reso + senza reso) + pvp (1 line)
+  // Left col: 1 line prezzoCosto + 1 line pvp (prezzoCosto is 1 line for most products)
   // Right col: produttore (1 line) + paese (1 line)
   const priceFs  = Math.max(
     f.prezzoCosto ? (config.cardFieldStyles?.prezzoCosto?.fontSize ?? 8) : 0,
@@ -656,7 +656,7 @@ function computeLayout(config: CatalogConfig): Layout {
     f.produttore ? (config.cardFieldStyles?.produttore?.fontSize ?? 6.5) : 0,
     f.paese      ? (config.cardFieldStyles?.paese?.fontSize ?? 6.5)      : 0,
   );
-  const priceColLines    = (f.prezzoCosto ? 2 : 0) + (f.pvp ? 1 : 0);
+  const priceColLines    = (f.prezzoCosto ? 1 : 0) + (f.pvp ? 1 : 0);
   const supplierColLines = (f.produttore ? 1 : 0) + (f.paese ? 1 : 0);
   const PRICES_H = anyPrice
     ? Math.max(
@@ -1229,6 +1229,14 @@ function CoverPage({
     const imgLeft = (pageW - imgW) / 2 + (pageW * imgOffsetX / 100);
     const imgTop = (pageH - imgH) / 2 + (pageH * imgOffsetY / 100);
 
+    // When logo2 is at the bottom, push the text block up to avoid overlap.
+    // logo2 top = pageH - logo2H - LOGO2_MARGIN (see renderCoverLogo2).
+    const LOGO2_MARGIN = 30;
+    const logo2Active = cov.logo2Tipo === 'custom' && !!cov.logo2CustomBase64;
+    const logo2AtBottom = logo2Active && (cov.logo2PosY ?? 'bottom') === 'bottom';
+    const logo2H = FINAL_LOGO_H[cov.logo2Dimensione ?? 'medio'] ?? 22;
+    const textPaddingBottom = logo2AtBottom ? logo2H + LOGO2_MARGIN + 8 : 44;
+
     return (
       <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: resolveFamily(config.fontFamiglia) }}>
         {/* Background image — overflow:hidden isolates the objectFit clipping context */}
@@ -1276,7 +1284,7 @@ function CoverPage({
             height: 160,
             justifyContent: 'flex-end',
             paddingHorizontal: 40,
-            paddingBottom: 44,
+            paddingBottom: textPaddingBottom,
           }}
         >
           <View style={{ width: '100%', alignItems: alignToFlex(titleAlign), marginBottom: spacingTS }}>
