@@ -386,6 +386,13 @@ const COVER_LOGO_JUSTIFY: Record<string, 'flex-start' | 'center' | 'flex-end'> =
 
 // ── ITEM 1 helper ─────────────────────────────────────────────────────────────
 
+// Bakes alpha into hex color as rgba() — avoids react-pdf transparency group bug (opacity prop creates PDF Form XObjects that hide sibling Text elements)
+function hexToRgba(hex: string, alpha: number): string {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return hex;
+  return `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${alpha})`;
+}
+
 function alignToFlex(align: 'left' | 'center' | 'right'): 'flex-start' | 'center' | 'flex-end' {
   if (align === 'center') return 'center';
   if (align === 'right') return 'flex-end';
@@ -898,7 +905,7 @@ function ProductCard({
 
         // Placeholder when no photo
         const placeholder = config.logoBase64 ? (
-          <Image style={{ width: 55, height: 12, opacity: 0.25 }} src={config.logoBase64} />
+          <Image style={{ width: 55, height: 12 }} src={config.logoBase64} />
         ) : null;
 
         // NUOVO badge
@@ -1205,7 +1212,7 @@ function CoverPage({
           <Image
             src={cov.immagineBase64}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }}
+            style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any }}
           />
         )}
 
@@ -1255,12 +1262,12 @@ function CoverPage({
           </View>
           {cov.sottotitolo ? (
             <View style={{ width: '100%', alignItems: alignToFlex(subtitleAlign), marginBottom: subtitle2 ? spacingS2 : 0 }}>
-              {renderCoverLines(cov.sottotitolo, { fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: typo.sottotitoloColor, letterSpacing: sottotitoloLS, opacity: 0.85 })}
+              {renderCoverLines(cov.sottotitolo, { fontSize: typo.sottotitoloFontSize, fontFamily: subtitleFont, color: hexToRgba(typo.sottotitoloColor, 0.85), letterSpacing: sottotitoloLS })}
             </View>
           ) : null}
           {subtitle2 ? (
             <View style={{ width: '100%', alignItems: alignToFlex(subtitle2Align) }}>
-              {renderCoverLines(subtitle2, { fontSize: typo.sottotitolo2FontSize ?? 11, fontFamily: subtitle2Font, color: typo.sottotitolo2Color ?? typo.sottotitoloColor, letterSpacing: sottotitoloLS, opacity: 0.75 })}
+              {renderCoverLines(subtitle2, { fontSize: typo.sottotitolo2FontSize ?? 11, fontFamily: subtitle2Font, color: hexToRgba(typo.sottotitolo2Color ?? typo.sottotitoloColor, 0.75), letterSpacing: sottotitoloLS })}
             </View>
           ) : null}
         </View>
@@ -1291,7 +1298,6 @@ function CoverPage({
                 height: imgHh,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 objectFit: 'cover' as any,
-                opacity: imgOpacity,
               }}
             />
           ) : null}
@@ -1532,7 +1538,7 @@ function FinalPage({
     const imgH = areaH * imgScale / 100;
     const left = (areaW - imgW) / 2 + (areaW * imgOffsetX / 100);
     const top = (areaH - imgH) / 2 + (areaH * imgOffsetY / 100);
-    return { position: 'absolute' as const, top, left, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }; // eslint-disable-line @typescript-eslint/no-explicit-any
+    return { position: 'absolute' as const, top, left, width: imgW, height: imgH, objectFit: 'cover' as any }; // eslint-disable-line @typescript-eslint/no-explicit-any
   }
 
   const PAD_H = 60;
@@ -1611,7 +1617,7 @@ function FinalPage({
         <View style={{ width: imgAreaW, height: pageH, overflow: 'hidden' }}>
           {imgSrc && (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
+            <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any }} />
           )}
         </View>
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
@@ -1654,7 +1660,7 @@ function FinalPage({
         <View style={{ height: imgAreaH, overflow: 'hidden' }}>
           {imgSrc && (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
+            <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any }} />
           )}
         </View>
         {logoView}
@@ -1675,7 +1681,7 @@ function FinalPage({
       <View style={{ height: imgAreaH, overflow: 'hidden' }}>
         {imgSrc && (
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
+          <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any }} />
         )}
       </View>
       <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
@@ -1752,7 +1758,7 @@ function PenultimaPage({
     const imgH = areaH * imgScale / 100;
     const left = (areaW - imgW) / 2 + (areaW * imgOffsetX / 100);
     const top = (areaH - imgH) / 2 + (areaH * imgOffsetY / 100);
-    return { position: 'absolute' as const, top, left, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }; // eslint-disable-line @typescript-eslint/no-explicit-any
+    return { position: 'absolute' as const, top, left, width: imgW, height: imgH, objectFit: 'cover' as any }; // eslint-disable-line @typescript-eslint/no-explicit-any
   }
 
   const PAD_H = 60;
@@ -1830,7 +1836,7 @@ function PenultimaPage({
         <View style={{ width: imgAreaW, height: pageH, overflow: 'hidden' }}>
           {imgSrc && (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
+            <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any }} />
           )}
         </View>
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 32, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
@@ -1873,7 +1879,7 @@ function PenultimaPage({
         <View style={{ height: imgAreaH, overflow: 'hidden' }}>
           {imgSrc && (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
+            <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any }} />
           )}
         </View>
         {logoView}
@@ -1894,7 +1900,7 @@ function PenultimaPage({
       <View style={{ height: imgAreaH, overflow: 'hidden' }}>
         {imgSrc && (
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any, opacity: imgOpacity }} />
+          <Image src={imgSrc} style={{ position: 'absolute', top: imgTop, left: imgLeft, width: imgW, height: imgH, objectFit: 'cover' as any }} />
         )}
       </View>
       <View style={{ height: textAreaH, justifyContent: 'center', paddingHorizontal: PAD_H, paddingTop: mt, paddingBottom: PAD_V, backgroundColor: textBg }}>
@@ -2051,12 +2057,12 @@ function TrancheSeparatorPage({
     <Page size={[pageW, pageH] as [number, number]} style={{ fontFamily: 'Helvetica', backgroundColor: st.bgColor, paddingTop: 20, paddingBottom: 20, paddingLeft: 20, paddingRight: 20 }}>
       <CatalogHeader config={config} today={today} layout={layout} />
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 }}>
-        <View style={{ width: 60, height: 2, backgroundColor: st.color, marginBottom: 20, opacity: 0.6 }} />
+        <View style={{ width: 60, height: 2, backgroundColor: hexToRgba(st.color, 0.6), marginBottom: 20 }} />
         <Text style={{ fontSize: st.fontSize, fontFamily: font, color: st.color, letterSpacing: 4, textAlign: 'center' }}>
           {displayName}
         </Text>
         {st.mostraNProdotti && (
-          <Text style={{ fontSize: 11, fontFamily: 'Helvetica', color: st.color, marginTop: 20, opacity: 0.6, letterSpacing: 2 }}>
+          <Text style={{ fontSize: 11, fontFamily: 'Helvetica', color: hexToRgba(st.color, 0.6), marginTop: 20, letterSpacing: 2 }}>
             {productCount} {productCount === 1 ? 'prodotto' : 'prodotti'}
           </Text>
         )}
