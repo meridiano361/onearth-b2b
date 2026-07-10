@@ -46,18 +46,22 @@ const RAGGRUPPAMENTO_FIELD: Record<string, keyof ProductForPDF> = {
 };
 
 // Converts any base64 data-URL logo to PNG so react-pdf can render it.
-// react-pdf v3 supports JPEG, PNG, GIF, BMP — NOT SVG or WEBP.
+// Always runs through sharp regardless of format — react-pdf's image decoder is stricter
+// than browsers, and this guarantees a clean PNG even from technically-valid but unusual inputs.
 async function normalizeLogoBase64(dataUrl: string | null | undefined): Promise<string | null> {
   if (!dataUrl) return null;
   const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
   if (!m) return null;
   const [, mime, b64] = m;
-  if (mime === 'image/png' || mime === 'image/jpeg' || mime === 'image/gif' || mime === 'image/bmp') return dataUrl;
   try {
     const buf = Buffer.from(b64, 'base64');
     const png = await sharp(buf).png().toBuffer();
     return `data:image/png;base64,${png.toString('base64')}`;
-  } catch { return null; }
+  } catch {
+    // sharp failed; fall back to original only for formats react-pdf supports
+    if (mime === 'image/png' || mime === 'image/jpeg' || mime === 'image/gif' || mime === 'image/bmp') return dataUrl;
+    return null;
+  }
 }
 
 async function fetchImageAsJpegBase64(url: string): Promise<string | null> {
@@ -611,6 +615,14 @@ export async function POST(req: NextRequest) {
         ordineTranche: body.ordineTranche,
         trancheOrder: body.trancheOrder,
       } as Partial<CatalogConfig>,
+    });
+
+    // Diagnostic: log logo2 state before rendering so Vercel logs reveal format issues
+    const cov2 = config.copertina;
+    console.error('[catalogo-pdf] logo2 state:', {
+      tipo: cov2.logo2Tipo,
+      hasData: !!cov2.logo2CustomBase64,
+      prefix: cov2.logo2CustomBase64?.slice(0, 40),
     });
 
     const pdfBuffer = await renderToBuffer(
