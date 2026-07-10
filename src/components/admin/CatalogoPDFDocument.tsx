@@ -635,7 +635,7 @@ function computeLayout(config: CatalogConfig): Layout {
   const TEXT_PAD = config.cardBoxStyle?.padding ?? 4;
   const CODE_H = 10;
   const descFontSize = config.cardFieldStyles?.descrizione?.fontSize ?? 8;
-  const DESC_H = Math.ceil(descFontSize * 1.35 * 2) + 2; // 2 lines max
+  const DESC_H = Math.ceil(descFontSize * 1.5 * 2) + 4; // 2 lines, lineHeight 1.5 + descender buffer
   const DETAIL_H = 10;
   const PRICES_H = 24;
   const ROW_GAP = 2;
@@ -1008,9 +1008,9 @@ function ProductCard({
         )}
         {(config.fieldOrder ?? ['codice', 'descrizione', 'misure']).filter((k) => k !== 'codice').map((fieldKey) => {
           if (fieldKey === 'descrizione' && f.descrizione) return (
-            <View key="descrizione" style={{ maxHeight: layout.DESC_H, marginBottom: cfs.descrizione.marginBottom ?? layout.ROW_GAP, overflow: 'hidden', alignItems: alignToFlex(cfs.descrizione.align) }}>
+            <View key="descrizione" style={{ height: layout.DESC_H, marginBottom: cfs.descrizione.marginBottom ?? layout.ROW_GAP, alignItems: alignToFlex(cfs.descrizione.align) }}>
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <Text style={{ fontSize: cfs.descrizione.fontSize, fontFamily: fieldFont(cfs.descrizione, config.fontFamiglia), color: cfs.descrizione.color, lineHeight: 1.35 }} {...({ numberOfLines: 2 } as any)}>
+              <Text style={{ fontSize: cfs.descrizione.fontSize, fontFamily: fieldFont(cfs.descrizione, config.fontFamiglia), color: cfs.descrizione.color, lineHeight: 1.5 }} {...({ numberOfLines: 2 } as any)}>
                 {(() => { const raw = f.campoNome === 'nome' ? product.name : (product.description || product.name); return cfs.descrizione.uppercase ? raw.toUpperCase() : raw; })()}
               </Text>
             </View>
