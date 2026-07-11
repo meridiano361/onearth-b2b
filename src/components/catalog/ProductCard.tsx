@@ -123,7 +123,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </p>
           )}
           <h3
-            className="text-sm font-medium text-primary"
+            className="text-xs font-medium text-primary"
             style={{
               display: '-webkit-box',
               WebkitLineClamp: 2,
@@ -131,9 +131,9 @@ export default function ProductCard({ product }: ProductCardProps) {
               overflow: 'hidden',
               wordBreak: 'break-word',
               overflowWrap: 'break-word',
-              minHeight: '2.5rem',
-              maxHeight: '2.5rem',
-              lineHeight: '1.25rem',
+              minHeight: '2.25rem',
+              maxHeight: '2.25rem',
+              lineHeight: '1.125rem',
             }}
           >
             {product.name}
@@ -157,7 +157,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               if (hasConReso) return (
                 <>
                   <p className="text-2xs text-gray-400 uppercase tracking-wide">Costo i.e. con reso</p>
-                  <p className="text-sm font-semibold text-primary">{formatCurrency(conReso)}</p>
+                  <p className="text-xs font-medium text-primary">{formatCurrency(conReso)}</p>
                   {hasSenzaReso && (
                     <>
                       <p className="text-2xs text-gray-400 uppercase tracking-wide">Senza reso</p>
@@ -169,13 +169,13 @@ export default function ProductCard({ product }: ProductCardProps) {
               if (hasSenzaReso) return (
                 <>
                   <p className="text-2xs text-gray-400 uppercase tracking-wide">{t('cost')}</p>
-                  <p className="text-sm font-semibold text-primary">{formatCurrency(senzaReso)}</p>
+                  <p className="text-xs font-medium text-primary">{formatCurrency(senzaReso)}</p>
                 </>
               );
               return (
                 <>
                   <p className="text-2xs text-gray-400 uppercase tracking-wide">{t('cost')}</p>
-                  <p className="text-sm font-semibold text-primary">{formatCurrency(product.costPrice)}</p>
+                  <p className="text-xs font-medium text-primary">{formatCurrency(product.costPrice)}</p>
                 </>
               );
             })()}
