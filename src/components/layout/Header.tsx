@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
-import { LogOut, UserCircle } from 'lucide-react';
+import { LogOut, UserCircle, HelpCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -139,6 +139,16 @@ export default function Header({ session }: HeaderProps) {
 
       {/* Notification bell */}
       <NotificationBell />
+
+      {/* Aiuto — desktop only */}
+      <Link
+        href="/catalog/assistenza"
+        className="hidden md:flex p-1.5 text-gray-400 hover:text-primary transition-colors"
+        title="Aiuto"
+        aria-label="Aiuto"
+      >
+        <HelpCircle size={19} />
+      </Link>
 
       {/* Profilo mobile — icona */}
       <Link
