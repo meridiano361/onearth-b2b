@@ -58,6 +58,7 @@ function settingsToFlat(s: AppSettingsData): SettingsFlat {
   f['home.editorialAttivo'] = String(s.home.editorialAttivo);
   f['home.editorialUrl'] = s.home.editorialUrl;
   f['home.editorialCaption'] = s.home.editorialCaption;
+  f['home.layoutCard'] = s.home.layoutCard;
   f['login.sfondoUrl'] = s.login.sfondoUrl;
   f['login.caption'] = s.login.caption;
   f['login.claim'] = s.login.claim;
@@ -666,7 +667,7 @@ export default function AdminPersonalizzazionePage() {
   }
 
   // Save key arrays
-  const homeKeys = ['home.titolo1','home.titolo1.maiuscolo','home.titolo1.colore','home.titolo1.size','home.titolo1.font','home.titolo1.weight','home.titolo1.lineHeight','home.titolo1.letterSpacing','home.titolo1.transform','home.titolo2','home.titolo2.colore','home.titolo2.size','home.titolo2.font','home.titolo2.weight','home.titolo2.lineHeight','home.titolo2.letterSpacing','home.titolo2.transform','home.cta','home.scrollAttivo','home.scrollNumero','home.scrollCollezione','home.editorialAttivo','home.editorialUrl','home.editorialCaption'];
+  const homeKeys = ['home.titolo1','home.titolo1.maiuscolo','home.titolo1.colore','home.titolo1.size','home.titolo1.font','home.titolo1.weight','home.titolo1.lineHeight','home.titolo1.letterSpacing','home.titolo1.transform','home.titolo2','home.titolo2.colore','home.titolo2.size','home.titolo2.font','home.titolo2.weight','home.titolo2.lineHeight','home.titolo2.letterSpacing','home.titolo2.transform','home.cta','home.scrollAttivo','home.scrollNumero','home.scrollCollezione','home.editorialAttivo','home.editorialUrl','home.editorialCaption','home.layoutCard'];
   const loginKeys = ['login.sfondoUrl', 'login.caption', 'login.claim'];
   const coloriKeys = ['colori.sfondo', 'colori.pulsanti', 'colori.testoPulsanti', 'colori.testo'];
   const socialKeys = ['social.ordine', ...SOCIAL_KEYS.flatMap(k => [`social.${k}.visibile`, `social.${k}.url`])];
@@ -710,138 +711,59 @@ export default function AdminPersonalizzazionePage() {
           {/* Homepage */}
           <SectionCard title="Homepage">
             <div className="space-y-4">
-              {/* Titolo 1 */}
-              <div className="space-y-2">
-                <p className="text-2xs font-semibold text-gray-400">Titolo 1</p>
-                <input type="text" value={settings.home.titolo1} onChange={e => update('home', { titolo1: e.target.value })} className={inp} />
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Font</label>
-                    <select value={settings.home.titolo1Font} onChange={e => update('home', { titolo1Font: e.target.value })} className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none bg-white">
-                      {[['system','System (Nunito)'],['nova','Nova'],['playfair','Playfair Display'],['montserrat','Montserrat'],['lato','Lato'],['georgia','Georgia'],['futura','Futura']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Peso</label>
-                    <select value={settings.home.titolo1Weight} onChange={e => update('home', { titolo1Weight: e.target.value })} className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none bg-white">
-                      {[['light','Light'],['normal','Normal'],['medium','Medium'],['semibold','Semibold'],['bold','Bold'],['extrabold','Extrabold']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Trasformazione</label>
-                    <select value={settings.home.titolo1Transform} onChange={e => update('home', { titolo1Transform: e.target.value })} className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none bg-white">
-                      <option value="none">Nessuna</option><option value="uppercase">MAIUSCOLO</option><option value="lowercase">minuscolo</option><option value="capitalize">Prima Lettera</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Colore</label>
-                    <div className="flex items-center gap-1.5">
-                      <input type="color" value={settings.home.titolo1Colore} onChange={e => update('home', { titolo1Colore: e.target.value })} className="w-8 h-8 rounded border border-border cursor-pointer flex-shrink-0" />
-                      <input type="text" value={settings.home.titolo1Colore} onChange={e => update('home', { titolo1Colore: e.target.value })} className="flex-1 border border-border rounded px-2 py-1.5 text-xs outline-none" />
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Dimensione (px)</label>
-                    <input type="range" min={12} max={60} value={settings.home.titolo1Size} onChange={e => update('home', { titolo1Size: Number(e.target.value) })} className="w-full" />
-                    <p className="text-2xs text-gray-400 text-center">{settings.home.titolo1Size}px</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Interlinea</label>
-                    <input type="range" min={1} max={2} step={0.05} value={settings.home.titolo1LineHeight} onChange={e => update('home', { titolo1LineHeight: Number(e.target.value) })} className="w-full" />
-                    <p className="text-2xs text-gray-400 text-center">{settings.home.titolo1LineHeight.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Spaziatura (px)</label>
-                    <input type="range" min={-2} max={10} step={0.5} value={settings.home.titolo1LetterSpacing} onChange={e => update('home', { titolo1LetterSpacing: Number(e.target.value) })} className="w-full" />
-                    <p className="text-2xs text-gray-400 text-center">{settings.home.titolo1LetterSpacing}px</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Titolo 2 */}
-              <div className="space-y-2 pt-2 border-t border-border">
-                <p className="text-2xs font-semibold text-gray-400">Titolo 2</p>
-                <input type="text" value={settings.home.titolo2} onChange={e => update('home', { titolo2: e.target.value })} className={inp} />
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Font</label>
-                    <select value={settings.home.titolo2Font} onChange={e => update('home', { titolo2Font: e.target.value })} className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none bg-white">
-                      {[['system','System (Nunito)'],['nova','Nova'],['playfair','Playfair Display'],['montserrat','Montserrat'],['lato','Lato'],['georgia','Georgia'],['futura','Futura']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Peso</label>
-                    <select value={settings.home.titolo2Weight} onChange={e => update('home', { titolo2Weight: e.target.value })} className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none bg-white">
-                      {[['light','Light'],['normal','Normal'],['medium','Medium'],['semibold','Semibold'],['bold','Bold'],['extrabold','Extrabold']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Trasformazione</label>
-                    <select value={settings.home.titolo2Transform} onChange={e => update('home', { titolo2Transform: e.target.value })} className="w-full border border-border rounded px-2 py-1.5 text-xs outline-none bg-white">
-                      <option value="none">Nessuna</option><option value="uppercase">MAIUSCOLO</option><option value="lowercase">minuscolo</option><option value="capitalize">Prima Lettera</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Colore</label>
-                    <div className="flex items-center gap-1.5">
-                      <input type="color" value={settings.home.titolo2Colore} onChange={e => update('home', { titolo2Colore: e.target.value })} className="w-8 h-8 rounded border border-border cursor-pointer flex-shrink-0" />
-                      <input type="text" value={settings.home.titolo2Colore} onChange={e => update('home', { titolo2Colore: e.target.value })} className="flex-1 border border-border rounded px-2 py-1.5 text-xs outline-none" />
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Dimensione (px)</label>
-                    <input type="range" min={12} max={40} value={settings.home.titolo2Size} onChange={e => update('home', { titolo2Size: Number(e.target.value) })} className="w-full" />
-                    <p className="text-2xs text-gray-400 text-center">{settings.home.titolo2Size}px</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Interlinea</label>
-                    <input type="range" min={1} max={2} step={0.05} value={settings.home.titolo2LineHeight} onChange={e => update('home', { titolo2LineHeight: Number(e.target.value) })} className="w-full" />
-                    <p className="text-2xs text-gray-400 text-center">{settings.home.titolo2LineHeight.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Spaziatura (px)</label>
-                    <input type="range" min={-2} max={10} step={0.5} value={settings.home.titolo2LetterSpacing} onChange={e => update('home', { titolo2LetterSpacing: Number(e.target.value) })} className="w-full" />
-                    <p className="text-2xs text-gray-400 text-center">{settings.home.titolo2LetterSpacing}px</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* CTA + scroll */}
-              <div className="space-y-3 pt-2 border-t border-border">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Testo CTA</label>
-                  <input type="text" value={settings.home.cta} onChange={e => update('home', { cta: e.target.value })} className={inp} />
-                </div>
-                <ToggleRow label="Mostra scroll prodotti" checked={settings.home.scrollAttivo} onChange={v => update('home', { scrollAttivo: v })} />
-                {settings.home.scrollAttivo && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">Numero prodotti (3–20)</label>
-                      <input type="number" value={settings.home.scrollNumero} onChange={e => update('home', { scrollNumero: Number(e.target.value) })} className={inp} min={3} max={20} />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">Filtra per collezione</label>
-                      <input type="text" value={settings.home.scrollCollezione} onChange={e => update('home', { scrollCollezione: e.target.value })} placeholder="es. CA27 (vuoto = tutti)" className={inp} />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Foto */}
-              <div className="space-y-3 pt-2 border-t border-border">
-                <p className="text-2xs font-semibold text-gray-400">Foto</p>
-                <ToggleRow label="Mostra foto editoriale" checked={settings.home.editorialAttivo} onChange={v => update('home', { editorialAttivo: v })} />
-                {settings.home.editorialAttivo && (<>
-                  <ImageUploadInput label="Foto" value={settings.home.editorialUrl} onChange={url => update('home', { editorialUrl: url })} />
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Didascalia (opzionale)</label>
-                    <input type="text" value={settings.home.editorialCaption} onChange={e => update('home', { editorialCaption: e.target.value })} className={inp} />
-                  </div>
-                </>)}
+              <p className="text-xs text-gray-400">Scegli come disporre le card delle collezioni nella home del cliente.</p>
+              <div className="grid grid-cols-3 gap-3">
+                {([
+                  {
+                    id: 'griglia',
+                    label: 'Affiancate',
+                    desc: 'Due colonne',
+                    preview: (
+                      <div className="flex gap-1 h-12">
+                        <div className="flex-1 bg-gray-300 rounded" />
+                        <div className="flex-1 bg-gray-300 rounded" />
+                      </div>
+                    ),
+                  },
+                  {
+                    id: 'colonna',
+                    label: 'In colonna',
+                    desc: "Una sotto l'altra",
+                    preview: (
+                      <div className="flex flex-col gap-1 h-12">
+                        <div className="flex-1 bg-gray-300 rounded" />
+                        <div className="flex-1 bg-gray-300 rounded" />
+                      </div>
+                    ),
+                  },
+                  {
+                    id: 'grande-prima',
+                    label: 'Grande + piccola',
+                    desc: 'Prima in evidenza',
+                    preview: (
+                      <div className="flex flex-col gap-1 h-12">
+                        <div className="bg-gray-300 rounded h-7" />
+                        <div className="bg-gray-300 rounded h-4" />
+                      </div>
+                    ),
+                  },
+                ] as const).map(({ id, label, desc, preview }) => {
+                  const active = settings.home.layoutCard === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => update('home', { layoutCard: id })}
+                      className={`flex flex-col gap-2 p-3 rounded-xl border-2 transition-all text-left ${active ? 'border-gray-900 bg-gray-50' : 'border-border hover:border-gray-300'}`}
+                    >
+                      {preview}
+                      <div>
+                        <p className={`text-xs font-semibold ${active ? 'text-gray-900' : 'text-gray-600'}`}>{label}</p>
+                        <p className="text-[10px] text-gray-400 leading-tight">{desc}</p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <SaveButton onClick={() => saveSection(homeKeys, 'Homepage')} loading={saving === 'Homepage'} />

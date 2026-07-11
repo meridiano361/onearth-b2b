@@ -26,6 +26,7 @@ export interface AppSettingsData {
     editorialAttivo: boolean;
     editorialUrl: string;
     editorialCaption: string;
+    layoutCard: string;
   };
   social: {
     ordine: string[];
@@ -198,6 +199,7 @@ export const DEFAULT_APP_SETTINGS: AppSettingsData = {
     editorialAttivo: false,
     editorialUrl: '',
     editorialCaption: '',
+    layoutCard: 'griglia',
   },
   social: {
     ordine: [...SOCIAL_KEYS],
@@ -388,6 +390,7 @@ export function parseSettingsFromDb(records: { chiave: string; valore: string }[
       editorialAttivo: bool('home.editorialAttivo', false),
       editorialUrl: str('home.editorialUrl', ''),
       editorialCaption: str('home.editorialCaption', ''),
+      layoutCard: str('home.layoutCard', 'griglia'),
     },
     social: {
       ordine: socialOrdine,
