@@ -150,7 +150,7 @@ export default function CustomerHome() {
                 Prenotazione chiusa
               </div>
             ) : deadline ? (
-              <div className="mt-2 flex items-center gap-1.5 text-2xs text-amber-300">
+              <div className="mt-2 flex items-center gap-1.5 text-2xs text-white/60">
                 <Clock size={10} />
                 {`Prenotazioni aperte fino al ${formatDeadline(deadline)}`}
               </div>

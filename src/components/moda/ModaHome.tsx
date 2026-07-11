@@ -61,10 +61,10 @@ export default function ModaHome() {
       <p className="text-sm text-gray-400 mt-1">{stagione}</p>
 
       {deadline && (
-        <div className={`mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+        <div className={`mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${
           isExpired
-            ? 'bg-gray-100 text-gray-500'
-            : 'bg-amber-50 text-amber-700 border border-amber-200'
+            ? 'bg-gray-100 text-gray-400 border-gray-200'
+            : 'bg-white text-gray-500 border-gray-200'
         }`}>
           {isExpired ? <Lock size={10} /> : <Clock size={10} />}
           {isExpired
