@@ -630,17 +630,18 @@ function computeLayout(config: CatalogConfig): Layout {
   const CARD_H = Math.floor(usableH / ROWS);
 
   const f = config.campi;
-  const IMG_H = f.foto ? Math.round(CARD_H * 0.56) : 0;
+
+  // Flags needed before computing IMG_H
+  const anyDetail = f.misure || f.linea || f.collezione || f.confezione || f.iva;
+  const anyPrice  = f.prezzoCosto || f.pvp || f.produttore || f.paese;
 
   const TEXT_PAD = config.cardBoxStyle?.padding ?? 4;
   const CODE_H = 10;
-  const DETAIL_H = 10;
   const ROW_GAP = 2;
 
-  const TEXT_AREA_H = CARD_H - IMG_H - (config.cardBoxStyle?.borderWidth ?? 0) * 2;
-
-  const anyDetail = f.misure || f.linea || f.collezione || f.confezione || f.iva;
-  const anyPrice  = f.prezzoCosto || f.pvp || f.produttore || f.paese;
+  // DETAIL_H: dynamic so the misure line always fits (was hardcoded 10 — too tight)
+  const misureFs = config.cardFieldStyles?.misure?.fontSize ?? 6.5;
+  const DETAIL_H = Math.ceil(misureFs * 1.5) + 2;
 
   // ── PRICES_H ─────────────────────────────────────────────────────────────────
   // Each price field (prezzoCosto / pvp) renders as TWO lines:
@@ -672,28 +673,29 @@ function computeLayout(config: CatalogConfig): Layout {
 
   const PRICES_H = anyPrice ? Math.max(priceColH, supplierColH, 14) : 0;
 
-  // ── DESC_H (adaptive) ─────────────────────────────────────────────────────────
-  // Reserve 2 lines for description if the card has room; else 1 line.
+  // ── DESC_H: always 2 lines ────────────────────────────────────────────────────
+  // IMG_H is capped below to guarantee this space is always available.
   const descFontSize = config.cardFieldStyles?.descrizione?.fontSize ?? 8;
   const desc2LineH = Math.ceil(descFontSize * 1.5 * 2) + 4;
-  const desc1LineH = Math.ceil(descFontSize * 1.5) + 2;
+  const DESC_H = f.descrizione ? desc2LineH : 0;
 
+  // ── IMG_H: 56% of card, but capped so text always fits ───────────────────────
   const bottomPad = anyPrice ? PRICES_H + TEXT_PAD : TEXT_PAD;
-  const availForDesc = TEXT_AREA_H
-    - TEXT_PAD                                       // paddingTop
-    - bottomPad                                      // paddingBottom (prices reserved)
-    - (f.codice   ? CODE_H   + ROW_GAP : 0)
-    - (anyDetail  ? DETAIL_H + ROW_GAP : 0)
-    - ROW_GAP;                                       // marginBottom of description itself
+  const minTextH = TEXT_PAD + bottomPad
+    + (f.codice      ? CODE_H   + ROW_GAP : 0)
+    + (f.descrizione ? DESC_H   + ROW_GAP : 0)
+    + (anyDetail     ? DETAIL_H + ROW_GAP : 0);
 
-  const DESC_H = f.descrizione
-    ? (availForDesc >= desc2LineH ? desc2LineH : desc1LineH)
+  const IMG_H = f.foto
+    ? Math.max(20, Math.min(Math.round(CARD_H * 0.56), CARD_H - minTextH))
     : 0;
 
+  const TEXT_AREA_H = CARD_H - IMG_H - (config.cardBoxStyle?.borderWidth ?? 0) * 2;
+
   let usedTextH = TEXT_PAD + bottomPad;
-  if (f.codice)    usedTextH += CODE_H   + ROW_GAP;
-  if (f.descrizione) usedTextH += DESC_H + ROW_GAP;
-  if (anyDetail)   usedTextH += DETAIL_H + ROW_GAP;
+  if (f.codice)      usedTextH += CODE_H   + ROW_GAP;
+  if (f.descrizione) usedTextH += DESC_H   + ROW_GAP;
+  if (anyDetail)     usedTextH += DETAIL_H + ROW_GAP;
 
   const SPACER_H = Math.max(0, TEXT_AREA_H - usedTextH);
 
@@ -1059,9 +1061,8 @@ function ProductCard({
               </View>
             );
             if (fieldKey === 'misure' && anyDetail) return (
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               <View key="misure" style={{ height: layout.DETAIL_H, marginBottom: misureStyle.marginBottom ?? layout.ROW_GAP, overflow: 'hidden' }}>
-                <Text style={{ fontSize: misureStyle.fontSize, fontFamily: fieldFont(misureStyle, config.fontFamiglia), color: misureStyle.color, textAlign: misureStyle.align }} {...({ numberOfLines: 1 } as any)}>
+                <Text style={{ fontSize: misureStyle.fontSize, fontFamily: fieldFont(misureStyle, config.fontFamiglia), color: misureStyle.color, lineHeight: 1.3, textAlign: misureStyle.align }}>
                   {detailText}
                 </Text>
               </View>
