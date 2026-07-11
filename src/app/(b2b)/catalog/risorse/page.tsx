@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 
 // ─── Document types ───────────────────────────────────────────────────────────
 
-interface Doc { id: string; nome: string; tipo: string; descrizione?: string | null; url: string; size: number; mimeType?: string | null; createdAt: string; }
+interface Doc { id: string; nome: string; tipo: string; cartella?: string | null; descrizione?: string | null; url: string; size: number; mimeType?: string | null; createdAt: string; }
 type MediaKind = 'pdf' | 'video' | 'audio' | 'other';
 const VIDEO_TIPI = ['Video presentazione', 'Video tutorial'];
 const AUDIO_TIPI = ['Audio / Podcast'];
@@ -293,25 +293,78 @@ export default function RisorsePage() {
           <FileText size={40} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">Nessuna risorsa disponibile</p>
         </div>
-      ) : (
-        <div className="space-y-8">
-          {SECTIONS.map(({ label, kinds }) => {
-            const items = docs.filter((d) => kinds.includes(getKind(d.tipo)));
-            if (items.length === 0) return null;
-            return (
-              <section key={label}>
-                <div className="flex items-center gap-2 mb-3">
-                  <KindIcon kind={kinds[0]} size={14} />
-                  <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</h2>
+      ) : docs.length > 0 ? (() => {
+        const cartelle = Array.from(new Set(docs.map((d) => d.cartella).filter(Boolean) as string[])).sort();
+        const senzaCartella = docs.filter((d) => !d.cartella);
+        const hasCartelle = cartelle.length > 0;
+
+        function DocsByKind({ items }: { items: Doc[] }) {
+          return (
+            <div className="space-y-6">
+              {SECTIONS.map(({ label, kinds }) => {
+                const sub = items.filter((d) => kinds.includes(getKind(d.tipo)));
+                if (sub.length === 0) return null;
+                return (
+                  <div key={label}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <KindIcon kind={kinds[0]} size={12} />
+                      <span className="text-2xs font-semibold text-gray-400 uppercase tracking-wider">{label}</span>
+                    </div>
+                    <div className="space-y-2">{sub.map((doc) => <DocCard key={doc.id} doc={doc} onPreview={setPreviewDoc} />)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
+
+        if (!hasCartelle) {
+          return (
+            <div className="space-y-8">
+              {SECTIONS.map(({ label, kinds }) => {
+                const items = docs.filter((d) => kinds.includes(getKind(d.tipo)));
+                if (items.length === 0) return null;
+                return (
+                  <section key={label}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <KindIcon kind={kinds[0]} size={14} />
+                      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</h2>
+                    </div>
+                    <div className="space-y-2">{items.map((doc) => <DocCard key={doc.id} doc={doc} onPreview={setPreviewDoc} />)}</div>
+                  </section>
+                );
+              })}
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-10">
+            {cartelle.map((c) => {
+              const items = docs.filter((d) => d.cartella === c);
+              if (items.length === 0) return null;
+              return (
+                <section key={c}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{c}</h2>
+                    <span className="flex-1 h-px bg-border" />
+                  </div>
+                  <DocsByKind items={items} />
+                </section>
+              );
+            })}
+            {senzaCartella.length > 0 && (
+              <section>
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Generale</h2>
+                  <span className="flex-1 h-px bg-border" />
                 </div>
-                <div className="space-y-2">
-                  {items.map((doc) => <DocCard key={doc.id} doc={doc} onPreview={setPreviewDoc} />)}
-                </div>
+                <DocsByKind items={senzaCartella} />
               </section>
-            );
-          })}
-        </div>
-      )}
+            )}
+          </div>
+        );
+      })() : null}
 
       {/* Modals */}
       {previewDoc && previewKind === 'video' && <VideoModal url={previewDoc.url} nome={previewDoc.nome} onClose={() => setPreviewDoc(null)} />}

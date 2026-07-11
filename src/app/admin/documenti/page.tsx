@@ -22,7 +22,7 @@ const TIPO_CONFIG: Record<string, TipoConfig> = {
 const TIPI = Object.keys(TIPO_CONFIG);
 function getTipoConfig(tipo: string): TipoConfig { return TIPO_CONFIG[tipo] ?? TIPO_CONFIG['Altro']; }
 
-interface Doc { id: string; nome: string; tipo: string; descrizione?: string | null; url: string; size: number; mimeType?: string | null; visibile: boolean; createdAt: string; }
+interface Doc { id: string; nome: string; tipo: string; cartella?: string | null; descrizione?: string | null; url: string; size: number; mimeType?: string | null; visibile: boolean; createdAt: string; }
 interface Album { id: string; nome: string; descrizione: string | null; copertina: string | null; visibile: boolean; nFoto: number; ordine: number; createdAt: string; }
 interface UploadProgress { percent: number; loaded: number; total: number }
 
@@ -77,9 +77,10 @@ function ProgressBar({ progress, label }: { progress: UploadProgress | null; lab
 
 // ─── Modals Documenti ─────────────────────────────────────────────────────────
 
-function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+function UploadModal({ onClose, onDone, cartelle }: { onClose: () => void; onDone: () => void; cartelle: string[] }) {
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState(TIPI[0]);
+  const [cartella, setCartella] = useState('');
   const [descrizione, setDescrizione] = useState('');
   const [visibile, setVisibile] = useState(true);
   const [file, setFile] = useState<File | null>(null);
@@ -99,7 +100,7 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
       setStatusMsg('Preparazione upload…');
       const { url, storageKey } = await uploadToSupabase(file, tipo, (p) => { setStatusMsg('Caricamento…'); setProgress(p); });
       setProgress(null); setStatusMsg('Salvataggio metadati…');
-      const res = await fetch('/api/admin/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome.trim(), tipo, descrizione: descrizione.trim() || null, url, storageKey, size: file.size, mimeType: file.type || null, visibile }) });
+      const res = await fetch('/api/admin/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome.trim(), tipo, cartella: cartella.trim() || null, descrizione: descrizione.trim() || null, url, storageKey, size: file.size, mimeType: file.type || null, visibile }) });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Errore salvataggio');
       toast.success('Documento caricato'); onDone();
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Errore upload'); }
@@ -114,6 +115,17 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
         <form onSubmit={handleSubmit} className="space-y-4">
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Nome *</label><input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="es. Condizioni Commerciali 2027" className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" /></div>
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Tipo *</label><select value={tipo} onChange={(e) => { setTipo(e.target.value); setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent bg-white">{TIPI.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+          <div>
+            <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Cartella <span className="normal-case font-normal text-gray-400">(opzionale)</span></label>
+            <input
+              list="cartelle-list"
+              value={cartella}
+              onChange={(e) => setCartella(e.target.value)}
+              placeholder="es. PE27, CA27 — lascia vuoto per nessuna cartella"
+              className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent"
+            />
+            <datalist id="cartelle-list">{cartelle.map((c) => <option key={c} value={c} />)}</datalist>
+          </div>
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sottotitolo <span className="normal-case font-normal text-gray-400">(etichetta visibile ai clienti — opzionale)</span></label><input value={descrizione} onChange={(e) => setDescrizione(e.target.value)} placeholder={`es. ${tipo}`} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" /></div>
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">{cfg.fileLabel}</label><input ref={fileInputRef} type="file" accept={cfg.accept || undefined} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary file:text-white hover:file:bg-warm-darker cursor-pointer" />{file && <p className="text-2xs text-gray-400 mt-1">{file.name} · {fmtSize(file.size)}</p>}</div>
           <div className="flex items-center gap-3"><label className="text-sm text-gray-600">Visibile ai clienti</label><button type="button" onClick={() => setVisibile((v) => !v)} className={`relative w-10 h-5 rounded-full transition-colors ${visibile ? 'bg-accent' : 'bg-gray-300'}`}><span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${visibile ? 'translate-x-5' : 'translate-x-0.5'}`} /></button></div>
@@ -129,9 +141,10 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
   );
 }
 
-function ReplaceModal({ doc, onClose, onDone }: { doc: Doc; onClose: () => void; onDone: () => void }) {
+function ReplaceModal({ doc, onClose, onDone, cartelle }: { doc: Doc; onClose: () => void; onDone: () => void; cartelle: string[] }) {
   const [nome, setNome] = useState(doc.nome);
   const [tipo, setTipo] = useState(doc.tipo);
+  const [cartella, setCartella] = useState(doc.cartella ?? '');
   const [descrizione, setDescrizione] = useState(doc.descrizione ?? '');
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<UploadProgress | null>(null);
@@ -153,7 +166,7 @@ function ReplaceModal({ doc, onClose, onDone }: { doc: Doc; onClose: () => void;
         fileFields = { url, storageKey, size: file.size, mimeType: file.type || null };
       }
       setStatusMsg('Salvataggio…');
-      const res = await fetch(`/api/admin/documents/${doc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome.trim(), tipo, descrizione: descrizione.trim() || null, ...fileFields }) });
+      const res = await fetch(`/api/admin/documents/${doc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome.trim(), tipo, cartella: cartella.trim() || null, descrizione: descrizione.trim() || null, ...fileFields }) });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Errore');
       toast.success('Documento aggiornato'); onDone();
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Errore'); }
@@ -168,6 +181,17 @@ function ReplaceModal({ doc, onClose, onDone }: { doc: Doc; onClose: () => void;
         <form onSubmit={handleSubmit} className="space-y-4">
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Nome</label><input value={nome} onChange={(e) => setNome(e.target.value)} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" /></div>
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Tipo</label><select value={tipo} onChange={(e) => { setTipo(e.target.value); setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent bg-white">{TIPI.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+          <div>
+            <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Cartella <span className="normal-case font-normal text-gray-400">(opzionale)</span></label>
+            <input
+              list="cartelle-list-replace"
+              value={cartella}
+              onChange={(e) => setCartella(e.target.value)}
+              placeholder="es. PE27, CA27 — lascia vuoto per nessuna cartella"
+              className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent"
+            />
+            <datalist id="cartelle-list-replace">{cartelle.map((c) => <option key={c} value={c} />)}</datalist>
+          </div>
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sottotitolo <span className="normal-case font-normal text-gray-400">(etichetta visibile ai clienti — opzionale)</span></label><input value={descrizione} onChange={(e) => setDescrizione(e.target.value)} placeholder={`es. ${tipo}`} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" /></div>
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sostituisci file — {cfg.fileLabel}</label><input ref={fileInputRef} type="file" accept={cfg.accept || undefined} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary file:text-white hover:file:bg-warm-darker cursor-pointer" />{file && <p className="text-2xs text-gray-400 mt-1">{file.name} · {fmtSize(file.size)}</p>}</div>
           <ProgressBar progress={progress} label={statusMsg} />
@@ -383,12 +407,22 @@ function DocumentiTab() {
   const [replaceDoc, setReplaceDoc] = useState<Doc | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
+  const [filtroCartella, setFiltroCartella] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery<{ data: Doc[] }>({
     queryKey: ['admin-documents'],
     queryFn: () => fetch('/api/admin/documents').then((r) => r.json()),
   });
   const docs = data?.data ?? [];
+
+  // Cartelle distinte (ordinate alfabeticamente)
+  const cartelle = Array.from(new Set(docs.map((d) => d.cartella).filter(Boolean) as string[])).sort();
+
+  const docsFiltrati = filtroCartella === null
+    ? docs
+    : filtroCartella === '__nessuna__'
+      ? docs.filter((d) => !d.cartella)
+      : docs.filter((d) => d.cartella === filtroCartella);
 
   async function toggleVisibile(doc: Doc) {
     try {
@@ -408,66 +442,127 @@ function DocumentiTab() {
 
   function onModalDone() { setShowUpload(false); setReplaceDoc(null); qc.invalidateQueries({ queryKey: ['admin-documents'] }); }
   const previewKind = previewDoc ? getTipoConfig(previewDoc.tipo).kind : null;
+  const hasNessuna = docs.some((d) => !d.cartella);
+
+  function DocTable({ items }: { items: Doc[] }) {
+    return (
+      <div className="bg-white border border-border rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead><tr className="border-b border-border bg-cream/50">
+            <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide">Nome</th>
+            <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Tipo</th>
+            <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Data</th>
+            <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Dim.</th>
+            <th className="text-center px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide">Visibile</th>
+            <th className="px-4 py-3" />
+          </tr></thead>
+          <tbody>
+            {items.map((doc) => {
+              const kind = getTipoConfig(doc.tipo).kind;
+              const canPreview = kind === 'video' || kind === 'audio';
+              return (
+                <tr key={doc.id} className="border-b border-border/50 last:border-0 hover:bg-cream/30 transition-colors">
+                  <td className="px-4 py-3"><a href={doc.url} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:text-accent transition-colors flex items-center gap-2"><DocIcon tipo={doc.tipo} />{doc.nome}</a></td>
+                  <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{doc.tipo}</td>
+                  <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{fmtDate(doc.createdAt)}</td>
+                  <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{fmtSize(doc.size)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <button onClick={() => toggleVisibile(doc)} className={`relative w-9 h-5 rounded-full transition-colors ${doc.visibile ? 'bg-accent' : 'bg-gray-200'}`} title={doc.visibile ? 'Nascondi' : 'Mostra'}>
+                      <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${doc.visibile ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5 justify-end">
+                      {canPreview && <button onClick={() => setPreviewDoc(doc)} className="p-1.5 text-gray-400 hover:text-accent transition-colors"><Play size={13} /></button>}
+                      <button onClick={() => setReplaceDoc(doc)} className="p-1.5 text-gray-400 hover:text-primary transition-colors"><RefreshCw size={13} /></button>
+                      {deleteId === doc.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => handleDelete(doc.id)} className="text-2xs font-medium text-red-600 hover:text-red-800">Elimina</button>
+                          <button onClick={() => setDeleteId(null)} className="text-2xs text-gray-400">Annulla</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setDeleteId(doc.id)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-400">PDF, video e audio visibili ai clienti</p>
         <button onClick={() => setShowUpload(true)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-warm-darker transition-colors"><Plus size={14} />Carica</button>
       </div>
+
+      {/* Filtro cartelle */}
+      {cartelle.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-5">
+          <button
+            onClick={() => setFiltroCartella(null)}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${filtroCartella === null ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-border hover:border-primary'}`}
+          >Tutte</button>
+          {cartelle.map((c) => (
+            <button
+              key={c}
+              onClick={() => setFiltroCartella(c === filtroCartella ? null : c)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${filtroCartella === c ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-border hover:border-primary'}`}
+            >{c}</button>
+          ))}
+          {hasNessuna && (
+            <button
+              onClick={() => setFiltroCartella(filtroCartella === '__nessuna__' ? null : '__nessuna__')}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${filtroCartella === '__nessuna__' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-400 border-border hover:border-primary'}`}
+            >Senza cartella</button>
+          )}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse" />)}</div>
       ) : docs.length === 0 ? (
         <div className="text-center py-16 text-gray-400"><FileText size={40} className="mx-auto mb-3 opacity-30" /><p className="text-sm">Nessun documento caricato</p></div>
+      ) : filtroCartella !== null ? (
+        // Vista filtrata: una sola tabella
+        docsFiltrati.length === 0
+          ? <p className="text-sm text-gray-400 py-8 text-center">Nessun documento in questa cartella.</p>
+          : <DocTable items={docsFiltrati} />
+      ) : cartelle.length === 0 ? (
+        // Nessuna cartella: lista piatta
+        <DocTable items={docs} />
       ) : (
-        <div className="bg-white border border-border rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-border bg-cream/50">
-              <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide">Nome</th>
-              <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Tipo</th>
-              <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Data</th>
-              <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Dim.</th>
-              <th className="text-center px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide">Visibile</th>
-              <th className="px-4 py-3" />
-            </tr></thead>
-            <tbody>
-              {docs.map((doc) => {
-                const kind = getTipoConfig(doc.tipo).kind;
-                const canPreview = kind === 'video' || kind === 'audio';
-                return (
-                  <tr key={doc.id} className="border-b border-border/50 last:border-0 hover:bg-cream/30 transition-colors">
-                    <td className="px-4 py-3"><a href={doc.url} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:text-accent transition-colors flex items-center gap-2"><DocIcon tipo={doc.tipo} />{doc.nome}</a></td>
-                    <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{doc.tipo}</td>
-                    <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{fmtDate(doc.createdAt)}</td>
-                    <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{fmtSize(doc.size)}</td>
-                    <td className="px-4 py-3 text-center">
-                      <button onClick={() => toggleVisibile(doc)} className={`relative w-9 h-5 rounded-full transition-colors ${doc.visibile ? 'bg-accent' : 'bg-gray-200'}`} title={doc.visibile ? 'Nascondi' : 'Mostra'}>
-                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${doc.visibile ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                      </button>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5 justify-end">
-                        {canPreview && <button onClick={() => setPreviewDoc(doc)} className="p-1.5 text-gray-400 hover:text-accent transition-colors"><Play size={13} /></button>}
-                        <button onClick={() => setReplaceDoc(doc)} className="p-1.5 text-gray-400 hover:text-primary transition-colors"><RefreshCw size={13} /></button>
-                        {deleteId === doc.id ? (
-                          <div className="flex items-center gap-1.5">
-                            <button onClick={() => handleDelete(doc.id)} className="text-2xs font-medium text-red-600 hover:text-red-800">Elimina</button>
-                            <button onClick={() => setDeleteId(null)} className="text-2xs text-gray-400">Annulla</button>
-                          </div>
-                        ) : (
-                          <button onClick={() => setDeleteId(doc.id)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        // Vista raggruppata per cartella
+        <div className="space-y-8">
+          {cartelle.map((c) => {
+            const items = docs.filter((d) => d.cartella === c);
+            if (items.length === 0) return null;
+            return (
+              <div key={c}>
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <span className="w-4 h-px bg-border inline-block" />{c}<span className="flex-1 h-px bg-border inline-block" />
+                </h3>
+                <DocTable items={items} />
+              </div>
+            );
+          })}
+          {hasNessuna && (
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span className="w-4 h-px bg-border inline-block" />Senza cartella<span className="flex-1 h-px bg-border inline-block" />
+              </h3>
+              <DocTable items={docs.filter((d) => !d.cartella)} />
+            </div>
+          )}
         </div>
       )}
-      {showUpload && <UploadModal onClose={() => setShowUpload(false)} onDone={onModalDone} />}
-      {replaceDoc && <ReplaceModal doc={replaceDoc} onClose={() => setReplaceDoc(null)} onDone={onModalDone} />}
+      {showUpload && <UploadModal onClose={() => setShowUpload(false)} onDone={onModalDone} cartelle={cartelle} />}
+      {replaceDoc && <ReplaceModal doc={replaceDoc} onClose={() => setReplaceDoc(null)} onDone={onModalDone} cartelle={cartelle} />}
       {previewDoc && previewKind === 'video' && <VideoModal url={previewDoc.url} nome={previewDoc.nome} onClose={() => setPreviewDoc(null)} />}
       {previewDoc && previewKind === 'audio' && <AudioModal url={previewDoc.url} nome={previewDoc.nome} onClose={() => setPreviewDoc(null)} />}
     </div>

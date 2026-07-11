@@ -22,6 +22,7 @@ function bucketFromMime(mimeType: string | null | undefined): string {
 const patchSchema = z.object({
   nome:        z.string().min(1).optional(),
   tipo:        z.string().min(1).optional(),
+  cartella:    z.string().nullable().optional(),
   descrizione: z.string().nullable().optional(),
   visibile:    z.boolean().optional(),
   // Presenti solo se il file è stato sostituito
@@ -55,6 +56,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     data: {
       ...(data.nome        !== undefined ? { nome:        data.nome }        : {}),
       ...(data.tipo        !== undefined ? { tipo:        data.tipo }        : {}),
+      ...(data.cartella    !== undefined ? { cartella:    data.cartella }    : {}),
       ...(data.descrizione !== undefined ? { descrizione: data.descrizione } : {}),
       ...(data.visibile    !== undefined ? { visibile:    data.visibile }    : {}),
       ...(data.url         !== undefined ? { url:         data.url }         : {}),
