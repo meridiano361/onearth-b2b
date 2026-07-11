@@ -25,7 +25,7 @@ const CATALOG_FONT_MAP: Record<string, string> = {
 const SIDEBAR_HIDDEN_PATHS = ['/catalog/orders', '/orders', '/catalog/destinazioni', '/moda/pareti', '/moda/visual'];
 const SIDEBAR_HIDDEN_EXACT = ['/catalog', '/home'];
 // Paths where <main> must be overflow-hidden (child manages its own scroll)
-const MAIN_CONTAINED_PATHS = ['/moda/pareti', '/moda/visual'];
+const MAIN_CONTAINED_PATHS = ['/moda/pareti', '/moda/visual', '/catalog/products', '/moda/catalogo'];
 
 export default async function B2BLayout({
   children,
