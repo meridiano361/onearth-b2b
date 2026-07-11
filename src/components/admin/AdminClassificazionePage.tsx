@@ -676,7 +676,7 @@ export default function AdminClassificazionePage() {
                 : 'text-gray-500 hover:text-primary'
             )}
           >
-            Moda PE27
+            Moda
           </button>
         </div>
       </div>
