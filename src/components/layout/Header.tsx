@@ -40,11 +40,20 @@ interface HeaderProps {
 export default function Header({ session }: HeaderProps) {
   const pathname = usePathname();
   const t = useTranslations('nav');
-  const { menu } = useSettings();
+  const { menu, collections } = useSettings();
 
   const isHome = pathname === '/home';
   const isInModa = pathname.startsWith('/moda');
+  const isInCasa = pathname.startsWith('/casa') || pathname.startsWith('/catalog/');
   const isAdmin = isAdminRole(session.user.role);
+
+  const modaInfo = collections.lista.find((c) => c.id === 'moda');
+  const casaInfo = collections.lista.find((c) => c.id === 'casa');
+  const collectionLabel = isInModa && pathname !== '/moda'
+    ? modaInfo?.titolo
+    : isInCasa && pathname !== '/casa'
+    ? casaInfo?.titolo
+    : null;
 
   return (
     <header className="bg-white border-b border-border flex-shrink-0 z-10 pt-safe">
@@ -60,6 +69,14 @@ export default function Header({ session }: HeaderProps) {
           priority
         />
       </Link>
+
+      {/* Collection label — shows on collection subpages */}
+      {collectionLabel && (
+        <div className="hidden sm:flex flex-col leading-none flex-shrink-0 border-l border-border pl-3 sm:pl-4">
+          <span className="text-[9px] uppercase tracking-[0.15em] text-gray-400 font-medium">Collezione</span>
+          <span className="text-xs font-semibold text-primary tracking-wide mt-0.5">{collectionLabel}</span>
+        </div>
+      )}
 
       {/* Nav links — desktop */}
       <nav className="hidden md:flex items-center gap-1">
