@@ -83,9 +83,9 @@ export default function ModaHome() {
 
       {/* Content 3 items — 3 columns */}
       <div className="grid grid-cols-3 gap-3 mt-3">
-        <ContentCard href="/moda/risorse" icon={FileText}  label="Documenti" />
-        <ContentCard href="/moda/risorse" icon={ImageIcon} label="Foto"      />
-        <ContentCard href="/moda/risorse" icon={Film}      label="Video"     />
+        <ContentCard href="/moda/risorse?tab=documenti" icon={FileText}  label="Documenti" />
+        <ContentCard href="/moda/risorse?tab=foto"      icon={ImageIcon} label="Foto"      />
+        <ContentCard href="/moda/risorse?tab=video"     icon={Film}      label="Video"     />
       </div>
 
       {/* Admin items */}

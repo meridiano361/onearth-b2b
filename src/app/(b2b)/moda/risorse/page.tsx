@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Metadata } from 'next';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
@@ -10,5 +11,9 @@ export const metadata: Metadata = { title: 'Risorse e Media — Moda PE27' };
 export default async function ModaRisorsePage() {
   const session = await getServerSession(authOptions);
   if (!session || !canAccessModa(session.user?.role, session.user?.email)) redirect('/home');
-  return <ModaRisorse />;
+  return (
+    <Suspense>
+      <ModaRisorse />
+    </Suspense>
+  );
 }
