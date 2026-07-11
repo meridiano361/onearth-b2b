@@ -141,7 +141,7 @@ export default function NotificationBell() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative group">
       <button
         ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
@@ -155,6 +155,9 @@ export default function NotificationBell() {
           </span>
         )}
       </button>
+      <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 text-[10px] font-semibold tracking-wider uppercase bg-gray-900 text-white rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-10">
+        Notifiche
+      </span>
 
       {open && (
         <>

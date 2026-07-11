@@ -141,47 +141,65 @@ export default function Header({ session }: HeaderProps) {
       <NotificationBell />
 
       {/* Aiuto — desktop only */}
-      <Link
-        href="/catalog/assistenza"
-        className="hidden md:flex p-1.5 text-gray-400 hover:text-primary transition-colors"
-        title="Aiuto"
-        aria-label="Aiuto"
-      >
-        <HelpCircle size={19} />
-      </Link>
+      <div className="relative group hidden md:block">
+        <Link
+          href="/catalog/assistenza"
+          className="flex p-1.5 text-gray-400 hover:text-primary transition-colors"
+          aria-label="Aiuto"
+        >
+          <HelpCircle size={19} />
+        </Link>
+        <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 text-[10px] font-semibold tracking-wider uppercase bg-gray-900 text-white rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          Aiuto
+        </span>
+      </div>
 
       {/* Profilo mobile — icona */}
-      <Link
-        href="/catalog/impostazioni"
-        className="sm:hidden p-1 text-gray-400 hover:text-primary transition-colors"
-        title="Profilo"
-      >
-        <UserCircle size={22} />
-      </Link>
+      <div className="relative group sm:hidden">
+        <Link
+          href="/catalog/impostazioni"
+          className="flex p-1 text-gray-400 hover:text-primary transition-colors"
+          aria-label="Profilo"
+        >
+          <UserCircle size={22} />
+        </Link>
+        <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 text-[10px] font-semibold tracking-wider uppercase bg-gray-900 text-white rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          Profilo
+        </span>
+      </div>
 
       {/* Profilo desktop — nome + email */}
-      <Link
-        href="/catalog/impostazioni"
-        className="hidden sm:flex flex-col items-end leading-tight hover:opacity-70 transition-opacity"
-        title="Profilo"
-      >
-        <p className="text-xs font-medium text-primary truncate max-w-[160px]">
-          {session.user.companyName}
-        </p>
-        <p className="text-2xs text-gray-400 truncate max-w-[160px]">
-          {session.user.email}
-        </p>
-      </Link>
+      <div className="relative group hidden sm:block">
+        <Link
+          href="/catalog/impostazioni"
+          className="flex flex-col items-end leading-tight hover:opacity-70 transition-opacity"
+          aria-label="Profilo"
+        >
+          <p className="text-xs font-medium text-primary truncate max-w-[160px]">
+            {session.user.companyName}
+          </p>
+          <p className="text-2xs text-gray-400 truncate max-w-[160px]">
+            {session.user.email}
+          </p>
+        </Link>
+        <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 text-[10px] font-semibold tracking-wider uppercase bg-gray-900 text-white rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          Profilo
+        </span>
+      </div>
 
       {/* Esci */}
-      <button
-        onClick={() => signOut({ callbackUrl: '/login' })}
-        className="p-1.5 text-gray-400 hover:text-primary transition-colors"
-        title={t('logout')}
-        aria-label={t('logout')}
-      >
-        <LogOut size={17} />
-      </button>
+      <div className="relative group">
+        <button
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          className="p-1.5 text-gray-400 hover:text-primary transition-colors"
+          aria-label={t('logout')}
+        >
+          <LogOut size={17} />
+        </button>
+        <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 text-[10px] font-semibold tracking-wider uppercase bg-gray-900 text-white rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          Esci
+        </span>
+      </div>
       </div>
     </header>
   );
