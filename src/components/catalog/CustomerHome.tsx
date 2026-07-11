@@ -171,25 +171,25 @@ export default function CustomerHome() {
           const layout = home.layoutCard ?? 'griglia';
           if (layout === 'colonna') return (
             <div className="flex flex-col gap-4">
-              <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} branch="casa" />
+              <CollectionCard info={casaInfo} href="/casa" branch="casa" />
               <CollectionCard info={modaInfo} href="/moda" branch="moda" />
             </div>
           );
           if (layout === 'grande-prima') return (
             <div className="flex flex-col gap-4">
-              <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} branch="casa" />
+              <CollectionCard info={casaInfo} href="/casa" branch="casa" />
               <CollectionCard info={modaInfo} href="/moda" compact branch="moda" />
             </div>
           );
           // default: griglia
           return (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} compact branch="casa" />
+              <CollectionCard info={casaInfo} href="/casa" compact branch="casa" />
               <CollectionCard info={modaInfo} href="/moda" compact branch="moda" />
             </div>
           );
         })() : (
-          <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} branch="casa" />
+          <CollectionCard info={casaInfo} href="/casa" branch="casa" />
         )}
 
         {/* Social */}
