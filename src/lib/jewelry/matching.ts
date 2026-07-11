@@ -36,6 +36,7 @@ export const ZONE_DEFAULT: ZoneDefaults = {
     orecchino: { categoria: 'orecchino', anchorX: 0.50, anchorY: 0.30, maxLarghezzaPx: 140, maxAltezzaPx: 200 },
     anello:    { categoria: 'anello',    anchorX: 0.50, anchorY: 0.35, maxLarghezzaPx: 100, maxAltezzaPx: 55 },
   },
+  espositore_onearth: {}, // nessuna zona di compositing — solo uso commerciale
 };
 
 export function getZoneDefault(

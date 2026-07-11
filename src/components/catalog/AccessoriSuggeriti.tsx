@@ -3,19 +3,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { ExternalLink, ShoppingBag } from 'lucide-react';
 
-type TipoTarget = 'collana' | 'bracciale' | 'orecchini' | 'universale';
-
 interface Accessorio {
   id: string;
-  code: string;
   name: string;
-  retailPrice: number;
+  retailPrice: number | null;
   misura: string | null;
   imageUrl: string | null;
   note: string | null;
   colore: string | null;
   linkAcquisto: string | null;
-  tipoTarget: TipoTarget[];
+  tipoLabel: string;
 }
 
 function getTipo(sottofamiglia: string | null | undefined): string | null {
@@ -24,11 +21,11 @@ function getTipo(sottofamiglia: string | null | undefined): string | null {
   if (s.includes('collana') || s.includes('collane')) return 'collana';
   if (s.includes('bracciale') || s.includes('bracciali')) return 'bracciale';
   if (s.includes('orecchino') || s.includes('orecchini')) return 'orecchini';
-  if (s.includes('anello') || s.includes('anelli')) return null;
   return null;
 }
 
-function euro(n: number) {
+function euro(n: number | null) {
+  if (n == null) return null;
   return '€ ' + n.toFixed(2).replace('.', ',');
 }
 
@@ -64,21 +61,21 @@ export default function AccessoriSuggeriti({ sottofamiglia }: Props) {
           <div key={item.id} className="flex gap-3 p-3 rounded-xl border border-border bg-cream/50 hover:bg-cream transition-colors">
             {/* Foto */}
             <div className="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border border-border bg-white flex items-center justify-center">
-              {item.imageUrl ? (
+              {item.imageUrl
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-              ) : (
-                <ShoppingBag size={16} className="text-gray-200" />
-              )}
+                ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                : <ShoppingBag size={16} className="text-gray-200" />}
             </div>
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-400 font-mono">{item.code}</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wider mb-0.5">{item.tipoLabel}</p>
               <p className="text-sm font-medium text-primary leading-tight">{item.name}</p>
               {item.misura && <p className="text-xs text-gray-400 mt-0.5">{item.misura}</p>}
               {item.colore && <p className="text-xs text-gray-400">{item.colore}</p>}
-              <p className="text-sm font-semibold text-primary mt-1">{euro(item.retailPrice)}</p>
+              {euro(item.retailPrice) && (
+                <p className="text-sm font-semibold text-primary mt-1">{euro(item.retailPrice)}</p>
+              )}
               {item.note && <p className="text-xs text-gray-400 italic mt-0.5 line-clamp-2">{item.note}</p>}
               {item.linkAcquisto && (
                 <a

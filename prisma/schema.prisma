@@ -905,6 +905,7 @@ enum TipoSupporto {
   cono_legno
   portaorecchini
   parete_ganci
+  espositore_onearth
 
   @@map("tipo_supporto")
 }
@@ -935,15 +936,21 @@ enum StatoCompositingJob {
 }
 
 model SupportoEspositivo {
-  id          String      @id @default(uuid())
-  nome        String
-  tipo        TipoSupporto
-  tono        TonoLegno?
-  immagineUrl String      @map("immagine_url")
-  larghezzaPx Int         @default(800) @map("larghezza_px")
-  altezzaPx   Int         @default(600) @map("altezza_px")
-  attivo      Boolean     @default(true)
-  createdAt   DateTime    @default(now()) @map("created_at")
+  id           String       @id @default(uuid())
+  nome         String
+  tipo         TipoSupporto
+  tono         TonoLegno?
+  immagineUrl  String       @map("immagine_url")
+  larghezzaPx  Int          @default(800) @map("larghezza_px")
+  altezzaPx    Int          @default(600) @map("altezza_px")
+  attivo       Boolean      @default(true)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  // Campi commerciali — per il pannello "Accessori consigliati" in scheda prodotto
+  retailPrice  Decimal?     @db.Decimal(10, 2) @map("retail_price")
+  costPrice    Decimal?     @db.Decimal(10, 2) @map("cost_price")
+  misura       String?
+  note         String?
+  linkAcquisto String?      @map("link_acquisto")
 
   zone ZonaPosizionamento[]
   jobs CompositingJob[]
@@ -983,21 +990,3 @@ model CompositingJob {
   @@map("compositing_job")
 }
 
-model AccessorioVendita {
-  id           String   @id @default(cuid())
-  code         String   @unique
-  name         String
-  retailPrice  Decimal  @db.Decimal(10, 2)
-  costPrice    Decimal  @db.Decimal(10, 2)
-  misura       String?
-  imageUrl     String?
-  note         String?
-  colore       String?
-  linkAcquisto String?
-  tipoTarget   String[]
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@map("accessori_vendita")
-}
