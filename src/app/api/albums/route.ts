@@ -12,6 +12,7 @@ export async function GET() {
     data: albums.map((a) => ({
       id: a.id,
       nome: a.nome,
+      cartella: a.cartella,
       descrizione: a.descrizione,
       copertina: a.copertina,
       nFoto: a._count.foto,

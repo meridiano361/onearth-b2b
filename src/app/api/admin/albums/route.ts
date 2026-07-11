@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
   const album = await prisma.album.create({
     data: {
       nome,
+      cartella:    body.cartella?.trim() || null,
       descrizione: body.descrizione?.trim() || null,
       visibile: body.visibile === true,
       ordine: (maxOrdine._max.ordine ?? -1) + 1,

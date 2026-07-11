@@ -30,7 +30,7 @@ function KindIcon({ kind, size = 16 }: { kind: MediaKind; size?: number }) {
 // ─── Album types ──────────────────────────────────────────────────────────────
 
 interface AlbumFoto { id: string; url: string; didascalia: string | null; ordine: number; }
-interface Album { id: string; nome: string; descrizione: string | null; copertina: string | null; nFoto: number; createdAt: string; }
+interface Album { id: string; nome: string; cartella?: string | null; descrizione: string | null; copertina: string | null; nFoto: number; createdAt: string; }
 interface AlbumDetail { id: string; nome: string; descrizione: string | null; foto: AlbumFoto[]; }
 
 // ─── Lightbox ─────────────────────────────────────────────────────────────────
@@ -257,50 +257,48 @@ export default function RisorsePage() {
         <h1 className="font-display text-2xl sm:text-3xl text-primary font-light tracking-wide">Risorse e media</h1>
       </div>
 
-      {/* ── Album fotografici ── */}
-      {(albumsLoading || albums.length > 0) && (
-        <section className="mb-10">
-          <div className="flex items-center gap-2 mb-4">
-            <ImageIcon size={14} className="text-gray-400" />
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Album fotografici</h2>
-          </div>
-          {albumsLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {[1,2,3].map((i) => <div key={i} className="aspect-[4/3] bg-white rounded-xl animate-pulse border border-border" />)}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {albums.map((album) => (
-                <div key={album.id} className="relative">
-                  <AlbumCard album={album} onClick={() => openAlbumDetail(album)} />
-                  {loadingAlbumId === album.id && (
-                    <div className="absolute inset-0 bg-white/60 rounded-xl flex items-center justify-center">
-                      <span className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ── Documenti e media ── */}
-      {docsLoading ? (
+      {/* ── Contenuto per cartella ── */}
+      {(docsLoading || albumsLoading) ? (
         <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-16 bg-white rounded-lg animate-pulse border border-border" />)}</div>
-      ) : docs.length === 0 && albums.length === 0 && !albumsLoading ? (
+      ) : docs.length === 0 && albums.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <FileText size={40} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">Nessuna risorsa disponibile</p>
         </div>
-      ) : docs.length > 0 ? (() => {
-        const cartelle = Array.from(new Set(docs.map((d) => d.cartella).filter(Boolean) as string[])).sort();
-        const senzaCartella = docs.filter((d) => !d.cartella);
+      ) : (() => {
+        const cartelle = Array.from(new Set([
+          ...docs.map((d) => d.cartella).filter(Boolean) as string[],
+          ...albums.map((a) => a.cartella).filter(Boolean) as string[],
+        ])).sort();
         const hasCartelle = cartelle.length > 0;
+
+        function AlbumsGrid({ items }: { items: Album[] }) {
+          if (items.length === 0) return null;
+          return (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <ImageIcon size={12} className="text-gray-400" />
+                <span className="text-2xs font-semibold text-gray-400 uppercase tracking-wider">Foto</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {items.map((album) => (
+                  <div key={album.id} className="relative">
+                    <AlbumCard album={album} onClick={() => openAlbumDetail(album)} />
+                    {loadingAlbumId === album.id && (
+                      <div className="absolute inset-0 bg-white/60 rounded-xl flex items-center justify-center">
+                        <span className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
 
         function DocsByKind({ items }: { items: Doc[] }) {
           return (
-            <div className="space-y-6">
+            <div className="space-y-5">
               {SECTIONS.map(({ label, kinds }) => {
                 const sub = items.filter((d) => kinds.includes(getKind(d.tipo)));
                 if (sub.length === 0) return null;
@@ -319,8 +317,10 @@ export default function RisorsePage() {
         }
 
         if (!hasCartelle) {
+          // No cartelle: albums at top, docs below (old layout)
           return (
             <div className="space-y-8">
+              <AlbumsGrid items={albums} />
               {SECTIONS.map(({ label, kinds }) => {
                 const items = docs.filter((d) => kinds.includes(getKind(d.tipo)));
                 if (items.length === 0) return null;
@@ -338,33 +338,39 @@ export default function RisorsePage() {
           );
         }
 
+        const senzaDocs   = docs.filter((d) => !d.cartella);
+        const senzaAlbums = albums.filter((a) => !a.cartella);
+
         return (
           <div className="space-y-10">
             {cartelle.map((c) => {
-              const items = docs.filter((d) => d.cartella === c);
-              if (items.length === 0) return null;
+              const cDocs   = docs.filter((d) => d.cartella === c);
+              const cAlbums = albums.filter((a) => a.cartella === c);
+              if (cDocs.length === 0 && cAlbums.length === 0) return null;
               return (
                 <section key={c}>
-                  <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-3 mb-5">
                     <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{c}</h2>
                     <span className="flex-1 h-px bg-border" />
                   </div>
-                  <DocsByKind items={items} />
+                  <AlbumsGrid items={cAlbums} />
+                  <DocsByKind items={cDocs} />
                 </section>
               );
             })}
-            {senzaCartella.length > 0 && (
+            {(senzaDocs.length > 0 || senzaAlbums.length > 0) && (
               <section>
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-3 mb-5">
                   <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Generale</h2>
                   <span className="flex-1 h-px bg-border" />
                 </div>
-                <DocsByKind items={senzaCartella} />
+                <AlbumsGrid items={senzaAlbums} />
+                <DocsByKind items={senzaDocs} />
               </section>
             )}
           </div>
         );
-      })() : null}
+      })()}
 
       {/* Modals */}
       {previewDoc && previewKind === 'video' && <VideoModal url={previewDoc.url} nome={previewDoc.nome} onClose={() => setPreviewDoc(null)} />}

@@ -11,6 +11,7 @@ import { LABEL_SUPPORTO } from '@/types/jewelry';
 interface Supporto {
   id: string;
   nome: string;
+  codice: string | null;
   tipo: TipoSupporto;
   tipoLabel: string;
   tono: 'chiaro' | 'scuro' | null;
@@ -92,6 +93,7 @@ function InlineEditor({
 }) {
   const [form, setForm] = useState({
     immagineUrl:  supporto.immagineUrl ?? '',
+    codice:       supporto.codice ?? '',
     retailPrice:  supporto.retailPrice ?? '',
     costPrice:    supporto.costPrice ?? '',
     misura:       supporto.misura ?? '',
@@ -112,6 +114,7 @@ function InlineEditor({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           immagineUrl:  form.immagineUrl.trim() || null,
+          codice:       form.codice.trim() || null,
           retailPrice:  form.retailPrice !== '' ? parseFloat(String(form.retailPrice)) : null,
           costPrice:    form.costPrice   !== '' ? parseFloat(String(form.costPrice))   : null,
           misura:       form.misura || null,
@@ -165,6 +168,13 @@ function InlineEditor({
               </button>
             </div>
           </div>
+        </div>
+
+        <div>
+          <label className={labelCls}>Codice articolo</label>
+          <input className={inputCls} value={form.codice}
+            onChange={(e) => setForm((f) => ({ ...f, codice: e.target.value }))}
+            placeholder="es. BU-LGN-CH-01" />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -264,6 +274,7 @@ export default function AccessoriVenditaAdmin() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium text-primary">{item.nome}</span>
+                    {item.codice && <span className="text-2xs font-mono text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">{item.codice}</span>}
                     {!item.attivo && <span className="text-2xs text-gray-400 italic">inattivo</span>}
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium border ${TIPO_COLOR[item.tipo]}`}>
                       {item.tipoLabel}

@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-11 (Risorse e Media — cartelle per collezione)
+// AGGIORNATO: 2026-07-11 (Risorse: cartelle con 3 sottosezioni; Accessori: codice articolo)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -328,7 +328,7 @@ export default function AssistenzaPage() {
           <SectionHeader n={15} icon={Film} label="Risorse e Media" />
           <ul className="space-y-2">
             <Bullet>Accedi alle Risorse dal menu in basso (icona cartella) o dalla homepage.</Bullet>
-            <Bullet>Trovi documenti PDF, video e audio condivisi da ON EARTH, raggruppati per <span className="font-medium">collezione</span> (es. PE27, CA27) quando disponibili.</Bullet>
+            <Bullet>I contenuti sono organizzati per <span className="font-medium">collezione</span> (es. PE27, CA27): ogni sezione raggruppa documenti PDF, album fotografici e video della stessa stagione.</Bullet>
             <Bullet><span className="font-medium">PDF:</span> scaricabili direttamente.</Bullet>
             <Bullet><span className="font-medium">Video:</span> il pulsante <span className="font-medium">Guarda</span> apre il video in una nuova scheda del browser.</Bullet>
             <Bullet><span className="font-medium">Audio:</span> ascoltabili con player integrato.</Bullet>

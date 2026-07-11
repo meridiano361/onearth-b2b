@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
       data: items.map((s) => ({
         id:           s.id,
         name:         s.nome,
+        codice:       s.codice,
         imageUrl:     s.immagineUrl || null,
         retailPrice:  s.retailPrice ? Number(s.retailPrice) : null,
         misura:       s.misura,

@@ -14,6 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const body = await req.json();
     const data: any = {};
     if (body.immagineUrl  !== undefined) data.immagineUrl  = body.immagineUrl?.trim()  || '';
+    if (body.codice       !== undefined) data.codice       = body.codice?.trim()       || null;
     if (body.retailPrice  !== undefined) data.retailPrice  = body.retailPrice  != null ? Number(body.retailPrice)  : null;
     if (body.costPrice    !== undefined) data.costPrice    = body.costPrice    != null ? Number(body.costPrice)    : null;
     if (body.misura       !== undefined) data.misura       = body.misura?.trim()       || null;
@@ -25,6 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       data: {
         id:           item.id,
         immagineUrl:  item.immagineUrl,
+        codice:       item.codice,
         retailPrice:  item.retailPrice  != null ? Number(item.retailPrice)  : null,
         costPrice:    item.costPrice    != null ? Number(item.costPrice)    : null,
         misura:       item.misura,

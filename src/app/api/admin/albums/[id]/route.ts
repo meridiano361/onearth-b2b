@@ -42,6 +42,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const body = await req.json();
   const data: Record<string, unknown> = {};
   if (body.nome !== undefined) data.nome = body.nome.trim();
+  if (body.cartella !== undefined) data.cartella = body.cartella?.trim() || null;
   if (body.descrizione !== undefined) data.descrizione = body.descrizione?.trim() || null;
   if (body.visibile !== undefined) data.visibile = body.visibile;
   if (body.copertina !== undefined) data.copertina = body.copertina || null;

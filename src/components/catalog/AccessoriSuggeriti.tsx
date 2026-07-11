@@ -6,6 +6,7 @@ import { ExternalLink, ShoppingBag } from 'lucide-react';
 interface Accessorio {
   id: string;
   name: string;
+  codice: string | null;
   retailPrice: number | null;
   misura: string | null;
   imageUrl: string | null;
@@ -69,7 +70,7 @@ export default function AccessoriSuggeriti({ sottofamiglia }: Props) {
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-400 uppercase tracking-wider mb-0.5">{item.tipoLabel}</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wider mb-0.5">{item.tipoLabel}{item.codice ? ` · ${item.codice}` : ''}</p>
               <p className="text-sm font-medium text-primary leading-tight">{item.name}</p>
               {item.misura && <p className="text-xs text-gray-400 mt-0.5">{item.misura}</p>}
               {item.colore && <p className="text-xs text-gray-400">{item.colore}</p>}

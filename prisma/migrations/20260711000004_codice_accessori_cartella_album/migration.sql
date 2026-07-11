@@ -1,0 +1,2 @@
+ALTER TABLE supporto_espositivo ADD COLUMN IF NOT EXISTS codice TEXT;
+ALTER TABLE albums ADD COLUMN IF NOT EXISTS cartella TEXT;

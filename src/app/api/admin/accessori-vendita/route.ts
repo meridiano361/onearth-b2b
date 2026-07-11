@@ -9,6 +9,7 @@ function serialize(s: any) {
   return {
     id:           s.id,
     nome:         s.nome,
+    codice:       s.codice,
     tipo:         s.tipo,
     tipoLabel:    LABEL_SUPPORTO[s.tipo as keyof typeof LABEL_SUPPORTO] ?? s.tipo,
     tono:         s.tono,

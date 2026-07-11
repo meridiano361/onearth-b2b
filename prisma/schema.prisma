@@ -688,6 +688,7 @@ model AccessLog {
 model Album {
   id          String      @id @default(cuid())
   nome        String
+  cartella    String?
   descrizione String?
   copertina   String?
   visibile    Boolean     @default(false)
@@ -947,6 +948,7 @@ model SupportoEspositivo {
   attivo       Boolean      @default(true)
   createdAt    DateTime     @default(now()) @map("created_at")
   // Campi commerciali — per il pannello "Accessori consigliati" in scheda prodotto
+  codice       String?
   retailPrice  Decimal?     @db.Decimal(10, 2) @map("retail_price")
   costPrice    Decimal?     @db.Decimal(10, 2) @map("cost_price")
   misura       String?
