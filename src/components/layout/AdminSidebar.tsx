@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Package, Users, ShoppingCart, Layers,
   LogOut, Settings, X, UserPlus, Eye, FileText,
   Image as ImageIcon, BookOpen, Paintbrush, Bell,
-  BarChart2, MessageSquare, ChevronDown, Gem,
+  BarChart2, MessageSquare, ChevronDown, Gem, ShoppingBag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -57,6 +57,7 @@ const NAV: NavEntry[] = [
   { href: '/admin/orders',           label: 'Ordini',            icon: ShoppingCart,    roles: ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE'] },
   { href: '/admin/personalizzazione',label: 'Personalizzazione', icon: Paintbrush,      roles: ['SUPER_ADMIN'] },
   { href: '/admin/products',         label: 'Prodotti',          icon: Package,         roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO', 'COMMERCIALE'] },
+  { href: '/admin/accessori-vendita', label: 'Accessori vendita', icon: ShoppingBag,    roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO'] },
   { href: '/admin/sondaggi',         label: 'Sondaggi',          icon: MessageSquare,   roles: ['SUPER_ADMIN', 'ADMIN'] },
   {
     groupLabel: 'Visual',

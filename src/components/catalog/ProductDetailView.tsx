@@ -12,6 +12,7 @@ import QuantitySelector from './QuantitySelector';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useSettings } from '@/contexts/SettingsContext';
 import type { Product } from '@/types';
+import AccessoriSuggeriti from './AccessoriSuggeriti';
 
 function ProductGallery({ product }: { product: Product }) {
   const photos = [product.imageUrl, product.imageUrl2, product.imageUrl3, product.imageUrl4].filter(Boolean) as string[];
@@ -499,6 +500,9 @@ export default function ProductDetailView({ id }: Props) {
         )}
 
       </div>
+
+      <AccessoriSuggeriti sottofamiglia={product.sottofamiglia} />
+
     </div>
   );
 }
