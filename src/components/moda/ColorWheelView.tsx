@@ -307,7 +307,7 @@ function FocusProductView({
   const hasFilters = famFilter || classeFilter || sottoclasseFilter || gruppoFilter;
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col h-full">
       {/* Parete context banner */}
       {pareteId && pareteBackHref && (
         <div className="flex items-center gap-3 px-4 py-2 bg-primary text-white text-xs">
@@ -728,7 +728,7 @@ export default function ColorWheelView() {
   }
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col h-full">
       {/* Parete context banner */}
       {pareteId && elementId && (
         <div className="flex items-center gap-3 px-4 py-2 bg-primary text-white text-xs">

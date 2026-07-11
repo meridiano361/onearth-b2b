@@ -29,8 +29,7 @@ const MODA_NAV = [
 ];
 
 const MODA_VISUAL_ITEMS = [
-  { href: '/moda/pareti',             label: 'Visual Parete',      isActive: (p: string) => p.startsWith('/moda/pareti') },
-  { href: '/moda/visual/bigiotteria', label: 'Visual Bigiotteria', isActive: (p: string) => p.startsWith('/moda/visual') },
+  { href: '/moda/pareti', label: 'Visual Moda', isActive: (p: string) => p.startsWith('/moda/pareti') },
 ];
 
 interface HeaderProps {

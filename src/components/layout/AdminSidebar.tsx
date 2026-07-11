@@ -59,14 +59,6 @@ const NAV: NavEntry[] = [
   { href: '/admin/products',         label: 'Prodotti',          icon: Package,         roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO', 'COMMERCIALE'] },
   { href: '/admin/accessori-vendita', label: 'Accessori vendita', icon: ShoppingBag,    roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO'] },
   { href: '/admin/sondaggi',         label: 'Sondaggi',          icon: MessageSquare,   roles: ['SUPER_ADMIN', 'ADMIN'] },
-  {
-    groupLabel: 'Visual',
-    icon: Gem,
-    roles: ['SUPER_ADMIN', 'ADMIN'],
-    items: [
-      { href: '/admin/visual/bigiotteria', label: 'Bigiotteria', icon: Gem, roles: ['SUPER_ADMIN', 'ADMIN'] },
-    ],
-  },
 ];
 
 interface AdminSidebarProps {

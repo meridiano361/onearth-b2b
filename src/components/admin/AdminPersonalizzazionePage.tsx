@@ -966,6 +966,24 @@ export default function AdminPersonalizzazionePage() {
             </div>
           </SectionCard>
 
+          {/* Visual */}
+          <SectionCard title="Visual">
+            <p className="text-xs text-gray-400">Accedi agli strumenti di composizione visiva per le collezioni. Le impostazioni parete si trovano in ciascuna sezione.</p>
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <a
+                href="/moda/pareti"
+                className="flex flex-col gap-1.5 p-4 rounded-xl border border-border hover:border-gray-400 hover:bg-cream transition-all"
+              >
+                <span className="text-xs font-semibold text-primary">Visual Moda</span>
+                <span className="text-[11px] text-gray-400">Pareti e composizioni PE27</span>
+              </a>
+              <div className="flex flex-col gap-1.5 p-4 rounded-xl border border-dashed border-border opacity-50 cursor-not-allowed">
+                <span className="text-xs font-semibold text-primary">Visual Casa</span>
+                <span className="text-[11px] text-gray-400">Disponibile prossimamente</span>
+              </div>
+            </div>
+          </SectionCard>
+
         </div>
       </div>
     </div>
