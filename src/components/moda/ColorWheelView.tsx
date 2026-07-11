@@ -751,7 +751,7 @@ export default function ColorWheelView() {
 
       <div className="flex flex-col xl:flex-row flex-1 overflow-hidden">
         {/* ── Left: Wheel + legends ───────────────────────────────── */}
-        <div className="xl:w-[460px] flex-shrink-0 border-b xl:border-b-0 xl:border-r border-border/50 p-4 sm:p-6 flex flex-col items-center gap-4">
+        <div className="xl:w-[460px] flex-shrink-0 border-b xl:border-b-0 xl:border-r border-border/50 p-4 sm:p-6 flex flex-col items-center gap-4 overflow-y-auto">
 
           {/* SVG Color Wheel */}
           <svg viewBox="0 0 400 400" className="w-full max-w-[380px]" style={{ overflow: 'visible' }}>
