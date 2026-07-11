@@ -1,0 +1,2 @@
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS collezione TEXT;
+ALTER TABLE albums    ADD COLUMN IF NOT EXISTS collezione TEXT;

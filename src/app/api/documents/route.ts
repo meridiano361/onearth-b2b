@@ -2,16 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
-  const tipo     = req.nextUrl.searchParams.get('tipo');
-  const cartella = req.nextUrl.searchParams.get('cartella');
+  const tipo       = req.nextUrl.searchParams.get('tipo');
+  const cartella   = req.nextUrl.searchParams.get('cartella');
+  const collezione = req.nextUrl.searchParams.get('collezione');
+
   const docs = await prisma.document.findMany({
     where: {
       visibile: true,
       ...(tipo     ? { tipo }     : {}),
       ...(cartella ? { cartella } : {}),
+      // null collezione = visible in all collections
+      ...(collezione ? { OR: [{ collezione }, { collezione: null }] } : {}),
     },
     orderBy: { createdAt: 'desc' },
-    select: { id: true, nome: true, tipo: true, cartella: true, descrizione: true, url: true, size: true, mimeType: true, createdAt: true },
+    select: { id: true, nome: true, tipo: true, cartella: true, collezione: true, descrizione: true, url: true, size: true, mimeType: true, createdAt: true },
   });
   return NextResponse.json({ data: docs.map((d) => ({ ...d, createdAt: d.createdAt.toISOString() })) });
 }

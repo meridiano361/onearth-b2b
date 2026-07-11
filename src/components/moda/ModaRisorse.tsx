@@ -249,14 +249,14 @@ export default function ModaRisorse() {
   const [loadingAlbumId, setLoadingAlbumId] = useState<string | null>(null);
 
   const { data: docsData, isLoading: docsLoading } = useQuery<{ data: Doc[] }>({
-    queryKey: ['public-documents'],
-    queryFn: () => fetch('/api/documents').then((r) => r.json()),
+    queryKey: ['public-documents', 'moda'],
+    queryFn: () => fetch('/api/documents?collezione=moda').then((r) => r.json()),
     staleTime: 60_000,
   });
 
   const { data: albumsData, isLoading: albumsLoading } = useQuery<{ data: Album[] }>({
-    queryKey: ['public-albums'],
-    queryFn: () => fetch('/api/albums').then((r) => r.json()),
+    queryKey: ['public-albums', 'moda'],
+    queryFn: () => fetch('/api/albums?collezione=moda').then((r) => r.json()),
     staleTime: 60_000,
   });
 

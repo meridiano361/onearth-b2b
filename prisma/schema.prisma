@@ -482,6 +482,7 @@ model Document {
   nome        String
   tipo        String
   cartella    String?
+  collezione  String?
   descrizione String?
   url         String
   storageKey  String
@@ -689,6 +690,7 @@ model Album {
   id          String      @id @default(cuid())
   nome        String
   cartella    String?
+  collezione  String?
   descrizione String?
   copertina   String?
   visibile    Boolean     @default(false)

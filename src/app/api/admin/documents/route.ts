@@ -9,6 +9,7 @@ const createSchema = z.object({
   nome:        z.string().min(1),
   tipo:        z.string().min(1),
   cartella:    z.string().optional().nullable(),
+  collezione:  z.string().nullable().optional(),
   descrizione: z.string().nullable().optional(),
   url:         z.string().url(),
   storageKey:  z.string().min(1),

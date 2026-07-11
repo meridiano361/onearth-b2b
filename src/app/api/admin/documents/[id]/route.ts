@@ -23,9 +23,9 @@ const patchSchema = z.object({
   nome:        z.string().min(1).optional(),
   tipo:        z.string().min(1).optional(),
   cartella:    z.string().nullable().optional(),
+  collezione:  z.string().nullable().optional(),
   descrizione: z.string().nullable().optional(),
   visibile:    z.boolean().optional(),
-  // Presenti solo se il file è stato sostituito
   url:         z.string().url().optional(),
   storageKey:  z.string().min(1).optional(),
   size:        z.number().positive().optional(),
@@ -63,6 +63,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.storageKey  !== undefined ? { storageKey:  data.storageKey }  : {}),
       ...(data.size        !== undefined ? { size:        data.size }        : {}),
       ...(data.mimeType    !== undefined ? { mimeType:    data.mimeType }    : {}),
+      ...(data.collezione  !== undefined ? { collezione:  data.collezione }  : {}),
     },
   });
 

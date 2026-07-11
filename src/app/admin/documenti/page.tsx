@@ -28,8 +28,29 @@ const TIPI_DOC   = TIPI.filter((t) => TIPO_CONFIG[t].kind !== 'video');
 const TIPI_VIDEO = TIPI.filter((t) => TIPO_CONFIG[t].kind === 'video');
 function getTipoConfig(tipo: string): TipoConfig { return TIPO_CONFIG[tipo] ?? TIPO_CONFIG['Altro']; }
 
-interface Doc { id: string; nome: string; tipo: string; cartella?: string | null; descrizione?: string | null; url: string; size: number; mimeType?: string | null; visibile: boolean; createdAt: string; }
-interface Album { id: string; nome: string; cartella?: string | null; descrizione: string | null; copertina: string | null; visibile: boolean; nFoto: number; ordine: number; createdAt: string; }
+interface Doc { id: string; nome: string; tipo: string; cartella?: string | null; collezione?: string | null; descrizione?: string | null; url: string; size: number; mimeType?: string | null; visibile: boolean; createdAt: string; }
+interface Album { id: string; nome: string; cartella?: string | null; collezione?: string | null; descrizione: string | null; copertina: string | null; visibile: boolean; nFoto: number; ordine: number; createdAt: string; }
+
+const COLLEZIONI = [
+  { id: 'moda', label: 'Moda', cls: 'bg-purple-100 text-purple-700' },
+  { id: 'casa', label: 'Casa', cls: 'bg-amber-100 text-amber-700' },
+];
+function CollezioneTag({ id }: { id: string | null | undefined }) {
+  const c = COLLEZIONI.find((x) => x.id === id);
+  if (!c) return null;
+  return <span className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${c.cls}`}>{c.label}</span>;
+}
+function CollezioneSelect({ value, onChange, label }: { value: string; onChange: (v: string) => void; label?: string }) {
+  return (
+    <div>
+      {label && <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">{label}</label>}
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent bg-white">
+        <option value="">— tutte le collezioni —</option>
+        {COLLEZIONI.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+      </select>
+    </div>
+  );
+}
 interface UploadProgress { percent: number; loaded: number; total: number }
 
 function fmtSize(b: number) { if (b < 1024) return b + ' B'; if (b < 1024*1024) return (b/1024).toFixed(0)+' KB'; return (b/(1024*1024)).toFixed(1)+' MB'; }
@@ -96,26 +117,32 @@ function ProgressBar({ progress, label }: { progress: UploadProgress | null; lab
 
 // ─── Modals ───────────────────────────────────────────────────────────────────
 
-function NuovaCartellaModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: (nome: string) => void }) {
+function NuovaCartellaModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: (nome: string, collezione: string) => void }) {
   const [nome, setNome] = useState('');
+  const [collezione, setCollezione] = useState('');
+  function handleConfirm() { if (nome.trim()) onConfirm(nome.trim(), collezione); }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-xs p-6">
-        <h2 className="text-sm font-semibold text-primary mb-4">Nuova cartella</h2>
-        <input
-          autoFocus
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && nome.trim()) onConfirm(nome.trim()); }}
-          placeholder="es. PE27, CA27…"
-          className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent mb-4"
-        />
-        <div className="flex justify-end gap-3">
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-xs p-6 space-y-4">
+        <h2 className="text-sm font-semibold text-primary">Nuova cartella</h2>
+        <div>
+          <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Nome *</label>
+          <input
+            autoFocus
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && nome.trim()) handleConfirm(); }}
+            placeholder="es. PE27, CA27…"
+            className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent"
+          />
+        </div>
+        <CollezioneSelect value={collezione} onChange={setCollezione} label="Collezione" />
+        <div className="flex justify-end gap-3 pt-1">
           <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-primary">Annulla</button>
           <button
             disabled={!nome.trim()}
-            onClick={() => nome.trim() && onConfirm(nome.trim())}
+            onClick={handleConfirm}
             className="px-5 py-2 text-sm font-medium bg-primary text-white rounded hover:bg-warm-darker disabled:opacity-40"
           >Crea</button>
         </div>
@@ -231,13 +258,14 @@ function CompressBar({
   );
 }
 
-function UploadModal({ onClose, onDone, defaultCartella, defaultTipo, cartelle }: {
+function UploadModal({ onClose, onDone, defaultCartella, defaultCollezione, defaultTipo, cartelle }: {
   onClose: () => void; onDone: () => void;
-  defaultCartella: string; defaultTipo?: string; cartelle: string[];
+  defaultCartella: string; defaultCollezione?: string; defaultTipo?: string; cartelle: string[];
 }) {
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState(defaultTipo ?? TIPI[0]);
   const [cartella, setCartella] = useState(defaultCartella);
+  const [collezione, setCollezione] = useState(defaultCollezione ?? '');
   const [descrizione, setDescrizione] = useState('');
   const [visibile, setVisibile] = useState(true);
   const [file, setFile] = useState<File | null>(null);
@@ -263,7 +291,7 @@ function UploadModal({ onClose, onDone, defaultCartella, defaultTipo, cartelle }
       setProgress(null); setStatusMsg('Salvataggio metadati…');
       const res = await fetch('/api/admin/documents', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: nome.trim(), tipo, cartella: cartella.trim() || null, descrizione: descrizione.trim() || null, url, storageKey, size: file.size, mimeType: file.type || null, visibile }),
+        body: JSON.stringify({ nome: nome.trim(), tipo, cartella: cartella.trim() || null, collezione: collezione || null, descrizione: descrizione.trim() || null, url, storageKey, size: file.size, mimeType: file.type || null, visibile }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Errore salvataggio');
       toast.success('Caricato'); onDone();
@@ -291,6 +319,7 @@ function UploadModal({ onClose, onDone, defaultCartella, defaultTipo, cartelle }
             <input list="cartelle-datalist" value={cartella} onChange={(e) => setCartella(e.target.value)} placeholder="es. PE27" className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" />
             <datalist id="cartelle-datalist">{cartelle.map((c) => <option key={c} value={c} />)}</datalist>
           </div>
+          <CollezioneSelect value={collezione} onChange={setCollezione} label="Collezione" />
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sottotitolo <span className="normal-case font-normal text-gray-400">(opzionale)</span></label><input value={descrizione} onChange={(e) => setDescrizione(e.target.value)} placeholder={`es. ${tipo}`} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" /></div>
           <div>
             <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">{cfg.fileLabel}</label>
@@ -318,6 +347,7 @@ function ReplaceModal({ doc, onClose, onDone, cartelle }: { doc: Doc; onClose: (
   const [nome, setNome] = useState(doc.nome);
   const [tipo, setTipo] = useState(doc.tipo);
   const [cartella, setCartella] = useState(doc.cartella ?? '');
+  const [collezione, setCollezione] = useState(doc.collezione ?? '');
   const [descrizione, setDescrizione] = useState(doc.descrizione ?? '');
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<UploadProgress | null>(null);
@@ -339,7 +369,7 @@ function ReplaceModal({ doc, onClose, onDone, cartelle }: { doc: Doc; onClose: (
         fileFields = { url, storageKey, size: file.size, mimeType: file.type || null };
       }
       setStatusMsg('Salvataggio…');
-      const res = await fetch(`/api/admin/documents/${doc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome.trim(), tipo, cartella: cartella.trim() || null, descrizione: descrizione.trim() || null, ...fileFields }) });
+      const res = await fetch(`/api/admin/documents/${doc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome.trim(), tipo, cartella: cartella.trim() || null, collezione: collezione || null, descrizione: descrizione.trim() || null, ...fileFields }) });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Errore');
       toast.success('Aggiornato'); onDone();
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Errore'); }
@@ -359,6 +389,7 @@ function ReplaceModal({ doc, onClose, onDone, cartelle }: { doc: Doc; onClose: (
             <input list="cartelle-replace" value={cartella} onChange={(e) => setCartella(e.target.value)} placeholder="es. PE27" className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" />
             <datalist id="cartelle-replace">{cartelle.map((c) => <option key={c} value={c} />)}</datalist>
           </div>
+          <CollezioneSelect value={collezione} onChange={setCollezione} label="Collezione" />
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sottotitolo <span className="normal-case font-normal text-gray-400">(opzionale)</span></label><input value={descrizione} onChange={(e) => setDescrizione(e.target.value)} placeholder={`es. ${tipo}`} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" /></div>
           <div>
             <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sostituisci file — {cfg.fileLabel}</label>
@@ -407,12 +438,13 @@ function AudioModal({ url, nome, onClose }: { url: string; nome: string; onClose
   );
 }
 
-function CreaAlbumModal({ onClose, onDone, defaultCartella, cartelle }: {
+function CreaAlbumModal({ onClose, onDone, defaultCartella, defaultCollezione, cartelle }: {
   onClose: () => void; onDone: (id: string) => void;
-  defaultCartella: string; cartelle: string[];
+  defaultCartella: string; defaultCollezione?: string; cartelle: string[];
 }) {
   const [nome, setNome] = useState('');
   const [cartella, setCartella] = useState(defaultCartella);
+  const [collezione, setCollezione] = useState(defaultCollezione ?? '');
   const [descrizione, setDescrizione] = useState('');
   const [visibile, setVisibile] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -422,7 +454,7 @@ function CreaAlbumModal({ onClose, onDone, defaultCartella, cartelle }: {
     if (!nome.trim()) { toast.error('Nome obbligatorio'); return; }
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/albums', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome.trim(), cartella: cartella.trim() || null, descrizione: descrizione.trim() || null, visibile }) });
+      const res = await fetch('/api/admin/albums', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: nome.trim(), cartella: cartella.trim() || null, collezione: collezione || null, descrizione: descrizione.trim() || null, visibile }) });
       if (!res.ok) throw new Error((await res.json()).error);
       const { data } = await res.json();
       toast.success('Album creato'); onDone(data.id);
@@ -442,6 +474,7 @@ function CreaAlbumModal({ onClose, onDone, defaultCartella, cartelle }: {
             <input list="cartelle-album" value={cartella} onChange={(e) => setCartella(e.target.value)} placeholder="es. PE27" className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" />
             <datalist id="cartelle-album">{cartelle.map((c) => <option key={c} value={c} />)}</datalist>
           </div>
+          <CollezioneSelect value={collezione} onChange={setCollezione} label="Collezione" />
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Descrizione</label><textarea value={descrizione} onChange={(e) => setDescrizione(e.target.value)} rows={2} placeholder="Opzionale" className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent resize-none" /></div>
           <div className="flex items-center gap-3"><label className="text-sm text-gray-600">Visibile ai clienti</label><button type="button" onClick={() => setVisibile((v) => !v)} className={`relative w-10 h-5 rounded-full transition-colors ${visibile ? 'bg-accent' : 'bg-gray-300'}`}><span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${visibile ? 'translate-x-5' : 'translate-x-0.5'}`} /></button></div>
           <div className="flex justify-end gap-3 pt-2">
@@ -582,11 +615,12 @@ function AlbumCard({ album, cartelle, onOpen, onDelete, onToggleVisibile, onMove
 
 const SENZA = '__senza__';
 
-function CartellaView({ cartella, docs, albums, cartelle, onRefreshDocs, onRefreshAlbums }: {
+function CartellaView({ cartella, docs, albums, cartelle, cartellaCollezioneMap, onRefreshDocs, onRefreshAlbums }: {
   cartella: string;
   docs: Doc[];
   albums: Album[];
   cartelle: string[];
+  cartellaCollezioneMap: Record<string, string>;
   onRefreshDocs: () => void;
   onRefreshAlbums: () => void;
 }) {
@@ -629,14 +663,20 @@ function CartellaView({ cartella, docs, albums, cartelle, onRefreshDocs, onRefre
   }
 
   async function moveDoc(doc: Doc, newCartella: string | null) {
-    const res = await fetch(`/api/admin/documents/${doc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cartella: newCartella }) });
+    const newCollezione = newCartella ? (cartellaCollezioneMap[newCartella] ?? null) : null;
+    const body: Record<string, unknown> = { cartella: newCartella };
+    if (newCollezione !== undefined) body.collezione = newCollezione;
+    const res = await fetch(`/api/admin/documents/${doc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!res.ok) { toast.error('Errore spostamento'); throw new Error(); }
     toast.success(`Spostato in "${newCartella ?? 'Senza cartella'}"`);
     onRefreshDocs();
   }
 
   async function moveAlbum(album: Album, newCartella: string | null) {
-    const res = await fetch(`/api/admin/albums/${album.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cartella: newCartella }) });
+    const newCollezione = newCartella ? (cartellaCollezioneMap[newCartella] ?? null) : null;
+    const body: Record<string, unknown> = { cartella: newCartella };
+    if (newCollezione !== undefined) body.collezione = newCollezione;
+    const res = await fetch(`/api/admin/albums/${album.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!res.ok) { toast.error('Errore spostamento'); throw new Error(); }
     toast.success(`Spostato in "${newCartella ?? 'Senza cartella'}"`);
     onRefreshAlbums();
@@ -692,9 +732,9 @@ function CartellaView({ cartella, docs, albums, cartelle, onRefreshDocs, onRefre
       </div>
 
       {/* Modals */}
-      {showUploadDoc && <UploadModal defaultCartella={cartellaValue ?? ''} defaultTipo="Catalogo PDF" cartelle={cartelle} onClose={() => setShowUploadDoc(false)} onDone={() => { setShowUploadDoc(false); onRefreshDocs(); }} />}
-      {showUploadVideo && <UploadModal defaultCartella={cartellaValue ?? ''} defaultTipo="Video presentazione" cartelle={cartelle} onClose={() => setShowUploadVideo(false)} onDone={() => { setShowUploadVideo(false); onRefreshDocs(); }} />}
-      {showCreaAlbum && <CreaAlbumModal defaultCartella={cartellaValue ?? ''} cartelle={cartelle} onClose={() => setShowCreaAlbum(false)} onDone={(id) => { setShowCreaAlbum(false); onRefreshAlbums(); router.push(`/admin/album/${id}`); }} />}
+      {showUploadDoc && <UploadModal defaultCartella={cartellaValue ?? ''} defaultCollezione={cartellaValue ? cartellaCollezioneMap[cartellaValue] : ''} defaultTipo="Catalogo PDF" cartelle={cartelle} onClose={() => setShowUploadDoc(false)} onDone={() => { setShowUploadDoc(false); onRefreshDocs(); }} />}
+      {showUploadVideo && <UploadModal defaultCartella={cartellaValue ?? ''} defaultCollezione={cartellaValue ? cartellaCollezioneMap[cartellaValue] : ''} defaultTipo="Video presentazione" cartelle={cartelle} onClose={() => setShowUploadVideo(false)} onDone={() => { setShowUploadVideo(false); onRefreshDocs(); }} />}
+      {showCreaAlbum && <CreaAlbumModal defaultCartella={cartellaValue ?? ''} defaultCollezione={cartellaValue ? cartellaCollezioneMap[cartellaValue] : ''} cartelle={cartelle} onClose={() => setShowCreaAlbum(false)} onDone={(id) => { setShowCreaAlbum(false); onRefreshAlbums(); router.push(`/admin/album/${id}`); }} />}
       {replaceDoc && <ReplaceModal doc={replaceDoc} cartelle={cartelle} onClose={() => setReplaceDoc(null)} onDone={() => { setReplaceDoc(null); onRefreshDocs(); }} />}
       {previewDoc && previewKind === 'video' && <VideoModal url={previewDoc.url} nome={previewDoc.nome} onClose={() => setPreviewDoc(null)} />}
       {previewDoc && previewKind === 'audio' && <AudioModal url={previewDoc.url} nome={previewDoc.nome} onClose={() => setPreviewDoc(null)} />}
@@ -708,6 +748,7 @@ export default function DocumentiPage() {
   const qc = useQueryClient();
   const [showNuovaCartella, setShowNuovaCartella] = useState(false);
   const [localCartelle, setLocalCartelle] = useState<string[]>([]);
+  const [localCartellaCollezioni, setLocalCartellaCollezioni] = useState<Record<string, string>>({});
   const [currentCartella, setCurrentCartella] = useState<string | null>(null);
   const [renamingCartella, setRenamingCartella] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -733,15 +774,22 @@ export default function DocumentiPage() {
   const allCartelle = Array.from(new Set([...dbCartelle, ...localCartelle])).sort();
   const hasSenza = docs.some((d) => !d.cartella) || albums.some((a) => !a.cartella);
 
+  // Derive cartella→collection mapping from existing docs/albums, overriding with local (newly created)
+  const cartellaCollezioneMap: Record<string, string> = {};
+  for (const d of docs) { if (d.cartella && d.collezione && !cartellaCollezioneMap[d.cartella]) cartellaCollezioneMap[d.cartella] = d.collezione; }
+  for (const a of albums) { if (a.cartella && a.collezione && !cartellaCollezioneMap[a.cartella]) cartellaCollezioneMap[a.cartella] = a.collezione; }
+  Object.assign(cartellaCollezioneMap, localCartellaCollezioni);
+
   useEffect(() => {
     if (currentCartella !== null) return;
     if (allCartelle.length > 0) setCurrentCartella(allCartelle[0]);
     else if (hasSenza) setCurrentCartella(SENZA);
   }, [allCartelle.length, hasSenza]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleNuovaCartella(nome: string) {
+  function handleNuovaCartella(nome: string, collezione: string) {
     const trimmed = nome.trim();
     if (!allCartelle.includes(trimmed)) setLocalCartelle((prev) => [...prev, trimmed]);
+    if (collezione) setLocalCartellaCollezioni((prev) => ({ ...prev, [trimmed]: collezione }));
     setCurrentCartella(trimmed);
     setShowNuovaCartella(false);
   }
@@ -818,6 +866,7 @@ export default function DocumentiPage() {
                 <>
                   <button onClick={() => setCurrentCartella(c)} className={chipCls(currentCartella === c)}>
                     <Folder size={12} />{c}
+                    {cartellaCollezioneMap[c] && <CollezioneTag id={cartellaCollezioneMap[c]} />}
                   </button>
                   <button
                     onClick={() => { setRenamingCartella(c); setRenameValue(c); }}
@@ -855,13 +904,14 @@ export default function DocumentiPage() {
           docs={docs}
           albums={albums}
           cartelle={allCartelle}
+          cartellaCollezioneMap={cartellaCollezioneMap}
           onRefreshDocs={() => refetchDocs()}
           onRefreshAlbums={() => refetchAlbums()}
         />
       )}
 
       {/* Modals */}
-      {showNuovaCartella && <NuovaCartellaModal onClose={() => setShowNuovaCartella(false)} onConfirm={handleNuovaCartella} />}
+      {showNuovaCartella && <NuovaCartellaModal onClose={() => setShowNuovaCartella(false)} onConfirm={(nome, col) => handleNuovaCartella(nome, col)} />}
     </div>
   );
 }

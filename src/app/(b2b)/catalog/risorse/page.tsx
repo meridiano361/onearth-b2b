@@ -220,14 +220,14 @@ export default function RisorsePage() {
   const [loadingAlbumId, setLoadingAlbumId] = useState<string | null>(null);
 
   const { data: docsData, isLoading: docsLoading } = useQuery<{ data: Doc[] }>({
-    queryKey: ['public-documents'],
-    queryFn: () => fetch('/api/documents').then((r) => r.json()),
+    queryKey: ['public-documents', 'casa'],
+    queryFn: () => fetch('/api/documents?collezione=casa').then((r) => r.json()),
     staleTime: 60_000,
   });
 
   const { data: albumsData, isLoading: albumsLoading } = useQuery<{ data: Album[] }>({
-    queryKey: ['public-albums'],
-    queryFn: () => fetch('/api/albums').then((r) => r.json()),
+    queryKey: ['public-albums', 'casa'],
+    queryFn: () => fetch('/api/albums?collezione=casa').then((r) => r.json()),
     staleTime: 60_000,
   });
 
