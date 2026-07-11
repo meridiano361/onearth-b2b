@@ -1,22 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Grid3x3, Heart, ShoppingCart, Package2, Palette, ArrowLeft, ChevronRight, Clock, Lock, Layout } from 'lucide-react';
+import { LayoutGrid, Heart, ShoppingCart, Package2, FileText, ImageIcon, Film, Clock, Lock, Palette, Layout } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useSession } from 'next-auth/react';
 import { isAdminRole } from '@/lib/roles';
-
-const CUSTOMER_ITEMS = [
-  { href: '/moda/catalogo',  icon: Grid3x3,     label: 'Catalogo',  description: 'Sfoglia e ordina tutta la bigiotteria PE27' },
-  { href: '/moda/preferiti', icon: Heart,        label: 'Preferiti', description: 'I tuoi prodotti preferiti'                  },
-  { href: '/moda/carrelli',  icon: ShoppingCart, label: 'Carrelli',  description: 'I tuoi carrelli attivi'                    },
-  { href: '/moda/ordini',    icon: Package2,     label: 'Ordini',    description: 'I tuoi ordini bigiotteria PE27'             },
-];
-
-const ADMIN_ITEMS = [
-  { href: '/moda/ruota-cromatica', icon: Palette, label: 'Ruota Cromatica', description: 'Abbinamenti cromatici e visual merchandising' },
-  { href: '/moda/pareti',          icon: Layout,  label: 'Visual',           description: 'Simula l\'esposizione in negozio'             },
-];
 
 function decodeCollezione(code: string): string {
   const prefix = code.slice(0, 2).toUpperCase();
@@ -31,20 +19,28 @@ function formatDeadline(iso: string): string {
   return new Date(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function NavItem({ href, icon: Icon, label, description }: { href: string; icon: React.ElementType; label: string; description: string }) {
+function NavCard({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-4 p-4 rounded-2xl border border-border hover:border-primary/30 bg-white hover:bg-cream transition-all duration-200 group shadow-sm"
+      className="flex flex-col items-center justify-center gap-2.5 py-5 rounded-2xl border border-border bg-white hover:bg-cream hover:border-gray-300 transition-all duration-200 group"
     >
-      <div className="w-10 h-10 rounded-xl bg-cream flex items-center justify-center flex-shrink-0">
+      <div className="w-9 h-9 rounded-xl bg-cream group-hover:bg-white flex items-center justify-center transition-colors">
         <Icon size={16} className="text-gray-500" />
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-primary leading-none">{label}</p>
-        <p className="text-xs text-gray-400 mt-1">{description}</p>
-      </div>
-      <ChevronRight size={15} className="text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" />
+      <span className="text-xs font-medium text-primary tracking-wide">{label}</span>
+    </Link>
+  );
+}
+
+function ContentCard({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-border bg-white hover:bg-cream hover:border-gray-300 transition-all duration-200 group"
+    >
+      <Icon size={15} className="text-gray-400 group-hover:text-gray-600 transition-colors" />
+      <span className="text-2xs font-medium text-gray-600 tracking-wide">{label}</span>
     </Link>
   );
 }
@@ -58,39 +54,47 @@ export default function ModaHome() {
   const isExpired = deadline ? new Date(deadline) < new Date() : false;
 
   return (
-    <div className="min-h-screen bg-[#faf8f5] text-primary">
+    <div className="min-h-screen bg-[#faf8f5] text-primary px-5 pt-8 pb-28">
       {/* Header */}
-      <div className="px-5 pt-8 pb-6">
-        <Link href="/home" className="flex items-center gap-1.5 text-gray-400 hover:text-gray-600 transition-colors text-xs mb-8">
-          <ArrowLeft size={13} /> Home
-        </Link>
-        <p className="text-xs tracking-[0.15em] text-gray-400 mb-1">collezione</p>
-        <h1 className="font-display text-3xl font-light tracking-widest leading-none text-primary">
-          MODA PE27
-        </h1>
-        <p className="text-xs text-gray-400 mt-2">{stagione}</p>
+      <p className="text-2xs tracking-[0.2em] uppercase text-gray-400">collezione</p>
+      <h1 className="font-display text-4xl font-light tracking-widest leading-tight mt-0.5">MODA PE27</h1>
+      <p className="text-sm text-gray-400 mt-1">{stagione}</p>
 
-        {deadline && (
-          <div className={`mt-4 flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${
-            isExpired
-              ? 'bg-gray-100 text-gray-500 border border-gray-200'
-              : 'bg-amber-50 text-amber-700 border border-amber-200'
-          }`}>
-            {isExpired ? <Lock size={12} className="flex-shrink-0" /> : <Clock size={12} className="flex-shrink-0" />}
-            {isExpired
-              ? `Le prenotazioni si sono chiuse il ${formatDeadline(deadline)}`
-              : `Le prenotazioni chiudono il ${formatDeadline(deadline)}`}
-          </div>
-        )}
+      {deadline && (
+        <div className={`mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+          isExpired
+            ? 'bg-gray-100 text-gray-500'
+            : 'bg-amber-50 text-amber-700 border border-amber-200'
+        }`}>
+          {isExpired ? <Lock size={10} /> : <Clock size={10} />}
+          {isExpired
+            ? `Prenotazioni chiuse il ${formatDeadline(deadline)}`
+            : `Aperte fino al ${formatDeadline(deadline)}`}
+        </div>
+      )}
+
+      {/* Main 4 items — 2×2 grid */}
+      <div className="grid grid-cols-2 gap-3 mt-8">
+        <NavCard href="/moda/catalogo"  icon={LayoutGrid}   label="Catalogo"  />
+        <NavCard href="/moda/preferiti" icon={Heart}        label="Preferiti" />
+        <NavCard href="/moda/carrelli"  icon={ShoppingCart} label="Carrelli"  />
+        <NavCard href="/moda/ordini"    icon={Package2}     label="Ordini"    />
       </div>
 
-      <div className="mx-5 h-px bg-border" />
-
-      {/* Navigation */}
-      <div className="px-5 py-6 space-y-2">
-        {CUSTOMER_ITEMS.map((item) => <NavItem key={item.href} {...item} />)}
-        {isAdmin && ADMIN_ITEMS.map((item) => <NavItem key={item.href} {...item} />)}
+      {/* Content 3 items — 3 columns */}
+      <div className="grid grid-cols-3 gap-3 mt-3">
+        <ContentCard href="/moda/risorse" icon={FileText}  label="Documenti" />
+        <ContentCard href="/moda/risorse" icon={ImageIcon} label="Foto"      />
+        <ContentCard href="/moda/risorse" icon={Film}      label="Video"     />
       </div>
+
+      {/* Admin items */}
+      {isAdmin && (
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <NavCard href="/moda/ruota-cromatica" icon={Palette} label="Ruota Cromatica" />
+          <NavCard href="/moda/pareti"          icon={Layout}  label="Visual"          />
+        </div>
+      )}
     </div>
   );
 }
