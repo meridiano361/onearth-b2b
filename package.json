@@ -57,6 +57,7 @@
     "next-intl": "^4.12.0",
     "node-html-parser": "^7.1.0",
     "papaparse": "^5.4.1",
+    "pdf-lib": "^1.17.1",
     "postcss": "^8.4.0",
     "prisma": "^5.14.0",
     "react": "^18.3.0",

@@ -3,8 +3,9 @@
 import { useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  FileText, Film, Music2, File, Plus, Trash2, RefreshCw, Upload, Play, X,
-  ImageIcon, GripVertical, Eye, EyeOff, Folder, FolderPlus, ChevronDown,
+  FileText, Film, Music2, File as FileIcon, Plus, Trash2, RefreshCw, Upload, Play, X,
+  ImageIcon, Eye, EyeOff, Folder, FolderPlus, FolderInput, Pencil, Check,
+  Loader2, Minimize2,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -38,7 +39,7 @@ function DocIcon({ tipo }: { tipo: string }) {
   if (k === 'video') return <Film size={13} className="text-blue-400 flex-shrink-0" />;
   if (k === 'audio') return <Music2 size={13} className="text-purple-400 flex-shrink-0" />;
   if (k === 'pdf')   return <FileText size={13} className="text-red-400 flex-shrink-0" />;
-  return <File size={13} className="text-gray-400 flex-shrink-0" />;
+  return <FileIcon size={13} className="text-gray-400 flex-shrink-0" />;
 }
 
 function uploadWithProgress(url: string, file: File, mimeType: string, onProgress: (p: UploadProgress) => void): Promise<void> {
@@ -61,6 +62,20 @@ async function uploadToSupabase(file: File, tipo: string, onProgress: (p: Upload
   const { signedUrl, storageKey, publicUrl } = await res.json();
   await uploadWithProgress(signedUrl, file, file.type || 'application/octet-stream', onProgress);
   return { url: publicUrl, storageKey };
+}
+
+async function compressPDF(file: File, onProgress: (pct: number) => void): Promise<File> {
+  const { PDFDocument } = await import('pdf-lib');
+  onProgress(10);
+  const bytes = await file.arrayBuffer();
+  onProgress(40);
+  const pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: true, updateMetadata: false });
+  onProgress(70);
+  const out = await pdfDoc.save({ useObjectStreams: true, addDefaultPage: false });
+  onProgress(100);
+  // Uint8Array is a valid BlobPart at runtime; cast needed due to strict TS buffer variance
+  const blob = new Blob([out as unknown as BlobPart], { type: 'application/pdf' });
+  return new File([blob], file.name, { type: 'application/pdf' });
 }
 
 function ProgressBar({ progress, label }: { progress: UploadProgress | null; label: string | null }) {
@@ -109,6 +124,113 @@ function NuovaCartellaModal({ onClose, onConfirm }: { onClose: () => void; onCon
   );
 }
 
+function SpostaModal({
+  nome, currentCartella, cartelle, onMove, onClose,
+}: {
+  nome: string; currentCartella: string | null; cartelle: string[];
+  onMove: (c: string | null) => Promise<void>; onClose: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const others = cartelle.filter((c) => c !== currentCartella);
+
+  async function move(c: string | null) {
+    setLoading(true);
+    try { await onMove(c); onClose(); }
+    catch { setLoading(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={!loading ? onClose : undefined} />
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-xs p-5">
+        <h2 className="text-sm font-semibold text-primary mb-1">Sposta</h2>
+        <p className="text-xs text-gray-400 mb-4 truncate">"{nome}"</p>
+        {loading ? (
+          <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-gray-400" /></div>
+        ) : others.length === 0 && currentCartella !== null ? (
+          <p className="text-xs text-gray-400 text-center py-4">Nessun'altra cartella disponibile.</p>
+        ) : (
+          <div className="space-y-1">
+            {others.map((c) => (
+              <button key={c} onClick={() => move(c)}
+                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-cream transition-colors flex items-center gap-2">
+                <Folder size={13} className="text-gray-400 flex-shrink-0" />{c}
+              </button>
+            ))}
+            {currentCartella !== null && (
+              <button onClick={() => move(null)}
+                className="w-full text-left px-3 py-2 text-sm text-gray-400 rounded-lg hover:bg-cream transition-colors flex items-center gap-2">
+                <Folder size={13} className="text-gray-300 flex-shrink-0" />Senza cartella
+              </button>
+            )}
+          </div>
+        )}
+        <button onClick={onClose} disabled={loading} className="mt-4 w-full py-2 text-sm text-gray-500 hover:text-primary disabled:opacity-50">Annulla</button>
+      </div>
+    </div>
+  );
+}
+
+function CompressBar({
+  file, tipo, onCompressed,
+}: {
+  file: File; tipo: string; onCompressed: (f: File) => void;
+}) {
+  const cfg = getTipoConfig(tipo);
+  const tooLarge = file.size > cfg.maxMB * 1024 * 1024;
+  const isPDF = cfg.kind === 'pdf';
+  const [compressing, setCompressing] = useState(false);
+  const [pct, setPct] = useState(0);
+  const [result, setResult] = useState<{ size: number; saved: number } | null>(null);
+
+  if (!isPDF) return null; // solo per PDF
+
+  async function handleCompress() {
+    setCompressing(true);
+    setPct(0);
+    setResult(null);
+    try {
+      const compressed = await compressPDF(file, setPct);
+      const saved = file.size - compressed.size;
+      setResult({ size: compressed.size, saved });
+      onCompressed(compressed);
+      if (saved > 0) toast.success(`Compresso: ${fmtSize(file.size)} → ${fmtSize(compressed.size)} (−${fmtSize(saved)})`);
+      else toast(`Compressione minima: il file è già ottimizzato`);
+    } catch {
+      toast.error('Errore compressione');
+    } finally {
+      setCompressing(false);
+    }
+  }
+
+  if (result) {
+    return (
+      <div className={`text-xs flex items-center gap-1.5 ${result.saved > 0 ? 'text-green-700' : 'text-gray-500'}`}>
+        <Check size={11} />
+        {result.saved > 0
+          ? `Compresso a ${fmtSize(result.size)} (−${fmtSize(result.saved)})`
+          : `Già ottimizzato (${fmtSize(result.size)})`}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex items-center gap-2 ${tooLarge ? 'text-amber-700' : 'text-gray-500'}`}>
+      {tooLarge && <span className="text-xs font-medium">Troppo grande —</span>}
+      {compressing ? (
+        <span className="text-xs flex items-center gap-1.5">
+          <Loader2 size={11} className="animate-spin" /> Compressione… {pct}%
+        </span>
+      ) : (
+        <button type="button" onClick={handleCompress}
+          className={`flex items-center gap-1 text-xs font-medium underline underline-offset-2 hover:opacity-80 ${tooLarge ? 'text-amber-700' : 'text-gray-500'}`}>
+          <Minimize2 size={11} /> Comprimi PDF
+        </button>
+      )}
+    </div>
+  );
+}
+
 function UploadModal({ onClose, onDone, defaultCartella, defaultTipo, cartelle }: {
   onClose: () => void; onDone: () => void;
   defaultCartella: string; defaultTipo?: string; cartelle: string[];
@@ -125,11 +247,15 @@ function UploadModal({ onClose, onDone, defaultCartella, defaultTipo, cartelle }
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cfg = getTipoConfig(tipo);
 
+  function handleFileChange(f: File | null) {
+    setFile(f);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) { toast.error('Seleziona un file'); return; }
     if (!nome.trim()) { toast.error('Inserisci un nome'); return; }
-    if (file.size > cfg.maxMB * 1024 * 1024) { toast.error(`File troppo grande (max ${cfg.maxMB} MB)`); return; }
+    if (file.size > cfg.maxMB * 1024 * 1024) { toast.error(`File troppo grande (max ${cfg.maxMB} MB) — comprimi prima`); return; }
     setLoading(true);
     try {
       setStatusMsg('Preparazione upload…');
@@ -156,8 +282,8 @@ function UploadModal({ onClose, onDone, defaultCartella, defaultTipo, cartelle }
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Nome *</label><input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="es. Catalogo PE27" className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" /></div>
           <div>
             <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Tipo *</label>
-            <select value={tipo} onChange={(e) => { setTipo(e.target.value); setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent bg-white">
-              {TIPI.map((t) => <option key={t} value={t}>{t}</option>)}
+            <select value={tipo} onChange={(e) => { setTipo(e.target.value); handleFileChange(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent bg-white">
+              {tipiToShow.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           <div>
@@ -166,9 +292,17 @@ function UploadModal({ onClose, onDone, defaultCartella, defaultTipo, cartelle }
             <datalist id="cartelle-datalist">{cartelle.map((c) => <option key={c} value={c} />)}</datalist>
           </div>
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sottotitolo <span className="normal-case font-normal text-gray-400">(opzionale)</span></label><input value={descrizione} onChange={(e) => setDescrizione(e.target.value)} placeholder={`es. ${tipo}`} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" /></div>
-          <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">{cfg.fileLabel}</label><input ref={fileInputRef} type="file" accept={cfg.accept || undefined} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary file:text-white hover:file:bg-warm-darker cursor-pointer" />{file && <p className="text-2xs text-gray-400 mt-1">{file.name} · {fmtSize(file.size)}</p>}</div>
+          <div>
+            <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">{cfg.fileLabel}</label>
+            <input ref={fileInputRef} type="file" accept={cfg.accept || undefined} onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)} className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary file:text-white hover:file:bg-warm-darker cursor-pointer" />
+            {file && (
+              <div className="mt-1.5 space-y-1.5">
+                <p className="text-2xs text-gray-400">{file.name} · {fmtSize(file.size)}</p>
+                <CompressBar file={file} tipo={tipo} onCompressed={(f) => setFile(f)} />
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-3"><label className="text-sm text-gray-600">Visibile ai clienti</label><button type="button" onClick={() => setVisibile((v) => !v)} className={`relative w-10 h-5 rounded-full transition-colors ${visibile ? 'bg-accent' : 'bg-gray-300'}`}><span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${visibile ? 'translate-x-5' : 'translate-x-0.5'}`} /></button></div>
-          <p className="text-2xs text-gray-400 bg-amber-50 border border-amber-200 rounded px-3 py-2">Piano attuale: max {PLAN_MAX_MB} MB per file.</p>
           <ProgressBar progress={progress} label={statusMsg} />
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} disabled={loading} className="px-4 py-2 text-sm text-gray-600 hover:text-primary disabled:opacity-50">Annulla</button>
@@ -198,7 +332,7 @@ function ReplaceModal({ doc, onClose, onDone, cartelle }: { doc: Doc; onClose: (
     try {
       let fileFields: Record<string, unknown> = {};
       if (file) {
-        if (file.size > cfg.maxMB * 1024 * 1024) throw new Error(`File troppo grande (max ${cfg.maxMB} MB)`);
+        if (file.size > cfg.maxMB * 1024 * 1024) throw new Error(`File troppo grande (max ${cfg.maxMB} MB) — comprimi prima`);
         setStatusMsg('Preparazione upload…');
         const { url, storageKey } = await uploadToSupabase(file, tipo, (p) => { setStatusMsg('Caricamento…'); setProgress(p); });
         setProgress(null);
@@ -226,7 +360,16 @@ function ReplaceModal({ doc, onClose, onDone, cartelle }: { doc: Doc; onClose: (
             <datalist id="cartelle-replace">{cartelle.map((c) => <option key={c} value={c} />)}</datalist>
           </div>
           <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sottotitolo <span className="normal-case font-normal text-gray-400">(opzionale)</span></label><input value={descrizione} onChange={(e) => setDescrizione(e.target.value)} placeholder={`es. ${tipo}`} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" /></div>
-          <div><label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sostituisci file — {cfg.fileLabel}</label><input ref={fileInputRef} type="file" accept={cfg.accept || undefined} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary file:text-white hover:file:bg-warm-darker cursor-pointer" />{file && <p className="text-2xs text-gray-400 mt-1">{file.name} · {fmtSize(file.size)}</p>}</div>
+          <div>
+            <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sostituisci file — {cfg.fileLabel}</label>
+            <input ref={fileInputRef} type="file" accept={cfg.accept || undefined} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-primary file:text-white hover:file:bg-warm-darker cursor-pointer" />
+            {file && (
+              <div className="mt-1.5 space-y-1.5">
+                <p className="text-2xs text-gray-400">{file.name} · {fmtSize(file.size)}</p>
+                <CompressBar file={file} tipo={tipo} onCompressed={(f) => setFile(f)} />
+              </div>
+            )}
+          </div>
           <ProgressBar progress={progress} label={statusMsg} />
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} disabled={loading} className="px-4 py-2 text-sm text-gray-600 hover:text-primary disabled:opacity-50">Annulla</button>
@@ -313,96 +456,125 @@ function CreaAlbumModal({ onClose, onDone, defaultCartella, cartelle }: {
 
 // ─── Doc table ────────────────────────────────────────────────────────────────
 
-function DocTable({ items, onReplace, onDelete, onPreview, onToggleVisibile }: {
+function DocTable({ items, cartelle, onReplace, onDelete, onPreview, onToggleVisibile, onMove }: {
   items: Doc[];
+  cartelle: string[];
   onReplace: (doc: Doc) => void;
   onDelete: (id: string) => void;
   onPreview: (doc: Doc) => void;
   onToggleVisibile: (doc: Doc) => void;
+  onMove: (doc: Doc, newCartella: string | null) => Promise<void>;
 }) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [spostaDoc, setSpostaDoc] = useState<Doc | null>(null);
   if (items.length === 0) return null;
   return (
-    <div className="bg-white border border-border rounded-xl overflow-hidden">
-      <table className="w-full text-sm">
-        <thead><tr className="border-b border-border bg-cream/50">
-          <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide">Nome</th>
-          <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Tipo</th>
-          <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Data</th>
-          <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Dim.</th>
-          <th className="text-center px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide">Visibile</th>
-          <th className="px-4 py-3" />
-        </tr></thead>
-        <tbody>
-          {items.map((doc) => {
-            const kind = getTipoConfig(doc.tipo).kind;
-            const canPreview = kind === 'video' || kind === 'audio';
-            return (
-              <tr key={doc.id} className="border-b border-border/50 last:border-0 hover:bg-cream/30 transition-colors">
-                <td className="px-4 py-3"><a href={doc.url} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:text-accent flex items-center gap-2"><DocIcon tipo={doc.tipo} />{doc.nome}</a></td>
-                <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{doc.tipo}</td>
-                <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{fmtDate(doc.createdAt)}</td>
-                <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{fmtSize(doc.size)}</td>
-                <td className="px-4 py-3 text-center">
-                  <button onClick={() => onToggleVisibile(doc)} className={`relative w-9 h-5 rounded-full transition-colors ${doc.visibile ? 'bg-accent' : 'bg-gray-200'}`}>
-                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${doc.visibile ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                  </button>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5 justify-end">
-                    {canPreview && <button onClick={() => onPreview(doc)} className="p-1.5 text-gray-400 hover:text-accent"><Play size={13} /></button>}
-                    <button onClick={() => onReplace(doc)} className="p-1.5 text-gray-400 hover:text-primary"><RefreshCw size={13} /></button>
-                    {deleteId === doc.id ? (
-                      <div className="flex items-center gap-1.5">
-                        <button onClick={() => { onDelete(doc.id); setDeleteId(null); }} className="text-2xs font-medium text-red-600 hover:text-red-800">Elimina</button>
-                        <button onClick={() => setDeleteId(null)} className="text-2xs text-gray-400">Annulla</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setDeleteId(doc.id)} className="p-1.5 text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <>
+      <div className="bg-white border border-border rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead><tr className="border-b border-border bg-cream/50">
+            <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide">Nome</th>
+            <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Tipo</th>
+            <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Data</th>
+            <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Dim.</th>
+            <th className="text-center px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide">Visibile</th>
+            <th className="px-4 py-3" />
+          </tr></thead>
+          <tbody>
+            {items.map((doc) => {
+              const kind = getTipoConfig(doc.tipo).kind;
+              const canPreview = kind === 'video' || kind === 'audio';
+              return (
+                <tr key={doc.id} className="border-b border-border/50 last:border-0 hover:bg-cream/30 transition-colors">
+                  <td className="px-4 py-3"><a href={doc.url} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:text-accent flex items-center gap-2"><DocIcon tipo={doc.tipo} />{doc.nome}</a></td>
+                  <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{doc.tipo}</td>
+                  <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{fmtDate(doc.createdAt)}</td>
+                  <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{fmtSize(doc.size)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <button onClick={() => onToggleVisibile(doc)} className={`relative w-9 h-5 rounded-full transition-colors ${doc.visibile ? 'bg-accent' : 'bg-gray-200'}`}>
+                      <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${doc.visibile ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5 justify-end">
+                      {canPreview && <button onClick={() => onPreview(doc)} className="p-1.5 text-gray-400 hover:text-accent" title="Riproduci"><Play size={13} /></button>}
+                      <button onClick={() => setSpostaDoc(doc)} className="p-1.5 text-gray-400 hover:text-primary" title="Sposta in cartella"><FolderInput size={13} /></button>
+                      <button onClick={() => onReplace(doc)} className="p-1.5 text-gray-400 hover:text-primary" title="Modifica"><RefreshCw size={13} /></button>
+                      {deleteId === doc.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => { onDelete(doc.id); setDeleteId(null); }} className="text-2xs font-medium text-red-600 hover:text-red-800">Elimina</button>
+                          <button onClick={() => setDeleteId(null)} className="text-2xs text-gray-400">Annulla</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setDeleteId(doc.id)} className="p-1.5 text-gray-400 hover:text-red-500" title="Elimina"><Trash2 size={13} /></button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {spostaDoc && (
+        <SpostaModal
+          nome={spostaDoc.nome}
+          currentCartella={spostaDoc.cartella ?? null}
+          cartelle={cartelle}
+          onMove={(c) => onMove(spostaDoc, c)}
+          onClose={() => setSpostaDoc(null)}
+        />
+      )}
+    </>
   );
 }
 
 // ─── Album card ───────────────────────────────────────────────────────────────
 
-function AlbumCard({ album, onOpen, onDelete, onToggleVisibile }: {
-  album: Album; onOpen: () => void; onDelete: () => void; onToggleVisibile: () => void;
+function AlbumCard({ album, cartelle, onOpen, onDelete, onToggleVisibile, onMove }: {
+  album: Album; cartelle: string[]; onOpen: () => void; onDelete: () => void;
+  onToggleVisibile: () => void; onMove: (newCartella: string | null) => Promise<void>;
 }) {
   const [confirmDel, setConfirmDel] = useState(false);
+  const [showSposta, setShowSposta] = useState(false);
   return (
-    <div className="bg-white border border-border rounded-xl overflow-hidden hover:shadow-sm transition-all group">
-      <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden">
-        {album.copertina
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={album.copertina} alt={album.nome} className="w-full h-full object-cover" />
-          : <div className="w-full h-full flex items-center justify-center"><ImageIcon size={32} className="text-gray-200" /></div>}
-        <div className={`absolute top-2 right-2 text-2xs font-medium px-2 py-0.5 rounded-full ${album.visibile ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-          {album.visibile ? 'Visibile' : 'Nascosto'}
+    <>
+      <div className="bg-white border border-border rounded-xl overflow-hidden hover:shadow-sm transition-all group">
+        <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden">
+          {album.copertina
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={album.copertina} alt={album.nome} className="w-full h-full object-cover" />
+            : <div className="w-full h-full flex items-center justify-center"><ImageIcon size={32} className="text-gray-200" /></div>}
+          <div className={`absolute top-2 right-2 text-2xs font-medium px-2 py-0.5 rounded-full ${album.visibile ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+            {album.visibile ? 'Visibile' : 'Nascosto'}
+          </div>
+        </div>
+        <div className="p-3">
+          <p className="text-sm font-semibold text-primary truncate">{album.nome}</p>
+          <p className="text-2xs text-gray-400 mt-0.5">{album.nFoto} foto · {fmtDate(album.createdAt)}</p>
+          {album.descrizione && <p className="text-2xs text-gray-500 mt-1 line-clamp-2">{album.descrizione}</p>}
+          <div className="flex items-center gap-2 mt-3">
+            <button onClick={onOpen} className="flex-1 text-xs font-medium text-center px-2 py-1.5 bg-primary text-white rounded hover:bg-warm-darker transition-colors">Apri</button>
+            <button onClick={() => setShowSposta(true)} className="p-1.5 text-gray-400 hover:text-primary" title="Sposta in cartella"><FolderInput size={13} /></button>
+            <button onClick={onToggleVisibile} className="p-1.5 text-gray-400 hover:text-primary" title={album.visibile ? 'Nascondi' : 'Mostra'}>
+              {album.visibile ? <EyeOff size={13} /> : <Eye size={13} />}
+            </button>
+            {confirmDel
+              ? <div className="flex items-center gap-1.5"><button onClick={onDelete} className="text-2xs font-medium text-red-600 hover:text-red-800">Elimina</button><button onClick={() => setConfirmDel(false)} className="text-2xs text-gray-400">✕</button></div>
+              : <button onClick={() => setConfirmDel(true)} className="p-1.5 text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>}
+          </div>
         </div>
       </div>
-      <div className="p-3">
-        <p className="text-sm font-semibold text-primary truncate">{album.nome}</p>
-        <p className="text-2xs text-gray-400 mt-0.5">{album.nFoto} foto · {fmtDate(album.createdAt)}</p>
-        {album.descrizione && <p className="text-2xs text-gray-500 mt-1 line-clamp-2">{album.descrizione}</p>}
-        <div className="flex items-center gap-2 mt-3">
-          <button onClick={onOpen} className="flex-1 text-xs font-medium text-center px-2 py-1.5 bg-primary text-white rounded hover:bg-warm-darker transition-colors">Apri</button>
-          <button onClick={onToggleVisibile} className="p-1.5 text-gray-400 hover:text-primary" title={album.visibile ? 'Nascondi' : 'Mostra'}>
-            {album.visibile ? <EyeOff size={13} /> : <Eye size={13} />}
-          </button>
-          {confirmDel
-            ? <div className="flex items-center gap-1.5"><button onClick={onDelete} className="text-2xs font-medium text-red-600 hover:text-red-800">Elimina</button><button onClick={() => setConfirmDel(false)} className="text-2xs text-gray-400">✕</button></div>
-            : <button onClick={() => setConfirmDel(true)} className="p-1.5 text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>}
-        </div>
-      </div>
-    </div>
+      {showSposta && (
+        <SpostaModal
+          nome={album.nome}
+          currentCartella={album.cartella ?? null}
+          cartelle={cartelle}
+          onMove={onMove}
+          onClose={() => setShowSposta(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -419,7 +591,6 @@ function CartellaView({ cartella, docs, albums, cartelle, onRefreshDocs, onRefre
   onRefreshAlbums: () => void;
 }) {
   const router = useRouter();
-  const qc = useQueryClient();
   const isSenza = cartella === SENZA;
   const cartellaValue = isSenza ? null : cartella;
 
@@ -457,6 +628,20 @@ function CartellaView({ cartella, docs, albums, cartelle, onRefreshDocs, onRefre
     toast.success('Album eliminato'); onRefreshAlbums();
   }
 
+  async function moveDoc(doc: Doc, newCartella: string | null) {
+    const res = await fetch(`/api/admin/documents/${doc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cartella: newCartella }) });
+    if (!res.ok) { toast.error('Errore spostamento'); throw new Error(); }
+    toast.success(`Spostato in "${newCartella ?? 'Senza cartella'}"`);
+    onRefreshDocs();
+  }
+
+  async function moveAlbum(album: Album, newCartella: string | null) {
+    const res = await fetch(`/api/admin/albums/${album.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cartella: newCartella }) });
+    if (!res.ok) { toast.error('Errore spostamento'); throw new Error(); }
+    toast.success(`Spostato in "${newCartella ?? 'Senza cartella'}"`);
+    onRefreshAlbums();
+  }
+
   const sectionCls = 'mb-8';
   const sectionHead = 'flex items-center justify-between mb-3';
   const sectionLabel = 'text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-2';
@@ -472,7 +657,7 @@ function CartellaView({ cartella, docs, albums, cartelle, onRefreshDocs, onRefre
         </div>
         {docItems.length === 0
           ? <p className="text-xs text-gray-400 py-4 text-center border border-dashed border-gray-200 rounded-lg">Nessun documento. <button onClick={() => setShowUploadDoc(true)} className="text-accent hover:underline">Carica</button></p>
-          : <DocTable items={docItems} onReplace={setReplaceDoc} onDelete={deleteDoc} onPreview={setPreviewDoc} onToggleVisibile={toggleVisibile} />}
+          : <DocTable items={docItems} cartelle={cartelle} onReplace={setReplaceDoc} onDelete={deleteDoc} onPreview={setPreviewDoc} onToggleVisibile={toggleVisibile} onMove={moveDoc} />}
       </div>
 
       {/* Foto (Album) */}
@@ -485,10 +670,11 @@ function CartellaView({ cartella, docs, albums, cartelle, onRefreshDocs, onRefre
           ? <p className="text-xs text-gray-400 py-4 text-center border border-dashed border-gray-200 rounded-lg">Nessun album. <button onClick={() => setShowCreaAlbum(true)} className="text-accent hover:underline">Crea album</button></p>
           : <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {albumsFiltrati.map((album) => (
-                <AlbumCard key={album.id} album={album}
+                <AlbumCard key={album.id} album={album} cartelle={cartelle}
                   onOpen={() => router.push(`/admin/album/${album.id}`)}
                   onDelete={() => deleteAlbum(album.id)}
                   onToggleVisibile={() => toggleAlbumVisibile(album)}
+                  onMove={(c) => moveAlbum(album, c)}
                 />
               ))}
             </div>}
@@ -502,7 +688,7 @@ function CartellaView({ cartella, docs, albums, cartelle, onRefreshDocs, onRefre
         </div>
         {videoItems.length === 0
           ? <p className="text-xs text-gray-400 py-4 text-center border border-dashed border-gray-200 rounded-lg">Nessun video. <button onClick={() => setShowUploadVideo(true)} className="text-accent hover:underline">Carica</button></p>
-          : <DocTable items={videoItems} onReplace={setReplaceDoc} onDelete={deleteDoc} onPreview={setPreviewDoc} onToggleVisibile={toggleVisibile} />}
+          : <DocTable items={videoItems} cartelle={cartelle} onReplace={setReplaceDoc} onDelete={deleteDoc} onPreview={setPreviewDoc} onToggleVisibile={toggleVisibile} onMove={moveDoc} />}
       </div>
 
       {/* Modals */}
@@ -519,10 +705,13 @@ function CartellaView({ cartella, docs, albums, cartelle, onRefreshDocs, onRefre
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function DocumentiPage() {
+  const qc = useQueryClient();
   const [showNuovaCartella, setShowNuovaCartella] = useState(false);
-  // Extra cartelle create localmente ma ancora senza items (spariscono al refresh)
   const [localCartelle, setLocalCartelle] = useState<string[]>([]);
-  const [currentCartella, setCurrentCartella] = useState<string | null>(null); // null = non ancora scelto
+  const [currentCartella, setCurrentCartella] = useState<string | null>(null);
+  const [renamingCartella, setRenamingCartella] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [renaming, setRenaming] = useState(false);
 
   const { data: docsData, refetch: refetchDocs } = useQuery<{ data: Doc[] }>({
     queryKey: ['admin-documents'],
@@ -536,7 +725,6 @@ export default function DocumentiPage() {
   const docs   = docsData?.data   ?? [];
   const albums = albumsData?.data ?? [];
 
-  // Derive cartelle da DB
   const dbCartelle = Array.from(new Set([
     ...docs.map((d) => d.cartella).filter(Boolean) as string[],
     ...albums.map((a) => a.cartella).filter(Boolean) as string[],
@@ -545,7 +733,6 @@ export default function DocumentiPage() {
   const allCartelle = Array.from(new Set([...dbCartelle, ...localCartelle])).sort();
   const hasSenza = docs.some((d) => !d.cartella) || albums.some((a) => !a.cartella);
 
-  // Seleziona cartella di default quando arrivano i dati
   useEffect(() => {
     if (currentCartella !== null) return;
     if (allCartelle.length > 0) setCurrentCartella(allCartelle[0]);
@@ -557,6 +744,31 @@ export default function DocumentiPage() {
     if (!allCartelle.includes(trimmed)) setLocalCartelle((prev) => [...prev, trimmed]);
     setCurrentCartella(trimmed);
     setShowNuovaCartella(false);
+  }
+
+  async function handleRename(oldName: string, newName: string) {
+    setRenamingCartella(null);
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) return;
+    setRenaming(true);
+    try {
+      const res = await fetch('/api/admin/documents/rename-cartella', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldName, newName: trimmed }),
+      });
+      if (!res.ok) throw new Error();
+      if (currentCartella === oldName) setCurrentCartella(trimmed);
+      setLocalCartelle((prev) => prev.map((c) => c === oldName ? trimmed : c));
+      await Promise.all([refetchDocs(), refetchAlbums()]);
+      qc.invalidateQueries({ queryKey: ['admin-documents'] });
+      qc.invalidateQueries({ queryKey: ['admin-albums'] });
+      toast.success(`Cartella rinominata in "${trimmed}"`);
+    } catch {
+      toast.error('Errore durante la rinomina');
+    } finally {
+      setRenaming(false);
+    }
   }
 
   const chipCls = (active: boolean) =>
@@ -577,11 +789,46 @@ export default function DocumentiPage() {
 
       {/* Chips cartelle */}
       {(allCartelle.length > 0 || hasSenza) && (
-        <div className="flex flex-wrap gap-2 mb-7">
+        <div className="flex flex-wrap gap-2 mb-7 items-center">
           {allCartelle.map((c) => (
-            <button key={c} onClick={() => setCurrentCartella(c)} className={chipCls(currentCartella === c)}>
-              <Folder size={12} />{c}
-            </button>
+            <div key={c} className="group flex items-center gap-0.5">
+              {renamingCartella === c ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    autoFocus
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleRename(c, renameValue);
+                      if (e.key === 'Escape') setRenamingCartella(null);
+                    }}
+                    onBlur={() => { if (renamingCartella === c) handleRename(c, renameValue); }}
+                    className="px-3 py-1.5 text-xs border-2 border-accent rounded-lg focus:outline-none font-medium min-w-0 w-24"
+                  />
+                  <button onClick={() => handleRename(c, renameValue)} disabled={renaming}
+                    className="p-1.5 text-accent hover:text-accent/80 disabled:opacity-50">
+                    <Check size={13} />
+                  </button>
+                  <button onClick={() => setRenamingCartella(null)}
+                    className="p-1.5 text-gray-400 hover:text-gray-600">
+                    <X size={13} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button onClick={() => setCurrentCartella(c)} className={chipCls(currentCartella === c)}>
+                    <Folder size={12} />{c}
+                  </button>
+                  <button
+                    onClick={() => { setRenamingCartella(c); setRenameValue(c); }}
+                    className="p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity rounded"
+                    title="Rinomina cartella"
+                  >
+                    <Pencil size={11} />
+                  </button>
+                </>
+              )}
+            </div>
           ))}
           {hasSenza && (
             <button onClick={() => setCurrentCartella(SENZA)} className={chipCls(currentCartella === SENZA)}>
@@ -593,7 +840,6 @@ export default function DocumentiPage() {
 
       {/* Content */}
       {currentCartella === null ? (
-        // Empty state iniziale
         <div className="text-center py-20 text-gray-400">
           <FolderPlus size={40} className="mx-auto mb-4 opacity-30" />
           <p className="text-sm font-medium">Nessuna cartella ancora</p>
