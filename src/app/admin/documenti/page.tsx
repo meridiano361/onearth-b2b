@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { useSettings } from '@/contexts/SettingsContext';
 
 // ─── Types & helpers ──────────────────────────────────────────────────────────
 
@@ -31,22 +32,34 @@ function getTipoConfig(tipo: string): TipoConfig { return TIPO_CONFIG[tipo] ?? T
 interface Doc { id: string; nome: string; tipo: string; cartella?: string | null; collezione?: string | null; descrizione?: string | null; url: string; size: number; mimeType?: string | null; visibile: boolean; createdAt: string; }
 interface Album { id: string; nome: string; cartella?: string | null; collezione?: string | null; descrizione: string | null; copertina: string | null; visibile: boolean; nFoto: number; ordine: number; createdAt: string; }
 
-const COLLEZIONI = [
-  { id: 'moda', label: 'Moda', cls: 'bg-purple-100 text-purple-700' },
-  { id: 'casa', label: 'Casa', cls: 'bg-amber-100 text-amber-700' },
+const COLLEZIONE_COLORS = [
+  'bg-purple-100 text-purple-700',
+  'bg-amber-100 text-amber-700',
+  'bg-blue-100 text-blue-700',
+  'bg-green-100 text-green-700',
+  'bg-rose-100 text-rose-700',
 ];
+
 function CollezioneTag({ id }: { id: string | null | undefined }) {
-  const c = COLLEZIONI.find((x) => x.id === id);
-  if (!c) return null;
-  return <span className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${c.cls}`}>{c.label}</span>;
+  const { collections } = useSettings();
+  if (!id) return null;
+  const idx = collections.lista.findIndex((c) => c.id === id);
+  const col = collections.lista[idx];
+  if (!col) return null;
+  const cls = COLLEZIONE_COLORS[idx % COLLEZIONE_COLORS.length];
+  return <span className={`text-[9px] font-semibold tracking-wider px-1.5 py-0.5 rounded ${cls}`}>{col.titolo}</span>;
 }
+
 function CollezioneSelect({ value, onChange, label }: { value: string; onChange: (v: string) => void; label?: string }) {
+  const { collections } = useSettings();
   return (
     <div>
       {label && <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">{label}</label>}
       <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent bg-white">
-        <option value="">— tutte le collezioni —</option>
-        {COLLEZIONI.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+        <option value="">— nessuna collezione —</option>
+        {collections.lista.map((c) => (
+          <option key={c.id} value={c.id}>{c.titolo}</option>
+        ))}
       </select>
     </div>
   );
