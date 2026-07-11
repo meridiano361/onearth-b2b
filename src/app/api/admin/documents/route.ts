@@ -9,11 +9,11 @@ const createSchema = z.object({
   nome:        z.string().min(1),
   tipo:        z.string().min(1),
   cartella:    z.string().optional().nullable(),
-  descrizione: z.string().optional(),
+  descrizione: z.string().nullable().optional(),
   url:         z.string().url(),
   storageKey:  z.string().min(1),
   size:        z.number().positive(),
-  mimeType:    z.string().optional(),
+  mimeType:    z.string().nullable().optional(),
   visibile:    z.boolean().default(true),
 });
 
