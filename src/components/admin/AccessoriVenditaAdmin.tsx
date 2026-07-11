@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, ExternalLink, Check, X, Loader2, ShoppingBag } from 'lucide-react';
+import { Pencil, ExternalLink, Check, X, Loader2, ShoppingBag, ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import type { TipoSupporto } from '@/types/jewelry';
@@ -23,6 +23,12 @@ interface Supporto {
   linkAcquisto: string | null;
 }
 
+interface FotoItem {
+  path: string;
+  name: string;
+  url: string;
+}
+
 function euro(n: number | null) {
   if (n == null) return '—';
   return '€ ' + n.toFixed(2).replace('.', ',');
@@ -36,6 +42,47 @@ const TIPO_COLOR: Record<TipoSupporto, string> = {
   espositore_onearth: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
 
+function FotoPickerModal({ onSelect, onClose }: { onSelect: (url: string) => void; onClose: () => void }) {
+  const { data: photos = [], isLoading } = useQuery<FotoItem[]>({
+    queryKey: ['admin-foto-picker'],
+    queryFn: () => fetch('/api/admin/foto').then((r) => r.json()).then((d) => d.data ?? []),
+    staleTime: 60_000,
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl flex flex-col" style={{ maxHeight: '80vh' }}>
+        <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
+          <span className="text-sm font-semibold text-primary">Scegli foto da infoto</span>
+          <button onClick={onClose} className="p-1 hover:text-primary text-gray-400 rounded"><X size={16} /></button>
+        </div>
+        <div className="overflow-y-auto p-4 flex-1">
+          {isLoading ? (
+            <div className="flex justify-center py-12"><Loader2 size={20} className="animate-spin text-gray-400" /></div>
+          ) : photos.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">Nessuna foto in infoto.</p>
+          ) : (
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+              {photos.map((p) => (
+                <button
+                  key={p.path}
+                  onClick={() => { onSelect(p.url); onClose(); }}
+                  className="aspect-square overflow-hidden rounded-lg border border-border hover:ring-2 ring-primary transition-all bg-cream"
+                  title={p.name}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.url} alt={p.name} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InlineEditor({
   supporto,
   onSaved,
@@ -44,13 +91,15 @@ function InlineEditor({
   onSaved: (updated: Partial<Supporto>) => void;
 }) {
   const [form, setForm] = useState({
-    retailPrice: supporto.retailPrice ?? '',
-    costPrice:   supporto.costPrice ?? '',
-    misura:      supporto.misura ?? '',
-    note:        supporto.note ?? '',
+    immagineUrl:  supporto.immagineUrl ?? '',
+    retailPrice:  supporto.retailPrice ?? '',
+    costPrice:    supporto.costPrice ?? '',
+    misura:       supporto.misura ?? '',
+    note:         supporto.note ?? '',
     linkAcquisto: supporto.linkAcquisto ?? '',
   });
   const [saving, setSaving] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
   const inputCls = 'w-full border border-border rounded px-3 py-1.5 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white';
@@ -62,6 +111,7 @@ function InlineEditor({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          immagineUrl:  form.immagineUrl.trim() || null,
           retailPrice:  form.retailPrice !== '' ? parseFloat(String(form.retailPrice)) : null,
           costPrice:    form.costPrice   !== '' ? parseFloat(String(form.costPrice))   : null,
           misura:       form.misura || null,
@@ -81,47 +131,83 @@ function InlineEditor({
   }
 
   return (
-    <div className="mt-4 space-y-3 border-t border-border pt-4">
-      <div className="grid grid-cols-2 gap-3">
+    <>
+      {pickerOpen && (
+        <FotoPickerModal
+          onSelect={(url) => setForm((f) => ({ ...f, immagineUrl: url }))}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+      <div className="mt-4 space-y-3 border-t border-border pt-4">
+        {/* Immagine */}
         <div>
-          <label className={labelCls}>Prezzo vendita i.i. (€)</label>
-          <input className={inputCls} type="number" step="0.01" min="0"
-            value={form.retailPrice}
-            onChange={(e) => setForm((f) => ({ ...f, retailPrice: e.target.value }))} />
+          <label className={labelCls}>Foto</label>
+          <div className="flex gap-2 items-start">
+            <div className="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border border-border bg-cream flex items-center justify-center">
+              {form.immagineUrl
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={form.immagineUrl} alt="" className="w-full h-full object-cover" />
+                : <ImageIcon size={16} className="text-gray-300" />}
+            </div>
+            <div className="flex-1 space-y-1.5">
+              <input
+                className={inputCls}
+                value={form.immagineUrl}
+                onChange={(e) => setForm((f) => ({ ...f, immagineUrl: e.target.value }))}
+                placeholder="https://..."
+              />
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="text-xs text-accent hover:underline flex items-center gap-1"
+              >
+                <ImageIcon size={11} /> Scegli da infoto
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Prezzo vendita i.i. (€)</label>
+            <input className={inputCls} type="number" step="0.01" min="0"
+              value={form.retailPrice}
+              onChange={(e) => setForm((f) => ({ ...f, retailPrice: e.target.value }))} />
+          </div>
+          <div>
+            <label className={labelCls}>Costo i.e. (€)</label>
+            <input className={inputCls} type="number" step="0.01" min="0"
+              value={form.costPrice}
+              onChange={(e) => setForm((f) => ({ ...f, costPrice: e.target.value }))} />
+          </div>
         </div>
         <div>
-          <label className={labelCls}>Costo i.e. (€)</label>
-          <input className={inputCls} type="number" step="0.01" min="0"
-            value={form.costPrice}
-            onChange={(e) => setForm((f) => ({ ...f, costPrice: e.target.value }))} />
+          <label className={labelCls}>Misure</label>
+          <input className={inputCls} value={form.misura}
+            onChange={(e) => setForm((f) => ({ ...f, misura: e.target.value }))}
+            placeholder="es. 30×15×10 cm" />
         </div>
+        <div>
+          <label className={labelCls}>Link acquisto (Demetra)</label>
+          <input className={inputCls} value={form.linkAcquisto}
+            onChange={(e) => setForm((f) => ({ ...f, linkAcquisto: e.target.value }))}
+            placeholder="https://..." />
+        </div>
+        <div>
+          <label className={labelCls}>Note</label>
+          <textarea className={`${inputCls} resize-none`} rows={2} value={form.note}
+            onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} />
+        </div>
+        <button
+          onClick={save}
+          disabled={saving}
+          className="w-full py-2 bg-primary text-white rounded text-sm hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1.5"
+        >
+          {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+          Salva
+        </button>
       </div>
-      <div>
-        <label className={labelCls}>Misure</label>
-        <input className={inputCls} value={form.misura}
-          onChange={(e) => setForm((f) => ({ ...f, misura: e.target.value }))}
-          placeholder="es. 30×15×10 cm" />
-      </div>
-      <div>
-        <label className={labelCls}>Link acquisto (Demetra)</label>
-        <input className={inputCls} value={form.linkAcquisto}
-          onChange={(e) => setForm((f) => ({ ...f, linkAcquisto: e.target.value }))}
-          placeholder="https://..." />
-      </div>
-      <div>
-        <label className={labelCls}>Note</label>
-        <textarea className={`${inputCls} resize-none`} rows={2} value={form.note}
-          onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} />
-      </div>
-      <button
-        onClick={save}
-        disabled={saving}
-        className="w-full py-2 bg-primary text-white rounded text-sm hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1.5"
-      >
-        {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-        Salva campi commerciali
-      </button>
-    </div>
+    </>
   );
 }
 
@@ -147,7 +233,7 @@ export default function AccessoriVenditaAdmin() {
         <div>
           <h1 className="text-xl font-semibold text-primary">Accessori alla vendita</h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            Imposta prezzi e link Demetra per i supporti espositivi. Per aggiungere nuovi supporti usa{' '}
+            Imposta prezzi, foto e link Demetra per i supporti espositivi. Per aggiungere nuovi supporti usa{' '}
             <Link href="/admin/visual/bigiotteria" className="text-accent hover:underline">Visual › Bigiotteria</Link>.
           </p>
         </div>
