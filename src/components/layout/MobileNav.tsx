@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect } from 'react';
 import {
   Home, LayoutGrid, ShoppingCart, Package, Heart, HelpCircle, Settings, Gem,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
+import { useBranchStore } from '@/store/branchStore';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { isAdminRole } from '@/lib/roles';
@@ -59,16 +61,39 @@ const MODA_BASE: NavItem[] = [
   { icon: Gem,          label: 'Visual',    href: '/moda/pareti',    isActive: (p) => p.startsWith('/moda/pareti') || p.startsWith('/moda/visual') },
 ];
 
-function getNavItems(pathname: string, isAdmin: boolean): NavItem[] {
+// Path definitivamente MODA (mai casa)
+function isModaPath(p: string) { return p.startsWith('/moda'); }
+
+// Path definitivamente CASA (mai moda)
+function isCasaPath(p: string) {
+  return (
+    p.startsWith('/catalog/products') ||
+    p.startsWith('/catalog/preferiti') ||
+    p.startsWith('/catalog/carts') ||
+    p.startsWith('/catalog/orders') ||
+    p.startsWith('/casa')
+  );
+}
+
+function getModaItems(isAdmin: boolean): NavItem[] {
+  return isAdmin
+    ? MODA_BASE
+    : MODA_BASE.filter((i) => i.href !== '/moda/pareti' && !i.href.startsWith('/moda/visual'));
+}
+
+function getNavItems(pathname: string, isAdmin: boolean, branch: 'casa' | 'moda'): NavItem[] {
   const tail = isAdmin ? ADMIN_ITEM : AIUTO_ITEM;
 
   if (pathname === '/home') return [tail];
-  if (pathname.startsWith('/moda')) {
-    const moda = isAdmin ? MODA_BASE : MODA_BASE.filter((i) => i.href !== '/moda/pareti' && !i.href.startsWith('/moda/visual'));
-    return [...moda, tail];
-  }
-  if (pathname.startsWith('/catalog/') || pathname.startsWith('/casa')) return [...CASA_BASE, tail];
-  return [HOME_ITEM, tail];
+
+  // Path definitivi: il branch non conta
+  if (isModaPath(pathname)) return [...getModaItems(isAdmin), tail];
+  if (isCasaPath(pathname)) return [...CASA_BASE, tail];
+
+  // Path ambigui (scheda prodotto /catalog/[id], assistenza, impostazioni, ecc.)
+  // Si usa il branch selezionato dall'utente in home, persisto in localStorage
+  if (branch === 'moda') return [...getModaItems(isAdmin), tail];
+  return [...CASA_BASE, tail];
 }
 
 export default function MobileNav() {
@@ -76,6 +101,13 @@ export default function MobileNav() {
   const { data: session } = useSession();
   const { getTotalItems } = useCartStore();
   const totalItems = getTotalItems();
+  const { branch, setBranch } = useBranchStore();
+
+  // Auto-sincronizza il branch dai path definitivi (accesso diretto tramite URL)
+  useEffect(() => {
+    if (isModaPath(pathname)) setBranch('moda');
+    else if (isCasaPath(pathname)) setBranch('casa');
+  }, [pathname, setBranch]);
 
   const { data: notifications = [] } = useQuery<{ letta: boolean }[]>({
     queryKey: ['notifications'],
@@ -89,7 +121,7 @@ export default function MobileNav() {
   const unreadCount = notifications.filter((n) => !n.letta).length;
 
   const adminUser = isAdminRole(session?.user?.role);
-  const navItems = getNavItems(pathname, adminUser);
+  const navItems = getNavItems(pathname, adminUser, branch);
 
   return (
     <nav

@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { canAccessModa } from '@/lib/modaAccess';
+import { useBranchStore, type ActiveBranch } from '@/store/branchStore';
 
 const SOCIAL_SVGS: Record<string, ReactNode> = {
   instagram: (
@@ -115,13 +116,15 @@ export default function CustomerHome() {
   const casaInfo = lista.find((c) => c.id === 'casa');
   const modaInfo = lista.find((c) => c.id === 'moda');
 
-  function CollectionCard({ info, href, compact = false }: { info: typeof casaInfo; href: string; compact?: boolean }) {
+  function CollectionCard({ info, href, compact = false, branch }: { info: typeof casaInfo; href: string; compact?: boolean; branch: ActiveBranch }) {
+    const { setBranch } = useBranchStore();
     if (!info) return null;
     const deadline = info.dataScadenza;
     const expired = deadline ? new Date(deadline) < new Date() : false;
     return (
       <Link
         href={href}
+        onClick={() => setBranch(branch)}
         className="block bg-black rounded-2xl overflow-hidden hover:opacity-90 transition-opacity duration-200 group"
       >
         {info.fotoUrl && (
@@ -166,11 +169,11 @@ export default function CustomerHome() {
         {/* Collection cards */}
         {(devPreview || canSeeModa) ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} compact />
-            <CollectionCard info={modaInfo} href="/moda" compact />
+            <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} compact branch="casa" />
+            <CollectionCard info={modaInfo} href="/moda" compact branch="moda" />
           </div>
         ) : (
-          <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} />
+          <CollectionCard info={casaInfo} href={isAdmin ? '/casa' : '/catalog/products'} branch="casa" />
         )}
 
         {/* Social */}
