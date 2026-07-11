@@ -28,6 +28,8 @@ type CollezioneItem = {
   dataScadenza: string;
   dataFine: string;
   scrollAttivo: boolean;
+  visibile: boolean;
+  fotoFiltro: string; // 'auto' | 'colore' | 'biancoNero'
 };
 
 // ─── settingsToFlat ──────────────────────────────────────────────────────────
@@ -505,15 +507,30 @@ function CollezioneCard({ item, onChange, onDelete }: {
   onDelete: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   const inp = 'w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900';
+  const visibile = item.visibile !== false;
+  const fotoFiltro = item.fotoFiltro ?? 'auto';
   return (
-    <div className="border border-border rounded-lg overflow-hidden bg-white">
-      <div className="flex items-center px-4 py-3">
-        <button type="button" onClick={() => setOpen(o => !o)} className="flex-1 flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">{item.titolo || 'Nuova collezione'}</span>
-          <ChevronDown size={14} className={`text-gray-400 transition-transform mr-3 ${open ? 'rotate-180' : ''}`} />
+    <div ref={setNodeRef} style={style} className="border border-border rounded-lg overflow-hidden bg-white">
+      <div className="flex items-center px-3 py-3 gap-2">
+        <button type="button" {...attributes} {...listeners} className="p-1 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none">
+          <GripVertical size={14} />
         </button>
-        <button type="button" onClick={onDelete} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors" title="Elimina collezione">
+        <button type="button" onClick={() => setOpen(o => !o)} className="flex-1 flex items-center justify-between min-w-0">
+          <span className={`text-sm font-medium truncate ${visibile ? 'text-gray-700' : 'text-gray-400 line-through'}`}>{item.titolo || 'Nuova collezione'}</span>
+          <ChevronDown size={14} className={`text-gray-400 transition-transform mx-2 flex-shrink-0 ${open ? 'rotate-180' : ''}`} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange({ visibile: !visibile })}
+          className={`flex-shrink-0 w-8 h-5 rounded-full transition-colors ${visibile ? 'bg-gray-900' : 'bg-gray-300'}`}
+          title={visibile ? 'Nascondi' : 'Mostra'}
+        >
+          <span className={`block mx-auto w-3.5 h-3.5 mt-0.5 rounded-full bg-white shadow transition-transform ${visibile ? 'translate-x-1.5' : '-translate-x-1.5'}`} />
+        </button>
+        <button type="button" onClick={onDelete} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0" title="Elimina">
           <Trash2 size={13} />
         </button>
       </div>
@@ -549,6 +566,14 @@ function CollezioneCard({ item, onChange, onDelete }: {
             </div>
           </div>
           <ToggleRow label="Mostra scroll prodotti" checked={item.scrollAttivo} onChange={v => onChange({ scrollAttivo: v })} />
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Foto home</label>
+            <select value={fotoFiltro} onChange={e => onChange({ fotoFiltro: e.target.value })} className="w-full border border-border rounded px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-gray-900 bg-white">
+              <option value="auto">Automatico (colore se attiva, B&amp;N se scaduta)</option>
+              <option value="colore">Sempre a colori</option>
+              <option value="biancoNero">Sempre in bianco e nero</option>
+            </select>
+          </div>
         </div>
       )}
     </div>
@@ -590,10 +615,12 @@ export default function AdminPersonalizzazionePage() {
       } catch { /* ignore */ }
       if (colList.length === 0) {
         colList = [
-          { id: 'casa', titolo: 'Casa 2027', sottotitolo: '', fotoUrl: '', dataInizio: '', dataScadenza: flat['collection.casa.bookingDeadline'] ?? '', dataFine: '', scrollAttivo: true },
-          { id: 'moda', titolo: 'Moda PE27', sottotitolo: '', fotoUrl: '', dataInizio: '', dataScadenza: flat['collection.moda.bookingDeadline'] ?? '', dataFine: '', scrollAttivo: true },
+          { id: 'casa', titolo: 'Casa 2027', sottotitolo: '', fotoUrl: '', dataInizio: '', dataScadenza: flat['collection.casa.bookingDeadline'] ?? '', dataFine: '', scrollAttivo: true, visibile: true, fotoFiltro: 'auto' },
+          { id: 'moda', titolo: 'Moda PE27', sottotitolo: '', fotoUrl: '', dataInizio: '', dataScadenza: flat['collection.moda.bookingDeadline'] ?? '', dataFine: '', scrollAttivo: true, visibile: true, fotoFiltro: 'auto' },
         ];
       }
+      // normalise legacy items missing new fields
+      colList = colList.map(c => ({ ...c, visibile: c.visibile ?? true, fotoFiltro: c.fotoFiltro ?? 'auto' }));
       setCollezioni(colList);
 
       return parsed;
@@ -664,6 +691,14 @@ export default function AdminPersonalizzazionePage() {
 
   function handleMenuItemChange(key: string, field: 'label' | 'visibile', value: string | boolean) {
     update('menu', { items: { ...settings.menu.items, [key]: { ...settings.menu.items[key], [field]: value } } });
+  }
+
+  function handleCollezioniDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = collezioni.findIndex(c => c.id === String(active.id));
+    const newIndex = collezioni.findIndex(c => c.id === String(over.id));
+    if (oldIndex !== -1 && newIndex !== -1) setCollezioni(prev => arrayMove(prev, oldIndex, newIndex));
   }
 
   // Save key arrays
@@ -826,20 +861,24 @@ export default function AdminPersonalizzazionePage() {
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-3">Collezioni</p>
         <div className="bg-white border border-border rounded-xl p-4 space-y-3">
-          <p className="text-xs text-gray-400">Crea e gestisci le collezioni visibili nell&apos;app. Ogni collezione ha date, titolo, foto e impostazioni proprie.</p>
-          <div className="space-y-2">
-            {collezioni.map((col, i) => (
-              <CollezioneCard
-                key={i}
-                item={col}
-                onChange={patch => setCollezioni(prev => prev.map((c, j) => j === i ? { ...c, ...patch } : c))}
-                onDelete={() => setCollezioni(prev => prev.filter((_, j) => j !== i))}
-              />
-            ))}
-          </div>
+          <p className="text-xs text-gray-400">Trascina per riordinare. L&apos;ordine determina la posizione nella home (prima = sinistra/alto). Usa il toggle per mostrare/nascondere.</p>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleCollezioniDragEnd}>
+            <SortableContext items={collezioni.map(c => c.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2">
+                {collezioni.map((col, i) => (
+                  <CollezioneCard
+                    key={col.id}
+                    item={col}
+                    onChange={patch => setCollezioni(prev => prev.map((c, j) => j === i ? { ...c, ...patch } : c))}
+                    onDelete={() => setCollezioni(prev => prev.filter((_, j) => j !== i))}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
           <button
             type="button"
-            onClick={() => setCollezioni(prev => [...prev, { id: `col-${Date.now()}`, titolo: '', sottotitolo: '', fotoUrl: '', dataInizio: '', dataScadenza: '', dataFine: '', scrollAttivo: true }])}
+            onClick={() => setCollezioni(prev => [...prev, { id: `col-${Date.now()}`, titolo: '', sottotitolo: '', fotoUrl: '', dataInizio: '', dataScadenza: '', dataFine: '', scrollAttivo: true, visibile: true, fotoFiltro: 'auto' }])}
             className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-600 border border-dashed border-border rounded-lg hover:border-gray-400 hover:text-gray-800 transition-colors w-full justify-center"
           >
             <Plus size={13} /> Aggiungi collezione

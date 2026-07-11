@@ -112,24 +112,32 @@ export default function CustomerHome() {
     if (popupNotification) sessionStorage.setItem(`notif-popup-${popupNotification.id}`, '1');
   }
 
-  const lista = collections.lista ?? [];
-  const casaInfo = lista.find((c) => c.id === 'casa');
-  const modaInfo = lista.find((c) => c.id === 'moda');
+  const lista = (collections.lista ?? []).filter((c) => c.visibile !== false);
 
-  function CollectionCard({ info, href, compact = false, branch }: { info: typeof casaInfo; href: string; compact?: boolean; branch: ActiveBranch }) {
+  type ColInfo = typeof lista[number];
+
+  function hrefForId(id: string) { return id === 'moda' ? '/moda' : `/${id}`; }
+  function branchForId(id: string): ActiveBranch { return id === 'moda' ? 'moda' : 'casa'; }
+
+  function CollectionCard({ info, compact = false }: { info: ColInfo; compact?: boolean }) {
     const { setBranch } = useBranchStore();
-    if (!info) return null;
     const deadline = info.dataScadenza;
     const expired = deadline ? new Date(deadline) < new Date() : false;
+    const filtro = info.fotoFiltro ?? 'auto';
+    const grayscale = filtro === 'biancoNero' || (filtro === 'auto' && expired);
     return (
       <Link
-        href={href}
-        onClick={() => setBranch(branch)}
+        href={hrefForId(info.id)}
+        onClick={() => setBranch(branchForId(info.id))}
         className="block bg-black rounded-2xl overflow-hidden hover:opacity-90 transition-opacity duration-200 group"
       >
         {info.fotoUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={info.fotoUrl} alt={info.titolo} className={`w-full object-cover ${compact ? 'h-[40vh]' : 'h-[58vh]'}`} />
+          <img
+            src={info.fotoUrl}
+            alt={info.titolo}
+            className={`w-full object-cover transition-all ${compact ? 'h-[40vh]' : 'h-[58vh]'} ${grayscale ? 'grayscale' : ''}`}
+          />
         )}
         <div className="flex items-center justify-between gap-4 p-6">
           <div>
@@ -169,27 +177,25 @@ export default function CustomerHome() {
         {/* Collection cards */}
         {(devPreview || canSeeModa) ? (() => {
           const layout = home.layoutCard ?? 'griglia';
+          if (lista.length === 0) return null;
           if (layout === 'colonna') return (
             <div className="flex flex-col gap-4">
-              <CollectionCard info={casaInfo} href="/casa" branch="casa" />
-              <CollectionCard info={modaInfo} href="/moda" branch="moda" />
+              {lista.map((c) => <CollectionCard key={c.id} info={c} />)}
             </div>
           );
           if (layout === 'grande-prima') return (
             <div className="flex flex-col gap-4">
-              <CollectionCard info={casaInfo} href="/casa" branch="casa" />
-              <CollectionCard info={modaInfo} href="/moda" compact branch="moda" />
+              {lista.map((c, i) => <CollectionCard key={c.id} info={c} compact={i > 0} />)}
             </div>
           );
           // default: griglia
           return (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <CollectionCard info={casaInfo} href="/casa" compact branch="casa" />
-              <CollectionCard info={modaInfo} href="/moda" compact branch="moda" />
+              {lista.map((c) => <CollectionCard key={c.id} info={c} compact />)}
             </div>
           );
         })() : (
-          <CollectionCard info={casaInfo} href="/casa" branch="casa" />
+          lista.length > 0 && <CollectionCard info={lista.find(c => c.id === 'casa') ?? lista[0]} />
         )}
 
         {/* Social */}

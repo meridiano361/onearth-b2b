@@ -157,6 +157,8 @@ export interface AppSettingsData {
       dataScadenza: string;
       dataFine: string;
       scrollAttivo: boolean;
+      visibile?: boolean;
+      fotoFiltro?: string; // 'auto' | 'colore' | 'biancoNero'
     }>;
   };
 }
