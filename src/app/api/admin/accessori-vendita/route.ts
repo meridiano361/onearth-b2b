@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
@@ -21,6 +21,55 @@ function serialize(s: any) {
     note:         s.note,
     linkAcquisto: s.linkAcquisto,
   };
+}
+
+// POST /api/admin/accessori-vendita — crea nuovo supporto (o duplica passando sourceId)
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !isAdminRole(session.user.role)) return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
+    const body = await req.json();
+
+    let createData: any;
+    if (body.sourceId) {
+      // Duplicate from existing
+      const src = await prisma.supportoEspositivo.findUniqueOrThrow({ where: { id: body.sourceId } });
+      createData = {
+        nome:         src.nome + ' (copia)',
+        tipo:         src.tipo,
+        tono:         src.tono,
+        immagineUrl:  src.immagineUrl,
+        larghezzaPx:  src.larghezzaPx,
+        altezzaPx:    src.altezzaPx,
+        attivo:       src.attivo,
+        codice:       src.codice,
+        retailPrice:  src.retailPrice,
+        costPrice:    src.costPrice,
+        misura:       src.misura,
+        note:         src.note,
+        linkAcquisto: src.linkAcquisto,
+      };
+    } else {
+      if (!body.nome?.trim() || !body.tipo) return NextResponse.json({ error: 'Nome e tipo obbligatori' }, { status: 400 });
+      createData = {
+        nome:         body.nome.trim(),
+        tipo:         body.tipo,
+        tono:         body.tono || null,
+        immagineUrl:  body.immagineUrl?.trim() || '',
+        codice:       body.codice?.trim() || null,
+        retailPrice:  body.retailPrice != null ? Number(body.retailPrice) : null,
+        costPrice:    body.costPrice   != null ? Number(body.costPrice)   : null,
+        misura:       body.misura?.trim() || null,
+        note:         body.note?.trim()   || null,
+        linkAcquisto: body.linkAcquisto?.trim() || null,
+      };
+    }
+
+    const item = await prisma.supportoEspositivo.create({ data: createData });
+    return NextResponse.json({ data: serialize(item) }, { status: 201 });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
 }
 
 // GET /api/admin/accessori-vendita — lista supporti con campi commerciali
