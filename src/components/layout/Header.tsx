@@ -26,7 +26,6 @@ const MODA_NAV = [
   { key: 'preferiti', href: '/moda/preferiti',      label: 'Preferiti', isActive: (p: string) => p.startsWith('/moda/preferiti') },
   { key: 'carrelli',  href: '/moda/carrelli',       label: 'Carrelli',  isActive: (p: string) => p.startsWith('/moda/carrelli') },
   { key: 'ordini',    href: '/moda/ordini',         label: 'Ordini',    isActive: (p: string) => p.startsWith('/moda/ordini') },
-  { key: 'assistenza',href: '/catalog/assistenza',  label: 'Aiuto',     isActive: (p: string) => p.startsWith('/catalog/assistenza') },
 ];
 
 const MODA_VISUAL_ITEMS = [
@@ -64,14 +63,6 @@ export default function Header({ session }: HeaderProps) {
 
       {/* Nav links — desktop */}
       <nav className="hidden md:flex items-center gap-1">
-        {isHome && (
-          <Link
-            href="/catalog/assistenza"
-            className="text-xs px-3 py-1.5 rounded transition-colors text-gray-400 hover:text-primary hover:bg-cream"
-          >
-            Aiuto
-          </Link>
-        )}
         {!isHome && (isInModa
             ? <>
                 {MODA_NAV.map(({ key, href, label, isActive }) => (
