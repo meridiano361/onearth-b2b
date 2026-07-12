@@ -6,7 +6,7 @@ import { ArrowLeft, Search, X, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useCartStore } from '@/store/cartStore';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, capitalize } from '@/lib/utils';
 import {
   MODA_CATEGORY_GROUPS,
   MODA_SORT_OPTIONS,
@@ -46,7 +46,7 @@ function ModaProductCard({ product }: { product: Product }) {
         )}
         <p className="text-sm text-white leading-snug mt-0.5 line-clamp-2">{product.name}</p>
         {MODA_CARD_FIELDS.showColor && product.colore && (
-          <p className="text-xs text-white/30 mt-0.5">{product.colore}</p>
+          <p className="text-xs text-white/30 mt-0.5">{capitalize(product.colore)}</p>
         )}
         {MODA_CARD_FIELDS.showCostPrice && (
           <p className="text-xs text-white/60 mt-1">{formatCurrency(Number(product.costPrice))}</p>

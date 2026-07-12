@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Upload, Search, Pencil, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Shirt, Home, Copy, Download, Columns2 } from 'lucide-react';
 import { CONFERENTE_OPTIONS, STAGIONE_OPTIONS } from '@/lib/productConstants';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, capitalize } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
@@ -878,11 +878,11 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
           </select>
           <select value={filterColore} onChange={(e) => setFilterColore(e.target.value)} className={selectClass}>
             <option value="">Colore 1</option>
-            {coloreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            {coloreOptions.map((v) => <option key={v} value={v}>{capitalize(v)}</option>)}
           </select>
           <select value={filterTemaColore} onChange={(e) => setFilterTemaColore(e.target.value)} className={selectClass}>
             <option value="">Tema colore</option>
-            {temaColoreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            {temaColoreOptions.map((v) => <option key={v} value={v}>{capitalize(v)}</option>)}
           </select>
           <select value={filterTemaColorePresenza} onChange={(e) => setFilterTemaColorePresenza(e.target.value as TemaColorePresenzaFilter)} className={selectClass}>
             <option value="all">Tema: Tutti</option>
@@ -1023,41 +1023,41 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
             </select>
             <select value={filterMateriale1} onChange={(e) => setFilterMateriale1(e.target.value)} className={selectClass}>
               <option value="">Materiale 1</option>
-              {materiale1Options.map((v) => <option key={v} value={v}>{v}</option>)}
+              {materiale1Options.map((v) => <option key={v} value={v}>{capitalize(v)}</option>)}
             </select>
             <select value={filterMateriale2} onChange={(e) => setFilterMateriale2(e.target.value)} className={selectClass}>
               <option value="">Materiale 2</option>
-              {materiale2Options.map((v) => <option key={v} value={v}>{v}</option>)}
+              {materiale2Options.map((v) => <option key={v} value={v}>{capitalize(v)}</option>)}
             </select>
             <select value={filterMateriale3} onChange={(e) => setFilterMateriale3(e.target.value)} className={selectClass}>
               <option value="">Materiale 3</option>
-              {materiale3Options.map((v) => <option key={v} value={v}>{v}</option>)}
+              {materiale3Options.map((v) => <option key={v} value={v}>{capitalize(v)}</option>)}
             </select>
             <select value={filterComposizione} onChange={(e) => setFilterComposizione(e.target.value)} className={selectClass}>
               <option value="">Composizione</option>
-              {composizioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+              {composizioneOptions.map((v) => <option key={v} value={v}>{capitalize(v)}</option>)}
             </select>
             <select value={filterFantasia} onChange={(e) => setFilterFantasia(e.target.value)} className={selectClass}>
               <option value="">Fantasia</option>
-              {fantasiaOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+              {fantasiaOptions.map((v) => <option key={v} value={v}>{capitalize(v)}</option>)}
             </select>
             <select value={filterLavorazione} onChange={(e) => setFilterLavorazione(e.target.value)} className={selectClass}>
               <option value="">Lavorazione</option>
-              {lavorazioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+              {lavorazioneOptions.map((v) => <option key={v} value={v}>{capitalize(v)}</option>)}
             </select>
 
             <span className="text-2xs font-semibold uppercase tracking-widest text-gray-400 w-full mb-0.5 mt-1">Colori</span>
             <select value={filterColore2} onChange={(e) => setFilterColore2(e.target.value)} className={selectClass}>
               <option value="">Colore 2</option>
-              {colore2Options.map((v) => <option key={v} value={v}>{v}</option>)}
+              {colore2Options.map((v) => <option key={v} value={v}>{capitalize(v)}</option>)}
             </select>
             <select value={filterColore3} onChange={(e) => setFilterColore3(e.target.value)} className={selectClass}>
               <option value="">Colore 3</option>
-              {colore3Options.map((v) => <option key={v} value={v}>{v}</option>)}
+              {colore3Options.map((v) => <option key={v} value={v}>{capitalize(v)}</option>)}
             </select>
             <select value={filterBloccoColore} onChange={(e) => setFilterBloccoColore(e.target.value)} className={selectClass}>
               <option value="">Blocco colore</option>
-              {bloccoColoreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+              {bloccoColoreOptions.map((v) => <option key={v} value={v}>{capitalize(v)}</option>)}
             </select>
           </div>
         )}
@@ -1289,22 +1289,22 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
                     {visibleCols.has('dettaglio')    && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.dettaglio || '—'}</span></td>}
                     {visibleCols.has('forma')        && <td><span className="text-xs text-gray-500">{p.forma || '—'}</span></td>}
                     {visibleCols.has('taglia')       && <td><span className="text-xs text-gray-500">{p.taglia || '—'}</span></td>}
-                    {visibleCols.has('materiale1')   && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.materiale1 || '—'}</span></td>}
-                    {visibleCols.has('materiale2')   && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.materiale2 || '—'}</span></td>}
-                    {visibleCols.has('materiale3')   && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.materiale3 || '—'}</span></td>}
-                    {visibleCols.has('composizione') && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.composizione || '—'}</span></td>}
-                    {visibleCols.has('fantasia')     && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.fantasia || '—'}</span></td>}
-                    {visibleCols.has('lavorazione')  && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.lavorazione || '—'}</span></td>}
-                    {visibleCols.has('bloccoColore') && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.bloccoColore || '—'}</span></td>}
+                    {visibleCols.has('materiale1')   && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{capitalize(p.materiale1) || '—'}</span></td>}
+                    {visibleCols.has('materiale2')   && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{capitalize(p.materiale2) || '—'}</span></td>}
+                    {visibleCols.has('materiale3')   && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{capitalize(p.materiale3) || '—'}</span></td>}
+                    {visibleCols.has('composizione') && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{capitalize(p.composizione) || '—'}</span></td>}
+                    {visibleCols.has('fantasia')     && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{capitalize(p.fantasia) || '—'}</span></td>}
+                    {visibleCols.has('lavorazione')  && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{capitalize(p.lavorazione) || '—'}</span></td>}
+                    {visibleCols.has('bloccoColore') && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{capitalize(p.bloccoColore) || '—'}</span></td>}
                     {/* Colori */}
-                    {visibleCols.has('colore')      && <td><span className="text-xs text-gray-500">{product.colore || '—'}</span></td>}
-                    {visibleCols.has('colore2')     && <td><span className="text-xs text-gray-500">{p.colore2 || '—'}</span></td>}
-                    {visibleCols.has('colore3')     && <td><span className="text-xs text-gray-500">{p.colore3 || '—'}</span></td>}
-                    {visibleCols.has('altriColori') && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{p.altriColori || '—'}</span></td>}
+                    {visibleCols.has('colore')      && <td><span className="text-xs text-gray-500">{capitalize(product.colore) || '—'}</span></td>}
+                    {visibleCols.has('colore2')     && <td><span className="text-xs text-gray-500">{capitalize(p.colore2) || '—'}</span></td>}
+                    {visibleCols.has('colore3')     && <td><span className="text-xs text-gray-500">{capitalize(p.colore3) || '—'}</span></td>}
+                    {visibleCols.has('altriColori') && <td><span className="text-xs text-gray-500 truncate block max-w-[90px]">{capitalize(p.altriColori) || '—'}</span></td>}
                     {visibleCols.has('temaColore')  && (
                       <td>
                         {hasTemaColore(product)
-                          ? <span className="inline-flex items-center gap-1 text-2xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded max-w-[110px] truncate" title={[product.temaColore, product.temaColore2, product.temaColore3, product.temaColore4, product.temaColore5].filter(Boolean).join(', ')}>{product.temaColore}</span>
+                          ? <span className="inline-flex items-center gap-1 text-2xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded max-w-[110px] truncate" title={[product.temaColore, product.temaColore2, product.temaColore3, product.temaColore4, product.temaColore5].filter(Boolean).map(capitalize).join(', ')}>{capitalize(product.temaColore)}</span>
                           : <span className="text-xs text-gray-300">—</span>
                         }
                       </td>

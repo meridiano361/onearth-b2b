@@ -95,6 +95,12 @@ export function debounce<T extends (...args: any[]) => any>(
   };
 }
 
+/** Prima lettera maiuscola, resto minuscolo. Gestisce null/undefined. */
+export function capitalize(str: string | null | undefined): string {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
 export function generateOrderNumber(): string {
   const date = new Date();
   const year = date.getFullYear().toString().slice(-2);

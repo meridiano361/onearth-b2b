@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ShoppingBag, Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
-import { formatCurrency, isValidLotQuantity } from '@/lib/utils';
+import { formatCurrency, isValidLotQuantity, capitalize } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import QuantitySelector from './QuantitySelector';
@@ -443,7 +443,7 @@ export default function ProductDetailView({ id }: Props) {
                 <h2 className="label-luxury text-gray-400 mb-3">Colori</h2>
                 <div className="space-y-2">
                   {activeColorFields.map(({ key, label }) => (
-                    <FieldRow key={key} label={label} value={String(p[key])} />
+                    <FieldRow key={key} label={label} value={capitalize(String(p[key]))} />
                   ))}
                 </div>
               </div>
@@ -453,7 +453,7 @@ export default function ProductDetailView({ id }: Props) {
                 <h2 className="label-luxury text-gray-400 mb-3">Materiali</h2>
                 <div className="space-y-2">
                   {activeMaterialFields.map(({ key, label }) => (
-                    <FieldRow key={key} label={label} value={String(p[key])} />
+                    <FieldRow key={key} label={label} value={capitalize(String(p[key]))} />
                   ))}
                 </div>
               </div>

@@ -7,7 +7,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Check, FileDown, Heart, Loader2, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { cn, debounce } from '@/lib/utils';
+import { cn, debounce, capitalize } from '@/lib/utils';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useViewMode } from '@/hooks/useViewMode';
 import CatalogFilters from './CatalogFilters';
@@ -606,7 +606,7 @@ export default function CatalogView({
             {CHIP_LABELS.map(({ key, label }) =>
               filters[key] && !(lockedCollezione && key === 'collezione') && !(lockedFamiglia && key === 'famiglia') ? (
                 <span key={key} className="inline-flex items-center gap-1 text-2xs bg-white border border-border rounded-full px-2.5 py-1 text-primary">
-                  <span className="text-gray-400">{label}:</span> {filters[key]}
+                  <span className="text-gray-400">{label}:</span> {(key === 'colore' || key === 'temaColore') ? capitalize(filters[key]) : filters[key]}
                   <button onClick={() => setFilter(key, null)} className="text-gray-400 hover:text-primary ml-0.5">
                     <X size={10} />
                   </button>

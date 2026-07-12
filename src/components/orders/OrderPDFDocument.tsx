@@ -1,6 +1,7 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import type { Order, OrderItem } from '@/types';
+import { capitalize } from '@/lib/utils';
 
 export type PDFGrouping = 'all' | 'famiglia' | 'sottofamiglia' | 'nomLinea' | 'colore';
 
@@ -208,7 +209,7 @@ function ItemRow({ item }: { item: OrderItem }) {
   const p = item.product;
   const details: string[] = [];
   if (p?.nomLinea) details.push(`Linea: ${p.nomLinea}`);
-  if (p?.colore) details.push(`Col: ${p.colore}`);
+  if (p?.colore) details.push(`Col: ${capitalize(p.colore)}`);
   if (p?.misura) details.push(`Mis: ${p.misura}`);
 
   return (

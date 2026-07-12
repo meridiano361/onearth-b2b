@@ -10,7 +10,7 @@ import OrderDemetraExport from '@/components/orders/OrderDemetraExport';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, capitalize } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import DisplayGroupsManager from '@/components/catalog/DisplayGroupsManager';
 import CalendarioEsposizione from '@/components/catalog/CalendarioEsposizione';
@@ -455,8 +455,8 @@ function AddProductsModal({
               ['Classe', previewProduct.classe],
               ['Sottoclasse', previewProduct.sottoclasse],
               ['Gruppo omogeneo', previewProduct.gruppoOmogeneo],
-              ['Colore', previewProduct.colore],
-              ['Tema colore', previewProduct.temaColore],
+              ['Colore', capitalize(previewProduct.colore)],
+              ['Tema colore', capitalize(previewProduct.temaColore)],
               ['Misura', previewProduct.misura],
               ['Produttore', previewProduct.produttore],
               ['Collezione', previewProduct.collezione],

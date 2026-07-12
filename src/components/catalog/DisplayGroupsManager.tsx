@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ProductImage } from '@/components/ui/ProductImage';
+import { capitalize } from '@/lib/utils';
 import type { DisplayGroup, DisplayGroupItem, DisplayGroupSchedule, OrderItem } from '@/types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -174,7 +175,7 @@ function ProductDetailModal({
 
   if (!p) return null;
 
-  const themes = [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].filter(Boolean).join(', ');
+  const themes = [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].filter(Boolean).map(capitalize).join(', ');
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -257,7 +258,7 @@ function ProductDetailModal({
                 {p.nomLinea && <Row label="Linea" value={p.nomLinea} />}
                 {p.collezione && <Row label="Collezione" value={p.collezione} />}
                 {p.stagione && <Row label="Stagione" value={p.stagione} />}
-                {p.colore && <Row label="Colore" value={p.colore} />}
+                {p.colore && <Row label="Colore" value={capitalize(p.colore)} />}
                 {themes && <Row label="Tema colore" value={themes} />}
                 {p.classe && <Row label="Classe" value={[p.classe, p.classe2].filter(Boolean).join(' / ')} />}
                 {p.sottoclasse && <Row label="Sottoclasse" value={[p.sottoclasse, p.sottoclasse2].filter(Boolean).join(' / ')} />}

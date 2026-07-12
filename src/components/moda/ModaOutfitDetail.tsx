@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Plus, X, Search, ShoppingBag, Loader2, Pencil, Check, Palette } from 'lucide-react';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useCartStore } from '@/store/cartStore';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, capitalize } from '@/lib/utils';
 import {
   ZONA_CONFIG,
   suggestZona,
@@ -76,7 +76,7 @@ function ColorColumn({ swatches, fantasia }: { swatches: ColorSwatch[]; fantasia
       {fantasia && (
         <div className="mt-1 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10">
           <p className="text-2xs text-white/30 uppercase tracking-widest mb-0.5">Fantasia</p>
-          <p className="text-xs text-white/70 italic">{fantasia}</p>
+          <p className="text-xs text-white/70 italic">{capitalize(fantasia)}</p>
         </div>
       )}
     </div>
@@ -123,7 +123,7 @@ function ZoneColumn({
                   {item.product.name}
                 </Link>
                 {item.product.colore && (
-                  <p className="text-2xs text-white/30 mt-0.5">{item.product.colore}</p>
+                  <p className="text-2xs text-white/30 mt-0.5">{capitalize(item.product.colore)}</p>
                 )}
                 <p className="text-xs text-white/50 mt-1">{formatCurrency(Number(item.product.costPrice))}</p>
               </div>
@@ -260,7 +260,7 @@ function AddProductsPanel({
                     <span className="text-2xs text-white/20 italic">{ZONA_CONFIG[suggested].label.split(' ')[0]}</span>
                   </div>
                   <p className="text-sm text-white truncate">{p.name}</p>
-                  {p.colore && <p className="text-xs text-white/30">{p.colore}</p>}
+                  {p.colore && <p className="text-xs text-white/30">{capitalize(p.colore)}</p>}
                 </div>
                 <button
                   onClick={() => handleToggle(p)}

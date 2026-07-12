@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Plus, X, Search, ShoppingBag, Loader2, Pencil, Check } from 'lucide-react';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useCartStore } from '@/store/cartStore';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, capitalize } from '@/lib/utils';
 import {
   LOOK_TIPO_LABELS,
   LOOK_TIPO_OPTIONS,
@@ -131,7 +131,7 @@ function AddProductsPanel({ lookId, existingIds, onClose }: {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-mono text-white/40">{p.code}</p>
                   <p className="text-sm text-white truncate">{p.name}</p>
-                  {p.colore && <p className="text-xs text-white/30">{p.colore}</p>}
+                  {p.colore && <p className="text-xs text-white/30">{capitalize(p.colore)}</p>}
                 </div>
                 <button
                   onClick={() => isIn ? removeMutation.mutate(p.id) : addMutation.mutate(p.id)}
@@ -190,7 +190,7 @@ function LookSection({
               <Link href={`/moda/product/${lp.product.id}`} className="text-sm text-white hover:underline underline-offset-2 line-clamp-2 leading-snug">
                 {lp.product.name}
               </Link>
-              {lp.product.colore && <p className="text-xs text-white/30 mt-0.5">{lp.product.colore}</p>}
+              {lp.product.colore && <p className="text-xs text-white/30 mt-0.5">{capitalize(lp.product.colore)}</p>}
               <p className="text-xs text-white/50 mt-0.5">{formatCurrency(Number(lp.product.costPrice))}</p>
               {lp.note && <p className="text-xs text-white/30 italic mt-0.5">{lp.note}</p>}
             </div>

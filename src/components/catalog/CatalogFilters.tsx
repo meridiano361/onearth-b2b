@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
+import { capitalize } from '@/lib/utils';
 import type { Product } from '@/types';
 
 interface CatalogFiltersProps {
@@ -111,12 +112,14 @@ function FilterSelect({
   value,
   options,
   onChange,
+  formatLabel,
 }: {
   label: string;
   allLabel: string;
   value: string | null;
   options: { value: string; count: number }[];
   onChange: (v: string | null) => void;
+  formatLabel?: (v: string) => string;
 }) {
   if (options.length === 0 && !value) return null;
   return (
@@ -129,7 +132,7 @@ function FilterSelect({
       >
         <option value="">{allLabel}</option>
         {options.map(({ value: optValue, count }) => (
-          <option key={optValue} value={optValue}>{optValue} ({count})</option>
+          <option key={optValue} value={optValue}>{formatLabel ? formatLabel(optValue) : optValue} ({count})</option>
         ))}
       </select>
     </div>
@@ -228,8 +231,8 @@ export default function CatalogFilters({
         {show('sottoclasse')        && <FilterSelect label={t('sottoclasse')}        allLabel={t('all')} value={selectedSottoclasse}        options={opts.sottoclasse}        onChange={onSottoclasseChange} />}
         {show('gruppoOmogeneo')     && <FilterSelect label={t('gruppoOmogeneo')}     allLabel={t('all')} value={selectedGruppoOmogeneo}     options={opts.gruppoOmogeneo}     onChange={onGruppoOmogeneoChange} />}
         {show('nomLinea')           && <FilterSelect label={t('linea')}              allLabel={t('all')} value={selectedNomLinea}           options={opts.nomLinea}           onChange={onNomLineaChange} />}
-        {show('colore')             && <FilterSelect label={t('colore')}             allLabel={t('all')} value={selectedColore}             options={opts.colore}             onChange={onColoreChange} />}
-        {show('temaColore')         && <FilterSelect label={t('temaColore')}         allLabel={t('all')} value={selectedTemaColore}         options={opts.temaColore}         onChange={onTemaColoreChange} />}
+        {show('colore')             && <FilterSelect label={t('colore')}             allLabel={t('all')} value={selectedColore}             options={opts.colore}             onChange={onColoreChange}     formatLabel={capitalize} />}
+        {show('temaColore')         && <FilterSelect label={t('temaColore')}         allLabel={t('all')} value={selectedTemaColore}         options={opts.temaColore}         onChange={onTemaColoreChange} formatLabel={capitalize} />}
         {show('stagione')           && <FilterSelect label={t('stagione')}           allLabel={t('all')} value={selectedStagione}           options={opts.stagione}           onChange={onStagioneChange} />}
         {show('collezione') && !lockedCollezione && <FilterSelect label={t('collezione')} allLabel={t('all')} value={selectedCollezione} options={opts.collezione} onChange={onCollezioneChange} />}
         {show('produttore')         && <FilterSelect label={t('produttore')}         allLabel={t('all')} value={selectedProduttore}         options={opts.produttore}         onChange={onProduttoreChange} />}
