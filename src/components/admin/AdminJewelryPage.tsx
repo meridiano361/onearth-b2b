@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, Settings2, Play, CheckCircle2, XCircle, Loader2, Upload } from 'lucide-react';
+import { Plus, Trash2, Pencil, Play, CheckCircle2, XCircle, Loader2, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -335,7 +335,7 @@ export default function AdminJewelryPage() {
                     <button title="Modifica zone"
                       onClick={() => setEditingZone(s)}
                       className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors">
-                      <Settings2 size={13} />
+                      <Pencil size={13} />
                     </button>
                     <button title="Test compositing"
                       onClick={() => setTestingSupporto(s)}

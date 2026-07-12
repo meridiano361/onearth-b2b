@@ -577,9 +577,62 @@ function DocTable({ items, cartelle, onReplace, onDelete, onPreview, onToggleVis
 
 // ─── Album card ───────────────────────────────────────────────────────────────
 
-function AlbumCard({ album, cartelle, onOpen, onDelete, onToggleVisibile, onMove }: {
+function ModificaAlbumModal({ album, onClose, onDone }: { album: Album; onClose: () => void; onDone: () => void }) {
+  const [nome, setNome] = useState(album.nome);
+  const [descrizione, setDescrizione] = useState(album.descrizione ?? '');
+  const [collezione, setCollezione] = useState(album.collezione ?? '');
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/albums/${album.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: nome.trim(), descrizione: descrizione.trim() || null, collezione: collezione || null }),
+      });
+      if (!res.ok) throw new Error('Errore salvataggio');
+      onDone();
+    } catch {
+      toast.error('Errore durante il salvataggio');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h3 className="text-sm font-semibold text-primary">Modifica album</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+        </div>
+        <div className="px-5 py-4 space-y-4">
+          <div>
+            <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Nome</label>
+            <input value={nome} onChange={(e) => setNome(e.target.value)} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent" />
+          </div>
+          <div>
+            <label className="block text-2xs font-medium text-gray-500 uppercase tracking-wide mb-1">Descrizione</label>
+            <textarea value={descrizione} onChange={(e) => setDescrizione(e.target.value)} rows={3} className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:border-accent resize-none" />
+          </div>
+          <CollezioneSelect value={collezione} onChange={setCollezione} label="Collezione" />
+        </div>
+        <div className="px-5 py-3 border-t border-border flex justify-end gap-2">
+          <button onClick={onClose} className="text-xs px-4 py-2 rounded border border-border text-gray-600 hover:bg-gray-50">Annulla</button>
+          <button onClick={handleSave} disabled={saving || !nome.trim()} className="text-xs px-4 py-2 rounded bg-primary text-white hover:bg-warm-darker disabled:opacity-50">
+            {saving ? 'Salvataggio…' : 'Salva'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AlbumCard({ album, cartelle, onOpen, onDelete, onToggleVisibile, onMove, onEdit }: {
   album: Album; cartelle: string[]; onOpen: () => void; onDelete: () => void;
   onToggleVisibile: () => void; onMove: (newCartella: string | null) => Promise<void>;
+  onEdit: () => void;
 }) {
   const [confirmDel, setConfirmDel] = useState(false);
   const [showSposta, setShowSposta] = useState(false);
@@ -601,6 +654,7 @@ function AlbumCard({ album, cartelle, onOpen, onDelete, onToggleVisibile, onMove
           {album.descrizione && <p className="text-2xs text-gray-500 mt-1 line-clamp-2">{album.descrizione}</p>}
           <div className="flex items-center gap-2 mt-3">
             <button onClick={onOpen} className="flex-1 text-xs font-medium text-center px-2 py-1.5 bg-primary text-white rounded hover:bg-warm-darker transition-colors">Apri</button>
+            <button onClick={onEdit} className="p-1.5 text-gray-400 hover:text-primary" title="Modifica"><Pencil size={13} /></button>
             <button onClick={() => setShowSposta(true)} className="p-1.5 text-gray-400 hover:text-primary" title="Sposta in cartella"><FolderInput size={13} /></button>
             <button onClick={onToggleVisibile} className="p-1.5 text-gray-400 hover:text-primary" title={album.visibile ? 'Nascondi' : 'Mostra'}>
               {album.visibile ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -651,6 +705,7 @@ function CartellaView({ cartella, docs, albums, cartelle, cartellaCollezioneMap,
   const [showUploadDoc, setShowUploadDoc] = useState(false);
   const [showUploadVideo, setShowUploadVideo] = useState(false);
   const [showCreaAlbum, setShowCreaAlbum] = useState(false);
+  const [editAlbum, setEditAlbum] = useState<Album | null>(null);
 
   const previewKind = previewDoc ? getTipoConfig(previewDoc.tipo).kind : null;
 
@@ -728,6 +783,7 @@ function CartellaView({ cartella, docs, albums, cartelle, cartellaCollezioneMap,
                   onDelete={() => deleteAlbum(album.id)}
                   onToggleVisibile={() => toggleAlbumVisibile(album)}
                   onMove={(c) => moveAlbum(album, c)}
+                  onEdit={() => setEditAlbum(album)}
                 />
               ))}
             </div>}
@@ -751,6 +807,7 @@ function CartellaView({ cartella, docs, albums, cartelle, cartellaCollezioneMap,
       {replaceDoc && <ReplaceModal doc={replaceDoc} cartelle={cartelle} onClose={() => setReplaceDoc(null)} onDone={() => { setReplaceDoc(null); onRefreshDocs(); }} />}
       {previewDoc && previewKind === 'video' && <VideoModal url={previewDoc.url} nome={previewDoc.nome} onClose={() => setPreviewDoc(null)} />}
       {previewDoc && previewKind === 'audio' && <AudioModal url={previewDoc.url} nome={previewDoc.nome} onClose={() => setPreviewDoc(null)} />}
+      {editAlbum && <ModificaAlbumModal album={editAlbum} onClose={() => setEditAlbum(null)} onDone={() => { setEditAlbum(null); onRefreshAlbums(); }} />}
     </div>
   );
 }
