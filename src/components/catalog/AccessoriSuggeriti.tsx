@@ -18,15 +18,39 @@ interface Supporto {
   tipoLabel: string;
 }
 
-// Normalizza classe o sottofamiglia → chiave categoria (deve corrispondere alla TIPO_MAP dell'API)
-function categoriaGioiello(classe: string | null | undefined, sottofamiglia: string | null | undefined): string | null {
+const KEYWORD_MAP: [RegExp, string][] = [
+  [/collana|collane/i,         'collana'],
+  [/bracciale|bracciali/i,     'bracciale'],
+  [/orecchino|orecchini/i,     'orecchini'],
+  [/anello|anelli/i,           'anello'],
+];
+
+function matchKeywords(val: string): string | null {
+  for (const [re, cat] of KEYWORD_MAP) {
+    if (re.test(val)) return cat;
+  }
+  return null;
+}
+
+// Determina la categoria gioiello guardando in ordine:
+// 1. classe / sottofamiglia (campi strutturati)
+// 2. prima parola del nome prodotto — solo per famiglia "Bigiotteria e gioielleria"
+function categoriaGioiello(
+  classe: string | null | undefined,
+  sottofamiglia: string | null | undefined,
+  name: string | null | undefined,
+  famiglia: string | null | undefined,
+): string | null {
   for (const val of [classe, sottofamiglia]) {
     if (!val) continue;
-    const s = val.toLowerCase();
-    if (s.includes('collana') || s.includes('collane')) return 'collana';
-    if (s.includes('bracciale') || s.includes('bracciali')) return 'bracciale';
-    if (s.includes('orecchino') || s.includes('orecchini')) return 'orecchini';
-    if (s.includes('anello') || s.includes('anelli')) return 'anello';
+    const cat = matchKeywords(val);
+    if (cat) return cat;
+  }
+  // Fallback: prima parola del nome, solo per prodotti gioiello
+  const isGioiello = !!famiglia?.toLowerCase().match(/gioiell|bigiott/);
+  if (isGioiello && name) {
+    const firstWord = name.split(' ')[0];
+    return matchKeywords(firstWord);
   }
   return null;
 }
@@ -39,10 +63,12 @@ function euro(n: number | null) {
 interface Props {
   classe: string | null | undefined;
   sottofamiglia: string | null | undefined;
+  name: string | null | undefined;
+  famiglia: string | null | undefined;
 }
 
-export default function AccessoriSuggeriti({ classe, sottofamiglia }: Props) {
-  const tipo = categoriaGioiello(classe, sottofamiglia);
+export default function AccessoriSuggeriti({ classe, sottofamiglia, name, famiglia }: Props) {
+  const tipo = categoriaGioiello(classe, sottofamiglia, name, famiglia);
 
   const { data: items = [] } = useQuery<Supporto[]>({
     queryKey: ['supporti-consigliati', tipo],

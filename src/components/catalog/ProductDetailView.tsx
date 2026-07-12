@@ -501,7 +501,7 @@ export default function ProductDetailView({ id }: Props) {
 
       </div>
 
-      <AccessoriSuggeriti classe={product.classe} sottofamiglia={product.sottofamiglia} />
+      <AccessoriSuggeriti classe={product.classe} sottofamiglia={product.sottofamiglia} name={product.name} famiglia={product.famiglia} />
 
     </div>
   );
