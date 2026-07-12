@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Package, Users, ShoppingCart, Layers,
   LogOut, Settings, X, UserPlus, Eye, FileText,
   Image as ImageIcon, BookOpen, Paintbrush, Bell,
-  BarChart2, MessageSquare, ChevronDown, Gem, ShoppingBag,
+  BarChart2, MessageSquare, ChevronDown, Gem, Shirt, Home, Box,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -56,8 +56,17 @@ const NAV: NavEntry[] = [
   { href: '/admin/notifiche',        label: 'Notifiche',         icon: Bell,            roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/orders',           label: 'Ordini',            icon: ShoppingCart,    roles: ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE'] },
   { href: '/admin/personalizzazione',label: 'Personalizzazione', icon: Paintbrush,      roles: ['SUPER_ADMIN'] },
-  { href: '/admin/products',         label: 'Prodotti',          icon: Package,         roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO', 'COMMERCIALE'] },
-  { href: '/admin/accessori-vendita', label: 'Accessori vendita', icon: ShoppingBag,    roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO'] },
+  {
+    groupLabel: 'Prodotti',
+    icon: Package,
+    roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO', 'COMMERCIALE'],
+    items: [
+      { href: '/admin/products',                      label: 'Tutti',               icon: Package, exact: true,  roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO', 'COMMERCIALE'] },
+      { href: '/admin/products/moda',                 label: 'Moda',                icon: Shirt,                 roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO', 'COMMERCIALE'] },
+      { href: '/admin/products/casa',                 label: 'Casa',                icon: Home,                  roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO', 'COMMERCIALE'] },
+      { href: '/admin/products/supporti-espositivi',  label: 'Supporti espositivi', icon: Box,                   roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO'] },
+    ],
+  },
   { href: '/admin/sondaggi',         label: 'Sondaggi',          icon: MessageSquare,   roles: ['SUPER_ADMIN', 'ADMIN'] },
 ];
 

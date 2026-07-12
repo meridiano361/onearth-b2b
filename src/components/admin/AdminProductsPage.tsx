@@ -184,7 +184,7 @@ function uniqueSorted(products: Product[], key: keyof Product): string[] {
   return Array.from(set).sort();
 }
 
-export default function AdminProductsPage() {
+export default function AdminProductsPage({ lockedSection }: { lockedSection?: 'moda' | 'casa' }) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
 
@@ -350,6 +350,8 @@ export default function AdminProductsPage() {
   const products = useMemo(() => {
     const q = search.trim().toLowerCase();
     let filtered = allProducts.filter((p) => {
+      if (lockedSection === 'moda' && p.gruppoMerceologico?.toLowerCase() !== 'moda') return false;
+      if (lockedSection === 'casa' && p.gruppoMerceologico?.toLowerCase() === 'moda') return false;
       if (q) {
         const match =
           p.code.toLowerCase().includes(q) ||
@@ -813,7 +815,9 @@ export default function AdminProductsPage() {
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
           <p className="label-luxury text-accent mb-1">Admin</p>
-          <h1 className="font-display text-2xl text-primary font-light">Prodotti</h1>
+          <h1 className="font-display text-2xl text-primary font-light">
+            Prodotti{lockedSection === 'moda' ? ' · Moda' : lockedSection === 'casa' ? ' · Casa' : ''}
+          </h1>
           <p className="text-sm text-gray-400 mt-0.5">
             {isLoading ? 'Caricamento...' : [
               `${products.length} prodotti${hasFilters ? ` (su ${allProducts.length})` : ''}`,
@@ -833,7 +837,10 @@ export default function AdminProductsPage() {
           <Button variant="secondary" icon={<Languages size={13} />} onClick={() => setShowTranslateConfirm(true)}>
             <span className="hidden sm:inline">Traduci tutti</span>
           </Button>
-          <Button icon={<Plus size={13} />} onClick={() => setShowCollectionPicker(true)}>
+          <Button icon={<Plus size={13} />} onClick={() => {
+            if (lockedSection) { setCreateCollectionHint(lockedSection); setShowCreateForm(true); }
+            else setShowCollectionPicker(true);
+          }}>
             <span className="hidden sm:inline">Aggiungi Prodotto</span>
             <span className="sm:hidden">Aggiungi</span>
           </Button>
@@ -847,10 +854,12 @@ export default function AdminProductsPage() {
           <div className="w-56">
             <Input placeholder="Codice, descrizione, produttore..." value={search} onChange={(e) => setSearch(e.target.value)} icon={<Search size={14} />} />
           </div>
-          <select value={filterGruppo} onChange={(e) => setFilterGruppo(e.target.value)} className={selectClass}>
-            <option value="">Gruppo merc.</option>
-            {gruppoOptions.map((v) => <option key={v} value={v}>{v}</option>)}
-          </select>
+          {!lockedSection && (
+            <select value={filterGruppo} onChange={(e) => setFilterGruppo(e.target.value)} className={selectClass}>
+              <option value="">Gruppo merc.</option>
+              {gruppoOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          )}
           <select value={filterFamiglia} onChange={(e) => setFilterFamiglia(e.target.value)} className={selectClass}>
             <option value="">Famiglia</option>
             {famigliaOptions.map((v) => <option key={v} value={v}>{v}</option>)}
