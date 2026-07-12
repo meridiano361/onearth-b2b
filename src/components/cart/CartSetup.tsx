@@ -21,6 +21,7 @@ export default function CartSetup() {
     setCart,
     clearCart,
     setCurrentCollection,
+    clearCollectionCart,
     pendingProduct,
     setPendingProduct,
     addItem,
@@ -56,7 +57,10 @@ export default function CartSetup() {
           if (res.data && res.data.collectionId === collectionId) {
             setCart(res.data as Cart);
           } else {
-            // Saved cartId belongs to a different collection — find the right one.
+            // Saved cartId belongs to a different collection — wipe the stale
+            // reference so the store isn't stuck with a wrong-collection cartId
+            // if loadFirstCart finds nothing.
+            clearCollectionCart(collectionId);
             loadFirstCart(collectionId);
           }
         })

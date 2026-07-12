@@ -26,6 +26,8 @@ interface CartStore {
   setCurrentCollection: (collection: string) => void;
   setCart: (cart: Cart) => void;
   clearCart: () => void;
+  /** Remove a specific collection's entry from cartIds without touching other state. */
+  clearCollectionCart: (collection: string) => void;
   setPendingProduct: (p: { product: Product; quantity: number; taglia?: string } | null) => void;
   setPendingVariants: (v: { product: Product; variants: SizeVariantQty[] } | null) => void;
   setNotes: (notes: string) => void;
@@ -83,13 +85,19 @@ export const useCartStore = create<CartStore>()(
         }),
 
       setCart: (cart) =>
-        set((state) => ({
-          cartId: cart.id,
-          cartIds: { ...state.cartIds, [state.currentCollection]: cart.id },
-          cartName: cart.name,
-          notes: cart.notes ?? '',
-          items: cart.items ?? [],
-        })),
+        set((state) => {
+          // Use the cart's own collectionId when available so the cartIds map is
+          // always correct, even if currentCollection hasn't caught up yet.
+          const col = cart.collectionId || state.currentCollection;
+          return {
+            cartId: cart.id,
+            currentCollection: col,
+            cartIds: { ...state.cartIds, [col]: cart.id },
+            cartName: cart.name,
+            notes: cart.notes ?? '',
+            items: cart.items ?? [],
+          };
+        }),
 
       clearCart: () =>
         set((state) => ({
@@ -100,6 +108,14 @@ export const useCartStore = create<CartStore>()(
           notes: '',
           pendingProduct: null,
           pendingVariants: null,
+        })),
+
+      clearCollectionCart: (collection) =>
+        set((state) => ({
+          cartIds: { ...state.cartIds, [collection]: null },
+          ...(state.currentCollection === collection
+            ? { cartId: null, cartName: null, items: [], notes: '' }
+            : {}),
         })),
 
       setPendingProduct: (p) => set({ pendingProduct: p }),
