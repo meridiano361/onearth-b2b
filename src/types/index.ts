@@ -342,6 +342,7 @@ export type CartStatus = 'DRAFT' | 'CONVERTED';
 export interface Cart {
   id: string;
   name: string;
+  collectionId: string;
   status: CartStatus;
   customerId: string | null;
   operatorId: string | null;

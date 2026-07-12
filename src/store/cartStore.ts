@@ -6,6 +6,15 @@ import { roundToLot } from '@/lib/utils';
 export interface SizeVariantQty { taglia: string; codice: string; quantity: number }
 
 interface CartStore {
+  // One active cartId per collection — persisted across sessions.
+  // Key: collectionId ('moda' | 'casa'), value: cart id or null.
+  cartIds: Record<string, string | null>;
+
+  // The collection the user is currently browsing — NOT persisted,
+  // set by CartSetup whenever the URL section changes.
+  currentCollection: string;
+
+  // Volatile: active cart data for the current collection.
   cartId: string | null;
   cartName: string | null;
   items: CartItem[];
@@ -14,6 +23,7 @@ interface CartStore {
   pendingProduct: { product: Product; quantity: number; taglia?: string } | null;
   pendingVariants: { product: Product; variants: SizeVariantQty[] } | null;
 
+  setCurrentCollection: (collection: string) => void;
   setCart: (cart: Cart) => void;
   clearCart: () => void;
   setPendingProduct: (p: { product: Product; quantity: number; taglia?: string } | null) => void;
@@ -32,10 +42,6 @@ interface CartStore {
   hasLotWarnings: () => boolean;
 }
 
-function itemKey(productId: string, taglia?: string) {
-  return `${productId}||${taglia ?? ''}`;
-}
-
 function matchItem(item: CartItem, productId: string, taglia?: string) {
   return item.productId === productId && (item.taglia ?? '') === (taglia ?? '');
 }
@@ -51,6 +57,8 @@ function patchCartItem(cartId: string, productId: string, quantity: number, tagl
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
+      cartIds: {},
+      currentCollection: 'casa',
       cartId: null,
       cartName: null,
       items: [],
@@ -58,16 +66,41 @@ export const useCartStore = create<CartStore>()(
       pendingProduct: null,
       pendingVariants: null,
 
+      // Called by CartSetup when the URL section changes (moda ↔ casa).
+      // Immediately swaps active cartId from the map; clears volatile data
+      // so the sidebar shows empty while CartSetup loads the correct cart.
+      setCurrentCollection: (collection) =>
+        set((state) => {
+          const newCartId = state.cartIds[collection] ?? null;
+          const same = newCartId === state.cartId;
+          return {
+            currentCollection: collection,
+            cartId: newCartId,
+            cartName: same ? state.cartName : null,
+            items: same ? state.items : [],
+            notes: same ? state.notes : '',
+          };
+        }),
+
       setCart: (cart) =>
-        set({
+        set((state) => ({
           cartId: cart.id,
+          cartIds: { ...state.cartIds, [state.currentCollection]: cart.id },
           cartName: cart.name,
           notes: cart.notes ?? '',
           items: cart.items ?? [],
-        }),
+        })),
 
       clearCart: () =>
-        set({ cartId: null, cartName: null, items: [], notes: '', pendingProduct: null, pendingVariants: null }),
+        set((state) => ({
+          cartId: null,
+          cartIds: { ...state.cartIds, [state.currentCollection]: null },
+          cartName: null,
+          items: [],
+          notes: '',
+          pendingProduct: null,
+          pendingVariants: null,
+        })),
 
       setPendingProduct: (p) => set({ pendingProduct: p }),
       setPendingVariants: (v) => set({ pendingVariants: v }),
@@ -146,7 +179,6 @@ export const useCartStore = create<CartStore>()(
         if (taglia !== undefined) {
           return items.find((i) => matchItem(i, productId, taglia))?.quantity || 0;
         }
-        // Sum across all taglie for this product
         return items.filter((i) => i.productId === productId).reduce((s, i) => s + i.quantity, 0);
       },
 
@@ -164,8 +196,9 @@ export const useCartStore = create<CartStore>()(
         }),
     }),
     {
-      name: 'onearth-cart-v2',
-      partialize: (state) => ({ cartId: state.cartId }),
+      name: 'onearth-cart-v3',
+      // Only persist the cartIds map, not volatile items/session data.
+      partialize: (state) => ({ cartIds: state.cartIds }),
     }
   )
 );

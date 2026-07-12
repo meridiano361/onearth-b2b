@@ -6,12 +6,30 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, Plus, ShoppingCart, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCartStore } from '@/store/cartStore';
+import { useCollectionRoutes } from '@/hooks/useCollectionRoutes';
 import type { Cart } from '@/types';
 
-/** Loads the active cart from server on login, and shows the select-cart modal when needed. */
+/** Loads the active cart from server on login, handles collection switching, and shows the select-cart modal when needed. */
 export default function CartSetup() {
   const { status } = useSession();
-  const { cartId, items, setCart, clearCart, pendingProduct, setPendingProduct, addItem, pendingVariants, setPendingVariants, addVariants } = useCartStore();
+  const routes = useCollectionRoutes();
+  const { collectionId } = routes;
+
+  const {
+    cartIds,
+    cartId,
+    setCart,
+    clearCart,
+    setCurrentCollection,
+    pendingProduct,
+    setPendingProduct,
+    addItem,
+    pendingVariants,
+    setPendingVariants,
+    addVariants,
+    items,
+  } = useCartStore();
+
   const queryClient = useQueryClient();
 
   // Invalidate my-carts whenever local items change so CartsView always shows fresh data
@@ -21,33 +39,43 @@ export default function CartSetup() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
-  // Load cart from server when authenticated
+  // On auth or collection change: sync the active cart to the current collection.
   useEffect(() => {
     if (status !== 'authenticated') return;
 
-    if (cartId) {
-      fetch(`/api/catalog/carts/${cartId}`)
+    // Update the store's active collection (swaps cartId from the map).
+    setCurrentCollection(collectionId);
+
+    // Read the up-to-date state synchronously to avoid stale closure.
+    const savedCartId = useCartStore.getState().cartIds[collectionId] ?? null;
+
+    if (savedCartId) {
+      fetch(`/api/catalog/carts/${savedCartId}`)
         .then((r) => r.json())
         .then((res) => {
-          if (res.data) {
+          if (res.data && res.data.collectionId === collectionId) {
             setCart(res.data as Cart);
           } else {
-            clearCart();
-            loadFirstCart();
+            // Saved cartId belongs to a different collection — find the right one.
+            loadFirstCart(collectionId);
           }
         })
         .catch(() => {});
     } else {
-      loadFirstCart();
+      loadFirstCart(collectionId);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, collectionId]);
 
-    // One-time migration: import items from the old localStorage cart (key 'onearth-cart')
+  // One-time migration: import items from the old localStorage cart on first login.
+  useEffect(() => {
+    if (status !== 'authenticated') return;
     migrateOldCart();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
-  function loadFirstCart() {
-    fetch('/api/catalog/carts')
+  function loadFirstCart(collection: string) {
+    fetch(`/api/catalog/carts?collection=${collection}`)
       .then((r) => r.json())
       .then((res) => {
         const carts: Cart[] = res.data ?? [];
@@ -65,21 +93,19 @@ export default function CartSetup() {
       const raw = localStorage.getItem('onearth-cart');
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      const items: { productId: string; quantity: number }[] = parsed?.state?.items ?? [];
-      if (items.length === 0) return;
+      const legacyItems: { productId: string; quantity: number }[] = parsed?.state?.items ?? [];
+      if (legacyItems.length === 0) return;
 
-      // Create a new cart named "Bozza recuperata"
       const res = await fetch('/api/catalog/carts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Bozza recuperata' }),
+        body: JSON.stringify({ name: 'Bozza recuperata', collectionId }),
       });
       if (!res.ok) return;
       const { data: newCart } = await res.json();
 
-      // Add all items
       await Promise.all(
-        items.map(({ productId, quantity }) =>
+        legacyItems.map(({ productId, quantity }) =>
           fetch(`/api/catalog/carts/${newCart.id}/items`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -94,14 +120,17 @@ export default function CartSetup() {
     } catch { /* silently ignore */ }
   }
 
-  // ── Select-cart modal (shown when pendingProduct is set and no active cart) ──
+  // ── Select-cart modal ─────────────────────────────────────────────────────────
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
 
   const { data: carts = [] } = useQuery<Cart[]>({
-    queryKey: ['my-carts'],
-    queryFn: () => fetch('/api/catalog/carts').then((r) => r.json()).then((d) => d.data as Cart[]),
+    queryKey: ['my-carts', collectionId],
+    queryFn: () =>
+      fetch(`/api/catalog/carts?collection=${collectionId}`)
+        .then((r) => r.json())
+        .then((d) => d.data as Cart[]),
     enabled: !!pendingProduct || !!pendingVariants,
   });
 
@@ -125,7 +154,6 @@ export default function CartSetup() {
       return;
     }
     setPendingProduct(null);
-    // Execute the pending add
     const effectiveQty = pendingProduct!.quantity;
     const product = pendingProduct!.product;
     fetch(`/api/catalog/carts/${cart.id}/items`, {
@@ -144,7 +172,7 @@ export default function CartSetup() {
       const res = await fetch('/api/catalog/carts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim() }),
+        body: JSON.stringify({ name: newName.trim(), collectionId }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? 'Errore');
@@ -177,7 +205,6 @@ export default function CartSetup() {
             <span className="font-medium text-primary">{pendingName}</span>.
           </p>
 
-          {/* Existing carts */}
           {carts.length > 0 && (
             <div className="space-y-2">
               {carts.map((cart) => (
@@ -196,7 +223,6 @@ export default function CartSetup() {
             </div>
           )}
 
-          {/* Create new */}
           {showCreate ? (
             <div className="space-y-2 pt-1">
               <input

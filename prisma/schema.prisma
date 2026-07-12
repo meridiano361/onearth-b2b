@@ -371,14 +371,15 @@ enum CartStatus {
 }
 
 model Cart {
-  id         String     @id @default(cuid())
-  name       String
-  status     CartStatus @default(DRAFT)
-  customerId String?
-  operatorId String?
-  notes      String?
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id           String     @id @default(cuid())
+  name         String
+  collectionId String     @default("casa")
+  status       CartStatus @default(DRAFT)
+  customerId   String?
+  operatorId   String?
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
   operator Operator? @relation(fields: [operatorId], references: [id], onDelete: Cascade)

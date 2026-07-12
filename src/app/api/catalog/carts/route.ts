@@ -17,6 +17,7 @@ function serializeCart(cart: any) {
     updatedAt: cart.updatedAt?.toISOString(),
     items: cart.items?.map((item: any) => ({
       productId: item.productId,
+      taglia: item.taglia ?? '',
       quantity: item.quantity,
       product: item.product ? {
         ...item.product,
@@ -29,7 +30,8 @@ function serializeCart(cart: any) {
   };
 }
 
-export async function GET() {
+// GET /api/catalog/carts?collection=moda|casa
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -37,8 +39,14 @@ export async function GET() {
     const where = userWhere(session);
     if (!where) return NextResponse.json({ data: [] });
 
+    const collection = req.nextUrl.searchParams.get('collection');
+
     const carts = await prisma.cart.findMany({
-      where: { ...where, status: 'DRAFT' },
+      where: {
+        ...where,
+        status: 'DRAFT',
+        ...(collection ? { collectionId: collection } : {}),
+      },
       include: {
         _count: { select: { items: true } },
         items: {
@@ -56,6 +64,7 @@ export async function GET() {
   }
 }
 
+// POST /api/catalog/carts — body: { name, collectionId }
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -64,11 +73,14 @@ export async function POST(req: NextRequest) {
     const where = userWhere(session);
     if (!where) return NextResponse.json({ error: 'Role not supported' }, { status: 400 });
 
-    const { name } = await req.json();
+    const { name, collectionId = 'casa' } = await req.json();
     if (!name?.trim()) return NextResponse.json({ error: 'Nome carrello obbligatorio' }, { status: 400 });
 
+    const validCollections = ['moda', 'casa'];
+    const safeCollectionId = validCollections.includes(collectionId) ? collectionId : 'casa';
+
     const cart = await prisma.cart.create({
-      data: { name: name.trim(), ...where },
+      data: { name: name.trim(), collectionId: safeCollectionId, ...where },
       include: { items: { include: { product: { include: { category: true } } } } },
     });
 

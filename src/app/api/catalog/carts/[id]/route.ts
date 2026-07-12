@@ -17,6 +17,7 @@ function serializeCart(cart: any) {
     updatedAt: cart.updatedAt?.toISOString(),
     items: cart.items?.map((item: any) => ({
       productId: item.productId,
+      taglia: item.taglia ?? '',
       quantity: item.quantity,
       product: item.product ? {
         ...item.product,

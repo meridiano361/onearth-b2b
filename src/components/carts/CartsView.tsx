@@ -15,19 +15,28 @@ import { usePreview } from '@/contexts/PreviewContext';
 import { ProductImage } from '@/components/ui/ProductImage';
 import QuantitySelector from '@/components/catalog/QuantitySelector';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
+import { useCollectionRoutes } from '@/hooks/useCollectionRoutes';
 import type { Cart, Destinazione } from '@/types';
 
-export default function CartsView() {
+interface CartsViewProps {
+  collection: string; // 'moda' | 'casa'
+}
+
+export default function CartsView({ collection }: CartsViewProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const preview = usePreview();
   const isOperator = session?.user.role === 'OPERATOR';
   const { cartId, setCart, clearCart, updateQuantity: storeUpdateQty } = useCartStore();
+  const routes = useCollectionRoutes();
 
   const { data: carts = [], isLoading } = useQuery<Cart[]>({
-    queryKey: ['my-carts'],
-    queryFn: () => fetch('/api/catalog/carts').then((r) => r.json()).then((d) => d.data as Cart[]),
+    queryKey: ['my-carts', collection],
+    queryFn: () =>
+      fetch(`/api/catalog/carts?collection=${collection}`)
+        .then((r) => r.json())
+        .then((d) => d.data as Cart[]),
     refetchOnMount: 'always',
     staleTime: 0,
   });
@@ -90,7 +99,7 @@ export default function CartsView() {
       const res = await fetch('/api/catalog/carts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim() }),
+        body: JSON.stringify({ name: newName.trim(), collectionId: collection }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? 'Errore');
@@ -339,7 +348,7 @@ export default function CartsView() {
                     </button>
                   )}
                   <button
-                    onClick={() => router.push('/catalog/products')}
+                    onClick={() => router.push(routes.catalog)}
                     disabled={!isActive}
                     className="text-xs border border-border rounded px-3 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     title={isActive ? 'Vai al catalogo' : 'Seleziona prima questo carrello'}
