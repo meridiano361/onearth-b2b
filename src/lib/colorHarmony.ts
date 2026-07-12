@@ -149,6 +149,57 @@ export function harmonyScore(
   return Math.round(Math.min(100, baseScore[type] + lightnessBonus));
 }
 
+// ── Italian color name → hue fallback ────────────────────────────────────────
+
+export const COLORE_ITALIANO_HUE: Record<string, { hex: string; isNeutral: boolean }> = {
+  'rosso':        { hex: '#C62828', isNeutral: false },
+  'arancione':    { hex: '#E65100', isNeutral: false },
+  'ocra':         { hex: '#F57F17', isNeutral: false },
+  'oro':          { hex: '#F9A825', isNeutral: false },
+  'giallo':       { hex: '#FDD835', isNeutral: false },
+  'verde acqua':  { hex: '#00897B', isNeutral: false },
+  'acquamarina':  { hex: '#00ACC1', isNeutral: false },
+  'turchese':     { hex: '#00838F', isNeutral: false },
+  'ottanio':      { hex: '#00695C', isNeutral: false },
+  'petrolio':     { hex: '#004D40', isNeutral: false },
+  'menta':        { hex: '#43A047', isNeutral: false },
+  'verde':        { hex: '#2E7D32', isNeutral: false },
+  'azzurro':      { hex: '#0288D1', isNeutral: false },
+  'blu':          { hex: '#1565C0', isNeutral: false },
+  'indaco':       { hex: '#4527A0', isNeutral: false },
+  'lilla':        { hex: '#AB47BC', isNeutral: false },
+  'viola':        { hex: '#6A1B9A', isNeutral: false },
+  'fucsia':       { hex: '#AD1457', isNeutral: false },
+  'rosa':         { hex: '#E91E63', isNeutral: false },
+  'bianco':       { hex: '#F5F5F5', isNeutral: true  },
+  'nero':         { hex: '#212121', isNeutral: true  },
+  'grigio':       { hex: '#9E9E9E', isNeutral: true  },
+  'argento':      { hex: '#B0BEC5', isNeutral: true  },
+  'marrone':      { hex: '#795548', isNeutral: true  },
+  'ecru':         { hex: '#EDE0C8', isNeutral: true  },
+  'trasparente':  { hex: '#E0E0E0', isNeutral: true  },
+};
+
+// Compound/longer keywords must precede their substrings (e.g. 'verde acqua' before 'verde')
+const COLORE_KEYWORD_ORDER = [
+  'verde acqua', 'acquamarina', 'turchese', 'ottanio', 'petrolio', 'menta',
+  'rosso', 'arancione', 'ocra', 'oro', 'giallo', 'verde',
+  'azzurro', 'blu', 'indaco', 'lilla', 'viola', 'fucsia', 'rosa',
+  'bianco', 'nero', 'grigio', 'argento', 'marrone', 'ecru', 'trasparente',
+];
+
+export function inferHueFromColore(
+  colore: string | null | undefined,
+): { hex: string; isNeutral: boolean } | null {
+  if (!colore) return null;
+  const key = colore.toLowerCase().trim();
+  if (COLORE_ITALIANO_HUE[key]) return COLORE_ITALIANO_HUE[key];
+  for (const kw of COLORE_KEYWORD_ORDER) {
+    if (key.includes(kw)) return COLORE_ITALIANO_HUE[kw];
+  }
+  return null;
+}
+
 // ── Display group generator ───────────────────────────────────────────────────
 
 export interface PantoneInfo {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireModaSession } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
-import { hexToHsl, getHueFamilyId, isColorNeutral, HUE_FAMILIES } from '@/lib/colorHarmony';
+import { hexToHsl, getHueFamilyId, isColorNeutral, HUE_FAMILIES, inferHueFromColore } from '@/lib/colorHarmony';
 
 
 type PantoneRow = {
@@ -93,6 +93,18 @@ export async function GET() {
       lum = hsl.l;
       isNeutral = isColorNeutral(hsl);
       hueFamilyId = getHueFamilyId(hex, isNeutral);
+    } else if (product.colore) {
+      const fallback = inferHueFromColore(product.colore);
+      if (fallback) {
+        hex = fallback.hex;
+        isNeutral = fallback.isNeutral;
+        if (!isNeutral) {
+          const hsl = hexToHsl(hex);
+          hue = hsl.h;
+          lum = hsl.l;
+          hueFamilyId = getHueFamilyId(hex, false);
+        }
+      }
     }
 
     familyMap.get(hueFamilyId)!.push(product);
