@@ -5,31 +5,54 @@ import { prisma } from '@/lib/prisma';
 import { LABEL_SUPPORTO } from '@/types/jewelry';
 import type { TipoSupporto } from '@/types/jewelry';
 
-// Mappa sottofamiglia prodotto → tipi supporto compatibili
+// Mappa categoria gioiello → tipi supporto compatibili (espositore_onearth è universale per tutti)
 const TIPO_MAP: Record<string, TipoSupporto[]> = {
   collana:   ['busto_legno',    'espositore_onearth'],
   bracciale: ['cono_legno',     'espositore_onearth'],
   orecchini: ['portaorecchini', 'espositore_onearth'],
+  anello:    ['cono_legno',     'espositore_onearth'],
 };
 
-// GET /api/accessori-vendita?tipo=collana|bracciale|orecchini
+// Normalizza classe/sottofamiglia prodotto → chiave di TIPO_MAP
+export function normalizzaCategoria(val: string): string | null {
+  const s = val.toLowerCase();
+  if (s.includes('collana') || s.includes('collane')) return 'collana';
+  if (s.includes('bracciale') || s.includes('bracciali')) return 'bracciale';
+  if (s.includes('orecchino') || s.includes('orecchini')) return 'orecchini';
+  if (s.includes('anello') || s.includes('anelli')) return 'anello';
+  return null;
+}
+
+// GET /api/accessori-vendita?tipo=collana|bracciale|orecchini|anello
+// Accetta anche ?classe=<Product.classe> come alternativa
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const tipo = req.nextUrl.searchParams.get('tipo');
-    const tipiRicercati: TipoSupporto[] = tipo && TIPO_MAP[tipo]
-      ? TIPO_MAP[tipo]
-      : ['espositore_onearth'];
+    const tipoParam = req.nextUrl.searchParams.get('tipo');
+    const classeParam = req.nextUrl.searchParams.get('classe');
+
+    // Determina la categoria: prima dal param esplicito, poi normalizzando classe
+    const categoria =
+      (tipoParam && TIPO_MAP[tipoParam] ? tipoParam : null) ??
+      (classeParam ? normalizzaCategoria(classeParam) : null);
+
+    // Se non c'è una categoria riconosciuta non mostrare nulla
+    if (!categoria) return NextResponse.json({ data: [] });
+
+    const tipiRicercati = TIPO_MAP[categoria];
 
     const items = await prisma.supportoEspositivo.findMany({
       where: {
         attivo: true,
         tipo: { in: tipiRicercati },
-        retailPrice: { not: null },   // mostra solo se il prezzo è stato compilato
+        retailPrice: { not: null },
       },
-      orderBy: { nome: 'asc' },
+      orderBy: [
+        { tipo: 'asc' },
+        { nome: 'asc' },
+      ],
     });
 
     return NextResponse.json({
@@ -39,12 +62,13 @@ export async function GET(req: NextRequest) {
         codice:       s.codice,
         imageUrl:     s.immagineUrl || null,
         retailPrice:  s.retailPrice ? Number(s.retailPrice) : null,
+        costPrice:    s.costPrice   ? Number(s.costPrice)   : null,
         misura:       s.misura,
         note:         s.note,
         colore:       s.tono ? (s.tono === 'chiaro' ? 'Legno chiaro' : 'Legno scuro') : null,
         linkAcquisto: s.linkAcquisto,
         tipo:         s.tipo,
-        tipoLabel:    LABEL_SUPPORTO[s.tipo],
+        tipoLabel:    LABEL_SUPPORTO[s.tipo as keyof typeof LABEL_SUPPORTO],
       })),
     });
   } catch (e: any) {
