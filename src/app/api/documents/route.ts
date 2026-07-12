@@ -11,8 +11,7 @@ export async function GET(req: NextRequest) {
       visibile: true,
       ...(tipo     ? { tipo }     : {}),
       ...(cartella ? { cartella } : {}),
-      // null collezione = visible in all collections
-      ...(collezione ? { OR: [{ collezione }, { collezione: null }] } : {}),
+      ...(collezione ? { collezione } : {}),
     },
     orderBy: { createdAt: 'desc' },
     select: { id: true, nome: true, tipo: true, cartella: true, collezione: true, descrizione: true, url: true, size: true, mimeType: true, createdAt: true },

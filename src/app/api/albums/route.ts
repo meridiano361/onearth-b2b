@@ -7,8 +7,7 @@ export async function GET(req: NextRequest) {
   const albums = await prisma.album.findMany({
     where: {
       visibile: true,
-      // null collezione = visible in all collections
-      ...(collezione ? { OR: [{ collezione }, { collezione: null }] } : {}),
+      ...(collezione ? { collezione } : {}),
     },
     orderBy: { ordine: 'asc' },
     include: { _count: { select: { foto: true } } },
