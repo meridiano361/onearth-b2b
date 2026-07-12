@@ -523,7 +523,6 @@ function DocTable({ items, cartelle, onReplace, onDelete, onPreview, onToggleVis
             <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Tipo</th>
             <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Data</th>
             <th className="text-left px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Dim.</th>
-            <th className="text-center px-4 py-3 text-2xs font-semibold text-gray-400 uppercase tracking-wide">Visibile</th>
             <th className="px-4 py-3" />
           </tr></thead>
           <tbody>
@@ -536,14 +535,12 @@ function DocTable({ items, cartelle, onReplace, onDelete, onPreview, onToggleVis
                   <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{doc.tipo}</td>
                   <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{fmtDate(doc.createdAt)}</td>
                   <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{fmtSize(doc.size)}</td>
-                  <td className="px-4 py-3 text-center">
-                    <button onClick={() => onToggleVisibile(doc)} className={`relative w-9 h-5 rounded-full transition-colors ${doc.visibile ? 'bg-accent' : 'bg-gray-200'}`}>
-                      <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${doc.visibile ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                    </button>
-                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5 justify-end">
                       {canPreview && <button onClick={() => onPreview(doc)} className="p-1.5 text-gray-400 hover:text-accent" title="Riproduci"><Play size={13} /></button>}
+                      <button onClick={() => onToggleVisibile(doc)} className="p-1.5 text-gray-400 hover:text-primary" title={doc.visibile ? 'Nascondi' : 'Mostra'}>
+                        {doc.visibile ? <Eye size={13} /> : <EyeOff size={13} />}
+                      </button>
                       <button onClick={() => setSpostaDoc(doc)} className="p-1.5 text-gray-400 hover:text-primary" title="Sposta in cartella"><FolderInput size={13} /></button>
                       <button onClick={() => onReplace(doc)} className="p-1.5 text-gray-400 hover:text-primary" title="Modifica"><Pencil size={13} /></button>
                       {deleteId === doc.id ? (
@@ -897,7 +894,7 @@ export default function DocumentiPage() {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-primary">Documenti e media</h1>
+          <h1 className="text-xl font-semibold text-primary">Risorse</h1>
           <p className="text-sm text-gray-400 mt-0.5">Organizza PDF, foto e video per collezione</p>
         </div>
         <button onClick={() => setShowNuovaCartella(true)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-warm-darker transition-colors flex-shrink-0">
