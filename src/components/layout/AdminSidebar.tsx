@@ -50,7 +50,7 @@ const NAV: NavEntry[] = [
       { href: '/admin/access-requests', label: 'Richieste accesso', icon: UserPlus,  roles: ['SUPER_ADMIN', 'ADMIN'] },
     ],
   },
-  { href: '/admin/documenti',        label: 'Documenti',         icon: FileText,        roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { href: '/admin/documenti',        label: 'Risorse',           icon: FileText,        roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/foto',             label: 'Foto',              icon: ImageIcon,       roles: ['SUPER_ADMIN', 'ADMIN'] },
   { href: '/admin/impostazioni',     label: 'Impostazioni',      icon: Settings,        roles: ['SUPER_ADMIN'] },
   { href: '/admin/notifiche',        label: 'Notifiche',         icon: Bell,            roles: ['SUPER_ADMIN', 'ADMIN'] },
