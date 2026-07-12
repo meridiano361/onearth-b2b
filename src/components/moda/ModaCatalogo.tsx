@@ -21,7 +21,7 @@ function ModaProductCard({ product }: { product: Product }) {
   const inCart = getItemQuantity(product.id) > 0;
 
   return (
-    <Link href={`/catalog/${product.id}`} className="group block">
+    <Link href={`/moda/product/${product.id}`} className="group block">
       <div className="relative aspect-[3/4] bg-[#111] rounded-xl overflow-hidden mb-2">
         <ProductImage
           src={product.imageUrl ?? product.imageUrl2 ?? product.imageUrl3 ?? product.imageUrl4 ?? product.imageUrl5}

@@ -18,6 +18,7 @@ import { computeProjections } from './CartSummary';
 import CartItem from './CartItem';
 import CartSummary from './CartSummary';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
+import { useCollectionRoutes } from '@/hooks/useCollectionRoutes';
 import type { Destinazione, Product } from '@/types';
 
 type SuggestionProduct = Pick<Product, 'id' | 'code' | 'name' | 'imageUrl' | 'costPrice' | 'retailPrice' | 'lotSize' | 'iva'>;
@@ -27,6 +28,7 @@ export default function CartSidebar() {
   const { data: session } = useSession();
   const preview = usePreview();
   const { ordine } = useSettings();
+  const routes = useCollectionRoutes();
   const { items, cartId, cartName, notes, clearCart, removeItem, getTotalItems, hasLotWarnings, addItem } = useCartStore();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,7 +93,7 @@ export default function CartSidebar() {
       clearCart();
       queryClient.invalidateQueries({ queryKey: ['my-carts'] });
       toast.success('Ordine creato con successo');
-      router.push('/catalog/orders');
+      router.push(routes.orders);
     } catch (e: any) {
       toast.error(e.message ?? t('errorCreate'));
     } finally {
@@ -150,7 +152,7 @@ export default function CartSidebar() {
         {cartId && (
           <div className="px-4 pt-2 pb-2 flex-shrink-0">
             <Link
-              href="/catalog/products"
+              href={routes.catalog}
               className="w-full py-1.5 text-xs font-medium rounded border border-dashed border-border text-gray-400 hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1.5"
             >
               <Plus size={11} /> Aggiungi prodotti

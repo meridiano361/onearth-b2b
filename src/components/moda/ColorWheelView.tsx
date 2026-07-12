@@ -387,7 +387,7 @@ function FocusProductView({
               </div>
             </div>
             <button
-              onClick={() => router.push(`/catalog/${hero.productId}`)}
+              onClick={() => router.push(`/moda/product/${hero.productId}`)}
               className="flex-shrink-0 text-xs text-gray-400 hover:text-primary transition-colors"
               title="Vai alla scheda prodotto"
             >
@@ -483,7 +483,7 @@ function FocusProductView({
                     <div key={p.id} className="relative group/fp">
                       <button
                         type="button"
-                        onClick={() => router.push(`/catalog/${p.id}`)}
+                        onClick={() => router.push(`/moda/product/${p.id}`)}
                         className="w-full text-left rounded-lg overflow-hidden border border-border hover:border-accent/40 transition-all hover:shadow-sm"
                         title={`${p.code} — ${p.name}`}
                       >
@@ -1238,7 +1238,7 @@ function ProductCard({
     <div className="relative group/card">
       <button
         onClick={onClick}
-        onDoubleClick={() => router.push(`/catalog/${product.id}`)}
+        onDoubleClick={() => router.push(`/moda/product/${product.id}`)}
         className={`w-full text-left rounded-lg overflow-hidden border transition-all ${
           isSelected
             ? 'border-accent ring-2 ring-accent/20 shadow-sm'

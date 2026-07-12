@@ -114,12 +114,12 @@ function ZoneColumn({
         <div className="space-y-2">
           {items.map((item) => (
             <div key={item.id} className="group relative flex gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-white/15 transition-colors">
-              <Link href={`/catalog/${item.product.id}`} className="w-16 h-16 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
+              <Link href={`/moda/product/${item.product.id}`} className="w-16 h-16 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
                 <ProductImage src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
               </Link>
               <div className="flex-1 min-w-0 pr-7">
                 <p className="text-2xs font-mono text-white/30 leading-none">{item.product.code}</p>
-                <Link href={`/catalog/${item.product.id}`} className="text-xs text-white hover:underline underline-offset-2 line-clamp-2 leading-snug mt-0.5 block">
+                <Link href={`/moda/product/${item.product.id}`} className="text-xs text-white hover:underline underline-offset-2 line-clamp-2 leading-snug mt-0.5 block">
                   {item.product.name}
                 </Link>
                 {item.product.colore && (

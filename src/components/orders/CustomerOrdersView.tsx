@@ -30,6 +30,7 @@ import OrderExcelExport from '@/components/orders/OrderExcelExport';
 import type { Order } from '@/types';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { getCollectionRoutes } from '@/lib/collectionRoutes';
 
 const PREVIEW_SORT_KEY = 'preview-sort';
 const SORT_OPTIONS = [
@@ -44,7 +45,7 @@ const SORT_OPTIONS = [
 ];
 
 
-export default function CustomerOrdersView() {
+export default function CustomerOrdersView({ collectionId }: { collectionId?: string }) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const t = useTranslations('orders');
@@ -52,6 +53,7 @@ export default function CustomerOrdersView() {
   const { data: session } = useSession();
   const isOperator = session?.user.role === 'OPERATOR';
   const { mondiEspositivi } = useFeatureFlags();
+  const routes = getCollectionRoutes(collectionId === 'moda' ? 'moda' : 'casa');
 
   const [budgetEditingOrderId, setBudgetEditingOrderId] = useState<string | null>(null);
   const [budgetEditInput, setBudgetEditInput] = useState('');
@@ -157,7 +159,7 @@ export default function CustomerOrdersView() {
   const { data: orders, isLoading } = useQuery<Order[]>({
     queryKey: ['my-orders'],
     queryFn: () =>
-      fetch('/api/orders?my=true')
+      fetch(`/api/orders?my=true${collectionId ? `&collectionId=${collectionId}` : ''}`)
         .then((r) => r.json())
         .then((d) => d.data as Order[]),
   });
@@ -200,7 +202,7 @@ export default function CustomerOrdersView() {
       const { data: newOrder } = await res.json();
       toast.success(t('duplicateSuccess'));
       queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-      router.push(`/catalog/orders/${newOrder.id}/preview`);
+      router.push(routes.orderPreview(newOrder.id));
     } catch (e: any) {
       toast.error(e.message ?? 'Errore');
     } finally {
@@ -336,7 +338,7 @@ export default function CustomerOrdersView() {
                   const { orderId, action } = authCheckPending;
                   setAuthCheckPending(null);
                   if (action === 'edit') {
-                    router.push(`/catalog/orders/${orderId}/preview`);
+                    router.push(routes.orderPreview(orderId));
                   } else {
                     setConfirmingId(orderId);
                   }
@@ -569,7 +571,7 @@ export default function CustomerOrdersView() {
                         if (requiresAuthCheck(order)) {
                           setAuthCheckPending({ orderId: order.id, action: 'edit' });
                         } else {
-                          router.push(`/catalog/orders/${order.id}/preview`);
+                          router.push(routes.orderPreview(order.id));
                         }
                       }}
                       className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
@@ -632,7 +634,7 @@ export default function CustomerOrdersView() {
 
                   {/* Anteprima */}
                   <button
-                    onClick={() => router.push(`/catalog/orders/${order.id}/preview`)}
+                    onClick={() => router.push(routes.orderPreview(order.id))}
                     className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
                   >
                     <ScanEye size={11} />
@@ -666,7 +668,7 @@ export default function CustomerOrdersView() {
                   {mondiEspositivi && (
                     <>
                       <button
-                        onClick={() => router.push(`/catalog/orders/${order.id}/preview?tab=esposizione`)}
+                        onClick={() => router.push(routes.orderPreview(order.id, 'esposizione'))}
                         className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
                         title="Esposizione"
                       >
@@ -674,7 +676,7 @@ export default function CustomerOrdersView() {
                         <span className="hidden sm:inline">Esposizione</span>
                       </button>
                       <button
-                        onClick={() => router.push(`/catalog/orders/${order.id}/preview?tab=calendario`)}
+                        onClick={() => router.push(routes.orderPreview(order.id, 'calendario'))}
                         className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
                         title="Calendario Esposizione"
                       >

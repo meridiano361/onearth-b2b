@@ -13,10 +13,10 @@ export async function GET(req: NextRequest) {
 
   if (productIds.length === 0) return NextResponse.json({ data: [] });
 
-  // Fetch cart products to extract their attributes
+  // Fetch cart products to extract their attributes + collection
   const cartProducts = await prisma.product.findMany({
     where: { id: { in: productIds } },
-    select: { nomLinea: true, temaColore: true, colore: true, classe: true, sottoclasse: true },
+    select: { nomLinea: true, temaColore: true, colore: true, classe: true, sottoclasse: true, collectionId: true },
   });
 
   const linee      = [...new Set(cartProducts.map((p) => p.nomLinea).filter(Boolean))] as string[];
@@ -24,12 +24,15 @@ export async function GET(req: NextRequest) {
   const colori     = [...new Set(cartProducts.map((p) => p.colore).filter(Boolean))] as string[];
   const classi     = [...new Set(cartProducts.map((p) => p.classe).filter(Boolean))] as string[];
   const sottoclassi = [...new Set(cartProducts.map((p) => p.sottoclasse).filter(Boolean))] as string[];
+  // Restrict suggestions to the same collection(s) as the cart products
+  const collectionIds = [...new Set(cartProducts.map((p) => p.collectionId).filter(Boolean))] as string[];
 
-  // Find candidates not already in cart
+  // Find candidates not already in cart, same collection
   const candidates = await prisma.product.findMany({
     where: {
       isActive: true,
       id: { notIn: productIds },
+      ...(collectionIds.length > 0 ? { collectionId: { in: collectionIds } } : {}),
       OR: [
         linee.length      ? { nomLinea:   { in: linee } }      : undefined,
         temiColore.length ? { temaColore: { in: temiColore } } : undefined,

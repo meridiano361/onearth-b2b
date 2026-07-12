@@ -182,12 +182,12 @@ function LookSection({
       <div className="space-y-2">
         {items.map((lp) => (
           <div key={lp.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] group">
-            <Link href={`/catalog/${lp.product.id}`} className="w-14 h-14 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
+            <Link href={`/moda/product/${lp.product.id}`} className="w-14 h-14 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
               <ProductImage src={lp.product.imageUrl} alt={lp.product.name} className="w-full h-full object-cover" />
             </Link>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-mono text-white/30">{lp.product.code}</p>
-              <Link href={`/catalog/${lp.product.id}`} className="text-sm text-white hover:underline underline-offset-2 line-clamp-2 leading-snug">
+              <Link href={`/moda/product/${lp.product.id}`} className="text-sm text-white hover:underline underline-offset-2 line-clamp-2 leading-snug">
                 {lp.product.name}
               </Link>
               {lp.product.colore && <p className="text-xs text-white/30 mt-0.5">{lp.product.colore}</p>}

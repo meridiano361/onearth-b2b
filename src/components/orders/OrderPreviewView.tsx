@@ -15,6 +15,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import DisplayGroupsManager from '@/components/catalog/DisplayGroupsManager';
 import CalendarioEsposizione from '@/components/catalog/CalendarioEsposizione';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { useCollectionRoutes } from '@/hooks/useCollectionRoutes';
 import type { Order, OrderItem, Product, Destinazione } from '@/types';
 
 // ── Sort options ───────────────────────────────────────────────
@@ -615,6 +616,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   const t = useTranslations('preview');
   const tg = useTranslations('groupings');
   const { mondiEspositivi } = useFeatureFlags();
+  const routes = useCollectionRoutes();
 
   const GROUPINGS = GROUPING_KEYS.map((k) => ({ value: k, label: tg(k) }));
 
@@ -848,7 +850,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
       if (!res.ok) throw new Error();
       const { data: newOrder } = await res.json();
       toast.success('Ordine duplicato con successo');
-      router.push(`/catalog/orders/${newOrder.id}/preview`);
+      router.push(routes.orderPreview(newOrder.id));
     } catch {
       toast.error('Errore nella duplicazione dell\'ordine');
     } finally {
@@ -864,7 +866,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center px-4">
         <p className="text-sm text-gray-500">{t('notFound')}</p>
-        <Link href="/catalog/orders" className="mt-3 text-sm text-accent hover:underline">
+        <Link href={routes.orders} className="mt-3 text-sm text-accent hover:underline">
           ← {t('backToOrders')}
         </Link>
       </div>
@@ -1012,7 +1014,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
         <div className="px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
-              href="/catalog/orders"
+              href={routes.orders}
               className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-primary hover:bg-cream rounded transition-colors"
             >
               <ArrowLeft size={16} />
@@ -1315,7 +1317,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
         <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           {/* Back */}
           <Link
-            href="/catalog/orders"
+            href={routes.orders}
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary transition-colors flex-shrink-0"
           >
             <ArrowLeft size={14} />

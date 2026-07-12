@@ -67,11 +67,13 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status');
     const customerId = searchParams.get('customerId');
     const organizationId = searchParams.get('organizationId');
+    const collectionIdParam = searchParams.get('collectionId');
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const skip = (page - 1) * limit;
 
     const where: any = {};
+    if (collectionIdParam) where.collectionId = collectionIdParam;
 
     const preview = getPreviewFromSession(session);
 
