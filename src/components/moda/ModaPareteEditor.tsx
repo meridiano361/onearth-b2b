@@ -308,8 +308,8 @@ function AddProductModal({
   });
 
   const { data: cartsData, isLoading: cartsLoading } = useQuery<{ data: Cart[] }>({
-    queryKey: ['catalog-carts-visual'],
-    queryFn: () => fetch('/api/catalog/carts').then((r) => r.json()),
+    queryKey: ['catalog-carts-visual', 'moda'],
+    queryFn: () => fetch('/api/catalog/carts?collection=moda').then((r) => r.json()),
     staleTime: 30_000,
     enabled: sourceTab === 'carrello',
   });

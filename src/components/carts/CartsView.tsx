@@ -15,7 +15,7 @@ import { usePreview } from '@/contexts/PreviewContext';
 import { ProductImage } from '@/components/ui/ProductImage';
 import QuantitySelector from '@/components/catalog/QuantitySelector';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
-import { useCollectionRoutes } from '@/hooks/useCollectionRoutes';
+import { getCollectionRoutes } from '@/lib/collectionRoutes';
 import type { Cart, Destinazione } from '@/types';
 
 interface CartsViewProps {
@@ -29,7 +29,10 @@ export default function CartsView({ collection }: CartsViewProps) {
   const preview = usePreview();
   const isOperator = session?.user.role === 'OPERATOR';
   const { cartId, setCart, clearCart, updateQuantity: storeUpdateQty } = useCartStore();
-  const routes = useCollectionRoutes();
+  // Routes derived from the collection prop, not from pathname, so the context
+  // is explicit and cannot silently drift if this component renders in an
+  // unexpected URL context.
+  const routes = getCollectionRoutes(collection);
 
   const { data: carts = [], isLoading } = useQuery<Cart[]>({
     queryKey: ['my-carts', collection],
@@ -76,7 +79,7 @@ export default function CartsView({ collection }: CartsViewProps) {
       queryClient.invalidateQueries({ queryKey: ['my-carts'] });
       queryClient.invalidateQueries({ queryKey: ['my-orders'] });
       toast.success('Ordine creato con successo');
-      router.push('/catalog/orders');
+      router.push(routes.orders);
     } catch (e: any) {
       toast.error(e.message ?? 'Errore');
     } finally {
