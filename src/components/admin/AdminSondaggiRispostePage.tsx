@@ -6,7 +6,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, Search, Download, Star, ChevronDown, ChevronUp,
-  Loader2, Trash2, MessageSquare, List, PenLine,
+  Loader2, Trash2, MessageSquare, List, Pencil,
 } from 'lucide-react';
 
 interface Question { key: string; text: string; type: string }
@@ -406,7 +406,7 @@ function AdminNoteInline({
               className="p-1 text-gray-300 hover:text-accent transition-colors flex-shrink-0"
               title="Modifica nota"
             >
-              <PenLine size={12} />
+              <Pencil size={12} />
             </button>
           </div>
         ) : (
@@ -414,7 +414,7 @@ function AdminNoteInline({
             onClick={() => { setValue(''); setEditing(true); }}
             className="flex items-center gap-1.5 text-2xs text-gray-400 hover:text-accent transition-colors"
           >
-            <PenLine size={12} /> Aggiungi nota interna
+            <Pencil size={12} /> Aggiungi nota interna
           </button>
         )}
       </div>

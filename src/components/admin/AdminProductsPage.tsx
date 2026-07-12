@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Search, Edit2, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Power, Shirt, Home, Copy, Download, Columns2 } from 'lucide-react';
+import { Plus, Upload, Search, Pencil, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Shirt, Home, Copy, Download, Columns2 } from 'lucide-react';
 import { CONFERENTE_OPTIONS, STAGIONE_OPTIONS } from '@/lib/productConstants';
 import { formatCurrency } from '@/lib/utils';
 import Button from '@/components/ui/Button';
@@ -1319,10 +1319,10 @@ export default function AdminProductsPage() {
                     <td className={`sticky right-0 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)] ${selectedIds.has(product.id) ? 'bg-accent/5' : 'bg-white'}`}>
                       <div className="flex items-center gap-1">
                         <button onClick={() => setPreviewProduct(product)} className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Anteprima"><Eye size={13} /></button>
-                        <button onClick={() => setEditingProduct(product)} className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica"><Edit2 size={13} /></button>
+                        <button onClick={() => setEditingProduct(product)} className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica"><Pencil size={13} /></button>
                         <button onClick={() => setDuplicatingProduct(product)} className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Duplica"><Copy size={13} /></button>
                         <button onClick={() => handleToggleActive(product)} className={`p-1.5 rounded transition-colors ${product.isActive ? 'text-green-500 hover:text-gray-400 hover:bg-gray-50' : 'text-gray-300 hover:text-green-500 hover:bg-green-50'}`} title={product.isActive ? 'Disattiva' : 'Attiva'}>
-                          <Power size={13} />
+                          {product.isActive ? <Eye size={13} /> : <EyeOff size={13} />}
                         </button>
                         <button onClick={() => handleDelete(product)} className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina"><Trash2 size={13} /></button>
                       </div>
@@ -1430,7 +1430,7 @@ export default function AdminProductsPage() {
                   onClick={() => { setPreviewProduct(null); setEditingProduct(p); }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors"
                 >
-                  <Edit2 size={12} />
+                  <Pencil size={12} />
                   Modifica
                 </button>
               </div>

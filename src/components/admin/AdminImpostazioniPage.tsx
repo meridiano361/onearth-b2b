@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Power, X, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatDate } from '@/lib/utils';
 
@@ -507,7 +507,7 @@ export default function AdminImpostazioniPage({ currentUserId }: { currentUserId
                         <Pencil size={13} />
                       </button>
                       <button onClick={() => handleToggleActive(user)} disabled={togglingId === user.id || user.id === currentUserId} className="p-1.5 text-gray-400 hover:text-primary hover:bg-cream rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={user.isActive ? 'Disattiva' : 'Attiva'}>
-                        <Power size={13} />
+                        {user.isActive ? <Eye size={13} /> : <EyeOff size={13} />}
                       </button>
                       {confirmDeleteId === user.id ? (
                         <span className="flex items-center gap-1">
@@ -565,7 +565,7 @@ export default function AdminImpostazioniPage({ currentUserId }: { currentUserId
                             <Pencil size={13} />
                           </button>
                           <button onClick={() => handleToggleActive(user)} disabled={togglingId === user.id || user.id === currentUserId} className="p-1.5 text-gray-400 hover:text-primary hover:bg-cream rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={user.isActive ? 'Disattiva' : 'Attiva'}>
-                            <Power size={13} />
+                            {user.isActive ? <Eye size={13} /> : <EyeOff size={13} />}
                           </button>
                           {confirmDeleteId === user.id ? (
                             <span className="flex items-center gap-1">

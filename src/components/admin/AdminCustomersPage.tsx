@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, KeyRound, Copy, Send, MoreHorizontal, Download } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Eye, EyeOff, KeyRound, Copy, Send, MoreHorizontal, Download } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -265,7 +265,7 @@ export default function AdminCustomersPage() {
                         className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors flex-shrink-0"
                         title="Modifica"
                       >
-                        <Edit2 size={13} />
+                        <Pencil size={13} />
                       </button>
                       <button
                         onClick={() => handleSendCredentials(customer)}
@@ -311,8 +311,8 @@ export default function AdminCustomersPage() {
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-gray-600 hover:bg-cream transition-colors"
           >
             {dropdownCustomer.isActive
-              ? <ToggleRight size={12} className="text-green-500" />
-              : <ToggleLeft size={12} />
+              ? <Eye size={12} className="text-green-500" />
+              : <EyeOff size={12} />
             }
             {dropdownCustomer.isActive ? 'Disattiva' : 'Attiva'}
           </button>

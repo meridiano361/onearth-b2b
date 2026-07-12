@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Package, Download, ChevronDown, ChevronUp, ScanEye, Edit2, Trash2 } from 'lucide-react';
+import { Package, Download, ChevronDown, ChevronUp, ScanEye, Pencil, Trash2 } from 'lucide-react';
 import OrderDemetraExport from './OrderDemetraExport';
 import { formatCurrency, formatDate, getOrderStatusLabel } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
@@ -100,7 +100,7 @@ function OrderRow({ order, isHighlighted, onDeleted }: { order: Order; isHighlig
             onClick={(e) => { e.stopPropagation(); setIsExpanded((v) => !v); }}
             className="text-xs text-gray-400 hover:text-primary border border-border rounded px-2 py-1.5 hover:bg-cream transition-all flex items-center gap-1"
           >
-            <Edit2 size={11} />
+            <Pencil size={11} />
             <span className="hidden sm:inline">Modifica</span>
           </button>
 

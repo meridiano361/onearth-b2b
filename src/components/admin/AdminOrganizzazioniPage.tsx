@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Plus, ChevronDown, ChevronRight, Edit2, Trash2,
-  ToggleLeft, ToggleRight, KeyRound, Store, Globe, Radio, Package,
+  Plus, ChevronDown, ChevronRight, Pencil, Trash2,
+  Eye, EyeOff, KeyRound, Store, Globe, Radio, Package,
   Users, MapPin, Copy, CheckSquare, Square, Loader2, Send,
   ShoppingBag, Building, ShoppingCart, Tag, Landmark, X, Search, Download,
 } from 'lucide-react';
@@ -881,7 +881,7 @@ export default function AdminOrganizzazioniPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditOrgModal(org); }}
                         className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary border border-border rounded px-2.5 py-1 hover:bg-cream transition-colors">
-                        <Edit2 size={12} />
+                        <Pencil size={12} />
                         Modifica
                       </button>
                     </div>
@@ -920,7 +920,7 @@ export default function AdminOrganizzazioniPage() {
                     <button
                       onClick={(e) => { e.stopPropagation(); setEditOrgModal(org); }}
                       className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary px-2 py-1 rounded hover:bg-cream transition-colors flex-shrink-0">
-                      <Edit2 size={12} />
+                      <Pencil size={12} />
                       <span>Modifica</span>
                     </button>
                   </div>
@@ -1007,7 +1007,7 @@ export default function AdminOrganizzazioniPage() {
                                         <div className="flex items-center gap-1 justify-end">
                                           <button onClick={() => setOpModal({ orgId: org.id, orgNome: org.nome, operator: op })}
                                             className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica">
-                                            <Edit2 size={12} />
+                                            <Pencil size={12} />
                                           </button>
                                           <button onClick={() => handleResetPassword(op, org.nome)}
                                             className="p-1 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Reset password (mostra)">
@@ -1025,8 +1025,8 @@ export default function AdminOrganizzazioniPage() {
                                             className="p-1 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
                                             title={op.attivo ? 'Disattiva' : 'Attiva'}>
                                             {op.attivo
-                                              ? <ToggleRight size={14} className="text-green-500" />
-                                              : <ToggleLeft size={14} />}
+                                              ? <Eye size={14} className="text-green-500" />
+                                              : <EyeOff size={14} />}
                                           </button>
                                           <button onClick={() => handleDeleteOperator(op)}
                                             className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina">
@@ -1087,7 +1087,7 @@ export default function AdminOrganizzazioniPage() {
                                     <div className="flex-1" />
                                     <button onClick={() => setOpModal({ orgId: org.id, orgNome: org.nome, operator: op })}
                                       className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica">
-                                      <Edit2 size={14} />
+                                      <Pencil size={14} />
                                     </button>
                                     <button onClick={() => handleResetPassword(op, org.nome)}
                                       className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Reset password (mostra)">
@@ -1105,8 +1105,8 @@ export default function AdminOrganizzazioniPage() {
                                       className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
                                       title={op.attivo ? 'Disattiva' : 'Attiva'}>
                                       {op.attivo
-                                        ? <ToggleRight size={16} className="text-green-500" />
-                                        : <ToggleLeft size={16} />}
+                                        ? <Eye size={16} className="text-green-500" />
+                                        : <EyeOff size={16} />}
                                     </button>
                                     <button onClick={() => handleDeleteOperator(op)}
                                       className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina">
@@ -1148,7 +1148,7 @@ export default function AdminOrganizzazioniPage() {
                               <div className="flex gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button onClick={() => setDestinazioneModal({ orgId: org.id, destinazione: d })}
                                   className="p-0.5 text-gray-400 hover:text-primary rounded transition-colors" title="Modifica">
-                                  <Edit2 size={11} />
+                                  <Pencil size={11} />
                                 </button>
                                 <button onClick={() => handleDeleteDestinazione(d)}
                                   className="p-0.5 text-gray-400 hover:text-red-500 rounded transition-colors" title="Elimina">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, Check, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -363,7 +363,7 @@ function ClassificazioneTab({
                           className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
                           title="Modifica"
                         >
-                          <Edit2 size={12} />
+                          <Pencil size={12} />
                         </button>
                         <button
                           onClick={() => setDeletingId(item.id)}
@@ -589,7 +589,7 @@ function ProduttoriTab() {
                           className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors"
                           title="Rinomina"
                         >
-                          <Edit2 size={12} />
+                          <Pencil size={12} />
                         </button>
                         <button
                           onClick={() => setDeletingNome(item.nome)}

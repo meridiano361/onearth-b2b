@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Plus, X, Search, Loader2, ChevronLeft, ChevronRight,
-  Trash2, Edit2, Check, Tag, PackagePlus, AlertTriangle, ZoomIn, ZoomOut,
+  Trash2, Pencil, Check, Tag, PackagePlus, AlertTriangle, ZoomIn, ZoomOut,
   SlidersHorizontal, ChevronDown, ChevronUp, GripVertical, Undo2, Redo2, ArrowUpDown,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -676,7 +676,7 @@ function ItemCard({
                 <button type="button" onClick={() => setShowPicker(true)}
                   title="Cambia prodotto"
                   className="text-gray-300 hover:text-gray-500 transition-colors">
-                  <Edit2 size={10} />
+                  <Pencil size={10} />
                 </button>
               )}
               {item.pezzi.length > 0 && <span className="text-2xs text-gray-300">{item.pezzi.length} pz</span>}
@@ -2110,7 +2110,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
             ) : (
               <button type="button" onClick={() => setEditingNome(true)} className="flex items-center gap-1.5 group min-w-0">
                 <h1 className="text-xs font-semibold uppercase tracking-wider truncate text-gray-900">{nome}</h1>
-                <Edit2 size={10} className="text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" />
+                <Pencil size={10} className="text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" />
               </button>
             )}
             <span className="text-gray-300 text-2xs flex-shrink-0">·</span>

@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  FileText, Film, Music2, File as FileIcon, Plus, Trash2, RefreshCw, Upload, Play, X,
+  FileText, Film, Music2, File as FileIcon, Plus, Trash2, Upload, Play, X,
   ImageIcon, Eye, EyeOff, Folder, FolderPlus, FolderInput, Pencil, Check,
   Loader2, Minimize2,
 } from 'lucide-react';
@@ -545,7 +545,7 @@ function DocTable({ items, cartelle, onReplace, onDelete, onPreview, onToggleVis
                     <div className="flex items-center gap-1.5 justify-end">
                       {canPreview && <button onClick={() => onPreview(doc)} className="p-1.5 text-gray-400 hover:text-accent" title="Riproduci"><Play size={13} /></button>}
                       <button onClick={() => setSpostaDoc(doc)} className="p-1.5 text-gray-400 hover:text-primary" title="Sposta in cartella"><FolderInput size={13} /></button>
-                      <button onClick={() => onReplace(doc)} className="p-1.5 text-gray-400 hover:text-primary" title="Modifica"><RefreshCw size={13} /></button>
+                      <button onClick={() => onReplace(doc)} className="p-1.5 text-gray-400 hover:text-primary" title="Modifica"><Pencil size={13} /></button>
                       {deleteId === doc.id ? (
                         <div className="flex items-center gap-1.5">
                           <button onClick={() => { onDelete(doc.id); setDeleteId(null); }} className="text-2xs font-medium text-red-600 hover:text-red-800">Elimina</button>

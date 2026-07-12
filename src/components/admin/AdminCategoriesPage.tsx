@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, FolderOpen, Folder } from 'lucide-react';
+import { Plus, ChevronRight, ChevronDown, Pencil, Trash2, FolderOpen, Folder } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
@@ -162,7 +162,7 @@ function TreeNode({ category, allCategories, level = 0, onEdit, onDelete }: Tree
             onClick={() => onEdit(category)}
             className="p-1 text-gray-400 hover:text-primary rounded hover:bg-white transition-colors"
           >
-            <Edit2 size={12} />
+            <Pencil size={12} />
           </button>
           <button
             onClick={() => onDelete(category)}

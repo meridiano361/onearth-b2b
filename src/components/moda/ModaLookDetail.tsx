@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { ArrowLeft, Plus, X, Search, ShoppingBag, Loader2, Edit2, Check } from 'lucide-react';
+import { ArrowLeft, Plus, X, Search, ShoppingBag, Loader2, Pencil, Check } from 'lucide-react';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useCartStore } from '@/store/cartStore';
 import { formatCurrency } from '@/lib/utils';
@@ -314,7 +314,7 @@ export default function ModaLookDetail({ lookId }: { lookId: string }) {
                   onClick={() => { setTitleValue(look.titolo); setEditingTitle(true); }}
                   className="text-white/20 hover:text-white/50 transition-colors flex-shrink-0"
                 >
-                  <Edit2 size={12} />
+                  <Pencil size={12} />
                 </button>
               </div>
             )}
