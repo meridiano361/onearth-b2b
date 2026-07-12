@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
-import { Bell, BellOff, Mail, MailX, Settings, X } from 'lucide-react';
+import { Bell, BellOff, Check, Mail, MailX, Settings, X } from 'lucide-react';
 
 type NotificationItem = {
   id: string;
@@ -26,6 +26,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'unread' | 'read'>('unread');
   const [showSettings, setShowSettings] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -33,7 +34,6 @@ export default function NotificationBell() {
   const { data: session } = useSession();
   const isCustomer = session?.user?.role === 'CUSTOMER';
 
-  // Customer notification preferences
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [pushSubscribed, setPushSubscribed] = useState(false);
   const [settingsBusy, setSettingsBusy] = useState(false);
@@ -100,7 +100,9 @@ export default function NotificationBell() {
     refetchInterval: 120_000,
   });
 
-  const unread = notifications.filter((n) => !n.letta).length;
+  const unread = notifications.filter((n) => !n.letta);
+  const read = notifications.filter((n) => n.letta);
+  const unreadCount = unread.length;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -124,6 +126,13 @@ export default function NotificationBell() {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
+  // Reset to unread tab when closing
+  useEffect(() => {
+    if (!open) {
+      setShowSettings(false);
+    }
+  }, [open]);
+
   async function markRead(id: string) {
     await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
     qc.setQueryData<NotificationItem[]>(['notifications'], (prev) =>
@@ -133,12 +142,14 @@ export default function NotificationBell() {
 
   async function markAllRead() {
     await Promise.all(
-      notifications.filter((n) => !n.letta).map((n) => fetch(`/api/notifications/${n.id}/read`, { method: 'POST' }))
+      unread.map((n) => fetch(`/api/notifications/${n.id}/read`, { method: 'POST' }))
     );
     qc.setQueryData<NotificationItem[]>(['notifications'], (prev) =>
       prev ? prev.map((n) => ({ ...n, letta: true })) : []
     );
   }
+
+  const displayed = activeTab === 'unread' ? unread : read;
 
   return (
     <div className="relative group">
@@ -149,9 +160,9 @@ export default function NotificationBell() {
         aria-label="Notifiche"
       >
         <Bell size={18} />
-        {unread > 0 && (
+        {unreadCount > 0 && (
           <span className="absolute -top-[4px] -right-[6px] bg-red-500 text-white text-[8px] font-bold min-w-[14px] h-[14px] rounded-full flex items-center justify-center leading-none px-[2px]">
-            {unread > 9 ? '9+' : unread}
+            {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
@@ -167,7 +178,7 @@ export default function NotificationBell() {
             onClick={() => setOpen(false)}
           />
 
-          {/* Panel: fixed on mobile, absolute on desktop */}
+          {/* Panel */}
           <div
             ref={panelRef}
             className="
@@ -181,19 +192,19 @@ export default function NotificationBell() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-primary">Notifiche</span>
-                {unread > 0 && (
+                {unreadCount > 0 && (
                   <span className="text-2xs bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold leading-none">
-                    {unread}
+                    {unreadCount}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-3">
-                {unread > 0 && (
+                {!showSettings && activeTab === 'unread' && unreadCount > 0 && (
                   <button
                     onClick={markAllRead}
                     className="text-xs text-gray-400 hover:text-primary transition-colors"
                   >
-                    Segna tutte come lette
+                    Segna tutte
                   </button>
                 )}
                 <button
@@ -206,22 +217,48 @@ export default function NotificationBell() {
               </div>
             </div>
 
-            {/* Notification list */}
+            {/* Tabs — hidden when settings are open */}
+            {!showSettings && (
+              <div className="flex border-b border-border flex-shrink-0">
+                <button
+                  onClick={() => setActiveTab('unread')}
+                  className={`flex-1 py-2 text-xs font-medium transition-colors border-b-2 -mb-px ${
+                    activeTab === 'unread'
+                      ? 'text-primary border-primary'
+                      : 'text-gray-400 border-transparent hover:text-primary'
+                  }`}
+                >
+                  Da leggere{unreadCount > 0 ? ` (${unreadCount})` : ''}
+                </button>
+                <button
+                  onClick={() => setActiveTab('read')}
+                  className={`flex-1 py-2 text-xs font-medium transition-colors border-b-2 -mb-px ${
+                    activeTab === 'read'
+                      ? 'text-primary border-primary'
+                      : 'text-gray-400 border-transparent hover:text-primary'
+                  }`}
+                >
+                  Già lette{read.length > 0 ? ` (${read.length})` : ''}
+                </button>
+              </div>
+            )}
+
+            {/* Content */}
             <div className="overflow-y-auto flex-1">
               {!showSettings ? (
-                notifications.length === 0 ? (
+                displayed.length === 0 ? (
                   <div className="px-4 py-10 text-center text-sm text-gray-400">
-                    Nessuna notifica
+                    {activeTab === 'unread' ? 'Nessuna notifica da leggere' : 'Nessuna notifica letta'}
                   </div>
                 ) : (
-                  notifications.map((n) => (
+                  displayed.map((n) => (
                     <div
                       key={n.id}
                       className="border-b last:border-0"
                       style={{ borderColor: 'rgba(0,0,0,0.08)' }}
                     >
                       <div
-                        className="p-4"
+                        className={`p-4 ${n.letta ? 'opacity-70' : ''}`}
                         style={{ backgroundColor: n.coloreSfondo, color: n.coloreTesto }}
                       >
                         <div className="flex items-start gap-3">
@@ -229,12 +266,7 @@ export default function NotificationBell() {
                             <span className="text-2xl flex-shrink-0 leading-none">{n.icona}</span>
                           )}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <p className="font-semibold text-sm leading-snug">{n.titolo}</p>
-                              {!n.letta && (
-                                <span className="flex-shrink-0 w-2 h-2 rounded-full bg-white mt-1 opacity-80" />
-                              )}
-                            </div>
+                            <p className="font-semibold text-sm leading-snug">{n.titolo}</p>
                             {n.testo && (
                               <p
                                 className="text-sm mt-1 leading-relaxed break-words whitespace-normal"
@@ -253,15 +285,18 @@ export default function NotificationBell() {
                               </a>
                             )}
                           </div>
-                          <button
-                            onClick={() => markRead(n.id)}
-                            className="flex-shrink-0 p-1 opacity-50 hover:opacity-100 transition-opacity"
-                            style={{ color: n.coloreTesto }}
-                            aria-label="Segna come letta"
-                            title="Segna come letta"
-                          >
-                            <X size={14} />
-                          </button>
+                          {/* Mark as read — only shown on unread tab */}
+                          {activeTab === 'unread' && (
+                            <button
+                              onClick={() => markRead(n.id)}
+                              className="flex-shrink-0 p-1 opacity-50 hover:opacity-100 transition-opacity"
+                              style={{ color: n.coloreTesto }}
+                              aria-label="Segna come letta"
+                              title="Segna come letta"
+                            >
+                              <Check size={14} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -272,7 +307,6 @@ export default function NotificationBell() {
                 <div className="p-4 space-y-4">
                   <p className="text-xs text-gray-400">Scegli come ricevere le notifiche da ON EARTH.</p>
 
-                  {/* Push toggle */}
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       {pushSubscribed ? <Bell size={14} className="text-primary flex-shrink-0" /> : <BellOff size={14} className="text-gray-400 flex-shrink-0" />}
@@ -292,7 +326,6 @@ export default function NotificationBell() {
 
                   <div className="h-px bg-border/50" />
 
-                  {/* Email toggle */}
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       {emailEnabled ? <Mail size={14} className="text-primary flex-shrink-0" /> : <MailX size={14} className="text-gray-400 flex-shrink-0" />}
