@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ShoppingBag, Check, Heart, Package } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
@@ -15,6 +16,8 @@ function ProductRow({ product }: { product: Product }) {
   const { addItem, getItemQuantity } = useCartStore();
   const { isFavorited, toggle: toggleFavorite } = useFavorites();
   const { card: cs } = useSettings();
+  const pathname = usePathname();
+  const productHref = pathname.startsWith('/moda') ? `/moda/product/${product.id}` : `/catalog/${product.id}`;
   const [justAdded, setJustAdded] = useState(false);
   const [heartPop, setHeartPop] = useState(false);
 
@@ -67,7 +70,7 @@ function ProductRow({ product }: { product: Product }) {
       </div>
 
       {/* Info */}
-      <Link href={`/catalog/${product.id}`} className="flex-1 min-w-0">
+      <Link href={productHref} className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
           <p className="text-2xs font-mono text-gray-400 tracking-wide leading-none">{product.code}</p>
           {cs.badgeNuovo && product.collezione?.toUpperCase() === 'CA27' && (

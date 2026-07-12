@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ShoppingBag, Check, AlertCircle, Layers, Heart } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn, formatCurrency, isValidLotQuantity } from '@/lib/utils';
@@ -22,6 +23,8 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { isFavorited, toggle: toggleFavorite } = useFavorites();
   const t = useTranslations('product');
   const { card: cs } = useSettings();
+  const pathname = usePathname();
+  const productHref = pathname.startsWith('/moda') ? `/moda/product/${product.id}` : `/catalog/${product.id}`;
   const cartQty = getItemQuantity(product.id);
   const [localQty, setLocalQty] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
@@ -60,7 +63,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       )}
     >
       {/* Clickable area: image + code + name → product detail */}
-      <Link href={`/catalog/${product.id}`} className="block">
+      <Link href={productHref} className="block">
         {/* Image */}
         <div className="aspect-square relative bg-cream overflow-hidden rounded-t">
           <ProductImage

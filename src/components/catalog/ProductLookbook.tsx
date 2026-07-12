@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Check, Heart, Plus, Package } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
@@ -15,6 +16,8 @@ function LookbookCard({ product }: { product: Product }) {
   const { addItem, getItemQuantity } = useCartStore();
   const { isFavorited, toggle: toggleFavorite } = useFavorites();
   const { card: cs } = useSettings();
+  const pathname = usePathname();
+  const productHref = pathname.startsWith('/moda') ? `/moda/product/${product.id}` : `/catalog/${product.id}`;
   const [justAdded, setJustAdded] = useState(false);
   const [heartPop, setHeartPop] = useState(false);
 
@@ -30,7 +33,7 @@ function LookbookCard({ product }: { product: Product }) {
   return (
     <div className="relative w-full h-full overflow-hidden rounded group">
       {/* Image */}
-      <Link href={`/catalog/${product.id}`} className="block w-full h-full">
+      <Link href={productHref} className="block w-full h-full">
         <ProductImage
           src={product.imageUrl ?? product.imageUrl2 ?? product.imageUrl3 ?? product.imageUrl4 ?? product.imageUrl5}
           alt={product.name}

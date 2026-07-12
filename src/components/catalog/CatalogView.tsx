@@ -458,24 +458,19 @@ export default function CatalogView({
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* ── Catalog PDF download ─────────────────────────────────── */}
-        <div className="hidden sm:flex border-b border-border bg-cream/30 px-4 sm:px-6 py-2.5 items-center justify-between gap-3">
-          <span className="text-2xs uppercase tracking-widest text-gray-400 font-medium hidden sm:block">
-            {isModa ? 'MODA PE27' : 'CASA 2027'}
-          </span>
-          <div className="flex items-center gap-4 ml-auto">
-            {catalogoDoc && !isModa && (
-              <a
-                href={catalogoDoc.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary transition-colors"
-              >
-                <FileDown size={13} />
-                Catalogo CASA 2027
-              </a>
-            )}
+        {catalogoDoc && !isModa && (
+          <div className="hidden sm:flex border-b border-border bg-cream/30 px-4 sm:px-6 py-2.5 items-center justify-end gap-3">
+            <a
+              href={catalogoDoc.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary transition-colors"
+            >
+              <FileDown size={13} />
+              Catalogo CASA 2027
+            </a>
           </div>
-        </div>
+        )}
 
         {/* Top bar */}
         <div className="flex-shrink-0 z-10 bg-background border-b border-border">
@@ -629,10 +624,10 @@ export default function CatalogView({
           </div>
         )}
 
-        {/* Collection header */}
-        <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-border/50">
+        {/* Collection header — hidden on sm+ where the site header already shows it */}
+        <div className="sm:hidden px-4 py-4 border-b border-border/50">
           <p className="label-luxury text-accent">Collezione</p>
-          <h1 className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide">
+          <h1 className="font-display text-xl text-primary font-light tracking-wide">
             {isModa ? 'MODA PE27' : 'CASA 2027'}
           </h1>
         </div>
