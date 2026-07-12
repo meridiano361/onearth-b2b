@@ -125,13 +125,13 @@ export default function ProductDetailView({ id }: Props) {
     { key: 'lotSize',    label: 'Confezione', show: ss.confezione },
   ];
 
-  const colorFields: { key: string; label: string; show?: boolean }[] = [
-    { key: 'colore',       label: 'Colore 1',     show: ss.colore },
+  const colorFields: { key: string; label: string }[] = [
+    { key: 'colore',       label: 'Colore 1' },
     { key: 'colore2',      label: 'Colore 2' },
     { key: 'colore3',      label: 'Colore 3' },
     { key: 'bloccoColore', label: 'Blocco colore' },
     { key: 'altriColori',  label: 'Altri colori' },
-    { key: 'temaColore',   label: 'Tema colore',  show: ss.temaColore },
+    { key: 'temaColore',   label: 'Tema colore' },
     { key: 'temaColore2',  label: 'Tema colore 2' },
     { key: 'temaColore3',  label: 'Tema colore 3' },
     { key: 'temaColore4',  label: 'Tema colore 4' },
@@ -209,7 +209,7 @@ export default function ProductDetailView({ id }: Props) {
     const v = p[key];
     return v !== null && v !== undefined && v !== '' && v !== 1;
   });
-  const activeColorFields = colorFields.filter(({ key, show }) => show !== false && p[key]);
+  const activeColorFields = colorFields.filter(({ key }) => p[key]);
   const activeMaterialFields = materialFields.filter(({ key }) => p[key]);
   const activeCertFields = certFields.filter(({ key }) => p[key]);
 
