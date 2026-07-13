@@ -73,7 +73,15 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     const where: any = {};
-    if (collectionIdParam) where.collectionId = collectionIdParam;
+    if (collectionIdParam) {
+      const branchMap: Record<string, string> = { casa: 'casa27', moda: 'modaPE27' };
+      const branch = branchMap[collectionIdParam];
+      if (branch) {
+        where.catalogBranch = branch;
+      } else {
+        where.collectionId = collectionIdParam;
+      }
+    }
 
     const preview = getPreviewFromSession(session);
 
