@@ -4,10 +4,8 @@ import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { Globe, Mic, ChevronRight, Clock, Lock, X, FlaskConical } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
-import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
-import { canAccessModa } from '@/lib/modaAccess';
 import { useBranchStore, type ActiveBranch } from '@/store/branchStore';
 
 const SOCIAL_SVGS: Record<string, ReactNode> = {
@@ -80,11 +78,8 @@ function NotificationPopup({ notification, onClose }: { notification: Notificati
   );
 }
 
-export default function CustomerHome() {
+export default function CustomerHome({ canSeeModa }: { canSeeModa: boolean }) {
   const { social: ss, collections, home } = useSettings();
-  const { data: session } = useSession();
-  const isAdmin = canAccessModa(session?.user?.role);
-  const canSeeModa = canAccessModa(session?.user?.role, session?.user?.email);
   const searchParams = useSearchParams();
   const devPreview = searchParams.get('devPreview') === '1';
 
