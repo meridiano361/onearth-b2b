@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, ExternalLink, Check, X, Loader2, ShoppingBag, ImageIcon, Plus, Copy } from 'lucide-react';
+import { Pencil, ExternalLink, Check, X, Loader2, ShoppingBag, ImageIcon, Plus, Copy, Link2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import type { TipoSupporto, TonoLegno } from '@/types/jewelry';
@@ -105,9 +105,32 @@ function InlineEditor({
   });
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [linking, setLinking] = useState(false);
 
   const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
   const inputCls = 'w-full border border-border rounded px-3 py-1.5 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white';
+
+  async function collegaDaCodice() {
+    const codice = form.codice.trim().toUpperCase();
+    if (!codice) { toast.error('Inserisci prima un codice'); return; }
+    setLinking(true);
+    try {
+      const res = await fetch('/api/admin/foto');
+      const body = await res.json();
+      const foto: { parsedCode: string | null; url: string }[] = body.data ?? [];
+      const match = foto.find((f) => f.parsedCode?.toUpperCase() === codice);
+      if (!match) {
+        toast.error(`Nessuna foto trovata in infoto per il codice "${codice}"`);
+        return;
+      }
+      setForm((f) => ({ ...f, immagineUrl: match.url }));
+      toast.success('Foto collegata — ricorda di salvare');
+    } catch {
+      toast.error('Errore durante la ricerca in infoto');
+    } finally {
+      setLinking(false);
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -170,13 +193,24 @@ function InlineEditor({
                 onChange={(e) => setForm((f) => ({ ...f, immagineUrl: e.target.value }))}
                 placeholder="https://..."
               />
-              <button
-                type="button"
-                onClick={() => setPickerOpen(true)}
-                className="text-xs text-accent hover:underline flex items-center gap-1"
-              >
-                <ImageIcon size={11} /> Scegli da infoto
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPickerOpen(true)}
+                  className="text-xs text-accent hover:underline flex items-center gap-1"
+                >
+                  <ImageIcon size={11} /> Scegli da infoto
+                </button>
+                <button
+                  type="button"
+                  onClick={collegaDaCodice}
+                  disabled={linking || !form.codice.trim()}
+                  className="text-xs text-blue-500 hover:underline flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {linking ? <Loader2 size={11} className="animate-spin" /> : <Link2 size={11} />}
+                  Collega da codice
+                </button>
+              </div>
             </div>
           </div>
         </div>
