@@ -64,7 +64,7 @@ export default function CartItem({ item }: CartItemProps) {
 
         <button
           onClick={() => removeItem(item.productId, item.taglia)}
-          className="text-gray-300 hover:text-gray-600 md:opacity-0 md:group-hover:opacity-100 transition-all flex-shrink-0 mt-0.5"
+          className="text-gray-300 hover:text-gray-600 md:opacity-0 md:group-hover:opacity-100 transition-all flex-shrink-0 p-2 -mr-2 -mt-1"
           title="Remove"
         >
           <X size={13} />

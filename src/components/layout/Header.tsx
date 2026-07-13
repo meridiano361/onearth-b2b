@@ -165,7 +165,7 @@ export default function Header({ session }: HeaderProps) {
       <div className="relative group sm:hidden">
         <Link
           href="/catalog/impostazioni"
-          className="flex p-1 text-gray-400 hover:text-primary transition-colors"
+          className="flex p-2 text-gray-400 hover:text-primary transition-colors"
           aria-label="Profilo"
         >
           <UserCircle size={22} />
@@ -198,7 +198,7 @@ export default function Header({ session }: HeaderProps) {
       <div className="relative group">
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
-          className="p-1.5 text-gray-400 hover:text-primary transition-colors"
+          className="p-2.5 text-gray-400 hover:text-primary transition-colors"
           aria-label={t('logout')}
         >
           <LogOut size={17} />

@@ -70,9 +70,9 @@ export default function QuantitySelector({
           type="button"
           onClick={decrement}
           disabled={value <= min}
-          className="w-7 h-7 flex items-center justify-center border border-border rounded-l bg-cream hover:bg-accent/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="w-8 h-8 flex items-center justify-center border border-border rounded-l bg-cream hover:bg-accent/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          <Minus size={11} />
+          <Minus size={12} />
         </button>
         <input
           ref={inputRef}
@@ -82,7 +82,7 @@ export default function QuantitySelector({
           onBlur={handleInputBlur}
           onKeyDown={handleKeyDown}
           className={cn(
-            'w-9 h-7 text-center text-xs font-medium border-y border-border bg-white focus:outline-none focus:border-accent',
+            'w-10 h-8 text-center text-xs font-medium border-y border-border bg-white focus:outline-none focus:border-accent',
             hasWarning && 'bg-amber-50 text-amber-700'
           )}
         />
@@ -90,9 +90,9 @@ export default function QuantitySelector({
           type="button"
           onClick={increment}
           disabled={max !== undefined && value >= max}
-          className="w-7 h-7 flex items-center justify-center border border-border rounded-r bg-cream hover:bg-accent/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="w-8 h-8 flex items-center justify-center border border-border rounded-r bg-cream hover:bg-accent/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          <Plus size={11} />
+          <Plus size={12} />
         </button>
       </div>
     );
