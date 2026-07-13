@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireModaSession } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 import { MODA_COLLEZIONE } from '@/lib/modaAccess';
-import { hexToHsl, getHueFamilyId, isColorNeutral, getHarmonyType, harmonyScore, generateDisplayGroups } from '@/lib/colorHarmony';
+import { hexToHsl, getHueFamilyId, isColorNeutral, getHarmonyType, harmonyScore, generateDisplayGroups, inferHueFromColore } from '@/lib/colorHarmony';
 import type { PantoneInfo } from '@/lib/colorHarmony';
 
 
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     select: {
       id: true, code: true, name: true,
       imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true, imageUrl5: true,
-      famiglia: true, sottofamiglia: true, classe: true, sottoclasse: true, gruppoOmogeneo: true,
+      colore: true, famiglia: true, sottofamiglia: true, classe: true, sottoclasse: true, gruppoOmogeneo: true,
     },
   });
 
@@ -43,13 +43,23 @@ export async function GET(req: NextRequest) {
   `;
 
   const heroPrimary = heroPantoneRows.find((r) => r.is_primary) ?? heroPantoneRows[0];
-  if (!heroPrimary) {
+
+  // Try inferring hero color from colore field if no pantone
+  let heroHex: string | null = heroPrimary?.hex_code ?? null;
+  let heroInferred = false;
+  if (!heroHex && heroProduct?.colore) {
+    const fallback = inferHueFromColore(heroProduct.colore);
+    if (fallback) { heroHex = fallback.hex; heroInferred = true; }
+  }
+
+  if (!heroHex) {
     return NextResponse.json({
       hero: heroProduct ? {
         productId,
         code: heroProduct.code,
         name: heroProduct.name,
         imageUrl: heroProduct.imageUrl ?? heroProduct.imageUrl2 ?? heroProduct.imageUrl3 ?? null,
+        colore: heroProduct.colore,
         famiglia: heroProduct.famiglia,
         sottofamiglia: heroProduct.sottofamiglia,
         classe: heroProduct.classe,
@@ -63,7 +73,7 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const heroHsl = hexToHsl(heroPrimary.hex_code);
+  const heroHsl = hexToHsl(heroHex);
   const heroHue = heroHsl.h;
   const heroL = heroHsl.l;
   const heroNeutral = isColorNeutral(heroHsl);
@@ -130,7 +140,7 @@ export async function GET(req: NextRequest) {
     colore: string | null; famiglia: string | null; sottofamiglia: string | null;
     classe: string | null; sottoclasse: string | null; gruppoOmogeneo: string | null;
     costPrice: number; retailPrice: number;
-    primaryPantone: { code: string; name: string; hex_code: string };
+    primaryPantone: { code: string; name: string; hex_code: string; inferred: boolean };
     harmonyType: string; score: number; hueFamilyId: string;
   };
 
@@ -139,9 +149,15 @@ export async function GET(req: NextRequest) {
 
   for (const product of allProducts) {
     const pantone = primaryMap.get(product.id);
-    if (!pantone) continue;
+    let hex: string | null = pantone?.hex_code ?? null;
+    let inferred = false;
+    if (!hex && product.colore) {
+      const fallback = inferHueFromColore(product.colore);
+      if (fallback) { hex = fallback.hex; inferred = true; }
+    }
+    if (!hex) continue;
 
-    const hsl = hexToHsl(pantone.hex_code);
+    const hsl = hexToHsl(hex);
     const hue = hsl.h;
     const lum = hsl.l;
     const neutral = isColorNeutral(hsl);
@@ -163,14 +179,19 @@ export async function GET(req: NextRequest) {
         gruppoOmogeneo: product.gruppoOmogeneo,
         costPrice: Number(product.costPrice),
         retailPrice: Number(product.retailPrice),
-        primaryPantone: { code: pantone.code, name: pantone.name, hex_code: pantone.hex_code },
+        primaryPantone: {
+          code: pantone?.code ?? '',
+          name: pantone?.name ?? product.colore ?? '',
+          hex_code: hex,
+          inferred,
+        },
         harmonyType: type,
         score,
-        hueFamilyId: getHueFamilyId(pantone.hex_code, neutral),
+        hueFamilyId: getHueFamilyId(hex, neutral),
       });
     }
 
-    pantoneInfoPool.push({ productId: product.id, hue, lightness: lum, isNeutral: neutral, hex: pantone.hex_code });
+    pantoneInfoPool.push({ productId: product.id, hue, lightness: lum, isNeutral: neutral, hex });
   }
 
   scored.sort((a, b) => b.score - a.score);
@@ -187,7 +208,7 @@ export async function GET(req: NextRequest) {
   }));
 
   // Display groups
-  const heroInfo: PantoneInfo = { productId, hue: heroHue, lightness: heroL, isNeutral: heroNeutral, hex: heroPrimary.hex_code };
+  const heroInfo: PantoneInfo = { productId, hue: heroHue, lightness: heroL, isNeutral: heroNeutral, hex: heroHex };
   const groups = generateDisplayGroups(heroInfo, pantoneInfoPool);
 
   return NextResponse.json({
@@ -196,18 +217,20 @@ export async function GET(req: NextRequest) {
       code: heroProduct?.code ?? '',
       name: heroProduct?.name ?? '',
       imageUrl: heroProduct?.imageUrl ?? heroProduct?.imageUrl2 ?? heroProduct?.imageUrl3 ?? heroProduct?.imageUrl4 ?? heroProduct?.imageUrl5 ?? null,
+      colore: heroProduct?.colore ?? null,
       famiglia: heroProduct?.famiglia ?? null,
       sottofamiglia: heroProduct?.sottofamiglia ?? null,
       classe: heroProduct?.classe ?? null,
       sottoclasse: heroProduct?.sottoclasse ?? null,
       gruppoOmogeneo: heroProduct?.gruppoOmogeneo ?? null,
       primaryPantone: {
-        code: heroPrimary.code,
-        name: heroPrimary.name,
-        hex_code: heroPrimary.hex_code,
+        code: heroPrimary?.code ?? '',
+        name: heroPrimary?.name ?? heroProduct?.colore ?? '',
+        hex_code: heroHex,
         hue_angle: heroHue,
         lightness: heroL,
         is_neutral: heroNeutral,
+        inferred: heroInferred,
       },
     },
     suggestions,

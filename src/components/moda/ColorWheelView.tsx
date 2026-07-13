@@ -4,7 +4,9 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, X, ArrowLeft, Sparkles, Star, Search, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { HUE_FAMILIES, type HueFamily } from '@/lib/colorHarmony';
+import { isAdminRole } from '@/lib/roles';
 import toast from 'react-hot-toast';
 import { nanoid } from 'nanoid';
 
@@ -18,6 +20,7 @@ interface PrimaryPantone {
   hue_angle: number;
   lightness: number;
   is_neutral: boolean;
+  inferred?: boolean;
 }
 
 interface WheelProduct {
@@ -50,7 +53,7 @@ interface ScoredProduct {
   gruppoOmogeneo: string | null;
   costPrice: number;
   retailPrice: number;
-  primaryPantone: { code: string; name: string; hex_code: string };
+  primaryPantone: { code: string; name: string; hex_code: string; inferred?: boolean };
   harmonyType: string;
   score: number;
   hueFamilyId: string;
@@ -241,6 +244,8 @@ function FocusProductView({
   addingProductId?: string | null;
 }) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const isAdmin = isAdminRole(session?.user?.role);
   const [activeGroupType, setActiveGroupType] = useState<string | null>(null);
   const [famFilter,        setFamFilter]       = useState<string | null>(null);
   const [classeFilter,     setClasseFilter]    = useState<string | null>(null);
@@ -367,8 +372,13 @@ function FocusProductView({
                     style={{ backgroundColor: hero.primaryPantone.hex_code }}
                   />
                   <span className="text-xs text-gray-500 truncate">
-                    {hero.primaryPantone.code} — {hero.primaryPantone.name}
+                    {hero.primaryPantone.code ? `${hero.primaryPantone.code} — ` : ''}{hero.primaryPantone.name}
                   </span>
+                  {hero.primaryPantone.inferred && isAdmin && (
+                    <span className="ml-0.5 px-1 py-0.5 rounded text-2xs font-medium bg-amber-100 text-amber-700 flex-shrink-0" title="Pantone generato automaticamente dal campo colore — non assegnato da un operatore">
+                      Auto
+                    </span>
+                  )}
                 </div>
               )}
               <div className="flex flex-wrap gap-2 mt-1.5">
@@ -508,7 +518,12 @@ function FocusProductView({
                                 className="w-3 h-3 rounded-full flex-shrink-0 border border-border/40"
                                 style={{ backgroundColor: p.primaryPantone.hex_code }}
                               />
-                              <span className="text-2xs text-gray-400 truncate">{p.primaryPantone.code}</span>
+                              <span className="text-2xs text-gray-400 truncate">
+                                {p.primaryPantone.code || p.primaryPantone.name}
+                              </span>
+                              {p.primaryPantone.inferred && isAdmin && (
+                                <span className="px-0.5 rounded text-2xs font-medium bg-amber-100 text-amber-700 flex-shrink-0">Auto</span>
+                              )}
                             </div>
                           )}
                           {(p.famiglia || p.classe) && (
@@ -546,6 +561,8 @@ function FocusProductView({
 type SortKey = 'code' | 'name' | 'colore' | 'price';
 
 export default function ColorWheelView() {
+  const { data: session } = useSession();
+  const isAdmin = isAdminRole(session?.user?.role);
   const searchParams = useSearchParams();
   const initialProductId = searchParams.get('productId');
   const pareteId    = searchParams.get('pareteId');
@@ -746,7 +763,7 @@ export default function ColorWheelView() {
         <h1 className="font-display text-xl sm:text-2xl text-primary font-light tracking-wide">
           Ruota Cromatica
         </h1>
-        <p className="text-xs text-gray-400 mt-0.5">{totalProducts} prodotti con colore Pantone</p>
+        <p className="text-xs text-gray-400 mt-0.5">{totalProducts} prodotti</p>
       </div>
 
       <div className="flex flex-col xl:flex-row flex-1 overflow-hidden">
@@ -874,7 +891,12 @@ export default function ColorWheelView() {
                 <span className="font-mono font-semibold text-primary">{hoveredProduct.code}</span>
                 <span className="text-gray-400 truncate flex-1">{hoveredProduct.name}</span>
                 {hoveredProduct.primaryPantone && (
-                  <span className="text-gray-400 flex-shrink-0 text-2xs">{hoveredProduct.primaryPantone.code}</span>
+                  <span className="text-gray-400 flex-shrink-0 text-2xs">
+                    {hoveredProduct.primaryPantone.code || hoveredProduct.primaryPantone.name}
+                    {hoveredProduct.primaryPantone.inferred && isAdmin && (
+                      <span className="ml-1 px-1 rounded bg-amber-100 text-amber-700">Auto</span>
+                    )}
+                  </span>
                 )}
               </div>
             )}
@@ -1025,6 +1047,7 @@ export default function ColorWheelView() {
                     onClick={() => handleProductClick(product.id)}
                     onAddToParete={pareteId ? () => addToParete({ id: product.id, code: product.code, name: product.name, imageUrl: product.imageUrl, hex: product.primaryPantone?.hex_code }) : undefined}
                     isAdding={addingProductId === product.id}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </div>
@@ -1049,8 +1072,15 @@ export default function ColorWheelView() {
                           style={{ backgroundColor: selectedProduct.primaryPantone.hex_code }}
                         />
                         <span className="text-xs text-gray-500">
-                          {selectedProduct.primaryPantone.code} — {selectedProduct.primaryPantone.name}
+                          {selectedProduct.primaryPantone.code
+                            ? `${selectedProduct.primaryPantone.code} — ${selectedProduct.primaryPantone.name}`
+                            : selectedProduct.primaryPantone.name}
                         </span>
+                        {selectedProduct.primaryPantone.inferred && isAdmin && (
+                          <span className="px-1 py-0.5 rounded text-2xs font-medium bg-amber-100 text-amber-700 flex-shrink-0" title="Colore generato automaticamente — non assegnato da un operatore">
+                            Auto
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1225,12 +1255,14 @@ function ProductCard({
   onClick,
   onAddToParete,
   isAdding,
+  isAdmin,
 }: {
   product: WheelProduct;
   isSelected: boolean;
   onClick: () => void;
   onAddToParete?: () => void;
   isAdding?: boolean;
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
 
@@ -1273,7 +1305,16 @@ function ProductCard({
           <p className="text-2xs font-mono font-semibold text-primary leading-none">{product.code}</p>
           <p className="text-2xs text-gray-500 truncate mt-0.5 leading-tight">{product.name}</p>
           {product.primaryPantone && (
-            <p className="text-2xs text-gray-400 mt-0.5 truncate">{product.primaryPantone.code}</p>
+            <div className="flex items-center gap-1 mt-0.5">
+              <p className="text-2xs text-gray-400 truncate flex-1">
+                {product.primaryPantone.code || product.primaryPantone.name}
+              </p>
+              {product.primaryPantone.inferred && isAdmin && (
+                <span className="px-0.5 rounded text-2xs font-medium bg-amber-100 text-amber-700 flex-shrink-0" title="Colore generato automaticamente — non assegnato da un operatore">
+                  Auto
+                </span>
+              )}
+            </div>
           )}
         </div>
       </button>

@@ -77,6 +77,7 @@ export async function GET() {
   const productPantoneInfo: {
     productId: string; hueFamilyId: string;
     hue: number; lightness: number; isNeutral: boolean; hex: string;
+    source: 'pantone' | 'inferred' | 'default';
   }[] = [];
 
   for (const product of products) {
@@ -86,8 +87,10 @@ export async function GET() {
     let lum = 50;
     let hex = '#9E9E9E';
     let isNeutral = true;
+    let source: 'pantone' | 'inferred' | 'default' = 'default';
 
     if (pantone) {
+      source = 'pantone';
       hex = pantone.hex_code;
       const hsl = hexToHsl(hex);
       hue = hsl.h;
@@ -97,6 +100,7 @@ export async function GET() {
     } else if (product.colore) {
       const fallback = inferHueFromColore(product.colore);
       if (fallback) {
+        source = 'inferred';
         hex = fallback.hex;
         isNeutral = fallback.isNeutral;
         if (!isNeutral) {
@@ -109,7 +113,7 @@ export async function GET() {
     }
 
     familyMap.get(hueFamilyId)!.push(product);
-    productPantoneInfo.push({ productId: product.id, hueFamilyId, hue, lightness: lum, isNeutral, hex });
+    productPantoneInfo.push({ productId: product.id, hueFamilyId, hue, lightness: lum, isNeutral, hex, source });
   }
 
   const families = HUE_FAMILIES.map((f) => ({
@@ -117,6 +121,7 @@ export async function GET() {
     products: (familyMap.get(f.id) ?? []).map((p) => {
       const info = productPantoneInfo.find((i) => i.productId === p.id);
       const pantone = primaryByProduct.get(p.id);
+      const isInferred = info?.source === 'inferred';
       return {
         id: p.id,
         code: p.code,
@@ -135,6 +140,18 @@ export async function GET() {
               hue_angle: info?.hue ?? 0,
               lightness: info?.lightness ?? 50,
               is_neutral: info?.isNeutral ?? true,
+              inferred: false,
+            }
+          : isInferred
+          ? {
+              pantoneColorId: 0,
+              code: '',
+              name: p.colore ?? '',
+              hex_code: info!.hex,
+              hue_angle: info!.hue,
+              lightness: info!.lightness,
+              is_neutral: info!.isNeutral,
+              inferred: true,
             }
           : null,
         hueFamilyId: info?.hueFamilyId ?? 'neutral',
