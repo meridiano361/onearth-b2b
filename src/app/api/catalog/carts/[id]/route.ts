@@ -13,8 +13,12 @@ function ownsCart(cart: { customerId: string | null; operatorId: string | null }
 function serializeCart(cart: any) {
   return {
     ...cart,
+    budgetPersonalizzato: cart.budgetPersonalizzato != null ? Number(cart.budgetPersonalizzato) : null,
     createdAt: cart.createdAt?.toISOString(),
     updatedAt: cart.updatedAt?.toISOString(),
+    canale: cart.canale
+      ? { ...cart.canale, budget: cart.canale.budget != null ? Number(cart.canale.budget) : null, createdAt: cart.canale.createdAt?.toISOString(), updatedAt: cart.canale.updatedAt?.toISOString() }
+      : null,
     items: cart.items?.map((item: any) => ({
       productId: item.productId,
       taglia: item.taglia ?? '',
@@ -37,7 +41,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     const cart = await prisma.cart.findUnique({
       where: { id: params.id },
-      include: { items: { include: { product: { include: { category: true } } }, orderBy: { createdAt: 'asc' } } },
+      include: { canale: true, items: { include: { product: { include: { category: true } } }, orderBy: { createdAt: 'asc' } } },
     });
 
     if (!cart) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -60,14 +64,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!ownsCart(cart, session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const body = await req.json();
-    const data: { name?: string; notes?: string } = {};
+    const data: any = {};
     if (typeof body.name === 'string') data.name = body.name.trim();
     if (typeof body.notes === 'string' || body.notes === null) data.notes = body.notes;
+    if (typeof body.canaleId !== 'undefined') data.canaleId = body.canaleId ?? null;
+    if (typeof body.budgetPersonalizzato !== 'undefined') data.budgetPersonalizzato = body.budgetPersonalizzato ?? null;
 
     const updated = await prisma.cart.update({
       where: { id: params.id },
       data,
-      include: { items: { include: { product: { include: { category: true } } }, orderBy: { createdAt: 'asc' } } },
+      include: { canale: true, items: { include: { product: { include: { category: true } } }, orderBy: { createdAt: 'asc' } } },
     });
 
     return NextResponse.json({ data: serializeCart(updated) });

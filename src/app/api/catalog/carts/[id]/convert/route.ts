@@ -22,8 +22,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (cart.status !== 'DRAFT') return NextResponse.json({ error: 'Carrello già convertito' }, { status: 409 });
   if (cart.items.length === 0) return NextResponse.json({ error: 'Il carrello è vuoto' }, { status: 400 });
 
-  const body = await req.json().catch(() => ({}));
-  const { canaleId, budgetPersonalizzato } = body as { canaleId?: string; budgetPersonalizzato?: number };
+  const canaleId = cart.canaleId ?? null;
+  const budgetPersonalizzato = cart.budgetPersonalizzato != null ? Number(cart.budgetPersonalizzato) : null;
 
   // Detect catalog branch from products' collezione field
   const hasModaProducts = cart.items.some((i) => i.product.collezione === MODA_COLLEZIONE);

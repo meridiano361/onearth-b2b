@@ -13,8 +13,12 @@ function userWhere(session: { user: { id: string; role: string } }) {
 function serializeCart(cart: any) {
   return {
     ...cart,
+    budgetPersonalizzato: cart.budgetPersonalizzato != null ? Number(cart.budgetPersonalizzato) : null,
     createdAt: cart.createdAt?.toISOString(),
     updatedAt: cart.updatedAt?.toISOString(),
+    canale: cart.canale
+      ? { ...cart.canale, budget: cart.canale.budget != null ? Number(cart.canale.budget) : null, createdAt: cart.canale.createdAt?.toISOString(), updatedAt: cart.canale.updatedAt?.toISOString() }
+      : null,
     items: cart.items?.map((item: any) => ({
       productId: item.productId,
       taglia: item.taglia ?? '',
@@ -49,6 +53,7 @@ export async function GET(req: NextRequest) {
       },
       include: {
         _count: { select: { items: true } },
+        canale: true,
         items: {
           include: { product: { include: { category: true } } },
           orderBy: { createdAt: 'asc' },
@@ -73,15 +78,21 @@ export async function POST(req: NextRequest) {
     const where = userWhere(session);
     if (!where) return NextResponse.json({ error: 'Role not supported' }, { status: 400 });
 
-    const { name, collectionId = 'casa' } = await req.json();
+    const { name, collectionId = 'casa', canaleId, budgetPersonalizzato } = await req.json();
     if (!name?.trim()) return NextResponse.json({ error: 'Nome carrello obbligatorio' }, { status: 400 });
 
     const validCollections = ['moda', 'casa'];
     const safeCollectionId = validCollections.includes(collectionId) ? collectionId : 'casa';
 
     const cart = await prisma.cart.create({
-      data: { name: name.trim(), collectionId: safeCollectionId, ...where },
-      include: { items: { include: { product: { include: { category: true } } } } },
+      data: {
+        name: name.trim(),
+        collectionId: safeCollectionId,
+        canaleId: canaleId || null,
+        budgetPersonalizzato: budgetPersonalizzato ?? null,
+        ...where,
+      },
+      include: { canale: true, items: { include: { product: { include: { category: true } } } } },
     });
 
     return NextResponse.json({ data: serializeCart(cart) }, { status: 201 });

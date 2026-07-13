@@ -347,6 +347,9 @@ export interface Cart {
   customerId: string | null;
   operatorId: string | null;
   notes: string | null;
+  canaleId: string | null;
+  budgetPersonalizzato: number | null;
+  canale?: Destinazione | null;
   createdAt: string;
   updatedAt: string;
   items: CartItem[];

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Cart, CartItem, Product } from '@/types';
+import type { Cart, CartItem, Destinazione, Product } from '@/types';
 import { roundToLot } from '@/lib/utils';
 
 export interface SizeVariantQty { taglia: string; codice: string; quantity: number }
@@ -19,6 +19,9 @@ interface CartStore {
   cartName: string | null;
   items: CartItem[];
   notes: string;
+  canaleId: string | null;
+  budgetPersonalizzato: number | null;
+  canale: Destinazione | null;
 
   pendingProduct: { product: Product; quantity: number; taglia?: string } | null;
   pendingVariants: { product: Product; variants: SizeVariantQty[] } | null;
@@ -29,6 +32,7 @@ interface CartStore {
   clearCart: () => void;
   /** Remove a specific collection's entry from cartIds without touching other state. */
   clearCollectionCart: (collection: string) => void;
+  setCartDestination: (canaleId: string | null, budget: number | null, canale: Destinazione | null) => void;
   setPendingProduct: (p: { product: Product; quantity: number; taglia?: string } | null) => void;
   setPendingVariants: (v: { product: Product; variants: SizeVariantQty[] } | null) => void;
   setShowCartPicker: (show: boolean) => void;
@@ -67,6 +71,9 @@ export const useCartStore = create<CartStore>()(
       cartName: null,
       items: [],
       notes: '',
+      canaleId: null,
+      budgetPersonalizzato: null,
+      canale: null,
       pendingProduct: null,
       pendingVariants: null,
       showCartPicker: false,
@@ -84,6 +91,9 @@ export const useCartStore = create<CartStore>()(
             cartName: same ? state.cartName : null,
             items: same ? state.items : [],
             notes: same ? state.notes : '',
+            canaleId: same ? state.canaleId : null,
+            budgetPersonalizzato: same ? state.budgetPersonalizzato : null,
+            canale: same ? state.canale : null,
           };
         }),
 
@@ -99,6 +109,9 @@ export const useCartStore = create<CartStore>()(
             cartName: cart.name,
             notes: cart.notes ?? '',
             items: cart.items ?? [],
+            canaleId: cart.canaleId ?? null,
+            budgetPersonalizzato: cart.budgetPersonalizzato ?? null,
+            canale: cart.canale ?? null,
           };
         }),
 
@@ -109,6 +122,9 @@ export const useCartStore = create<CartStore>()(
           cartName: null,
           items: [],
           notes: '',
+          canaleId: null,
+          budgetPersonalizzato: null,
+          canale: null,
           pendingProduct: null,
           pendingVariants: null,
         })),
@@ -117,9 +133,11 @@ export const useCartStore = create<CartStore>()(
         set((state) => ({
           cartIds: { ...state.cartIds, [collection]: null },
           ...(state.currentCollection === collection
-            ? { cartId: null, cartName: null, items: [], notes: '' }
+            ? { cartId: null, cartName: null, items: [], notes: '', canaleId: null, budgetPersonalizzato: null, canale: null }
             : {}),
         })),
+
+      setCartDestination: (canaleId, budget, canale) => set({ canaleId, budgetPersonalizzato: budget, canale }),
 
       setPendingProduct: (p) => {
         if (!p) { set({ pendingProduct: null }); return; }

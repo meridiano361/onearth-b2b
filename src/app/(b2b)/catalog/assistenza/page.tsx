@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-13 (Catalogo neutro: nessun carrello pre-selezionato; icona cambio carrello nella sidebar)
+// AGGIORNATO: 2026-07-13 (Destinazione e budget scelti alla creazione del carrello, modificabili in qualsiasi momento dalla sidebar)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -189,9 +189,10 @@ export default function AssistenzaPage() {
             <Bullet>Puoi andare al catalogo e aggiungere prodotti direttamente: al primo clic su <span className="font-medium">Aggiungi</span> ti viene chiesto in quale carrello inserirli (o di crearne uno nuovo).</Bullet>
             <Bullet>In alternativa vai in <span className="font-medium">Carrelli</span> nel menu per creare un carrello in anticipo o gestire quelli esistenti.</Bullet>
             <Bullet>Ogni utente può avere più carrelli aperti contemporaneamente (es. un carrello per ogni cliente o stagione).</Bullet>
-            <Bullet>Crea un nuovo carrello con il pulsante <span className="font-medium">Nuovo carrello</span> in alto a destra: assegna un nome (es. &ldquo;Natale 2026&rdquo;, &ldquo;Riassortimento Milano&rdquo;).</Bullet>
+            <Bullet>Crea un nuovo carrello con il pulsante <span className="font-medium">Nuovo carrello</span> in alto a destra: scegli la destinazione (obbligatoria per gli operatori), assegna un nome e imposta il budget se vuoi.</Bullet>
             <Bullet>Clicca <span className="font-medium">Seleziona</span> su un carrello per renderlo attivo: il carrello attivo è evidenziato con il badge <span className="font-medium">attivo</span>.</Bullet>
             <Bullet>Una volta attivo, clicca <span className="font-medium">+ Aggiungi prodotti</span> per andare al catalogo e iniziare ad aggiungere prodotti.</Bullet>
+            <Bullet>La destinazione e il budget del carrello sono visibili nella barra laterale, sotto il nome del carrello: clicca <span className="font-medium">Modifica</span> per cambiarli in qualsiasi momento.</Bullet>
             <Bullet>I carrelli sono sincronizzati tra tutti i tuoi dispositivi: se aggiungi prodotti da un telefono, li ritrovi esattamente uguali accedendo dallo stesso account su un altro dispositivo.</Bullet>
             <Bullet>Rinomina un carrello con l&apos;icona matita. Eliminalo con l&apos;icona cestino (i prodotti vengono persi).</Bullet>
             <Bullet>Un carrello diventa un Ordine quando clicchi <span className="font-medium">Crea Ordine</span> nella barra laterale. Dopo la conversione il carrello non è più modificabile.</Bullet>
@@ -207,8 +208,7 @@ export default function AssistenzaPage() {
             <Bullet>Dopo la selezione la barra laterale mostra il carrello attivo e le quantità dei prodotti aggiunti.</Bullet>
             <Bullet>Per i prodotti MODA con più taglie (es. S, M, L) clicca <span className="font-medium">Aggiungi</span>: prima scegli la taglia, poi il carrello. Ogni taglia compare come riga separata nel carrello.</Bullet>
             <Bullet>Per cambiare carrello in qualsiasi momento clicca l&apos;icona <span className="font-medium">⇄</span> in alto nella barra laterale (accanto all&apos;icona cestino): si apre il pannello di selezione carrello.</Bullet>
-            <Bullet>Clicca <span className="font-medium">Crea Ordine</span> nella barra laterale per convertire il carrello in un ordine.</Bullet>
-            <Bullet>Se hai più destinazioni ti verrà chiesto di selezionarne una.</Bullet>
+            <Bullet>Clicca <span className="font-medium">Crea Ordine</span> nella barra laterale per convertire il carrello in un ordine: destinazione e budget vengono presi automaticamente dal carrello.</Bullet>
             <Bullet>Dopo la creazione vieni portato automaticamente alla pagina Ordini.</Bullet>
           </ul>
         </section>
@@ -217,11 +217,11 @@ export default function AssistenzaPage() {
         <section id="budget-ordine" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
           <SectionHeader n={7} icon={Wallet} label="Budget Ordine" />
           <ul className="space-y-2">
-            <Bullet>Il budget appartiene al singolo ordine, non alla destinazione.</Bullet>
-            <Bullet>Prima di creare un ordine trovi il campo <span className="font-medium">Budget ordine €</span> nella barra del carrello, sotto il pulsante Crea Ordine: compilalo se vuoi definire una spesa massima per quell&apos;ordine (opzionale).</Bullet>
+            <Bullet>Il budget si imposta quando crei il carrello (o in seguito cliccando <span className="font-medium">Modifica</span> nella barra laterale): appartiene al singolo carrello/ordine, non alla destinazione.</Bullet>
+            <Bullet>Se la destinazione ha già un budget configurato, puoi scegliere di usarlo o di impostarne uno personalizzato.</Bullet>
+            <Bullet>La barra di progressione nella sidebar mostra quanto del budget è stato usato man mano che aggiungi prodotti.</Bullet>
             <Bullet>Una volta creato l&apos;ordine, puoi modificare il budget in qualsiasi momento direttamente dalla pagina dell&apos;ordine usando l&apos;icona matita accanto al budget.</Bullet>
-            <Bullet>Cambiare la destinazione dell&apos;ordine non modifica il budget impostato.</Bullet>
-            <Bullet>Non devi entrare nella sezione Destinazioni per gestire il budget di un ordine.</Bullet>
+            <Bullet>Cambiare la destinazione del carrello non modifica il budget impostato.</Bullet>
           </ul>
         </section>
 

@@ -1,19 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, Plus, ShoppingCart, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import { useCollectionRoutes } from '@/hooks/useCollectionRoutes';
-import type { Cart } from '@/types';
+import type { Cart, Destinazione } from '@/types';
 
 /** Loads the active cart from server on login, handles collection switching, and shows the select-cart modal when needed. */
 export default function CartSetup() {
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   const routes = useCollectionRoutes();
   const { collectionId } = routes;
+  const isOperator = session?.user?.role === 'OPERATOR';
 
   const {
     setCart,
@@ -30,22 +32,18 @@ export default function CartSetup() {
 
   const queryClient = useQueryClient();
 
-  // Invalidate my-carts whenever local items change so CartsView always shows fresh data
   useEffect(() => {
     if (status !== 'authenticated') return;
     queryClient.invalidateQueries({ queryKey: ['my-carts'] });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
-  // On auth or collection change: just track the active collection.
-  // No auto-loading — the user picks a cart explicitly via the picker modal.
   useEffect(() => {
     if (status !== 'authenticated') return;
     setCurrentCollection(collectionId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, collectionId]);
 
-  // One-time migration: import items from the old localStorage cart on first login.
   useEffect(() => {
     if (status !== 'authenticated') return;
     migrateOldCart();
@@ -90,6 +88,9 @@ export default function CartSetup() {
 
   // ── Select-cart modal ─────────────────────────────────────────────────────────
   const [newName, setNewName] = useState('');
+  const [newCanaleId, setNewCanaleId] = useState('');
+  const [budgetChoice, setBudgetChoice] = useState<'dest' | 'custom' | null>(null);
+  const [budgetCustom, setBudgetCustom] = useState('');
   const [creating, setCreating] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
 
@@ -101,6 +102,30 @@ export default function CartSetup() {
         .then((d) => d.data as Cart[]),
     enabled: status === 'authenticated',
   });
+
+  const { data: destinazioni = [] } = useQuery<Destinazione[]>({
+    queryKey: ['destinazioni'],
+    queryFn: () => fetch('/api/catalog/destinazioni').then(r => r.json()).then(d => d.data ?? []),
+    enabled: status === 'authenticated' && isOperator,
+  });
+
+  const selectedDest = useMemo(() => destinazioni.find(d => d.id === newCanaleId) ?? null, [destinazioni, newCanaleId]);
+  const destBudget = selectedDest?.budget ?? null;
+
+  // Reset budget choice when destination changes
+  useEffect(() => {
+    setBudgetChoice(null);
+    setBudgetCustom(destBudget != null ? String(destBudget) : '');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newCanaleId]);
+
+  // Auto-fill name from destination
+  useEffect(() => {
+    if (selectedDest && !newName) {
+      setNewName(selectedDest.nome || selectedDest.tipo);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newCanaleId]);
 
   if (!pendingProduct && !pendingVariants && !showCartPicker) return null;
 
@@ -139,19 +164,39 @@ export default function CartSetup() {
     toast.success(`Aggiunto a "${cart.name}"`);
   }
 
+  function resetCreateForm() {
+    setShowCreate(false);
+    setNewName('');
+    setNewCanaleId('');
+    setBudgetChoice(null);
+    setBudgetCustom('');
+  }
+
+  const budgetFinal: number | null = isOperator
+    ? (budgetChoice === 'dest' && destBudget != null ? destBudget : parseFloat(budgetCustom) || null)
+    : null;
+
+  const canCreate = !!newName.trim() && (!isOperator || !!newCanaleId);
+
   async function handleCreateAndAdd() {
     if (!newName.trim()) return;
     setCreating(true);
     try {
+      const body: any = { name: newName.trim(), collectionId };
+      if (isOperator && newCanaleId) {
+        body.canaleId = newCanaleId;
+        if (budgetFinal != null && !isNaN(budgetFinal)) body.budgetPersonalizzato = budgetFinal;
+      }
       const res = await fetch('/api/catalog/carts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim(), collectionId }),
+        body: JSON.stringify(body),
       });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? 'Errore');
+      const resBody = await res.json();
+      if (!res.ok) throw new Error(resBody.error ?? 'Errore');
       queryClient.invalidateQueries({ queryKey: ['my-carts'] });
-      await handleSelectCart(body.data as Cart);
+      resetCreateForm();
+      await handleSelectCart(resBody.data as Cart);
     } catch (e: any) {
       toast.error(e.message ?? 'Errore');
     } finally {
@@ -162,7 +207,7 @@ export default function CartSetup() {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closePending} />
-      <div className="relative z-10 bg-white w-full sm:max-w-sm sm:rounded-lg shadow-xl max-h-[80vh] flex flex-col">
+      <div className="relative z-10 bg-white w-full sm:max-w-sm sm:rounded-lg shadow-xl max-h-[85dvh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             <ShoppingCart size={14} className="text-gray-500" />
@@ -193,7 +238,10 @@ export default function CartSetup() {
                 >
                   <div>
                     <p className="text-sm font-medium text-primary">{cart.name}</p>
-                    <p className="text-2xs text-gray-400">{(cart.items?.length ?? 0)} articoli</p>
+                    <p className="text-2xs text-gray-400">
+                      {(cart.items?.length ?? 0)} articoli
+                      {cart.canale ? ` · ${cart.canale.nome || cart.canale.tipo}${cart.canale.citta ? ` · ${cart.canale.citta}` : ''}` : ''}
+                    </p>
                   </div>
                   <Check size={13} className="text-accent opacity-0 group-hover:opacity-100" />
                 </button>
@@ -202,23 +250,91 @@ export default function CartSetup() {
           )}
 
           {showCreate ? (
-            <div className="space-y-2 pt-1">
-              <input
-                autoFocus
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleCreateAndAdd(); if (e.key === 'Escape') setShowCreate(false); }}
-                placeholder="Nome carrello…"
-                className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-              <div className="flex gap-2">
-                <button onClick={() => setShowCreate(false)} className="flex-1 py-2 text-xs border border-border rounded text-gray-500 hover:bg-cream">
+            <div className="space-y-3 pt-1">
+              {/* Destination — operators only */}
+              {isOperator && (
+                <div>
+                  <label className="block text-2xs text-gray-500 uppercase tracking-wide mb-1">Destinazione *</label>
+                  <select
+                    value={newCanaleId}
+                    onChange={e => setNewCanaleId(e.target.value)}
+                    className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent bg-white"
+                    autoFocus
+                  >
+                    <option value="">— Scegli destinazione —</option>
+                    {destinazioni.map(d => (
+                      <option key={d.id} value={d.id}>
+                        {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Name */}
+              <div>
+                <label className="block text-2xs text-gray-500 uppercase tracking-wide mb-1">Nome carrello *</label>
+                <input
+                  autoFocus={!isOperator}
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && canCreate) handleCreateAndAdd(); if (e.key === 'Escape') resetCreateForm(); }}
+                  placeholder="es. Primavera Bottega…"
+                  className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+              </div>
+
+              {/* Budget — only for operators with a destination */}
+              {isOperator && newCanaleId && (
+                <div>
+                  <label className="block text-2xs text-gray-500 uppercase tracking-wide mb-2">Budget ordine</label>
+                  {destBudget != null ? (
+                    <div className="space-y-1.5">
+                      <label className={`flex items-center gap-2.5 border rounded p-2.5 cursor-pointer transition-colors ${budgetChoice === 'dest' ? 'border-accent bg-accent/5' : 'border-border hover:bg-cream/50'}`}>
+                        <input type="radio" name="budgetSetup" checked={budgetChoice === 'dest'} onChange={() => setBudgetChoice('dest')} className="accent-primary" />
+                        <span className="text-xs text-primary">Budget destinazione: <strong>{formatCurrency(destBudget)}</strong></span>
+                      </label>
+                      <label className={`flex items-start gap-2.5 border rounded p-2.5 cursor-pointer transition-colors ${budgetChoice === 'custom' ? 'border-accent bg-accent/5' : 'border-border hover:bg-cream/50'}`}>
+                        <input type="radio" name="budgetSetup" checked={budgetChoice === 'custom'} onChange={() => setBudgetChoice('custom')} className="accent-primary mt-0.5" />
+                        <div className="flex-1" onClick={e => e.stopPropagation()}>
+                          <p className="text-xs text-primary mb-1.5">Budget personalizzato</p>
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">€</span>
+                            <input
+                              type="number" min="0" step="100"
+                              value={budgetCustom}
+                              onChange={e => { setBudgetCustom(e.target.value); setBudgetChoice('custom'); }}
+                              onFocus={() => setBudgetChoice('custom')}
+                              placeholder={String(destBudget)}
+                              className="w-full pl-6 pr-2 py-1.5 border border-border rounded text-xs text-primary focus:outline-none focus:border-accent bg-white"
+                            />
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">€</span>
+                      <input
+                        type="number" min="0" step="100"
+                        value={budgetCustom}
+                        onChange={e => setBudgetCustom(e.target.value)}
+                        placeholder="es. 3000 (opzionale)"
+                        className="w-full pl-6 pr-2 h-9 border border-border rounded text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button onClick={resetCreateForm} className="flex-1 py-2 text-xs border border-border rounded text-gray-500 hover:bg-cream">
                   Annulla
                 </button>
                 <button
                   onClick={handleCreateAndAdd}
-                  disabled={creating || !newName.trim()}
+                  disabled={creating || !canCreate}
                   className="flex-1 py-2 text-xs bg-primary text-background rounded hover:bg-warm-darker disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {creating ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}

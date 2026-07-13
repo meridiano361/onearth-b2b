@@ -14,7 +14,6 @@ import { useCartStore } from '@/store/cartStore';
 import { usePreview } from '@/contexts/PreviewContext';
 import { ProductImage } from '@/components/ui/ProductImage';
 import QuantitySelector from '@/components/catalog/QuantitySelector';
-import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { getCollectionRoutes } from '@/lib/collectionRoutes';
 import type { Cart, Destinazione } from '@/types';
 
@@ -29,9 +28,6 @@ export default function CartsView({ collection }: CartsViewProps) {
   const preview = usePreview();
   const isOperator = session?.user.role === 'OPERATOR';
   const { cartId, setCart, clearCart, updateQuantity: storeUpdateQty } = useCartStore();
-  // Routes derived from the collection prop, not from pathname, so the context
-  // is explicit and cannot silently drift if this component renders in an
-  // unexpected URL context.
   const routes = getCollectionRoutes(collection);
 
   const { data: carts = [], isLoading } = useQuery<Cart[]>({
@@ -44,34 +40,53 @@ export default function CartsView({ collection }: CartsViewProps) {
     staleTime: 0,
   });
 
+  const { data: destinazioni = [] } = useQuery<Destinazione[]>({
+    queryKey: ['destinazioni'],
+    queryFn: () => fetch('/api/catalog/destinazioni').then(r => r.json()).then(d => d.data ?? []),
+    enabled: isOperator,
+  });
+
   const [newName, setNewName] = useState('');
+  const [newCanaleId, setNewCanaleId] = useState('');
+  const [newBudgetChoice, setNewBudgetChoice] = useState<'dest' | 'custom' | null>(null);
+  const [newBudgetCustom, setNewBudgetCustom] = useState('');
   const [creating, setCreating] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameInput, setRenameInput] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  // Order conversion
   const [convertingId, setConvertingId] = useState<string | null>(null);
-  const [modalCartId, setModalCartId] = useState<string | null>(null);
-  const [destinazioni, setDestinazioni] = useState<Destinazione[]>([]);
 
+  // Auto-fill cart name from selected destination
   useEffect(() => {
-    if (!isOperator && !preview) return;
-    fetch('/api/catalog/destinazioni')
-      .then((r) => r.json())
-      .then((d) => setDestinazioni(d.data ?? []))
-      .catch(() => {});
-  }, [isOperator, preview]);
+    if (newCanaleId) {
+      const dest = destinazioni.find(d => d.id === newCanaleId);
+      if (dest && !newName) setNewName(dest.nome || dest.tipo);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newCanaleId]);
 
-  async function handleConvert(cartId: string, canaleId?: string, budgetPersonalizzato?: number | null) {
+  const selectedNewDest = destinazioni.find(d => d.id === newCanaleId) ?? null;
+  const newDestBudget = selectedNewDest?.budget ?? null;
+
+  function resetCreateForm() {
+    setShowCreate(false);
+    setNewName('');
+    setNewCanaleId('');
+    setNewBudgetChoice(null);
+    setNewBudgetCustom('');
+  }
+
+  const canCreate = !!newName.trim() && (!isOperator || !!newCanaleId);
+
+  async function handleConvert(cartId: string) {
     setConvertingId(cartId);
     try {
       const res = await fetch(`/api/catalog/carts/${cartId}/convert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ canaleId: canaleId ?? null, budgetPersonalizzato: budgetPersonalizzato ?? null }),
+        body: JSON.stringify({}),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? 'Errore creazione ordine');
@@ -87,30 +102,35 @@ export default function CartsView({ collection }: CartsViewProps) {
     }
   }
 
-  function handleCreateOrderClick(cart: Cart) {
-    if (isOperator || preview) {
-      setModalCartId(cart.id);
-    } else {
-      handleConvert(cart.id);
-    }
-  }
-
   async function handleCreate() {
-    if (!newName.trim()) return;
+    if (!canCreate) return;
     setCreating(true);
     try {
+      let budgetFinal: number | null = null;
+      if (newBudgetChoice === 'dest' && newDestBudget != null) {
+        budgetFinal = newDestBudget;
+      } else {
+        const parsed = parseFloat(newBudgetCustom);
+        budgetFinal = !isNaN(parsed) && parsed > 0 ? parsed : null;
+      }
+
+      const body: any = { name: newName.trim(), collectionId: collection };
+      if (isOperator && newCanaleId) {
+        body.canaleId = newCanaleId;
+        if (budgetFinal != null) body.budgetPersonalizzato = budgetFinal;
+      }
+
       const res = await fetch('/api/catalog/carts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim(), collectionId: collection }),
+        body: JSON.stringify(body),
       });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? 'Errore');
-      setCart(body.data as Cart);
+      const resBody = await res.json();
+      if (!res.ok) throw new Error(resBody.error ?? 'Errore');
+      setCart(resBody.data as Cart);
       queryClient.invalidateQueries({ queryKey: ['my-carts'] });
-      setNewName('');
-      setShowCreate(false);
-      toast.success(`Carrello "${body.data.name}" creato`);
+      resetCreateForm();
+      toast.success(`Carrello "${resBody.data.name}" creato`);
     } catch (e: any) {
       toast.error(e.message ?? 'Errore');
     } finally {
@@ -164,17 +184,14 @@ export default function CartsView({ collection }: CartsViewProps) {
 
   async function handleUpdateQty(cart: Cart, productId: string, quantity: number) {
     if (cart.id === cartId) {
-      // Active cart — delegate to store (handles API + local state)
       storeUpdateQty(productId, quantity);
     } else {
-      // Non-active cart — direct API call
       fetch(`/api/catalog/carts/${cart.id}/items`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId, quantity }),
       }).catch(() => {});
     }
-    // Optimistically update the query cache
     queryClient.setQueryData<Cart[]>(['my-carts'], (prev = []) =>
       prev.map((c) =>
         c.id !== cart.id ? c : {
@@ -193,18 +210,6 @@ export default function CartsView({ collection }: CartsViewProps) {
     (cart.items ?? []).reduce((s, i) => s + Number(i.product.costPrice) * i.quantity, 0);
 
   return (
-    <>
-    {modalCartId && (
-      <CreateOrderModal
-        destinazioni={destinazioni}
-        onClose={() => setModalCartId(null)}
-        onSubmit={(canaleId, budget) => {
-          setModalCartId(null);
-          handleConvert(modalCartId, canaleId, budget);
-        }}
-        submitting={convertingId === modalCartId}
-      />
-    )}
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between gap-3">
@@ -226,25 +231,91 @@ export default function CartsView({ collection }: CartsViewProps) {
       {showCreate && (
         <div className="mb-4 bg-white border border-border rounded p-4 space-y-3">
           <p className="text-xs font-semibold text-primary">Nuovo carrello</p>
+
+          {/* Destination — operators only */}
+          {isOperator && (
+            <div>
+              <label className="block text-2xs text-gray-500 uppercase tracking-wide mb-1">Destinazione *</label>
+              <select
+                value={newCanaleId}
+                onChange={e => { setNewCanaleId(e.target.value); setNewBudgetChoice(null); setNewBudgetCustom(''); }}
+                className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent bg-white"
+                autoFocus
+              >
+                <option value="">— Scegli destinazione —</option>
+                {destinazioni.map(d => (
+                  <option key={d.id} value={d.id}>
+                    {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Name */}
           <input
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowCreate(false); }}
-            autoFocus
+            onKeyDown={(e) => { if (e.key === 'Enter' && canCreate) handleCreate(); if (e.key === 'Escape') resetCreateForm(); }}
+            autoFocus={!isOperator}
             placeholder="es. Natale 2026, Riassortimento Milano…"
             className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent"
           />
+
+          {/* Budget — operators only */}
+          {isOperator && newCanaleId && (
+            <div>
+              <label className="block text-2xs text-gray-500 uppercase tracking-wide mb-2">Budget ordine</label>
+              {newDestBudget != null ? (
+                <div className="space-y-1.5">
+                  <label className={`flex items-center gap-2.5 border rounded p-2.5 cursor-pointer transition-colors ${newBudgetChoice === 'dest' ? 'border-accent bg-accent/5' : 'border-border hover:bg-cream/50'}`}>
+                    <input type="radio" name="newBudget" checked={newBudgetChoice === 'dest'} onChange={() => { setNewBudgetChoice('dest'); setNewBudgetCustom(String(newDestBudget)); }} className="accent-primary" />
+                    <span className="text-xs text-primary">Budget destinazione: <strong>{formatCurrency(newDestBudget)}</strong></span>
+                  </label>
+                  <label className={`flex items-start gap-2.5 border rounded p-2.5 cursor-pointer transition-colors ${newBudgetChoice === 'custom' ? 'border-accent bg-accent/5' : 'border-border hover:bg-cream/50'}`}>
+                    <input type="radio" name="newBudget" checked={newBudgetChoice === 'custom'} onChange={() => setNewBudgetChoice('custom')} className="accent-primary mt-0.5" />
+                    <div className="flex-1" onClick={e => e.stopPropagation()}>
+                      <p className="text-xs text-primary mb-1.5">Budget personalizzato</p>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">€</span>
+                        <input
+                          type="number" min="0" step="100"
+                          value={newBudgetChoice === 'custom' ? newBudgetCustom : ''}
+                          onChange={e => { setNewBudgetCustom(e.target.value); setNewBudgetChoice('custom'); }}
+                          onFocus={() => setNewBudgetChoice('custom')}
+                          placeholder={String(newDestBudget)}
+                          className="w-full pl-6 pr-2 py-1.5 border border-border rounded text-xs text-primary focus:outline-none focus:border-accent bg-white"
+                        />
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              ) : (
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">€</span>
+                  <input
+                    type="number" min="0" step="100"
+                    value={newBudgetCustom}
+                    onChange={e => setNewBudgetCustom(e.target.value)}
+                    placeholder="es. 3000 (opzionale)"
+                    className="w-full pl-6 pr-2 h-9 border border-border rounded text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-2">
             <button
-              onClick={() => { setShowCreate(false); setNewName(''); }}
+              onClick={resetCreateForm}
               className="flex-1 py-2 text-xs border border-border rounded text-gray-500 hover:bg-cream transition-colors"
             >
               Annulla
             </button>
             <button
               onClick={handleCreate}
-              disabled={creating || !newName.trim()}
+              disabled={creating || !canCreate}
               className="flex-1 py-2 text-xs bg-primary text-background rounded hover:bg-warm-darker transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
               {creating ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
@@ -317,7 +388,11 @@ export default function CartsView({ collection }: CartsViewProps) {
                     <p className="text-2xs text-gray-400 mt-0.5">
                       {itemCount} {itemCount === 1 ? 'articolo' : 'articoli'} · {pzCount} pz
                       {value > 0 && ` · ${formatCurrency(value)}`}
+                      {cart.canale && ` · ${cart.canale.nome || cart.canale.tipo}${cart.canale.citta ? `, ${cart.canale.citta}` : ''}`}
                     </p>
+                    {cart.budgetPersonalizzato != null && (
+                      <p className="text-2xs text-gray-400">Budget: {formatCurrency(cart.budgetPersonalizzato)}</p>
+                    )}
                   </div>
 
                   {/* Icon actions */}
@@ -371,7 +446,7 @@ export default function CartsView({ collection }: CartsViewProps) {
                       </span>
                     ) : (
                       <button
-                        onClick={() => handleCreateOrderClick(cart)}
+                        onClick={() => handleConvert(cart.id)}
                         disabled={convertingId === cart.id}
                         className="flex items-center gap-1.5 text-xs bg-primary text-background rounded px-3 py-1.5 hover:bg-warm-darker transition-colors disabled:opacity-50"
                       >
@@ -458,6 +533,5 @@ export default function CartsView({ collection }: CartsViewProps) {
         })}
       </div>
     </div>
-    </>
   );
 }
