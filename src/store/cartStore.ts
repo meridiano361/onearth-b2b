@@ -121,8 +121,18 @@ export const useCartStore = create<CartStore>()(
             : {}),
         })),
 
-      setPendingProduct: (p) => set({ pendingProduct: p }),
-      setPendingVariants: (v) => set({ pendingVariants: v }),
+      setPendingProduct: (p) => {
+        if (!p) { set({ pendingProduct: null }); return; }
+        const { cartId } = get();
+        if (cartId) { get().addItem(p.product, p.quantity, p.taglia); return; }
+        set({ pendingProduct: p });
+      },
+      setPendingVariants: (v) => {
+        if (!v) { set({ pendingVariants: null }); return; }
+        const { cartId } = get();
+        if (cartId) { get().addVariants(v.product, v.variants); return; }
+        set({ pendingVariants: v });
+      },
       setShowCartPicker: (show) => set({ showCartPicker: show }),
 
       setNotes: (notes) => {
