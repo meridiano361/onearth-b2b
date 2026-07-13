@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { getPreviewFromSession } from '@/lib/preview';
 import { prisma } from '@/lib/prisma';
 import Header from '@/components/layout/Header';
-import CartSidebar from '@/components/cart/CartSidebar';
+import CartSidebarConditional from '@/components/cart/CartSidebarConditional';
 import MobileNav from '@/components/layout/MobileNav';
 import PreviewBanner from '@/components/layout/PreviewBanner';
 import { PreviewProvider } from '@/contexts/PreviewContext';
@@ -21,9 +21,6 @@ const CATALOG_FONT_MAP: Record<string, string> = {
   lato: "'Lato', 'Helvetica Neue', Helvetica, Arial, sans-serif",
 };
 
-// Paths where the cart sidebar should not be shown (exact match only for home routes)
-const SIDEBAR_HIDDEN_PATHS = ['/catalog/orders', '/orders', '/catalog/destinazioni', '/moda/pareti', '/moda/visual'];
-const SIDEBAR_HIDDEN_EXACT = ['/catalog', '/home'];
 // Paths where <main> must be overflow-hidden (child manages its own scroll)
 const MAIN_CONTAINED_PATHS = ['/moda/pareti', '/moda/visual', '/catalog/products', '/moda/catalogo', '/moda/ruota-cromatica'];
 
@@ -53,9 +50,6 @@ export default async function B2BLayout({
   const catalogFontFamily = CATALOG_FONT_MAP[catalogFontKey] ?? CATALOG_FONT_MAP.inter;
 
   const pathname = headers().get('x-pathname') ?? '';
-  const hideSidebar =
-    SIDEBAR_HIDDEN_EXACT.includes(pathname) ||
-    SIDEBAR_HIDDEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
   const mainContained = MAIN_CONTAINED_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
 
   const previewData = getPreviewFromSession(session);
@@ -93,12 +87,7 @@ export default async function B2BLayout({
               {children}
             </main>
 
-            {/* Cart sidebar — desktop only, hidden on orders pages */}
-            {!hideSidebar && (
-              <aside className="hidden lg:block w-80 xl:w-[340px] border-l border-border flex-shrink-0 bg-white overflow-y-auto">
-                <CartSidebar />
-              </aside>
-            )}
+            <CartSidebarConditional />
           </div>
 
           <MobileNav />
