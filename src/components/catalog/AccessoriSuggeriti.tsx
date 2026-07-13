@@ -109,8 +109,19 @@ export default function AccessoriSuggeriti({ classe, sottofamiglia, name, famigl
               <p className="text-sm font-medium text-primary leading-tight">{item.name}</p>
               {item.colore && <p className="text-xs text-gray-400 mt-0.5">{item.colore}</p>}
               {item.misura && <p className="text-xs text-gray-400">{item.misura}</p>}
-              {euro(item.retailPrice) && (
-                <p className="text-sm font-semibold text-primary mt-1">{euro(item.retailPrice)}</p>
+              {(item.costPrice != null || item.retailPrice != null) && (
+                <div className="flex items-baseline gap-3 mt-1">
+                  {item.costPrice != null && (
+                    <span className="text-xs text-gray-400">
+                      Costo i.e. <span className="font-semibold text-primary">{euro(item.costPrice)}</span>
+                    </span>
+                  )}
+                  {item.retailPrice != null && (
+                    <span className="text-xs text-gray-400">
+                      PVP i.i. <span className="font-semibold text-primary">{euro(item.retailPrice)}</span>
+                    </span>
+                  )}
+                </div>
               )}
               {item.note && (
                 <p className="text-xs text-gray-400 italic mt-0.5 line-clamp-2">{item.note}</p>
