@@ -88,13 +88,11 @@ export default function ModaHome() {
         <ContentCard href="/moda/risorse?tab=video"     icon={Film}      label="Video"     />
       </div>
 
-      {/* Admin items */}
-      {isAdmin && (
-        <div className="grid grid-cols-2 gap-3 mt-3">
-          <NavCard href="/moda/ruota-cromatica" icon={Palette} label="Ruota Cromatica" />
-          <NavCard href="/moda/pareti"          icon={Layout}  label="Visual"          />
-        </div>
-      )}
+      {/* Ruota cromatica — visibile a tutti; Visual solo admin */}
+      <div className={`grid gap-3 mt-3 ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        <NavCard href="/moda/ruota-cromatica" icon={Palette} label="Ruota Cromatica" />
+        {isAdmin && <NavCard href="/moda/pareti" icon={Layout} label="Visual" />}
+      </div>
     </div>
   );
 }
