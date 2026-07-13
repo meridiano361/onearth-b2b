@@ -22,6 +22,7 @@ interface CartStore {
 
   pendingProduct: { product: Product; quantity: number; taglia?: string } | null;
   pendingVariants: { product: Product; variants: SizeVariantQty[] } | null;
+  showCartPicker: boolean;
 
   setCurrentCollection: (collection: string) => void;
   setCart: (cart: Cart) => void;
@@ -30,6 +31,7 @@ interface CartStore {
   clearCollectionCart: (collection: string) => void;
   setPendingProduct: (p: { product: Product; quantity: number; taglia?: string } | null) => void;
   setPendingVariants: (v: { product: Product; variants: SizeVariantQty[] } | null) => void;
+  setShowCartPicker: (show: boolean) => void;
   setNotes: (notes: string) => void;
 
   addItem: (product: Product, quantity?: number, taglia?: string) => void;
@@ -67,6 +69,7 @@ export const useCartStore = create<CartStore>()(
       notes: '',
       pendingProduct: null,
       pendingVariants: null,
+      showCartPicker: false,
 
       // Called by CartSetup when the URL section changes (moda ↔ casa).
       // Immediately swaps active cartId from the map; clears volatile data
@@ -120,6 +123,7 @@ export const useCartStore = create<CartStore>()(
 
       setPendingProduct: (p) => set({ pendingProduct: p }),
       setPendingVariants: (v) => set({ pendingVariants: v }),
+      setShowCartPicker: (show) => set({ showCartPicker: show }),
 
       setNotes: (notes) => {
         const { cartId } = get();
@@ -212,9 +216,9 @@ export const useCartStore = create<CartStore>()(
         }),
     }),
     {
-      name: 'onearth-cart-v3',
-      // Only persist the cartIds map, not volatile items/session data.
-      partialize: (state) => ({ cartIds: state.cartIds }),
+      name: 'onearth-cart-v4',
+      // Nothing persisted — catalog always starts neutral (no pre-selected cart).
+      partialize: () => ({}),
     }
   )
 );

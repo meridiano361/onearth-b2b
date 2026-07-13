@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag, Plus } from 'lucide-react';
+import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag, Plus, ArrowLeftRight } from 'lucide-react';
 import Link from 'next/link';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useTranslations } from 'next-intl';
@@ -29,7 +29,7 @@ export default function CartSidebar() {
   const preview = usePreview();
   const { ordine } = useSettings();
   const routes = useCollectionRoutes();
-  const { items, cartId, cartName, notes, clearCart, removeItem, getTotalItems, hasLotWarnings, addItem } = useCartStore();
+  const { items, cartId, cartName, notes, clearCart, removeItem, getTotalItems, hasLotWarnings, setPendingProduct, setShowCartPicker } = useCartStore();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [destinazioni, setDestinazioni] = useState<Destinazione[]>([]);
@@ -137,15 +137,24 @@ export default function CartSidebar() {
               </span>
             )}
           </div>
-          {!isEmpty && (
+          <div className="flex items-center gap-2 flex-shrink-0">
             <button
-              onClick={() => { if (confirm(t('clearConfirm'))) clearCart(); }}
-              className="text-gray-300 hover:text-gray-600 transition-colors flex-shrink-0"
-              title={t('clearTooltip')}
+              onClick={() => setShowCartPicker(true)}
+              className="text-gray-300 hover:text-gray-600 transition-colors"
+              title="Cambia carrello"
             >
-              <Trash2 size={13} />
+              <ArrowLeftRight size={13} />
             </button>
-          )}
+            {!isEmpty && (
+              <button
+                onClick={() => { if (confirm(t('clearConfirm'))) clearCart(); }}
+                className="text-gray-300 hover:text-gray-600 transition-colors"
+                title={t('clearTooltip')}
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Aggiungi prodotti */}
@@ -263,7 +272,7 @@ export default function CartSidebar() {
                         <p className="text-2xs text-gray-400">{formatCurrency(p.costPrice)}</p>
                       </div>
                       <button
-                        onClick={() => addItem(p as any, p.lotSize || 1)}
+                        onClick={() => setPendingProduct({ product: p as any, quantity: p.lotSize || 1 })}
                         className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-primary text-white rounded hover:bg-warm-darker transition-colors"
                       >
                         <ShoppingBag size={11} />

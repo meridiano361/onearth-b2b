@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-13 (Selezione carrello: Aggiungi chiede sempre a quale carrello aggiungere)
+// AGGIORNATO: 2026-07-13 (Catalogo neutro: nessun carrello pre-selezionato; icona cambio carrello nella sidebar)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -186,7 +186,8 @@ export default function AssistenzaPage() {
         <section id="carrelli" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
           <SectionHeader n={5} icon={ShoppingCart} label="I Carrelli" />
           <ul className="space-y-2">
-            <Bullet>Prima di aggiungere prodotti devi avere un carrello attivo. Vai in <span className="font-medium">Carrelli</span> nel menu per crearne uno o selezionarne uno esistente.</Bullet>
+            <Bullet>Puoi andare al catalogo e aggiungere prodotti direttamente: al primo clic su <span className="font-medium">Aggiungi</span> ti viene chiesto in quale carrello inserirli (o di crearne uno nuovo).</Bullet>
+            <Bullet>In alternativa vai in <span className="font-medium">Carrelli</span> nel menu per creare un carrello in anticipo o gestire quelli esistenti.</Bullet>
             <Bullet>Ogni utente può avere più carrelli aperti contemporaneamente (es. un carrello per ogni cliente o stagione).</Bullet>
             <Bullet>Crea un nuovo carrello con il pulsante <span className="font-medium">Nuovo carrello</span> in alto a destra: assegna un nome (es. &ldquo;Natale 2026&rdquo;, &ldquo;Riassortimento Milano&rdquo;).</Bullet>
             <Bullet>Clicca <span className="font-medium">Seleziona</span> su un carrello per renderlo attivo: il carrello attivo è evidenziato con il badge <span className="font-medium">attivo</span>.</Bullet>
@@ -201,9 +202,11 @@ export default function AssistenzaPage() {
         <section id="creare-ordine" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
           <SectionHeader n={6} icon={ShoppingBag} label="Creare un Ordine" />
           <ul className="space-y-2">
-            <Bullet>Vai al catalogo e clicca <span className="font-medium">Aggiungi</span> su un prodotto: si apre un pannello dove selezioni in quale carrello inserirlo. Vengono mostrati solo i carrelli della collezione corrente (es. PE27 nel catalogo MODA, CA27 nel catalogo casa).</Bullet>
-            <Bullet>Per i prodotti MODA con più taglie (es. S, M, L) clicca <span className="font-medium">Aggiungi</span>: prima scegli la taglia, poi il carrello dove inserirla. Ogni taglia compare come riga separata nel carrello.</Bullet>
-            <Bullet>Nella barra a destra vedi il carrello corrente con: costo totale, vendite potenziali, margine medio.</Bullet>
+            <Bullet>Quando entri nel catalogo tutti i prodotti mostrano il pulsante <span className="font-medium">Aggiungi</span>: nessun carrello è pre-selezionato.</Bullet>
+            <Bullet>Al primo clic su <span className="font-medium">Aggiungi</span> si apre un pannello dove selezioni in quale carrello inserire il prodotto (o crei un nuovo carrello). Vengono mostrati solo i carrelli della collezione corrente (es. PE27 nel catalogo MODA, CA27 nel catalogo casa).</Bullet>
+            <Bullet>Dopo la selezione la barra laterale mostra il carrello attivo e le quantità dei prodotti aggiunti.</Bullet>
+            <Bullet>Per i prodotti MODA con più taglie (es. S, M, L) clicca <span className="font-medium">Aggiungi</span>: prima scegli la taglia, poi il carrello. Ogni taglia compare come riga separata nel carrello.</Bullet>
+            <Bullet>Per cambiare carrello in qualsiasi momento clicca l&apos;icona <span className="font-medium">⇄</span> in alto nella barra laterale (accanto all&apos;icona cestino): si apre il pannello di selezione carrello.</Bullet>
             <Bullet>Clicca <span className="font-medium">Crea Ordine</span> nella barra laterale per convertire il carrello in un ordine.</Bullet>
             <Bullet>Se hai più destinazioni ti verrà chiesto di selezionarne una.</Bullet>
             <Bullet>Dopo la creazione vieni portato automaticamente alla pagina Ordini.</Bullet>

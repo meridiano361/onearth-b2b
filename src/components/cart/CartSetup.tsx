@@ -16,18 +16,15 @@ export default function CartSetup() {
   const { collectionId } = routes;
 
   const {
-    cartIds,
-    cartId,
     setCart,
-    clearCart,
     setCurrentCollection,
-    clearCollectionCart,
     pendingProduct,
     setPendingProduct,
-    addItem,
     pendingVariants,
     setPendingVariants,
     addVariants,
+    showCartPicker,
+    setShowCartPicker,
     items,
   } = useCartStore();
 
@@ -40,34 +37,11 @@ export default function CartSetup() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
-  // On auth or collection change: sync the active cart to the current collection.
+  // On auth or collection change: just track the active collection.
+  // No auto-loading — the user picks a cart explicitly via the picker modal.
   useEffect(() => {
     if (status !== 'authenticated') return;
-
-    // Update the store's active collection (swaps cartId from the map).
     setCurrentCollection(collectionId);
-
-    // Read the up-to-date state synchronously to avoid stale closure.
-    const savedCartId = useCartStore.getState().cartIds[collectionId] ?? null;
-
-    if (savedCartId) {
-      fetch(`/api/catalog/carts/${savedCartId}`)
-        .then((r) => r.json())
-        .then((res) => {
-          if (res.data && res.data.collectionId === collectionId) {
-            setCart(res.data as Cart);
-          } else {
-            // Saved cartId belongs to a different collection — wipe the stale
-            // reference so the store isn't stuck with a wrong-collection cartId
-            // if loadFirstCart finds nothing.
-            clearCollectionCart(collectionId);
-            loadFirstCart(collectionId);
-          }
-        })
-        .catch(() => {});
-    } else {
-      loadFirstCart(collectionId);
-    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, collectionId]);
 
@@ -77,16 +51,6 @@ export default function CartSetup() {
     migrateOldCart();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
-
-  function loadFirstCart(collection: string) {
-    fetch(`/api/catalog/carts?collection=${collection}`)
-      .then((r) => r.json())
-      .then((res) => {
-        const carts: Cart[] = res.data ?? [];
-        if (carts.length > 0) setCart(carts[0]);
-      })
-      .catch(() => {});
-  }
 
   async function migrateOldCart() {
     const MIGRATION_DONE_KEY = 'onearth-cart-migrated';
@@ -138,17 +102,23 @@ export default function CartSetup() {
     enabled: status === 'authenticated',
   });
 
-  if (!pendingProduct && !pendingVariants) return null;
+  if (!pendingProduct && !pendingVariants && !showCartPicker) return null;
 
   const pendingName = pendingProduct?.product.name ?? pendingVariants?.product.name;
+  const isPickerOnly = showCartPicker && !pendingProduct && !pendingVariants;
 
   function closePending() {
     setPendingProduct(null);
     setPendingVariants(null);
+    setShowCartPicker(false);
   }
 
   async function handleSelectCart(cart: Cart) {
     setCart(cart);
+    if (isPickerOnly) {
+      setShowCartPicker(false);
+      return;
+    }
     if (pendingVariants) {
       const { product, variants } = pendingVariants;
       setPendingVariants(null);
@@ -196,7 +166,7 @@ export default function CartSetup() {
         <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             <ShoppingCart size={14} className="text-gray-500" />
-            <p className="text-sm font-semibold text-primary">In quale carrello?</p>
+            <p className="text-sm font-semibold text-primary">{isPickerOnly ? 'Cambia carrello' : 'In quale carrello?'}</p>
           </div>
           <button onClick={closePending} className="text-gray-400 hover:text-primary p-1">
             <X size={16} />
@@ -204,10 +174,14 @@ export default function CartSetup() {
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
-          <p className="text-xs text-gray-500">
-            Scegli un carrello esistente o creane uno nuovo per aggiungere{' '}
-            <span className="font-medium text-primary">{pendingName}</span>.
-          </p>
+          {isPickerOnly ? (
+            <p className="text-xs text-gray-500">Scegli il carrello attivo o creane uno nuovo.</p>
+          ) : (
+            <p className="text-xs text-gray-500">
+              Scegli un carrello esistente o creane uno nuovo per aggiungere{' '}
+              <span className="font-medium text-primary">{pendingName}</span>.
+            </p>
+          )}
 
           {carts.length > 0 && (
             <div className="space-y-2">
