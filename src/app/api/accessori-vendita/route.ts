@@ -14,7 +14,7 @@ const TIPO_MAP: Record<string, TipoSupporto[]> = {
 };
 
 // Normalizza classe/sottofamiglia prodotto → chiave di TIPO_MAP
-export function normalizzaCategoria(val: string): string | null {
+function normalizzaCategoria(val: string): string | null {
   const s = val.toLowerCase();
   if (s.includes('collana') || s.includes('collane')) return 'collana';
   if (s.includes('bracciale') || s.includes('bracciali')) return 'bracciale';
