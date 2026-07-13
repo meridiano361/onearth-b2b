@@ -49,6 +49,9 @@ function filterMatchesProduct(p: Product, key: keyof Filters, value: string): bo
   if (key === 'materiale') {
     return [p.materiale1, p.materiale2, p.materiale3].some(v => v === value);
   }
+  if (key === 'colore') {
+    return [p.colore, p.colore2, p.colore3].some(v => v === value);
+  }
   const primary = (p as unknown as Record<string, unknown>)[key] as string | undefined;
   if (primary === value) return true;
   const sec = FILTER_SECONDARY[key];
@@ -71,6 +74,10 @@ function getAvailableValues(products: Product[], filters: Filters, key: keyof Fi
       }
     } else if (key === 'materiale') {
       for (const v of [p.materiale1, p.materiale2, p.materiale3]) {
+        if (v) result.add(v);
+      }
+    } else if (key === 'colore') {
+      for (const v of [p.colore, p.colore2, p.colore3]) {
         if (v) result.add(v);
       }
     } else {
@@ -348,7 +355,7 @@ export default function CatalogView({
     if (nomLinea)           result = result.filter((p) => p.nomLinea           === nomLinea);
     if (modello)            result = result.filter((p) => p.modello            === modello);
     if (materiale)          result = result.filter((p) => [p.materiale1, p.materiale2, p.materiale3].includes(materiale));
-    if (colore)             result = result.filter((p) => p.colore             === colore);
+    if (colore)             result = result.filter((p) => [p.colore, p.colore2, p.colore3].includes(colore));
     if (temaColore)         result = result.filter((p) => [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].includes(temaColore));
     if (stagione)           result = result.filter((p) => p.stagione           === stagione);
     if (collezione)         result = result.filter((p) => p.collezione?.toLowerCase() === collezione.toLowerCase());

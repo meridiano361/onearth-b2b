@@ -22,7 +22,7 @@ const CATALOG_FONT_MAP: Record<string, string> = {
 };
 
 // Paths where <main> must be overflow-hidden (child manages its own scroll)
-const MAIN_CONTAINED_PATHS = ['/moda/pareti', '/moda/visual', '/catalog/products', '/moda/catalogo', '/moda/ruota-cromatica'];
+const MAIN_CONTAINED_PATHS = ['/moda/pareti', '/moda/visual', '/catalog/products', '/moda/catalogo', '/moda/ruota-cromatica', '/moda/product'];
 
 export default async function B2BLayout({
   children,

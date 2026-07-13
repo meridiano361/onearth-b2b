@@ -225,7 +225,8 @@ export default function ProductDetailView({ id }: Props) {
     (ss.iva && product.iva != null);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+    <div className="h-full overflow-y-auto">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-24 md:pb-8">
       <button
         onClick={() => router.back()}
         className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary transition-colors mb-6"
@@ -501,6 +502,7 @@ export default function ProductDetailView({ id }: Props) {
 
       <AccessoriSuggeriti classe={product.classe} sottofamiglia={product.sottofamiglia} name={product.name} famiglia={product.famiglia} />
 
+    </div>
     </div>
   );
 }

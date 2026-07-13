@@ -62,6 +62,9 @@ function productMatchesFilter(p: Product, key: string, value: string): boolean {
   if (key === 'materiale') {
     return [p.materiale1, p.materiale2, p.materiale3].some(v => v === value);
   }
+  if (key === 'colore') {
+    return [p.colore, p.colore2, p.colore3].some(v => v === value);
+  }
   const primary = (p as unknown as Record<string, unknown>)[key] as string | undefined;
   if (primary === value) return true;
   const secondary = MULTI_VALUE_FIELDS[key];
@@ -101,6 +104,17 @@ function computeOptions(products: Product[], filters: FilterRecord, key: string)
     const counts = new Map<string, number>();
     for (const p of filtered) {
       for (const v of [p.materiale1, p.materiale2, p.materiale3]) {
+        if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
+      }
+    }
+    return Array.from(counts.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([value, count]) => ({ value, count }));
+  }
+  if (key === 'colore') {
+    const counts = new Map<string, number>();
+    for (const p of filtered) {
+      for (const v of [p.colore, p.colore2, p.colore3]) {
         if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
       }
     }
@@ -233,7 +247,7 @@ export default function CatalogFilters({
   }), [products, activeFilters]);
 
   return (
-    <div className="w-56 flex-shrink-0 border-r border-border bg-white overflow-y-auto">
+    <div className="w-56 flex-shrink-0 border-r border-border bg-white overflow-y-auto h-full">
       <div className="p-4">
 
         {/* Header */}
