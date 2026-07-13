@@ -7,6 +7,12 @@ import { useCartStore } from '@/store/cartStore';
 import QuantitySelector from '@/components/catalog/QuantitySelector';
 import type { CartItem as CartItemType } from '@/types';
 
+function effectiveCost(product: any): number {
+  const conReso   = Number(product.costoIeConReso);
+  const senzaReso = Number(product.costoIeSenzaReso);
+  return conReso > 0 ? conReso : senzaReso > 0 ? senzaReso : Number(product.costPrice);
+}
+
 interface CartItemProps {
   item: CartItemType;
 }
@@ -48,7 +54,7 @@ export default function CartItem({ item }: CartItemProps) {
               compact
             />
             <span className="text-xs font-medium text-primary ml-auto">
-              {formatCurrency(item.product.costPrice * item.quantity)}
+              {formatCurrency(effectiveCost(item.product) * item.quantity)}
             </span>
           </div>
 

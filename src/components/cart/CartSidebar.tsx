@@ -4,12 +4,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag, Plus, ArrowLeftRight } from 'lucide-react';
+import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag, Plus, ArrowLeftRight, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePreview } from '@/contexts/PreviewContext';
@@ -29,9 +29,10 @@ export default function CartSidebar() {
   const preview = usePreview();
   const { ordine } = useSettings();
   const routes = useCollectionRoutes();
-  const { items, cartId, cartName, notes, clearCart, removeItem, getTotalItems, hasLotWarnings, setPendingProduct, setShowCartPicker } = useCartStore();
+  const { items, cartId, cartName, notes, clearCart, removeItem, getTotalItems, getTotalLines, hasLotWarnings, setPendingProduct, setShowCartPicker } = useCartStore();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [itemsExpanded, setItemsExpanded] = useState(true);
   const [destinazioni, setDestinazioni] = useState<Destinazione[]>([]);
   const [selectedDestinazioneId, setSelectedDestinazioneId] = useState('');
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
@@ -39,6 +40,7 @@ export default function CartSidebar() {
   const ts = useTranslations('cartSummary');
 
   const totalItems = getTotalItems();
+  const totalLines = getTotalLines();
   const hasWarnings = hasLotWarnings();
   const isEmpty = items.length === 0;
   const isOperator = session?.user.role === 'OPERATOR';
@@ -178,117 +180,139 @@ export default function CartSidebar() {
           </div>
         )}
 
-        {/* Scrollable area: items + budget + summary + suggestions */}
-        <div className="flex-1 overflow-y-auto min-h-0">
-          {isEmpty ? (
-            <div className="flex flex-col items-center justify-center h-full py-12 px-4 text-center">
-              <ShoppingCart size={32} className="text-gray-200 mb-3" />
-              <p className="text-sm text-gray-400 font-light">{cartId ? t('emptyTitle') : 'Nessun carrello attivo'}</p>
-              <p className="text-2xs text-gray-300 mt-1">
-                {cartId ? t('emptyHint') : 'Vai in Carrelli per crearne uno'}
-              </p>
-            </div>
-          ) : (
-            <div>
-              {hasWarnings && (
-                <div className="mx-4 mt-3 mb-0 flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded">
-                  <AlertTriangle size={13} className="text-amber-500 flex-shrink-0" />
-                  <p className="text-2xs text-amber-700">{t('lotWarning')}</p>
-                </div>
-              )}
-              {items.map((item) => (
-                <CartItem key={item.productId + '||' + (item.taglia ?? '')} item={item} />
-              ))}
-
-              {ordine.mostraBudget && budget != null && (
-                <div className="px-4 pt-3 pb-0 border-t border-border bg-cream/20">
-                  <div className="flex justify-between text-2xs text-gray-400 mb-1">
-                    <span className="uppercase tracking-wide">{ts('budgetChannel')}</span>
-                    <span className="font-semibold text-primary">{formatCurrency(budget)}</span>
-                  </div>
-                  <div className="flex justify-between text-2xs text-gray-400 mb-1.5">
-                    {ordine.mostraCosto && (
-                      <span>{ts('budgetUsed')}: <span className="font-medium text-primary">{formatCurrency(costTotal)}</span></span>
-                    )}
-                    {ordine.mostraRimanente && (
-                      <span>{ts('budgetRemaining')}: <span className={`font-medium ${budgetRemaining! < 0 ? 'text-red-500' : 'text-primary'}`}>{formatCurrency(budgetRemaining ?? 0)}</span></span>
-                    )}
-                  </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
-                    <div
-                      className={`h-full rounded-full transition-all ${barColor}`}
-                      style={{ width: `${Math.min(budgetPct, 100)}%` }}
-                    />
-                  </div>
-                  {budgetPct > 100 && (
-                    <div className="text-2xs text-red-500 font-medium mb-1">
-                      {ts('budgetExceeded', { amount: formatCurrency(costTotal - budget) })}
-                    </div>
-                  )}
-                  {budgetPct > 90 && budgetPct <= 100 && (
-                    <div className="text-2xs text-orange-500 font-medium mb-1">
-                      {ts('budgetWarning')}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <CartSummary />
-
-              {suggestions.length > 0 && (
-                <div className="px-4 pb-3 border-t border-border/60">
-                  <p className="text-2xs text-gray-400 uppercase tracking-wider mt-3 mb-2">{ts('suggestions')}</p>
-                  <div className="space-y-2">
-                    {suggestions.map((p) => (
-                      <div key={p.id} className="flex items-center gap-2 bg-cream/50 rounded p-2">
-                        <div className="w-10 h-10 flex-shrink-0 rounded bg-white overflow-hidden border border-border">
-                          <ProductImage src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-2xs font-mono text-gray-400 truncate">{p.code}</p>
-                          <p className="text-xs text-primary truncate leading-snug">{p.name}</p>
-                          <p className="text-2xs text-gray-400">{formatCurrency(p.costPrice)}</p>
-                        </div>
-                        <button
-                          onClick={() => setPendingProduct({ product: p as any, quantity: p.lotSize || 1 })}
-                          className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-primary text-white rounded hover:bg-warm-darker transition-colors"
-                        >
-                          <ShoppingBag size={11} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Crea Ordine — pinned at bottom */}
-        {!isEmpty && (
-          <div className="px-4 pt-3 pb-3 border-t border-border flex-shrink-0">
-            {preview ? (
-              <div className="w-full py-2 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
-                Non puoi creare ordini in modalità anteprima
-              </div>
-            ) : hasWarnings ? (
-              <div className="w-full py-2 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
-                {t('fixLots')}
-              </div>
-            ) : (
-              <button
-                onClick={handleCreateOrder}
-                disabled={isSubmitting}
-                className="w-full py-2 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <><Loader2 size={12} className="animate-spin" /> {t('creating')}</>
-                ) : (
-                  <><Send size={12} /> {t('createOrder')}</>
-                )}
-              </button>
-            )}
+        {/* Empty state */}
+        {isEmpty ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-12 px-4 text-center">
+            <ShoppingCart size={32} className="text-gray-200 mb-3" />
+            <p className="text-sm text-gray-400 font-light">{cartId ? t('emptyTitle') : 'Nessun carrello attivo'}</p>
+            <p className="text-2xs text-gray-300 mt-1">
+              {cartId ? t('emptyHint') : 'Vai in Carrelli per crearne uno'}
+            </p>
           </div>
+        ) : (
+          <>
+            {/* Summary strip — sempre visibile, con toggle lista */}
+            <div className="px-4 py-2.5 border-b border-border bg-cream/30 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <span className="text-2xs text-gray-400">
+                  {totalLines} {totalLines === 1 ? 'riga' : 'righe'} · {totalItems} pz
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-primary">{formatCurrency(costTotal)}</span>
+                  <button
+                    onClick={() => setItemsExpanded((v) => !v)}
+                    className="text-gray-400 hover:text-primary transition-colors p-0.5"
+                    title={itemsExpanded ? 'Comprimi lista' : 'Espandi lista'}
+                  >
+                    <ChevronDown size={13} className={cn('transition-transform duration-200', itemsExpanded ? '' : '-rotate-90')} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Lista prodotti — collassabile */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {itemsExpanded && (
+                <div>
+                  {hasWarnings && (
+                    <div className="mx-4 mt-3 mb-0 flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded">
+                      <AlertTriangle size={13} className="text-amber-500 flex-shrink-0" />
+                      <p className="text-2xs text-amber-700">{t('lotWarning')}</p>
+                    </div>
+                  )}
+                  {items.map((item) => (
+                    <CartItem key={item.productId + '||' + (item.taglia ?? '')} item={item} />
+                  ))}
+
+                  {ordine.mostraBudget && budget != null && (
+                    <div className="px-4 pt-3 pb-0 border-t border-border bg-cream/20">
+                      <div className="flex justify-between text-2xs text-gray-400 mb-1">
+                        <span className="uppercase tracking-wide">{ts('budgetChannel')}</span>
+                        <span className="font-semibold text-primary">{formatCurrency(budget)}</span>
+                      </div>
+                      <div className="flex justify-between text-2xs text-gray-400 mb-1.5">
+                        {ordine.mostraCosto && (
+                          <span>{ts('budgetUsed')}: <span className="font-medium text-primary">{formatCurrency(costTotal)}</span></span>
+                        )}
+                        {ordine.mostraRimanente && (
+                          <span>{ts('budgetRemaining')}: <span className={`font-medium ${budgetRemaining! < 0 ? 'text-red-500' : 'text-primary'}`}>{formatCurrency(budgetRemaining ?? 0)}</span></span>
+                        )}
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
+                        <div
+                          className={`h-full rounded-full transition-all ${barColor}`}
+                          style={{ width: `${Math.min(budgetPct, 100)}%` }}
+                        />
+                      </div>
+                      {budgetPct > 100 && (
+                        <div className="text-2xs text-red-500 font-medium mb-1">
+                          {ts('budgetExceeded', { amount: formatCurrency(costTotal - budget) })}
+                        </div>
+                      )}
+                      {budgetPct > 90 && budgetPct <= 100 && (
+                        <div className="text-2xs text-orange-500 font-medium mb-1">
+                          {ts('budgetWarning')}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <CartSummary />
+
+                  {suggestions.length > 0 && (
+                    <div className="px-4 pb-3 border-t border-border/60">
+                      <p className="text-2xs text-gray-400 uppercase tracking-wider mt-3 mb-2">{ts('suggestions')}</p>
+                      <div className="space-y-2">
+                        {suggestions.map((p) => (
+                          <div key={p.id} className="flex items-center gap-2 bg-cream/50 rounded p-2">
+                            <div className="w-10 h-10 flex-shrink-0 rounded bg-white overflow-hidden border border-border">
+                              <ProductImage src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-2xs font-mono text-gray-400 truncate">{p.code}</p>
+                              <p className="text-xs text-primary truncate leading-snug">{p.name}</p>
+                              <p className="text-2xs text-gray-400">{formatCurrency(p.costPrice)}</p>
+                            </div>
+                            <button
+                              onClick={() => setPendingProduct({ product: p as any, quantity: p.lotSize || 1 })}
+                              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-primary text-white rounded hover:bg-warm-darker transition-colors"
+                            >
+                              <ShoppingBag size={11} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Crea Ordine — sempre pinnato in fondo */}
+            <div className="px-4 pt-3 pb-3 border-t border-border flex-shrink-0">
+              {preview ? (
+                <div className="w-full py-2 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
+                  Non puoi creare ordini in modalità anteprima
+                </div>
+              ) : hasWarnings ? (
+                <div className="w-full py-2 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
+                  {t('fixLots')}
+                </div>
+              ) : (
+                <button
+                  onClick={handleCreateOrder}
+                  disabled={isSubmitting}
+                  className="w-full py-2 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? (
+                    <><Loader2 size={12} className="animate-spin" /> {t('creating')}</>
+                  ) : (
+                    <><Send size={12} /> {t('createOrder')}</>
+                  )}
+                </button>
+              )}
+            </div>
+          </>
         )}
       </div>
 
