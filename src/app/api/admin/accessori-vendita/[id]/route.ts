@@ -4,7 +4,22 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 
-// PATCH /api/admin/accessori-vendita/[id] — aggiorna solo i campi commerciali del supporto
+// DELETE /api/admin/accessori-vendita/[id]
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !isAdminRole(session.user.role)) {
+      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
+    }
+    await prisma.supportoEspositivo.delete({ where: { id: params.id } });
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    if (e.code === 'P2025') return NextResponse.json({ error: 'Non trovato' }, { status: 404 });
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
+
+// PATCH /api/admin/accessori-vendita/[id]
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);

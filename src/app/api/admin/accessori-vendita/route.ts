@@ -72,6 +72,24 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// DELETE /api/admin/accessori-vendita — elimina massiva (body: { ids: string[] })
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !isAdminRole(session.user.role)) {
+      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
+    }
+    const { ids } = await req.json();
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: 'IDs obbligatori' }, { status: 400 });
+    }
+    const { count } = await prisma.supportoEspositivo.deleteMany({ where: { id: { in: ids } } });
+    return NextResponse.json({ ok: true, count });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
+
 // GET /api/admin/accessori-vendita — lista supporti con campi commerciali
 export async function GET() {
   try {

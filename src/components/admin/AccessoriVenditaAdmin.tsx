@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, ExternalLink, Check, X, Loader2, ShoppingBag, ImageIcon, Plus, Copy, Link2 } from 'lucide-react';
+import { Pencil, ExternalLink, Check, X, Loader2, ShoppingBag, ImageIcon, Plus, Copy, Link2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import type { TipoSupporto, TonoLegno } from '@/types/jewelry';
@@ -361,6 +361,7 @@ export default function AccessoriVenditaAdmin() {
   const qc = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: items = [], isLoading } = useQuery<Supporto[]>({
     queryKey: ['admin-accessori-vendita'],
@@ -377,6 +378,54 @@ export default function AccessoriVenditaAdmin() {
   function handleCreated(item: Supporto) {
     qc.setQueryData<Supporto[]>(['admin-accessori-vendita'], (old = []) => [...old, item]);
     setShowCreate(false);
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === items.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map((i) => i.id)));
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Eliminare definitivamente questo supporto espositivo?')) return;
+    try {
+      const res = await fetch(`/api/admin/accessori-vendita/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Errore');
+      qc.setQueryData<Supporto[]>(['admin-accessori-vendita'], (old = []) => old.filter((s) => s.id !== id));
+      setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      toast.success('Eliminato');
+    } catch (e: any) {
+      toast.error(e.message ?? 'Errore');
+    }
+  }
+
+  async function handleBulkDelete() {
+    const n = selectedIds.size;
+    if (!confirm(`Eliminare definitivamente ${n} ${n === 1 ? 'supporto espositivo' : 'supporti espositivi'}?`)) return;
+    try {
+      const ids = [...selectedIds];
+      const res = await fetch('/api/admin/accessori-vendita', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Errore');
+      qc.setQueryData<Supporto[]>(['admin-accessori-vendita'], (old = []) => old.filter((s) => !ids.includes(s.id)));
+      setSelectedIds(new Set());
+      toast.success(`${n} ${n === 1 ? 'supporto eliminato' : 'supporti eliminati'}`);
+    } catch (e: any) {
+      toast.error(e.message ?? 'Errore');
+    }
   }
 
   async function handleDuplicate(id: string) {
@@ -403,12 +452,22 @@ export default function AccessoriVenditaAdmin() {
           <h1 className="text-xl font-semibold text-primary">Supporti espositivi</h1>
           <p className="text-sm text-gray-400 mt-0.5">Gestisci i supporti espositivi vendibili: nome, prezzi, foto e link Demetra.</p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-primary text-white rounded-lg hover:bg-warm-darker transition-colors flex-shrink-0"
-        >
-          <Plus size={13} /> Nuovo
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {selectedIds.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+            >
+              <Trash2 size={13} /> Elimina {selectedIds.size}
+            </button>
+          )}
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-primary text-white rounded-lg hover:bg-warm-darker transition-colors"
+          >
+            <Plus size={13} /> Nuovo
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -419,9 +478,31 @@ export default function AccessoriVenditaAdmin() {
         </div>
       ) : (
         <div className="space-y-3">
+          {/* Seleziona tutti */}
+          <div className="flex items-center gap-2 px-1 pb-1">
+            <input
+              type="checkbox"
+              checked={items.length > 0 && selectedIds.size === items.length}
+              ref={(el) => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < items.length; }}
+              onChange={toggleSelectAll}
+              className="w-4 h-4 accent-primary cursor-pointer"
+            />
+            <span className="text-2xs text-gray-400">
+              {selectedIds.size > 0 ? `${selectedIds.size} selezionati` : 'Seleziona tutti'}
+            </span>
+          </div>
+
           {items.map((item) => (
-            <div key={item.id} className={`bg-white border border-border rounded-xl p-4 shadow-sm ${!item.attivo ? 'opacity-50' : ''}`}>
+            <div key={item.id} className={`bg-white border rounded-xl p-4 shadow-sm transition-colors ${selectedIds.has(item.id) ? 'border-primary/40 bg-primary/5' : 'border-border'} ${!item.attivo ? 'opacity-50' : ''}`}>
               <div className="flex gap-4 items-start">
+                {/* Checkbox */}
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(item.id)}
+                  onChange={() => toggleSelect(item.id)}
+                  className="mt-1 w-4 h-4 accent-primary cursor-pointer flex-shrink-0"
+                />
+
                 {/* Foto */}
                 <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden border border-border bg-cream flex items-center justify-center">
                   {item.immagineUrl
@@ -470,6 +551,13 @@ export default function AccessoriVenditaAdmin() {
                     title="Modifica"
                   >
                     {expandedId === item.id ? <X size={14} /> : <Pencil size={14} />}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="p-2 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
+                    title="Elimina"
+                  >
+                    <Trash2 size={13} />
                   </button>
                 </div>
               </div>
