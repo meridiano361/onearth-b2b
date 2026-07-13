@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireModaSession } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
+import { MODA_COLLEZIONE } from '@/lib/modaAccess';
 import { hexToHsl, getHueFamilyId, isColorNeutral, getHarmonyType, harmonyScore, generateDisplayGroups } from '@/lib/colorHarmony';
 import type { PantoneInfo } from '@/lib/colorHarmony';
 
@@ -71,6 +72,7 @@ export async function GET(req: NextRequest) {
   const allProducts = await prisma.product.findMany({
     where: {
       isActive: true,
+      collezione: MODA_COLLEZIONE,
       gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' },
       id: { not: productId },
     },

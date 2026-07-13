@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireModaSession } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 import { hexToHsl, getHueFamilyId, isColorNeutral, HUE_FAMILIES, inferHueFromColore } from '@/lib/colorHarmony';
+import { MODA_COLLEZIONE } from '@/lib/modaAccess';
 
 
 type PantoneRow = {
@@ -19,7 +20,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const products = await prisma.product.findMany({
-    where: { isActive: true, gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' } },
+    where: { isActive: true, collezione: MODA_COLLEZIONE, gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' } },
     select: {
       id: true,
       code: true,
