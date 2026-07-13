@@ -2,10 +2,10 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, X, ArrowLeft, Sparkles, Star, Search, ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { Loader2, X, ArrowLeft, Sparkles, Star, Search, ChevronDown, ChevronRight, Plus, Palette } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { HUE_FAMILIES, type HueFamily } from '@/lib/colorHarmony';
+import { HUE_FAMILIES, type HueFamily, harmonyScore, getHarmonyType } from '@/lib/colorHarmony';
 import { isAdminRole } from '@/lib/roles';
 import toast from 'react-hot-toast';
 import { nanoid } from 'nanoid';
@@ -579,6 +579,8 @@ export default function ColorWheelView() {
   const [searchQuery, setSearchQuery]             = useState('');
   const [sortBy, setSortBy]                       = useState<SortKey>('code');
   const [addingProductId, setAddingProductId]     = useState<string | null>(null);
+  const [palettaCategoria, setPalettaCategoria]   = useState<string | null>(null);
+  const [palettaPantoneKey, setPalettaPantoneKey] = useState<string | null>(null);
 
   const { data: wheelData, isLoading: wheelLoading, isError, error, refetch } = useQuery<{ families: WheelFamily[] }>({
     queryKey: ['moda-color-wheel'],
@@ -653,6 +655,58 @@ export default function ColorWheelView() {
   }, [visibleProducts, searchQuery, sortBy]);
 
   const allDots = families.flatMap((f) => f.products);
+
+  // ── Palette per categoria ─────────────────────────────────────────────────────
+
+  type PantoneSummary = {
+    key: string; hex: string; code: string; name: string;
+    productIds: string[]; hue: number; lightness: number; isNeutral: boolean;
+  };
+
+  const famiglieConPalette = useMemo((): { famiglia: string; pantones: PantoneSummary[] }[] => {
+    const map = new Map<string, Map<string, PantoneSummary>>();
+    for (const wf of families) {
+      for (const p of wf.products) {
+        if (!p.famiglia || !p.primaryPantone) continue;
+        const pt = p.primaryPantone;
+        const key = pt.code || pt.hex_code;
+        if (!map.has(p.famiglia)) map.set(p.famiglia, new Map());
+        const pMap = map.get(p.famiglia)!;
+        if (!pMap.has(key)) {
+          pMap.set(key, { key, hex: pt.hex_code, code: pt.code, name: pt.name, productIds: [], hue: pt.hue_angle, lightness: pt.lightness, isNeutral: pt.is_neutral });
+        }
+        const entry = pMap.get(key)!;
+        if (!entry.productIds.includes(p.id)) entry.productIds.push(p.id);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([famiglia, pMap]) => ({
+        famiglia,
+        pantones: Array.from(pMap.values()).sort((a, b) =>
+          a.isNeutral !== b.isNeutral ? (a.isNeutral ? 1 : -1) : a.hue - b.hue
+        ),
+      }))
+      .filter(f => f.pantones.length > 0)
+      .sort((a, b) => a.famiglia.localeCompare(b.famiglia, 'it'));
+  }, [families]);
+
+  const selectedHero = selectedProductId ? productMap.get(selectedProductId) : null;
+
+  type ScoredPantone = PantoneSummary & { score: number | null; harmonyType: string | null };
+
+  const scoredPaletteItems = useMemo((): ScoredPantone[] => {
+    const pantones = famiglieConPalette.find(f => f.famiglia === palettaCategoria)?.pantones ?? [];
+    if (!selectedHero) return pantones.map(p => ({ ...p, score: null, harmonyType: null }));
+    return pantones
+      .map(pt => ({
+        ...pt,
+        score: harmonyScore(selectedHero.hue, pt.hue, selectedHero.isNeutral, pt.isNeutral, selectedHero.lightness, pt.lightness),
+        harmonyType: getHarmonyType(selectedHero.hue, pt.hue, selectedHero.isNeutral, pt.isNeutral),
+      }))
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  }, [famiglieConPalette, palettaCategoria, selectedHero]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
 
   function handleFamilyClick(familyId: string) {
     setSelectedFamilyId((prev) => (prev === familyId ? null : familyId));
@@ -1053,6 +1107,178 @@ export default function ColorWheelView() {
               </div>
             )}
           </div>
+
+          {/* Palette Pantone per categoria */}
+          {!wheelLoading && famiglieConPalette.length > 0 && (
+            <div className="border-t border-border/50 p-4 sm:p-6">
+              {/* Header */}
+              <div className="flex items-center gap-2 mb-3">
+                <Palette size={14} className="text-accent flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-primary">Palette Pantone per categoria</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {selectedHero
+                      ? `Abbinamenti di ${selectedHero.code} nelle altre categorie`
+                      : 'Colori Pantone disponibili per famiglia merceologica'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Family tab chips */}
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {famiglieConPalette.map(f => (
+                  <button
+                    key={f.famiglia}
+                    onClick={() => {
+                      setPalettaCategoria(prev => prev === f.famiglia ? null : f.famiglia);
+                      setPalettaPantoneKey(null);
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                      palettaCategoria === f.famiglia
+                        ? 'bg-primary text-background border-primary'
+                        : 'bg-white text-gray-600 border-border hover:border-primary/30 hover:bg-cream'
+                    }`}
+                  >
+                    {f.famiglia}
+                    <span className={`tabular-nums text-2xs ${palettaCategoria === f.famiglia ? 'text-background/70' : 'text-gray-400'}`}>
+                      {f.pantones.length}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Overview cards — no category selected */}
+              {!palettaCategoria && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {famiglieConPalette.map(f => (
+                    <button
+                      key={f.famiglia}
+                      onClick={() => { setPalettaCategoria(f.famiglia); setPalettaPantoneKey(null); }}
+                      className="text-left p-3 rounded-xl border border-border hover:border-accent/40 bg-white hover:shadow-sm transition-all"
+                    >
+                      <p className="text-xs font-semibold text-primary mb-2 truncate">{f.famiglia}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {f.pantones.slice(0, 14).map(pt => (
+                          <span
+                            key={pt.key}
+                            className="w-4 h-4 rounded-full border border-white shadow-sm"
+                            style={{ backgroundColor: pt.hex }}
+                            title={`${pt.code} — ${pt.name}`}
+                          />
+                        ))}
+                        {f.pantones.length > 14 && (
+                          <span className="text-2xs text-gray-400 self-center ml-0.5">+{f.pantones.length - 14}</span>
+                        )}
+                      </div>
+                      <p className="text-2xs text-gray-400 mt-2 tabular-nums">
+                        {f.pantones.length} colori · {f.pantones.reduce((s, p) => s + p.productIds.length, 0)} prodotti
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Selected category palette */}
+              {palettaCategoria && scoredPaletteItems.length > 0 && (
+                <div>
+                  {selectedHero && (
+                    <div className="flex items-center gap-2 mb-3 text-xs text-gray-500">
+                      <span
+                        className="w-3 h-3 rounded-full flex-shrink-0 border border-border/40"
+                        style={{ backgroundColor: selectedHero.primaryPantone?.hex_code ?? '#9E9E9E' }}
+                      />
+                      <span>
+                        Abbinamenti cromatici di <strong className="text-primary">{selectedHero.code}</strong> con i prodotti di <strong className="text-primary">{palettaCategoria}</strong>
+                      </span>
+                    </div>
+                  )}
+
+                  {selectedHero && (
+                    <div className="flex items-center gap-4 text-2xs text-gray-400 mb-3 px-1">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> Alta armonia
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-blue-300 inline-block" /> Compatibile
+                      </span>
+                      <span className="flex items-center gap-1 opacity-50">
+                        <span className="w-2 h-2 rounded-full bg-gray-300 inline-block" /> Bassa armonia
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="space-y-0.5">
+                    {scoredPaletteItems.map(pt => {
+                      const isHarmonic   = pt.score !== null && pt.score >= 70;
+                      const isCompatible = pt.score !== null && pt.score >= 50 && pt.score < 70;
+                      const opacity = pt.score === null ? 1
+                        : isHarmonic ? 1
+                        : isCompatible ? 0.6
+                        : 0.25;
+                      const isExpanded = palettaPantoneKey === pt.key;
+
+                      return (
+                        <div key={pt.key}>
+                          <button
+                            onClick={() => setPalettaPantoneKey(prev => prev === pt.key ? null : pt.key)}
+                            style={{ opacity }}
+                            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all ${
+                              isExpanded ? 'bg-gray-100' : 'hover:bg-gray-50'
+                            }`}
+                          >
+                            <span
+                              className="w-5 h-5 rounded-full flex-shrink-0 border-2 border-white shadow"
+                              style={{ backgroundColor: pt.hex }}
+                            />
+                            <span className="font-mono text-2xs text-gray-500 w-20 flex-shrink-0 truncate">{pt.code || '—'}</span>
+                            <span className="text-xs text-gray-700 flex-1 truncate">{pt.name}</span>
+                            <span className="text-2xs text-gray-400 tabular-nums flex-shrink-0">{pt.productIds.length} prod.</span>
+                            {isHarmonic && pt.harmonyType && (
+                              <span className={`text-2xs px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium ${HARMONY_COLORS[pt.harmonyType] ?? 'bg-gray-100 text-gray-600'}`}>
+                                {HARMONY_LABELS[pt.harmonyType] ?? pt.harmonyType}
+                              </span>
+                            )}
+                          </button>
+
+                          {/* Expanded products */}
+                          {isExpanded && (
+                            <div className="ml-8 pl-3 border-l-2 border-border/30 py-2 mb-1">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                                {pt.productIds.slice(0, 9).map(pid => {
+                                  const prod = productMap.get(pid);
+                                  if (!prod) return null;
+                                  return (
+                                    <button
+                                      key={pid}
+                                      onClick={() => handleProductClick(pid)}
+                                      className="flex items-center gap-1.5 text-left p-1 rounded hover:bg-white transition-colors"
+                                    >
+                                      {prod.imageUrl
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        ? <img src={prod.imageUrl} alt="" className="w-8 h-8 object-cover rounded flex-shrink-0 border border-border/40" />
+                                        : <div className="w-8 h-8 rounded flex-shrink-0" style={{ backgroundColor: pt.hex }} />
+                                      }
+                                      <div className="min-w-0">
+                                        <p className="font-mono font-semibold text-primary text-2xs truncate leading-tight">{prod.code}</p>
+                                        <p className="text-gray-400 text-2xs truncate leading-tight">{prod.name}</p>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              {pt.productIds.length > 9 && (
+                                <p className="text-2xs text-gray-400 mt-1">+{pt.productIds.length - 9} altri prodotti</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Suggestions panel */}
           {selectedProduct && (
