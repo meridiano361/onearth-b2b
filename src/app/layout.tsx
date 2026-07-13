@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Nunito } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import ToasterWrapper from '@/components/layout/ToasterWrapper';
 import Providers from '@/components/layout/Providers';
 import WhatsAppWidget from '@/components/WhatsAppWidget';
@@ -45,14 +47,17 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const locale = await getLocale();
-  const messages = await getMessages();
+  const [locale, messages, session] = await Promise.all([
+    getLocale(),
+    getMessages(),
+    getServerSession(authOptions),
+  ]);
 
   return (
     <html lang={locale} className={nunito.variable}>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <Providers>
+          <Providers session={session}>
             {children}
             <ToasterWrapper />
             <WhatsAppWidget />

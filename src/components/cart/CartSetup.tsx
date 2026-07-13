@@ -135,7 +135,7 @@ export default function CartSetup() {
       fetch(`/api/catalog/carts?collection=${collectionId}`)
         .then((r) => r.json())
         .then((d) => d.data as Cart[]),
-    enabled: !!pendingProduct || !!pendingVariants,
+    enabled: status === 'authenticated',
   });
 
   if (!pendingProduct && !pendingVariants) return null;
