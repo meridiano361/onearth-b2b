@@ -145,11 +145,20 @@ export default function CartSidebar() {
             >
               <ArrowLeftRight size={13} />
             </button>
-            {!isEmpty && (
+            {cartId && (
               <button
-                onClick={() => { if (confirm(t('clearConfirm'))) clearCart(); }}
-                className="text-gray-300 hover:text-gray-600 transition-colors"
-                title={t('clearTooltip')}
+                onClick={async () => {
+                  if (!confirm('Eliminare definitivamente questo carrello?')) return;
+                  try {
+                    await fetch(`/api/catalog/carts/${cartId}`, { method: 'DELETE' });
+                    clearCart();
+                    queryClient.invalidateQueries({ queryKey: ['my-carts'] });
+                  } catch {
+                    toast.error('Errore durante l\'eliminazione del carrello');
+                  }
+                }}
+                className="text-gray-300 hover:text-red-400 transition-colors"
+                title="Elimina carrello"
               >
                 <Trash2 size={13} />
               </button>
