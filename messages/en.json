@@ -238,6 +238,8 @@
         "sottoclasse": "Subclass",
         "gruppoOmogeneo": "Homogeneous group",
         "linea": "Line",
+        "modello": "Model",
+        "materiale": "Material",
         "colore": "Color",
         "temaColore": "Color theme",
         "stagione": "Season",

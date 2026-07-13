@@ -322,6 +322,8 @@ const ALL_CATALOG_FILTERS: { key: string; label: string }[] = [
   { key: 'sottoclasse',        label: 'Sottoclasse' },
   { key: 'gruppoOmogeneo',     label: 'Gruppo omogeneo' },
   { key: 'nomLinea',           label: 'Linea' },
+  { key: 'modello',            label: 'Modello' },
+  { key: 'materiale',          label: 'Materiale' },
   { key: 'collezione',         label: 'Collezione' },
   { key: 'colore',             label: 'Colore' },
   { key: 'temaColore',         label: 'Tema colore' },

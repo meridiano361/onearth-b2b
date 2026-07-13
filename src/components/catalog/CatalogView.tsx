@@ -24,6 +24,8 @@ type Filters = {
   sottoclasse:        string | null;
   gruppoOmogeneo:     string | null;
   nomLinea:           string | null;
+  modello:            string | null;
+  materiale:          string | null;
   colore:             string | null;
   temaColore:         string | null;
   stagione:           string | null;
@@ -44,6 +46,9 @@ function filterMatchesProduct(p: Product, key: keyof Filters, value: string): bo
   if (key === 'temaColore') {
     return [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].some(v => v === value);
   }
+  if (key === 'materiale') {
+    return [p.materiale1, p.materiale2, p.materiale3].some(v => v === value);
+  }
   const primary = (p as unknown as Record<string, unknown>)[key] as string | undefined;
   if (primary === value) return true;
   const sec = FILTER_SECONDARY[key];
@@ -62,6 +67,10 @@ function getAvailableValues(products: Product[], filters: Filters, key: keyof Fi
     if (!matches) continue;
     if (key === 'temaColore') {
       for (const v of [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5]) {
+        if (v) result.add(v);
+      }
+    } else if (key === 'materiale') {
+      for (const v of [p.materiale1, p.materiale2, p.materiale3]) {
         if (v) result.add(v);
       }
     } else {
@@ -92,15 +101,17 @@ function clearInvalidFilters(products: Product[], filters: Filters, changedKey: 
 
 const EMPTY_FILTERS: Filters = {
   gruppoMerceologico: null, famiglia: null, classe: null, sottoclasse: null,
-  gruppoOmogeneo: null, nomLinea: null, colore: null, temaColore: null,
-  stagione: null, collezione: null, produttore: null, tranche: null,
+  gruppoOmogeneo: null, nomLinea: null, modello: null, materiale: null,
+  colore: null, temaColore: null, stagione: null, collezione: null,
+  produttore: null, tranche: null,
 };
 
 // Short URL keys for cleaner URLs
 const URL_KEYS: Record<keyof Filters, string> = {
   gruppoMerceologico: 'gm', famiglia: 'fam', classe: 'cls', sottoclasse: 'sub',
-  gruppoOmogeneo: 'go', nomLinea: 'lin', colore: 'col', temaColore: 'tcol',
-  stagione: 'stag', collezione: 'coll', produttore: 'prod', tranche: 'tran',
+  gruppoOmogeneo: 'go', nomLinea: 'lin', modello: 'mod', materiale: 'mat',
+  colore: 'col', temaColore: 'tcol', stagione: 'stag', collezione: 'coll',
+  produttore: 'prod', tranche: 'tran',
 };
 
 const CHIP_LABELS: { key: keyof Filters; label: string }[] = [
@@ -110,6 +121,8 @@ const CHIP_LABELS: { key: keyof Filters; label: string }[] = [
   { key: 'sottoclasse',        label: 'Sottoclasse' },
   { key: 'gruppoOmogeneo',     label: 'Gruppo omogeneo' },
   { key: 'nomLinea',           label: 'Linea' },
+  { key: 'modello',            label: 'Modello' },
+  { key: 'materiale',          label: 'Materiale' },
   { key: 'colore',             label: 'Colore' },
   { key: 'temaColore',         label: 'Tema colore' },
   { key: 'stagione',           label: 'Stagione' },
@@ -326,13 +339,15 @@ export default function CatalogView({
       );
     }
 
-    const { gruppoMerceologico, famiglia, classe, sottoclasse, gruppoOmogeneo, nomLinea, colore, temaColore, stagione, collezione, produttore, tranche } = filters;
+    const { gruppoMerceologico, famiglia, classe, sottoclasse, gruppoOmogeneo, nomLinea, modello, materiale, colore, temaColore, stagione, collezione, produttore, tranche } = filters;
     if (gruppoMerceologico) result = result.filter((p) => p.gruppoMerceologico === gruppoMerceologico);
     if (famiglia)           result = result.filter((p) => p.famiglia           === famiglia);
     if (classe)             result = result.filter((p) => p.classe === classe || (p as any).classe2 === classe);
     if (sottoclasse)        result = result.filter((p) => p.sottoclasse === sottoclasse || (p as any).sottoclasse2 === sottoclasse);
     if (gruppoOmogeneo)     result = result.filter((p) => p.gruppoOmogeneo === gruppoOmogeneo || (p as any).gruppoOmogeneo2 === gruppoOmogeneo);
     if (nomLinea)           result = result.filter((p) => p.nomLinea           === nomLinea);
+    if (modello)            result = result.filter((p) => p.modello            === modello);
+    if (materiale)          result = result.filter((p) => [p.materiale1, p.materiale2, p.materiale3].includes(materiale));
     if (colore)             result = result.filter((p) => p.colore             === colore);
     if (temaColore)         result = result.filter((p) => [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].includes(temaColore));
     if (stagione)           result = result.filter((p) => p.stagione           === stagione);
@@ -385,6 +400,8 @@ export default function CatalogView({
       selectedSottoclasse:        currentFilters.sottoclasse,        onSottoclasseChange:        (v: string | null) => onFilterChange('sottoclasse', v),
       selectedGruppoOmogeneo:     currentFilters.gruppoOmogeneo,     onGruppoOmogeneoChange:     (v: string | null) => onFilterChange('gruppoOmogeneo', v),
       selectedNomLinea:           currentFilters.nomLinea,           onNomLineaChange:           (v: string | null) => onFilterChange('nomLinea', v),
+      selectedModello:            currentFilters.modello,            onModelloChange:            (v: string | null) => onFilterChange('modello', v),
+      selectedMateriale:          currentFilters.materiale,          onMaterialeChange:          (v: string | null) => onFilterChange('materiale', v),
       selectedColore:             currentFilters.colore,             onColoreChange:             (v: string | null) => onFilterChange('colore', v),
       selectedTemaColore:         currentFilters.temaColore,         onTemaColoreChange:         (v: string | null) => onFilterChange('temaColore', v),
       selectedStagione:           currentFilters.stagione,           onStagioneChange:           (v: string | null) => onFilterChange('stagione', v),
