@@ -178,8 +178,8 @@ export default function CartSidebar() {
           </div>
         )}
 
-        {/* Items */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Scrollable area: items + budget + summary + suggestions */}
+        <div className="flex-1 overflow-y-auto min-h-0">
           {isEmpty ? (
             <div className="flex flex-col items-center justify-center h-full py-12 px-4 text-center">
               <ShoppingCart size={32} className="text-gray-200 mb-3" />
@@ -199,99 +199,96 @@ export default function CartSidebar() {
               {items.map((item) => (
                 <CartItem key={item.productId + '||' + (item.taglia ?? '')} item={item} />
               ))}
+
+              {ordine.mostraBudget && budget != null && (
+                <div className="px-4 pt-3 pb-0 border-t border-border bg-cream/20">
+                  <div className="flex justify-between text-2xs text-gray-400 mb-1">
+                    <span className="uppercase tracking-wide">{ts('budgetChannel')}</span>
+                    <span className="font-semibold text-primary">{formatCurrency(budget)}</span>
+                  </div>
+                  <div className="flex justify-between text-2xs text-gray-400 mb-1.5">
+                    {ordine.mostraCosto && (
+                      <span>{ts('budgetUsed')}: <span className="font-medium text-primary">{formatCurrency(costTotal)}</span></span>
+                    )}
+                    {ordine.mostraRimanente && (
+                      <span>{ts('budgetRemaining')}: <span className={`font-medium ${budgetRemaining! < 0 ? 'text-red-500' : 'text-primary'}`}>{formatCurrency(budgetRemaining ?? 0)}</span></span>
+                    )}
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
+                    <div
+                      className={`h-full rounded-full transition-all ${barColor}`}
+                      style={{ width: `${Math.min(budgetPct, 100)}%` }}
+                    />
+                  </div>
+                  {budgetPct > 100 && (
+                    <div className="text-2xs text-red-500 font-medium mb-1">
+                      {ts('budgetExceeded', { amount: formatCurrency(costTotal - budget) })}
+                    </div>
+                  )}
+                  {budgetPct > 90 && budgetPct <= 100 && (
+                    <div className="text-2xs text-orange-500 font-medium mb-1">
+                      {ts('budgetWarning')}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <CartSummary />
+
+              {suggestions.length > 0 && (
+                <div className="px-4 pb-3 border-t border-border/60">
+                  <p className="text-2xs text-gray-400 uppercase tracking-wider mt-3 mb-2">{ts('suggestions')}</p>
+                  <div className="space-y-2">
+                    {suggestions.map((p) => (
+                      <div key={p.id} className="flex items-center gap-2 bg-cream/50 rounded p-2">
+                        <div className="w-10 h-10 flex-shrink-0 rounded bg-white overflow-hidden border border-border">
+                          <ProductImage src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-2xs font-mono text-gray-400 truncate">{p.code}</p>
+                          <p className="text-xs text-primary truncate leading-snug">{p.name}</p>
+                          <p className="text-2xs text-gray-400">{formatCurrency(p.costPrice)}</p>
+                        </div>
+                        <button
+                          onClick={() => setPendingProduct({ product: p as any, quantity: p.lotSize || 1 })}
+                          className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-primary text-white rounded hover:bg-warm-darker transition-colors"
+                        >
+                          <ShoppingBag size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Summary, barra budget destinazione, suggerimenti */}
+        {/* Crea Ordine — pinned at bottom */}
         {!isEmpty && (
-          <>
-            {/* Crea Ordine */}
-            <div className="px-4 pt-3 pb-3 border-t border-border flex-shrink-0">
-              {preview ? (
-                <div className="w-full py-2 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
-                  Non puoi creare ordini in modalità anteprima
-                </div>
-              ) : hasWarnings ? (
-                <div className="w-full py-2 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
-                  {t('fixLots')}
-                </div>
-              ) : (
-                <button
-                  onClick={handleCreateOrder}
-                  disabled={isSubmitting}
-                  className="w-full py-2 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? (
-                    <><Loader2 size={12} className="animate-spin" /> {t('creating')}</>
-                  ) : (
-                    <><Send size={12} /> {t('createOrder')}</>
-                  )}
-                </button>
-              )}
-            </div>
-
-            {ordine.mostraBudget && budget != null && (
-              <div className="px-4 pt-3 pb-0 border-t border-border bg-cream/20">
-                <div className="flex justify-between text-2xs text-gray-400 mb-1">
-                  <span className="uppercase tracking-wide">{ts('budgetChannel')}</span>
-                  <span className="font-semibold text-primary">{formatCurrency(budget)}</span>
-                </div>
-                <div className="flex justify-between text-2xs text-gray-400 mb-1.5">
-                  {ordine.mostraCosto && (
-                    <span>{ts('budgetUsed')}: <span className="font-medium text-primary">{formatCurrency(costTotal)}</span></span>
-                  )}
-                  {ordine.mostraRimanente && (
-                    <span>{ts('budgetRemaining')}: <span className={`font-medium ${budgetRemaining! < 0 ? 'text-red-500' : 'text-primary'}`}>{formatCurrency(budgetRemaining ?? 0)}</span></span>
-                  )}
-                </div>
-                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
-                  <div
-                    className={`h-full rounded-full transition-all ${barColor}`}
-                    style={{ width: `${Math.min(budgetPct, 100)}%` }}
-                  />
-                </div>
-                {budgetPct > 100 && (
-                  <div className="text-2xs text-red-500 font-medium mb-1">
-                    {ts('budgetExceeded', { amount: formatCurrency(costTotal - budget) })}
-                  </div>
-                )}
-                {budgetPct > 90 && budgetPct <= 100 && (
-                  <div className="text-2xs text-orange-500 font-medium mb-1">
-                    {ts('budgetWarning')}
-                  </div>
-                )}
+          <div className="px-4 pt-3 pb-3 border-t border-border flex-shrink-0">
+            {preview ? (
+              <div className="w-full py-2 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
+                Non puoi creare ordini in modalità anteprima
               </div>
-            )}
-
-            <CartSummary />
-
-            {suggestions.length > 0 && (
-              <div className="px-4 pb-3 border-t border-border/60">
-                <p className="text-2xs text-gray-400 uppercase tracking-wider mt-3 mb-2">{ts('suggestions')}</p>
-                <div className="space-y-2">
-                  {suggestions.map((p) => (
-                    <div key={p.id} className="flex items-center gap-2 bg-cream/50 rounded p-2">
-                      <div className="w-10 h-10 flex-shrink-0 rounded bg-white overflow-hidden border border-border">
-                        <ProductImage src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-2xs font-mono text-gray-400 truncate">{p.code}</p>
-                        <p className="text-xs text-primary truncate leading-snug">{p.name}</p>
-                        <p className="text-2xs text-gray-400">{formatCurrency(p.costPrice)}</p>
-                      </div>
-                      <button
-                        onClick={() => setPendingProduct({ product: p as any, quantity: p.lotSize || 1 })}
-                        className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-primary text-white rounded hover:bg-warm-darker transition-colors"
-                      >
-                        <ShoppingBag size={11} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+            ) : hasWarnings ? (
+              <div className="w-full py-2 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
+                {t('fixLots')}
               </div>
+            ) : (
+              <button
+                onClick={handleCreateOrder}
+                disabled={isSubmitting}
+                className="w-full py-2 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <><Loader2 size={12} className="animate-spin" /> {t('creating')}</>
+                ) : (
+                  <><Send size={12} /> {t('createOrder')}</>
+                )}
+              </button>
             )}
-          </>
+          </div>
         )}
       </div>
 

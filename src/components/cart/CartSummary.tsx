@@ -11,7 +11,12 @@ export function computeProjections(items: { product: { costPrice: number | strin
   let venditeIE = 0;
 
   for (const { product, quantity } of items) {
-    const cost   = Number(product.costPrice);
+    const p = product as any;
+    const costoConReso   = Number(p.costoIeConReso);
+    const costoSenzaReso = Number(p.costoIeSenzaReso);
+    const cost = costoConReso > 0 ? costoConReso
+               : costoSenzaReso > 0 ? costoSenzaReso
+               : Number(product.costPrice);
     const retail = Number(product.retailPrice);
     const iva    = product.iva ?? 22;
     costTotal += cost * quantity;
