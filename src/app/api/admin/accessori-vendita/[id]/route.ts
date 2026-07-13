@@ -13,6 +13,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     const body = await req.json();
     const data: any = {};
+    if (body.nome         !== undefined) data.nome         = body.nome?.trim()         || null;
     if (body.immagineUrl  !== undefined) data.immagineUrl  = body.immagineUrl?.trim()  || '';
     if (body.codice       !== undefined) data.codice       = body.codice?.trim()       || null;
     if (body.retailPrice  !== undefined) data.retailPrice  = body.retailPrice  != null ? Number(body.retailPrice)  : null;
@@ -25,6 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({
       data: {
         id:           item.id,
+        nome:         item.nome,
         immagineUrl:  item.immagineUrl,
         codice:       item.codice,
         retailPrice:  item.retailPrice  != null ? Number(item.retailPrice)  : null,

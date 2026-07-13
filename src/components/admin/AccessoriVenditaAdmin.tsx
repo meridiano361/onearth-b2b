@@ -94,6 +94,7 @@ function InlineEditor({
   onSaved: (updated: Partial<Supporto>) => void;
 }) {
   const [form, setForm] = useState({
+    nome:         supporto.nome ?? '',
     immagineUrl:  supporto.immagineUrl ?? '',
     codice:       supporto.codice ?? '',
     retailPrice:  supporto.retailPrice ?? '',
@@ -115,6 +116,7 @@ function InlineEditor({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          nome:         form.nome.trim() || null,
           immagineUrl:  form.immagineUrl.trim() || null,
           codice:       form.codice.trim() || null,
           retailPrice:  form.retailPrice !== '' ? parseFloat(String(form.retailPrice)) : null,
@@ -144,6 +146,13 @@ function InlineEditor({
         />
       )}
       <div className="mt-4 space-y-3 border-t border-border pt-4">
+        <div>
+          <label className={labelCls}>Nome</label>
+          <input className={inputCls} value={form.nome}
+            onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
+            placeholder="es. Busto legno chiaro 30cm" />
+        </div>
+
         {/* Immagine */}
         <div>
           <label className={labelCls}>Foto</label>
@@ -253,7 +262,7 @@ function CreaAccessorioModal({ onSaved, onClose }: { onSaved: (item: Supporto) =
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg p-5 space-y-4">
         {pickerOpen && <FotoPickerModal onSelect={(url) => { setForm(f => ({ ...f, immagineUrl: url })); setPickerOpen(false); }} onClose={() => setPickerOpen(false)} />}
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-primary">Nuovo accessorio</h3>
+          <h3 className="text-sm font-semibold text-primary">Nuovo supporto espositivo</h3>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-primary"><X size={16} /></button>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -357,8 +366,8 @@ export default function AccessoriVenditaAdmin() {
       {showCreate && <CreaAccessorioModal onSaved={handleCreated} onClose={() => setShowCreate(false)} />}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-primary">Accessori alla vendita</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Gestisci i supporti espositivi vendibili: prezzi, foto e link Demetra.</p>
+          <h1 className="text-xl font-semibold text-primary">Supporti espositivi</h1>
+          <p className="text-sm text-gray-400 mt-0.5">Gestisci i supporti espositivi vendibili: nome, prezzi, foto e link Demetra.</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
@@ -372,7 +381,7 @@ export default function AccessoriVenditaAdmin() {
         <div className="flex justify-center py-12"><Loader2 size={20} className="animate-spin text-gray-400" /></div>
       ) : items.length === 0 ? (
         <div className="text-center py-12 text-gray-400 text-sm">
-          Nessun accessorio. Clicca <button onClick={() => setShowCreate(true)} className="text-accent hover:underline">+ Nuovo</button> per aggiungerne.
+          Nessun supporto. Clicca <button onClick={() => setShowCreate(true)} className="text-accent hover:underline">+ Nuovo</button> per aggiungerne.
         </div>
       ) : (
         <div className="space-y-3">
