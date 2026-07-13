@@ -217,7 +217,7 @@ function LookSection({
 
 export default function ModaLookDetail({ lookId }: { lookId: string }) {
   const qc = useQueryClient();
-  const { addItem } = useCartStore();
+  const { addItem, setPendingProduct } = useCartStore();
   const [showAdd, setShowAdd] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState('');
@@ -373,7 +373,7 @@ export default function ModaLookDetail({ lookId }: { lookId: string }) {
                   items={groupedProdotti[tipo]}
                   lookId={lookId}
                   onRemove={(productId) => removeProdotto.mutate(productId)}
-                  onAddToCart={(lp) => addItem(lp.product as any, lp.product.lotSize || 1)}
+                  onAddToCart={(lp) => setPendingProduct({ product: lp.product as any, quantity: lp.product.lotSize || 1 })}
                 />
               ))}
             </div>

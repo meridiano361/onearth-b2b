@@ -19,7 +19,7 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { getItemQuantity, updateQuantity, addItem, addVariants } = useCartStore();
+  const { getItemQuantity, updateQuantity, setPendingProduct, setPendingVariants } = useCartStore();
   const { isFavorited, toggle: toggleFavorite } = useFavorites();
   const t = useTranslations('product');
   const { card: cs } = useSettings();
@@ -47,10 +47,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       return;
     }
     const qty = localQty > 0 ? localQty : product.lotSize || 1;
-    addItem(product, qty);
     setLocalQty(0);
-    setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 1500);
+    setPendingProduct({ product, quantity: qty });
   }
 
   return (
@@ -265,9 +263,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         product={product}
         onClose={() => setShowSizePicker(false)}
         onConfirm={(variants) => {
-          addVariants(product, variants);
-          setJustAdded(true);
-          setTimeout(() => setJustAdded(false), 1500);
+          setPendingVariants({ product, variants });
         }}
       />
     )}

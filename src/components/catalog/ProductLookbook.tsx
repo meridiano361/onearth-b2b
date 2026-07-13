@@ -13,7 +13,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import type { Product } from '@/types';
 
 function LookbookCard({ product }: { product: Product }) {
-  const { addItem, getItemQuantity } = useCartStore();
+  const { setPendingProduct, getItemQuantity } = useCartStore();
   const { isFavorited, toggle: toggleFavorite } = useFavorites();
   const { card: cs } = useSettings();
   const pathname = usePathname();
@@ -25,9 +25,7 @@ function LookbookCard({ product }: { product: Product }) {
 
   function handleAdd(e: React.MouseEvent) {
     e.stopPropagation();
-    addItem(product, product.lotSize || 1);
-    setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 1500);
+    setPendingProduct({ product, quantity: product.lotSize || 1 });
   }
 
   return (

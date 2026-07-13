@@ -94,7 +94,7 @@ interface Props {
 
 export default function ProductDetailView({ id }: Props) {
   const router = useRouter();
-  const { getItemQuantity, updateQuantity, addItem } = useCartStore();
+  const { getItemQuantity, updateQuantity, setPendingProduct } = useCartStore();
   const [justAdded, setJustAdded] = useState(false);
   const [showSizePanel, setShowSizePanel] = useState(false);
   const tp = useTranslations('product');
@@ -170,9 +170,7 @@ export default function ProductDetailView({ id }: Props) {
 
   function handleAdd() {
     if (!product) return;
-    addItem(product, product.lotSize || 1);
-    setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 1800);
+    setPendingProduct({ product, quantity: product.lotSize || 1 });
   }
 
   function handleQuantityChange(qty: number) {
@@ -327,7 +325,7 @@ export default function ProductDetailView({ id }: Props) {
                           ) : (
                             <button
                               type="button"
-                              onClick={() => addItem(product, product.lotSize || 1, taglia)}
+                              onClick={() => setPendingProduct({ product, quantity: product.lotSize || 1, taglia })}
                               className="w-7 h-7 flex items-center justify-center rounded-full border border-border hover:border-primary hover:text-primary text-gray-400 transition-colors"
                             >
                               <Plus size={14} />

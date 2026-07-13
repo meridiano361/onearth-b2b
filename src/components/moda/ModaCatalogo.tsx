@@ -17,7 +17,7 @@ import { MODA_COLLEZIONE } from '@/lib/modaAccess';
 import type { Product } from '@/types';
 
 function ModaProductCard({ product }: { product: Product }) {
-  const { addItem, getItemQuantity } = useCartStore();
+  const { setPendingProduct, getItemQuantity } = useCartStore();
   const inCart = getItemQuantity(product.id) > 0;
 
   return (
@@ -34,7 +34,7 @@ function ModaProductCard({ product }: { product: Product }) {
           </div>
         )}
         <button
-          onClick={(e) => { e.preventDefault(); addItem(product, product.lotSize || 1); }}
+          onClick={(e) => { e.preventDefault(); setPendingProduct({ product, quantity: product.lotSize || 1 }); }}
           className="absolute bottom-0 left-0 right-0 py-2.5 bg-white/90 backdrop-blur-sm text-black text-xs font-medium text-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         >
           Aggiungi al carrello

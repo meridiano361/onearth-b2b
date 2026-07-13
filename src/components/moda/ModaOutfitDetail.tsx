@@ -292,7 +292,7 @@ function AddProductsPanel({
 
 export default function ModaOutfitDetail({ outfitId }: { outfitId: string }) {
   const qc = useQueryClient();
-  const { addItem } = useCartStore();
+  const { addItem, setPendingProduct } = useCartStore();
   const [showAdd, setShowAdd] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState('');
@@ -467,7 +467,7 @@ export default function ModaOutfitDetail({ outfitId }: { outfitId: string }) {
                 items={centroItems}
                 outfitId={outfitId}
                 onRemove={(productId) => removeItem.mutate(productId)}
-                onAddToCart={(item) => addToCart([item])}
+                onAddToCart={(item) => setPendingProduct({ product: item.product as any, quantity: item.product.lotSize || 1 })}
               />
             </div>
 
@@ -478,7 +478,7 @@ export default function ModaOutfitDetail({ outfitId }: { outfitId: string }) {
                 items={destraItems}
                 outfitId={outfitId}
                 onRemove={(productId) => removeItem.mutate(productId)}
-                onAddToCart={(item) => addToCart([item])}
+                onAddToCart={(item) => setPendingProduct({ product: item.product as any, quantity: item.product.lotSize || 1 })}
               />
             </div>
           </div>

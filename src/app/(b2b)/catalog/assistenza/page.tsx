@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-11 (Risorse: cartelle con 3 sottosezioni; Accessori: codice articolo)
+// AGGIORNATO: 2026-07-13 (Selezione carrello: Aggiungi chiede sempre a quale carrello aggiungere)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -201,8 +201,8 @@ export default function AssistenzaPage() {
         <section id="creare-ordine" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
           <SectionHeader n={6} icon={ShoppingBag} label="Creare un Ordine" />
           <ul className="space-y-2">
-            <Bullet>Seleziona un carrello attivo dalla sezione <a href="#carrelli" className="text-accent hover:underline">Carrelli</a>, poi vai al catalogo e aggiungi prodotti con i pulsanti <span className="font-medium">+</span> e <span className="font-medium">−</span>.</Bullet>
-            <Bullet>Per i prodotti MODA con più taglie (es. S, M, L) clicca <span className="font-medium">Aggiungi</span>: si apre un pannello dove puoi scegliere quanti pezzi per ciascuna taglia aggiungere al carrello in una sola operazione. Ogni taglia compare come riga separata nel carrello.</Bullet>
+            <Bullet>Vai al catalogo e clicca <span className="font-medium">Aggiungi</span> su un prodotto: si apre un pannello dove selezioni in quale carrello inserirlo. Vengono mostrati solo i carrelli della collezione corrente (es. PE27 nel catalogo MODA, CA27 nel catalogo casa).</Bullet>
+            <Bullet>Per i prodotti MODA con più taglie (es. S, M, L) clicca <span className="font-medium">Aggiungi</span>: prima scegli la taglia, poi il carrello dove inserirla. Ogni taglia compare come riga separata nel carrello.</Bullet>
             <Bullet>Nella barra a destra vedi il carrello corrente con: costo totale, vendite potenziali, margine medio.</Bullet>
             <Bullet>Clicca <span className="font-medium">Crea Ordine</span> nella barra laterale per convertire il carrello in un ordine.</Bullet>
             <Bullet>Se hai più destinazioni ti verrà chiesto di selezionarne una.</Bullet>
