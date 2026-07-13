@@ -82,7 +82,7 @@ function NotificationPopup({ notification, onClose }: { notification: Notificati
 
 export default function CustomerHome() {
   const { social: ss, collections, home } = useSettings();
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const isAdmin = canAccessModa(session?.user?.role);
   const canSeeModa = canAccessModa(session?.user?.role, session?.user?.email);
   const searchParams = useSearchParams();
@@ -175,7 +175,7 @@ export default function CustomerHome() {
         )}
 
         {/* Collection cards */}
-        {(devPreview || canSeeModa) ? (() => {
+        {sessionStatus === 'loading' ? null : (devPreview || canSeeModa) ? (() => {
           const layout = home.layoutCard ?? 'griglia';
           if (lista.length === 0) return null;
           if (layout === 'colonna') return (
