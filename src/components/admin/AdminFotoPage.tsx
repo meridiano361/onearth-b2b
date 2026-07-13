@@ -12,6 +12,7 @@ import BulkImageUpload from './BulkImageUpload';
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type PhotoProduct = { id: string; code: string; name: string; slot: number };
+type PhotoSupporto = { id: string; codice: string; nome: string };
 
 type Photo = {
   path: string;
@@ -23,6 +24,7 @@ type Photo = {
   parsedCode: string | null;
   parsedSlot: number | null;
   product: PhotoProduct | null;
+  supporto: PhotoSupporto | null;
 };
 
 // ── Utils ────────────────────────────────────────────────────────────────────
@@ -127,6 +129,13 @@ function DetailModal({
                   Scollega
                 </button>
               </div>
+            </div>
+          ) : photo.supporto ? (
+            <div className="bg-green-50 border border-green-200 rounded p-3">
+              <p className="text-xs font-medium text-green-700">In uso — Supporto espositivo</p>
+              <p className="text-2xs text-gray-600 mt-0.5">
+                <span className="font-mono">{photo.supporto.codice}</span> — {photo.supporto.nome}
+              </p>
             </div>
           ) : photo.status === 'da-collegare' ? (
             <div className="bg-amber-50 border border-amber-200 rounded p-3">

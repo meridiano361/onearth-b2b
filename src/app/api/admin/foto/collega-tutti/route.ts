@@ -31,11 +31,9 @@ function firstFreeSlot(p: ProductRow): number | null {
 
 // POST /api/admin/foto/collega-tutti
 // Scans the bucket and links all unlinked photos whose filename matches:
-//   1. A product code directly (existing behaviour)
-//   2. Any sizeVariant codice of a MODA product (new)
-// For direct matches: uses the parsed slot; skips if already taken.
-// For sizeVariant matches: uses the next free slot so multiple taglia photos
-//   can all land on the same parent product.
+//   1. A product code directly
+//   2. Any sizeVariant codice of a MODA product
+//   3. A SupportoEspositivo codice (single slot — skips if already has an image)
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -59,18 +57,22 @@ export async function POST(req: NextRequest) {
       .map((f) => ({ path: `products/${f.name}`, name: f.name })),
   ];
 
-  // Load ALL products — needed for both code and sizeVariant lookup
-  const products = await prisma.product.findMany({
-    select: {
-      id: true, code: true, gruppoMerceologico: true, sizeVariants: true,
-      imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true, imageUrl5: true,
-    },
-  });
+  const [products, supporti] = await Promise.all([
+    prisma.product.findMany({
+      select: {
+        id: true, code: true, gruppoMerceologico: true, sizeVariants: true,
+        imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true, imageUrl5: true,
+      },
+    }),
+    prisma.supportoEspositivo.findMany({
+      select: { id: true, codice: true, immagineUrl: true },
+    }),
+  ]);
 
   const linkedUrls = new Set<string>();
   const codeToProduct = new Map<string, ProductRow>();
-  // Maps each sizeVariant codice → the parent MODA product
   const variantCodeToProduct = new Map<string, ProductRow>();
+  const codiceToSupporto = new Map<string, { id: string; immagineUrl: string | null }>();
 
   for (const p of products) {
     codeToProduct.set(p.code.toUpperCase(), p);
@@ -91,8 +93,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  for (const s of supporti) {
+    if (s.codice) codiceToSupporto.set(s.codice.trim().toUpperCase(), s);
+    if (s.immagineUrl) linkedUrls.add(s.immagineUrl);
+  }
+
   let linked = 0;
   let linkedByVariant = 0;
+  let linkedBySupporto = 0;
   let alreadyLinked = 0;
   let notFound = 0;
   let slotTaken = 0;
@@ -108,26 +116,34 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
+    // 1. Direct product match
     const directProduct = codeToProduct.get(parsed.productCode);
-    const variantProduct = directProduct
-      ? undefined
-      : variantCodeToProduct.get(parsed.productCode);
+    // 2. MODA sizeVariant match (only if no direct product match)
+    const variantProduct = directProduct ? undefined : variantCodeToProduct.get(parsed.productCode);
+    // 3. SupportoEspositivo match (only if no product match)
+    const supporto = (directProduct || variantProduct) ? undefined : codiceToSupporto.get(parsed.productCode);
 
-    if (!directProduct && !variantProduct) {
+    if (!directProduct && !variantProduct && !supporto) {
       notFound++;
       continue;
     }
 
-    // For both direct and sizeVariant matches, use the first free slot.
-    // The _N suffix in the filename is a relative ordering hint among multiple
-    // photos of the same product, not an absolute slot number — so a lone
-    // 123_2.jpg should land on slot 1 rather than leaving slot 1 empty.
-    const targetProduct = directProduct ?? variantProduct!;
-    const slot = firstFreeSlot(targetProduct);
-    if (slot === null) {
-      slotTaken++;
+    if (supporto) {
+      if (supporto.immagineUrl) { slotTaken++; continue; }
+      await prisma.supportoEspositivo.update({
+        where: { id: supporto.id },
+        data: { immagineUrl: publicUrl },
+      });
+      supporto.immagineUrl = publicUrl;
+      linkedUrls.add(publicUrl);
+      linked++;
+      linkedBySupporto++;
       continue;
     }
+
+    const targetProduct = directProduct ?? variantProduct!;
+    const slot = firstFreeSlot(targetProduct);
+    if (slot === null) { slotTaken++; continue; }
     const field = imageIndexToField(slot);
     await prisma.product.update({
       where: { id: targetProduct.id },
@@ -139,5 +155,5 @@ export async function POST(req: NextRequest) {
     if (variantProduct) linkedByVariant++;
   }
 
-  return NextResponse.json({ linked, linkedByVariant, alreadyLinked, notFound, slotTaken });
+  return NextResponse.json({ linked, linkedByVariant, linkedBySupporto, alreadyLinked, notFound, slotTaken });
 }

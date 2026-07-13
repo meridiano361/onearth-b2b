@@ -45,22 +45,27 @@ export async function GET() {
       urlMap.set(path, data.publicUrl);
     }
 
-    // Load ALL products — needed to check sizeVariant codes too
-    const products = await prisma.product.findMany({
-      select: {
-        id: true, code: true, name: true, gruppoMerceologico: true, sizeVariants: true,
-        imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true, imageUrl5: true,
-      },
-    });
+    // Load products and supporti in parallel
+    const [products, supporti] = await Promise.all([
+      prisma.product.findMany({
+        select: {
+          id: true, code: true, name: true, gruppoMerceologico: true, sizeVariants: true,
+          imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true, imageUrl5: true,
+        },
+      }),
+      prisma.supportoEspositivo.findMany({
+        select: { id: true, codice: true, nome: true, immagineUrl: true },
+      }),
+    ]);
 
-    // Build URL → {product, slot} map and code lookup maps
     const urlToProduct = new Map<string, { id: string; code: string; name: string; slot: number }>();
     const codeToProduct = new Map<string, { id: string; code: string; name: string }>();
     const variantCodeToProduct = new Map<string, { id: string; code: string; name: string }>();
+    const urlToSupporto = new Map<string, { id: string; codice: string; nome: string }>();
+    const codiceToSupporto = new Map<string, { id: string; codice: string; nome: string }>();
 
     for (const p of products) {
       codeToProduct.set(p.code.toUpperCase(), p);
-
       const slots: [string | null, number][] = [
         [p.imageUrl, 1], [p.imageUrl2, 2], [p.imageUrl3, 3],
         [p.imageUrl4, 4], [p.imageUrl5, 5],
@@ -70,8 +75,6 @@ export async function GET() {
           urlToProduct.set(url, { id: p.id, code: p.code, name: p.name, slot });
         }
       }
-
-      // Index sizeVariant codes for MODA products
       if (
         p.gruppoMerceologico?.toUpperCase() === 'MODA' &&
         Array.isArray(p.sizeVariants)
@@ -83,25 +86,28 @@ export async function GET() {
       }
     }
 
+    for (const s of supporti) {
+      if (s.immagineUrl) urlToSupporto.set(s.immagineUrl, { id: s.id, codice: s.codice ?? '', nome: s.nome });
+      if (s.codice) codiceToSupporto.set(s.codice.trim().toUpperCase(), { id: s.id, codice: s.codice, nome: s.nome });
+    }
+
     const photos = allFiles.map(({ path, name, metadata, created_at }) => {
       const url = urlMap.get(path)!;
-      const match = urlToProduct.get(url) ?? null;
+      const productMatch = urlToProduct.get(url) ?? null;
+      const supportoMatch = !productMatch ? (urlToSupporto.get(url) ?? null) : null;
       const parsed = parseImageFilename(name);
 
-      // da-collegare se: filename valido E (codice diretto O codice taglia MODA)
       const parsedCode = parsed.valid ? parsed.productCode : null;
       const isLinkable = parsedCode
-        ? (codeToProduct.has(parsedCode) || variantCodeToProduct.has(parsedCode))
+        ? (
+            codeToProduct.has(parsedCode) ||
+            variantCodeToProduct.has(parsedCode) ||
+            codiceToSupporto.has(parsedCode)
+          )
         : false;
 
-      // in-uso: URL presente in uno slot prodotto
-      // da-collegare: filename valido il cui codice corrisponde a un prodotto o a una taglia MODA
-      // orfana: filename non valido o codice non riconosciuto
-      const status: 'in-uso' | 'da-collegare' | 'orfana' = match
-        ? 'in-uso'
-        : isLinkable
-        ? 'da-collegare'
-        : 'orfana';
+      const status: 'in-uso' | 'da-collegare' | 'orfana' =
+        (productMatch || supportoMatch) ? 'in-uso' : isLinkable ? 'da-collegare' : 'orfana';
 
       return {
         path,
@@ -112,8 +118,11 @@ export async function GET() {
         status,
         parsedCode,
         parsedSlot: parsed.valid ? parsed.imageIndex : null,
-        product: match
-          ? { id: match.id, code: match.code, name: match.name, slot: match.slot }
+        product: productMatch
+          ? { id: productMatch.id, code: productMatch.code, name: productMatch.name, slot: productMatch.slot }
+          : null,
+        supporto: supportoMatch
+          ? { id: supportoMatch.id, codice: supportoMatch.codice, nome: supportoMatch.nome }
           : null,
       };
     });
