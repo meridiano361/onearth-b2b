@@ -1012,3 +1012,24 @@ model VocabolarioCampo {
   @@id([campo, valore])
   @@map("vocabolario_campo")
 }
+
+model CondizioniCommerciali {
+  id                 String   @id @default(cuid())
+  conferente         String
+  collezione         String
+  scontoConReso      Float?   @map("sconto_con_reso")
+  percentualeReso    Float?   @map("percentuale_reso")
+  noteReso           String?  @map("note_reso")
+  scontoSenzaReso    Float?   @map("sconto_senza_reso")
+  extraScontoVolume  Json?    @map("extra_sconto_volume")
+  importoMinimoIe    Float?   @map("importo_minimo_ie")
+  consegna           String?
+  pagamentoGg        Int?     @map("pagamento_gg")
+  condizioniRiordini String?  @map("condizioni_riordini")
+  note               String?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt      @map("updated_at")
+
+  @@unique([conferente, collezione])
+  @@map("condizioni_commerciali")
+}

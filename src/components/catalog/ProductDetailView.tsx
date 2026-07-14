@@ -166,6 +166,24 @@ export default function ProductDetailView({ id }: Props) {
   });
 
   const product = data;
+  const isModa = product?.gruppoMerceologico?.toLowerCase() === 'moda';
+
+  const { data: condizioni } = useQuery({
+    queryKey: ['condizioni-commerciali', product?.conferente, product?.collezione],
+    queryFn: async () => {
+      if (!product?.conferente || !product?.collezione) return null;
+      const res = await fetch(`/api/condizioni-commerciali?conferente=${encodeURIComponent(product.conferente)}&collezione=${encodeURIComponent(product.collezione)}`);
+      return (await res.json()).data as {
+        scontoConReso: number | null; percentualeReso: number | null; noteReso: string | null;
+        scontoSenzaReso: number | null;
+        extraScontoVolume: Array<{ soglia: number; extra: number }> | null;
+        importoMinimoIe: number | null; consegna: string | null; pagamentoGg: number | null;
+        condizioniRiordini: string | null; note: string | null;
+      } | null;
+    },
+    enabled: !!product?.conferente && !!product?.collezione,
+    staleTime: 300_000,
+  });
   const cartQty = product ? getItemQuantity(product.id) : 0;
   const inCart = cartQty > 0;
   const hasLotWarning = inCart && product ? !isValidLotQuantity(cartQty, product.lotSize) : false;
@@ -279,7 +297,7 @@ export default function ProductDetailView({ id }: Props) {
                   if (hasConReso) return (
                     <>
                       <p className="text-xs text-gray-400">Costo i.e. con reso: <span className="font-medium text-primary">{formatCurrency(conReso)}</span></p>
-                      {hasSenzaReso && <p className="text-xs text-gray-400">Senza reso: <span className="font-medium text-primary">{formatCurrency(senzaReso)}</span></p>}
+                      {hasSenzaReso && <p className="text-xs text-gray-400">Costo i.e. senza reso: <span className="font-medium text-primary">{formatCurrency(senzaReso)}</span></p>}
                     </>
                   );
                   if (hasSenzaReso) return (
@@ -436,57 +454,88 @@ export default function ProductDetailView({ id }: Props) {
           </div>
         )}
 
-        {/* Colori + Materiali */}
-        {(activeColorFields.length > 0 || activeMaterialFields.length > 0) && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {activeColorFields.length > 0 && (
-              <div>
-                <h2 className="label-luxury text-gray-400 mb-3">Colori</h2>
-                <div className="space-y-2">
-                  {activeColorFields.map(({ key, label }) => (
-                    <FieldRow key={key} label={label} value={capitalize(String(p[key]))} />
-                  ))}
-                </div>
+        {/* Colori + Materiali — per MODA in sezione unica */}
+        {isModa ? (
+          (activeColorFields.length > 0 || activeMaterialFields.length > 0) && (
+            <div>
+              <h2 className="label-luxury text-gray-400 mb-3">Colori e composizione</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+                {activeColorFields.map(({ key, label }) => (
+                  <FieldRow key={key} label={label} value={capitalize(String(p[key]))} />
+                ))}
+                {activeMaterialFields.map(({ key, label }) => {
+                  const val = capitalize(String(p[key]));
+                  const aiQuery: Record<string, string> = {
+                    materiale1:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
+                    materiale2:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
+                    materiale3:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
+                    fantasia:    `Cos'è la fantasia tessile "${val}"?`,
+                    lavorazione: `Cos'è la lavorazione tessile "${val}"?`,
+                  };
+                  if (aiQuery[key]) {
+                    const aiUrl = `https://www.perplexity.ai/search?q=${encodeURIComponent(aiQuery[key])}`;
+                    return (
+                      <div key={key} className="flex items-baseline gap-2">
+                        <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
+                        <span className="text-sm text-primary">{val}</span>
+                        <a href={aiUrl} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-2xs text-accent/70 hover:text-accent transition-colors ml-1 flex-shrink-0">
+                          <Sparkles size={10} /><span>Cos'è?</span>
+                        </a>
+                      </div>
+                    );
+                  }
+                  return <FieldRow key={key} label={label} value={val} />;
+                })}
               </div>
-            )}
-            {activeMaterialFields.length > 0 && (
-              <div>
-                <h2 className="label-luxury text-gray-400 mb-3">Materiali</h2>
-                <div className="space-y-2">
-                  {activeMaterialFields.map(({ key, label }) => {
-                    const val = capitalize(String(p[key]));
-                    const aiQuery: Record<string, string> = {
-                      materiale1:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
-                      materiale2:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
-                      materiale3:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
-                      fantasia:    `Cos'è la fantasia tessile "${val}"?`,
-                      lavorazione: `Cos'è la lavorazione tessile "${val}"?`,
-                    };
-                    if (aiQuery[key]) {
-                      const aiUrl = `https://www.perplexity.ai/search?q=${encodeURIComponent(aiQuery[key])}`;
-                      return (
-                        <div key={key} className="flex items-baseline gap-2">
-                          <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
-                          <span className="text-sm text-primary">{val}</span>
-                          <a
-                            href={aiUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title={`Chiedi all'AI cos'è "${val}"`}
-                            className="flex items-center gap-1 text-2xs text-accent/70 hover:text-accent transition-colors ml-1 flex-shrink-0"
-                          >
-                            <Sparkles size={10} />
-                            <span>Cos'è?</span>
-                          </a>
-                        </div>
-                      );
-                    }
-                    return <FieldRow key={key} label={label} value={val} />;
-                  })}
+            </div>
+          )
+        ) : (
+          (activeColorFields.length > 0 || activeMaterialFields.length > 0) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              {activeColorFields.length > 0 && (
+                <div>
+                  <h2 className="label-luxury text-gray-400 mb-3">Colori</h2>
+                  <div className="space-y-2">
+                    {activeColorFields.map(({ key, label }) => (
+                      <FieldRow key={key} label={label} value={capitalize(String(p[key]))} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+              {activeMaterialFields.length > 0 && (
+                <div>
+                  <h2 className="label-luxury text-gray-400 mb-3">Materiali</h2>
+                  <div className="space-y-2">
+                    {activeMaterialFields.map(({ key, label }) => {
+                      const val = capitalize(String(p[key]));
+                      const aiQuery: Record<string, string> = {
+                        materiale1:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
+                        materiale2:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
+                        materiale3:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
+                        fantasia:    `Cos'è la fantasia tessile "${val}"?`,
+                        lavorazione: `Cos'è la lavorazione tessile "${val}"?`,
+                      };
+                      if (aiQuery[key]) {
+                        const aiUrl = `https://www.perplexity.ai/search?q=${encodeURIComponent(aiQuery[key])}`;
+                        return (
+                          <div key={key} className="flex items-baseline gap-2">
+                            <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
+                            <span className="text-sm text-primary">{val}</span>
+                            <a href={aiUrl} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-2xs text-accent/70 hover:text-accent transition-colors ml-1 flex-shrink-0">
+                              <Sparkles size={10} /><span>Cos'è?</span>
+                            </a>
+                          </div>
+                        );
+                      }
+                      return <FieldRow key={key} label={label} value={val} />;
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
         )}
 
         {/* Certificazioni + Info commerciali + Note */}
@@ -502,7 +551,7 @@ export default function ProductDetailView({ id }: Props) {
                 </div>
               </div>
             )}
-            {hasBusinessInfo && (
+            {(hasBusinessInfo || condizioni) && (
               <div>
                 <h2 className="label-luxury text-gray-400 mb-3">Informazioni commerciali</h2>
                 <div className="space-y-2">
@@ -514,6 +563,32 @@ export default function ProductDetailView({ id }: Props) {
                   )}
                   {ss.iva && product.iva != null && (
                     <FieldRow label="IVA" value={`${product.iva}%`} />
+                  )}
+                  {condizioni && (
+                    <>
+                      {condizioni.scontoConReso != null && (
+                        <FieldRow label="Sconto con reso" value={`${condizioni.scontoConReso}%${condizioni.noteReso ? ` (${condizioni.noteReso})` : ''}`} />
+                      )}
+                      {condizioni.percentualeReso != null && (
+                        <FieldRow label="% reso sul totale" value={`${condizioni.percentualeReso}%`} />
+                      )}
+                      {condizioni.scontoSenzaReso != null && (
+                        <FieldRow label="Sconto senza reso" value={`${condizioni.scontoSenzaReso}%`} />
+                      )}
+                      {condizioni.extraScontoVolume?.map((ev, i) => (
+                        <FieldRow key={i} label={`Extra volume >€${ev.soglia.toLocaleString('it-IT')}`} value={`+${ev.extra}%`} />
+                      ))}
+                      {condizioni.importoMinimoIe != null && (
+                        <FieldRow label="Importo minimo i.e." value={`€${condizioni.importoMinimoIe.toLocaleString('it-IT')}`} />
+                      )}
+                      {condizioni.consegna && <FieldRow label="Consegna" value={condizioni.consegna} />}
+                      {condizioni.pagamentoGg != null && (
+                        <FieldRow label="Pagamento" value={`${condizioni.pagamentoGg} gg`} />
+                      )}
+                      {condizioni.condizioniRiordini && (
+                        <FieldRow label="Riordini" value={condizioni.condizioniRiordini} />
+                      )}
+                    </>
                   )}
                 </div>
               </div>

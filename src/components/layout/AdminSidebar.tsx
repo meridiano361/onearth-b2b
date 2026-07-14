@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Package, Users, ShoppingCart, Layers,
   LogOut, Settings, X, UserPlus, Eye, FileText,
   Image as ImageIcon, BookOpen, Paintbrush, Bell,
-  BarChart2, MessageSquare, ChevronDown, Gem, Shirt, Home, Box,
+  BarChart2, MessageSquare, ChevronDown, Gem, Shirt, Home, Box, Handshake,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -67,6 +67,7 @@ const NAV: NavEntry[] = [
       { href: '/admin/products/supporti-espositivi',  label: 'Supporti espositivi', icon: Box,                   roles: ['SUPER_ADMIN', 'ADMIN', 'MAGAZZINO'] },
     ],
   },
+  { href: '/admin/condizioni-commerciali', label: 'Cond. commerciali', icon: Handshake, roles: ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE'] },
   { href: '/admin/sondaggi',         label: 'Sondaggi',          icon: MessageSquare,   roles: ['SUPER_ADMIN', 'ADMIN'] },
 ];
 
