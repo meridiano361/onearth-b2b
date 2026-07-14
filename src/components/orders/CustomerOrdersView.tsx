@@ -9,20 +9,30 @@ import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
 import { formatCurrency, formatDate, getOrderStatusLabel, getOrderStatusColor } from '@/lib/utils';
+function effectiveUnitCost(product: any, unitPrice: number): number {
+  const conReso   = Number(product?.costoIeConReso);
+  const senzaReso = Number(product?.costoIeSenzaReso);
+  if (conReso   > 0) return conReso;
+  if (senzaReso > 0) return senzaReso;
+  return unitPrice;
+}
+
 function orderProjections(order: Order) {
+  let costoIe  = 0;
   let venditeII = 0;
   let venditeIE = 0;
   for (const item of order.items ?? []) {
     if (!item.product) continue;
-    const retail = Number(item.product.retailPrice);
-    const iva    = item.product.iva ?? 22;
+    const retail   = Number(item.product.retailPrice);
+    const iva      = item.product.iva ?? 22;
+    const unitCost = effectiveUnitCost(item.product, Number(item.unitPrice));
+    costoIe   += unitCost * item.quantity;
     venditeII += retail * item.quantity;
     venditeIE += (retail * item.quantity) / (1 + iva / 100);
   }
-  const cost     = Number(order.totalValue);
-  const guadagno = venditeIE - cost;
+  const guadagno = venditeIE - costoIe;
   const margine  = venditeIE > 0 ? (guadagno / venditeIE) * 100 : 0;
-  return { venditeII, guadagno, margine };
+  return { costoIe, venditeII, guadagno, margine };
 }
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import OrderDemetraExport from '@/components/orders/OrderDemetraExport';
@@ -496,61 +506,53 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
 
                 {/* Projections */}
                 {(() => {
-                  const { venditeII, guadagno, margine } = orderProjections(order);
+                  const { costoIe, venditeII, guadagno, margine } = orderProjections(order);
                   const budget = order.budgetPersonalizzato ?? null;
-                  const cost = Number(order.totalValue);
-                  const budgetPct = budget && budget > 0 ? (cost / budget) * 100 : 0;
-                  const budgetRemaining = budget != null ? budget - cost : null;
+                  const budgetPct = budget && budget > 0 ? (costoIe / budget) * 100 : 0;
+                  const budgetRemaining = budget != null ? budget - costoIe : null;
                   const hasAnyField = ordine.mostraCosto || ordine.mostraVendite || ordine.mostraGuadagno || ordine.mostraMargine || (ordine.mostraBudget && budget != null);
                   if (!hasAnyField) return null;
                   return (
-                    <div className="bg-cream/60 rounded p-2.5 space-y-1.5">
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <TrendingUp size={10} className="text-gray-400" />
-                        <span className="text-2xs text-gray-400 uppercase tracking-wide">Proiezioni</span>
-                      </div>
-                      {/* Each metric on its own flex row — values never overflow */}
-                      <div className="space-y-0.5">
-                        {ordine.mostraCosto && (
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span className="text-2xs text-gray-400 flex-shrink-0">Costo (i.e.)</span>
-                            <span className="text-2xs font-medium text-primary tabular-nums">{formatCurrency(cost)}</span>
-                          </div>
-                        )}
-                        {ordine.mostraVendite && (
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span className="text-2xs text-gray-400 flex-shrink-0">Vendite pot.</span>
-                            <span className="text-2xs font-medium text-primary tabular-nums">{formatCurrency(venditeII)}</span>
-                          </div>
-                        )}
-                        {ordine.mostraGuadagno && (
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span className="text-2xs text-gray-400 flex-shrink-0">Guadagno</span>
-                            <span className={`text-2xs font-medium tabular-nums ${guadagno >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatCurrency(guadagno)}</span>
-                          </div>
-                        )}
-                        {ordine.mostraMargine && (
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span className="text-2xs text-gray-400 flex-shrink-0">Margine</span>
-                            <span className="text-2xs font-medium text-primary tabular-nums">{margine.toFixed(1)}%</span>
-                          </div>
-                        )}
-                      </div>
+                    <div className="bg-cream/60 rounded p-2.5 space-y-0.5">
+                      {ordine.mostraCosto && (
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-2xs text-gray-400 flex-shrink-0">Costo I.E.</span>
+                          <span className="text-2xs font-medium text-gray-700 tabular-nums">{formatCurrency(costoIe)}</span>
+                        </div>
+                      )}
+                      {ordine.mostraVendite && (
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-2xs text-gray-400 flex-shrink-0">Vendite pot.</span>
+                          <span className="text-2xs font-medium text-gray-700 tabular-nums">{formatCurrency(venditeII)}</span>
+                        </div>
+                      )}
+                      {ordine.mostraGuadagno && (
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-2xs text-gray-400 flex-shrink-0">Guadagno</span>
+                          <span className={`text-2xs font-medium tabular-nums ${guadagno >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatCurrency(guadagno)}</span>
+                        </div>
+                      )}
+                      {ordine.mostraMargine && (
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-2xs text-gray-400 flex-shrink-0">Margine</span>
+                          <span className="text-2xs font-medium text-gray-600 tabular-nums">{margine.toFixed(1)}%</span>
+                        </div>
+                      )}
                       {ordine.mostraBudget && budget != null && (
                         <>
                           <div className="h-px bg-border/40 my-1" />
                           <div className="flex items-baseline justify-between gap-2 text-2xs text-gray-400">
                             <span className="flex-shrink-0">Budget</span>
                             <div className="flex items-baseline gap-2 min-w-0">
-                              <span className="text-primary font-medium tabular-nums">{formatCurrency(budget)}</span>
+                              <span className="text-gray-700 font-medium tabular-nums">{formatCurrency(budget)}</span>
                               {ordine.mostraRimanente && budgetRemaining != null && (
-                                <span className={`tabular-nums flex-shrink-0 ${budgetRemaining < 0 ? 'text-red-500 font-medium' : ''}`}>
+                                <span className={`tabular-nums flex-shrink-0 ${budgetRemaining < 0 ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
                                   ({budgetRemaining >= 0 ? '+' : ''}{formatCurrency(budgetRemaining)})
                                 </span>
                               )}
                             </div>
                           </div>
-                          <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-1 bg-gray-100 rounded-full overflow-hidden mt-1">
                             <div
                               className={`h-full rounded-full ${budgetPct > 100 ? 'bg-red-400' : budgetPct > 90 ? 'bg-orange-400' : 'bg-emerald-400'}`}
                               style={{ width: `${Math.min(budgetPct, 100)}%` }}
