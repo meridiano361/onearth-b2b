@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-14 (Filtro Modello; chip Novità/Continuativi anche in MODA; badge CO; istruzioni Demetra aggiornate)
+// AGGIORNATO: 2026-07-14 (Filtro Modello; chip Novità/Continuativi anche in MODA; badge CO; istruzioni Demetra; Anteprima→Modifica Anteprima)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -288,7 +288,7 @@ export default function AssistenzaPage() {
         <section id="anteprima" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
           <SectionHeader n={12} icon={Eye} label="Anteprima e Raggruppamento" />
           <ul className="space-y-2">
-            <Bullet>Clicca <span className="font-medium">Anteprima</span> su un ordine per vedere i prodotti raggruppati visivamente.</Bullet>
+            <Bullet>Clicca <span className="font-medium">Modifica Anteprima</span> su un ordine per vedere i prodotti raggruppati visivamente e modificarli.</Bullet>
             <Bullet>Scegli il criterio di raggruppamento: Gruppo merceologico, Famiglia, Classe, Sottoclasse, Gruppo omogeneo, Linea, Tema colore, Stagione, Collezione, Produttore, Tranche.</Bullet>
             <Bullet>Usa la <span className="font-medium">barra di ricerca</span> in alto per filtrare i prodotti dell&apos;ordine per nome o codice.</Bullet>
             <Bullet>Modifica quantità direttamente dall&apos;anteprima con i pulsanti <span className="font-medium">+</span> e <span className="font-medium">−</span>.</Bullet>

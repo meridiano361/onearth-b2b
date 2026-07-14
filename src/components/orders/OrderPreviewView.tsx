@@ -113,46 +113,46 @@ function ProductCard({
   return (
     <div className="bg-white border border-border flex flex-col">
       {/* Image */}
-      <div className="relative aspect-[4/3] bg-[#C8C0B5] overflow-hidden">
+      <div className="relative aspect-square bg-[#C8C0B5] overflow-hidden">
         <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
         {/* Remove button */}
         <button
           onClick={() => onRemove(item.id)}
-          className="absolute top-2 left-2 bg-white/80 rounded p-1 text-gray-500 hover:text-red-500 transition-colors"
+          className="absolute top-1.5 left-1.5 bg-white/80 rounded p-0.5 text-gray-500 hover:text-red-500 transition-colors"
           title={removeLabel}
         >
-          <X size={12} />
+          <X size={10} />
         </button>
         {/* Qty badge */}
-        <div className="absolute top-2 right-2 bg-primary/90 text-white text-2xs font-bold px-1.5 py-0.5 leading-tight">
+        <div className="absolute top-1.5 right-1.5 bg-primary/90 text-white text-[9px] font-bold px-1 py-px leading-tight">
           ×{effectiveQty}
         </div>
       </div>
 
       {/* Body */}
-      <div className="p-2.5 flex flex-col gap-1.5 grow">
+      <div className="p-2 flex flex-col gap-1 grow">
         <div>
-          <div className="flex items-center gap-1.5 leading-none">
-            <p className="text-2xs font-mono text-gray-400 tracking-wider">{product.code}</p>
+          <div className="flex items-center gap-1 leading-none">
+            <p className="text-[9px] font-mono text-gray-400 tracking-wider">{product.code}</p>
             {product.collezione === 'CA27' && !product.isContinuativo && (
-              <span className="bg-black text-white text-[8px] font-bold px-1 py-px rounded-sm leading-none flex-shrink-0">NUOVO</span>
+              <span className="bg-black text-white text-[7px] font-bold px-1 py-px rounded-sm leading-none flex-shrink-0">NUOVO</span>
             )}
           </div>
-          <p className="text-xs font-medium text-primary leading-snug mt-1 h-10 overflow-hidden">{product.name}</p>
+          <p className="text-[10px] font-medium text-primary leading-snug mt-0.5 h-8 overflow-hidden">{product.name}</p>
         </div>
 
-        <div className="mt-auto space-y-0.5">
-          <p className="text-2xs text-gray-400">
+        <div className="mt-auto space-y-px">
+          <p className="text-[9px] text-gray-400">
             PVP: <span className="text-gray-600 font-medium">{formatCurrency(product.retailPrice)}</span>
           </p>
-          <p className="text-2xs text-gray-400">
-            Costo I.E.: <span className="text-gray-600 font-medium">{formatCurrency(effectiveCost(item.product, Number(item.unitPrice)))}</span>
+          <p className="text-[9px] text-gray-400">
+            IE: <span className="text-gray-600 font-medium">{formatCurrency(effectiveCost(item.product, Number(item.unitPrice)))}</span>
           </p>
         </div>
 
-        {/* Quantity control — no disabled, UI is optimistic */}
-        <div className="flex items-center justify-between pt-2 border-t border-border/60">
-          <div className="flex items-center gap-2">
+        {/* Quantity control */}
+        <div className="flex items-center justify-between pt-1.5 border-t border-border/60">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => {
                 const newQty = effectiveQty - lotSize;
@@ -164,21 +164,21 @@ function ProductCard({
                   onQtyChange(item.id, newQty);
                 }
               }}
-              className="w-10 h-10 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
+              className="w-7 h-7 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
               aria-label={decreaseLabel}
             >
-              <Minus size={14} />
+              <Minus size={11} />
             </button>
-            <span className="text-xl font-semibold text-primary text-center min-w-[2.5rem]">{effectiveQty}</span>
+            <span className="text-sm font-semibold text-primary text-center min-w-[1.75rem]">{effectiveQty}</span>
             <button
               onClick={() => onQtyChange(item.id, effectiveQty + lotSize)}
-              className="w-10 h-10 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
+              className="w-7 h-7 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
               aria-label={increaseLabel}
             >
-              <Plus size={14} />
+              <Plus size={11} />
             </button>
           </div>
-          <span className="text-sm font-semibold text-primary">{formatCurrency(effectiveSubtotal)}</span>
+          <span className="text-xs font-semibold text-primary">{formatCurrency(effectiveSubtotal)}</span>
         </div>
       </div>
     </div>
@@ -1259,7 +1259,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
               {group.items.map((item) => (
                 <ProductCard
                   key={item.id}

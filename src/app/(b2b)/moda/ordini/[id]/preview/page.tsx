@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import OrderPreviewView from '@/components/orders/OrderPreviewView';
 
-export const metadata: Metadata = { title: 'Anteprima Ordine Moda — ON EARTH B2B' };
+export const metadata: Metadata = { title: 'Modifica Anteprima Moda — ON EARTH B2B' };
 
 export default function ModaOrderPreviewPage({
   params,

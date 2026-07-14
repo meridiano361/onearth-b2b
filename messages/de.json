@@ -119,7 +119,7 @@
         "articles": "{count} Artikel",
         "pieces": "Stück",
         "edit": "Bearbeiten",
-        "preview": "Vorschau",
+        "preview": "Bearbeiten & Vorschau",
         "duplicateOrder": "Bestellung duplizieren",
         "duplicating": "Wird dupliziert...",
         "delete": "Löschen",
@@ -267,7 +267,7 @@
         "catalogButton": "PDF-Katalog herunterladen"
     },
     "preview": {
-        "title": "Bestellvorschau",
+        "title": "Bearbeiten & Vorschau",
         "back": "Zurück zur Bestellung",
         "addProducts": "Produkte hinzufügen",
         "searchPlaceholder": "Nach Code oder Name suchen...",
