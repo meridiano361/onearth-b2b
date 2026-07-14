@@ -114,6 +114,12 @@ export default function ProductCard({ product }: ProductCardProps) {
               NUOVO
             </div>
           )}
+          {/* CO badge — continuativo */}
+          {product.isContinuativo && !product.collezione?.toUpperCase().startsWith('CA') && (
+            <div className="absolute bottom-2 right-2 bg-[#7A6A5A] text-white text-2xs font-bold px-2 py-0.5 rounded-full tracking-wide">
+              CO
+            </div>
+          )}
         </div>
 
         {/* Code + Name */}

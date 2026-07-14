@@ -112,6 +112,7 @@ model Product {
   fantasia           String?
   lavorazione        String?
   dettaglio          String?
+  isContinuativo     Boolean  @default(false)
   sizeVariants       Json?    @map("size_variants")
   descrizioneEn      String?
   descrizioneDe      String?

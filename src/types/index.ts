@@ -99,6 +99,7 @@ export interface Product {
   fantasia: string | null;
   lavorazione: string | null;
   dettaglio: string | null;
+  isContinuativo: boolean;
   pantoneColors: ProductPantoneEntry[];
   sizeVariants: Array<{ taglia: string; codice: string }> | null;
   createdAt: string;

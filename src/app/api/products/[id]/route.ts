@@ -78,6 +78,7 @@ const updateSchema = z.object({
   pantoneColorIds: z.array(z.coerce.number().int()).optional(),
   pantoneAutoFilledFlags: z.array(z.boolean()).optional(),
   sizeVariants: z.array(z.object({ taglia: z.string(), codice: z.string() })).optional().nullable(),
+  isContinuativo: z.boolean().optional(),
 });
 
 export async function GET(

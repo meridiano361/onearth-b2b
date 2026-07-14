@@ -215,6 +215,7 @@ const schema = z
     imageUrl4: z.string().optional(),
     imageUrl5: z.string().optional(),
     isActive: z.boolean().default(true),
+    isContinuativo: z.boolean().default(false),
   })
   .refine(
     (d) => {
@@ -452,7 +453,8 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       imageUrl4: product ? (product.imageUrl4 || '') : '',
       imageUrl5: product ? (product.imageUrl5 || '') : '',
       isActive: src.isActive ?? true,
-    } : { isActive: true, lotSize: '1', iva: '22', gruppoMerceologico: initialValues?.gruppoMerceologico ?? '' },
+      isContinuativo: src.isContinuativo ?? false,
+    } : { isActive: true, isContinuativo: false, lotSize: '1', iva: '22', gruppoMerceologico: initialValues?.gruppoMerceologico ?? '' },
   });
 
   // ── Watchers ─────────────────────────────────────────────────────────────
@@ -883,6 +885,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
               })()
             : undefined,
           sizeVariants:    sizeVariants.filter((sv) => sv.taglia && sv.codice),
+          isContinuativo:  (v as any).isContinuativo ?? false,
         }),
       });
 
@@ -1533,6 +1536,10 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       <div className="flex items-center gap-2">
         <input type="checkbox" id="isActive" {...register('isActive')} className="w-4 h-4 accent-accent" />
         <label htmlFor="isActive" className="text-sm text-primary">Attivo (visibile a catalogo)</label>
+      </div>
+      <div className="flex items-center gap-2">
+        <input type="checkbox" id="isContinuativo" {...register('isContinuativo')} className="w-4 h-4 accent-accent" />
+        <label htmlFor="isContinuativo" className="text-sm text-primary">CO — Continuativo (prodotto non nuovo, già presente in collezioni precedenti)</label>
       </div>
 
       <div className="flex justify-between items-center gap-3 pt-1">

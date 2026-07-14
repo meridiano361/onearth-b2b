@@ -80,6 +80,7 @@ const productSchema = z.object({
   sizeVariants: z.array(z.object({ taglia: z.string(), codice: z.string() })).optional().nullable(),
   costoIeSenzaReso: z.coerce.number().positive().optional().nullable(),
   costoIeConReso:   z.coerce.number().positive().optional().nullable(),
+  isContinuativo: z.boolean().default(false),
 });
 
 export async function GET(req: NextRequest) {
@@ -155,6 +156,7 @@ export async function GET(req: NextRequest) {
     const classe = searchParams.get('classe');
     const sottoclasse = searchParams.get('sottoclasse');
     const produttore = searchParams.get('produttore');
+    const isContinuativoParam = searchParams.get('isContinuativo');
 
     if (famiglia) where.famiglia = famiglia;
     if (sottofamiglia) where.sottofamiglia = sottofamiglia;
@@ -162,6 +164,8 @@ export async function GET(req: NextRequest) {
     if (classe) where.classe = classe;
     if (sottoclasse) where.sottoclasse = sottoclasse;
     if (produttore) where.produttore = produttore;
+    if (isContinuativoParam === 'true') where.isContinuativo = true;
+    if (isContinuativoParam === 'false') where.isContinuativo = false;
 
     const [products, total] = await Promise.all([
       prisma.product.findMany({

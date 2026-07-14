@@ -363,8 +363,8 @@ export default function CatalogView({
     if (tranche)            result = result.filter((p) => p.tranche            === tranche);
     if (bloccoColoreFilter) result = result.filter((p) => (p.colorBlockIds ?? []).includes(bloccoColoreFilter.id));
     if (onlyFavorites)      result = result.filter((p) => favoriteIds.has(p.id));
-    if (novitaFilter === 'novita')       result = result.filter((p) => p.collezione === 'CA27');
-    if (novitaFilter === 'continuativi') result = result.filter((p) => p.collezione !== 'CA27');
+    if (novitaFilter === 'novita')       result = result.filter((p) => isModa ? !p.isContinuativo : p.collezione === 'CA27');
+    if (novitaFilter === 'continuativi') result = result.filter((p) => isModa ? p.isContinuativo  : p.collezione !== 'CA27');
 
     if (sortBy === 'az')         result = [...result].sort((a, b) => a.name.localeCompare(b.name, 'it'));
     else if (sortBy === 'za')    result = [...result].sort((a, b) => b.name.localeCompare(a.name, 'it'));
@@ -601,24 +601,22 @@ export default function CatalogView({
             </div>
           </div>
 
-          {/* Novità / Continuativi chips — Casa only */}
-          {!lockedCollezione && (
-            <div className="flex items-center gap-1.5 px-4 sm:px-6 pb-2.5">
-              {(['all', 'novita', 'continuativi'] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setNovitaFilter(v)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex-shrink-0 ${
-                    novitaFilter === v
-                      ? 'bg-primary text-background border-primary'
-                      : 'bg-white text-gray-500 border-border hover:bg-cream'
-                  }`}
-                >
-                  {v === 'all' ? 'Tutti' : v === 'novita' ? 'Novità' : 'Continuativi'}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Novità / Continuativi chips */}
+          <div className="flex items-center gap-1.5 px-4 sm:px-6 pb-2.5">
+            {(['all', 'novita', 'continuativi'] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setNovitaFilter(v)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex-shrink-0 ${
+                  novitaFilter === v
+                    ? 'bg-primary text-background border-primary'
+                    : 'bg-white text-gray-500 border-border hover:bg-cream'
+                }`}
+              >
+                {v === 'all' ? 'Tutti' : v === 'novita' ? 'Novità' : 'Continuativi'}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Scrollable content */}
