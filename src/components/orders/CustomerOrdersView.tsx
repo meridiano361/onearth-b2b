@@ -165,7 +165,7 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
   }
 
   const { data: orders, isLoading } = useQuery<Order[]>({
-    queryKey: ['my-orders'],
+    queryKey: ['my-orders', collectionId ?? 'all'],
     queryFn: () =>
       fetch(`/api/orders?my=true${collectionId ? `&collectionId=${collectionId}` : ''}`)
         .then((r) => r.json())
