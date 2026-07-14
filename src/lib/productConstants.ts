@@ -118,6 +118,7 @@ export const MATERIALE_OPTIONS = [
   'Corno',
   'Cotone',
   'Fibra arancia',
+  'Ferro',
   'Fibra latte',
   'Jeans',
   'Juta',
