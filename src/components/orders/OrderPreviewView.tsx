@@ -134,7 +134,7 @@ function ProductCard({
         <div>
           <div className="flex items-center gap-1.5 leading-none">
             <p className="text-2xs font-mono text-gray-400 tracking-wider">{product.code}</p>
-            {product.collezione === 'CA27' && (
+            {product.collezione === 'CA27' && !product.isContinuativo && (
               <span className="bg-black text-white text-[8px] font-bold px-1 py-px rounded-sm leading-none flex-shrink-0">NUOVO</span>
             )}
           </div>
@@ -352,7 +352,7 @@ function AddProductsModal({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
             <p className="text-xs font-mono text-gray-400">{product.code}</p>
-            {product.collezione === 'CA27' && (
+            {product.collezione === 'CA27' && !(product as any).isContinuativo && (
               <span className="bg-black text-white text-[8px] font-bold px-1 py-px rounded-sm leading-none flex-shrink-0">NUOVO</span>
             )}
           </div>
@@ -1161,22 +1161,6 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
         <CalendarioEsposizione orderId={id} />
       )}
 
-      {/* ── Vista ordine (hidden when mondi/calendario active) */}
-      {viewMode === 'ordine' && mondiEspositivi && displayGroupCount === 0 && (
-        <div className="mx-4 sm:mx-6 mt-4 rounded-xl border border-[#E8DDD0] bg-[#F5F0E8] px-5 py-4 flex items-start gap-4">
-          <Layers size={20} className="text-[#C17A5A] flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-primary">Organizza l&apos;esposizione in negozio</p>
-            <p className="text-xs text-gray-500 mt-0.5">Raggruppa i prodotti in esposizioni e pianifica le settimane di esposizione.</p>
-          </div>
-          <button
-            onClick={() => setViewMode('mondi')}
-            className="flex-shrink-0 text-xs bg-primary text-white px-3 py-1.5 rounded hover:bg-primary/90 transition-colors"
-          >
-            Inizia
-          </button>
-        </div>
-      )}
 
       {viewMode === 'ordine' && <>
 
@@ -1251,7 +1235,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
       )}
 
       {/* ── Content ───────────────────────────────────────── */}
-      <div className="flex-1 px-4 sm:px-6 py-6 pb-32 lg:pb-24">
+      <div className="px-4 sm:px-6 py-6 pb-32 lg:pb-24">
         {groups.length === 0 && (
           <p className="text-sm text-gray-400 text-center py-16">
             {productSearch ? `Nessun prodotto per "${productSearch}"` : t('noItems')}
