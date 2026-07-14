@@ -136,9 +136,9 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
               onClick={(e) => handleCSV(e)}
               className="flex items-center w-full text-left px-4 py-2.5 text-xs text-primary hover:bg-cream transition-colors"
             >
-              CSV completo
+              {tranchePresenti.length <= 1 ? 'CSV' : 'CSV completo'}
             </button>
-            {tranchePresenti.map((tr) => (
+            {tranchePresenti.length > 1 && tranchePresenti.map((tr) => (
               <button
                 key={tr}
                 onClick={(e) => handleCSV(e, tr)}
