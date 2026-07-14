@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
-import { LogOut, UserCircle, HelpCircle, Home } from 'lucide-react';
+import { LogOut, UserCircle, HelpCircle, Home, Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -143,6 +143,22 @@ export default function Header({ session }: HeaderProps) {
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Admin — desktop only, admin users only */}
+      {isAdmin && (
+        <div className="relative group hidden md:block">
+          <Link
+            href="/admin"
+            className="flex p-1.5 text-gray-400 hover:text-primary transition-colors"
+            aria-label="Admin"
+          >
+            <Settings size={19} />
+          </Link>
+          <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 text-[10px] font-semibold tracking-wider uppercase bg-gray-900 text-white rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+            Admin
+          </span>
+        </div>
+      )}
 
       {/* Home — desktop only (mobile uses bottom nav) */}
       <div className="relative group hidden md:block">
