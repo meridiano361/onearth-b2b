@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-13 (Destinazione e budget scelti alla creazione del carrello, modificabili in qualsiasi momento dalla sidebar)
+// AGGIORNATO: 2026-07-14 (Risorse con 3 tab separati: Documenti, Foto, Video)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -331,10 +331,11 @@ export default function AssistenzaPage() {
           <SectionHeader n={15} icon={Film} label="Risorse e Media" />
           <ul className="space-y-2">
             <Bullet>Accedi alle Risorse dal menu in basso (icona cartella) o dalla homepage.</Bullet>
-            <Bullet>I contenuti sono organizzati per <span className="font-medium">collezione</span> (es. PE27, CA27): ogni sezione raggruppa documenti PDF, album fotografici e video della stessa stagione.</Bullet>
-            <Bullet><span className="font-medium">PDF:</span> scaricabili direttamente.</Bullet>
-            <Bullet><span className="font-medium">Video:</span> il pulsante <span className="font-medium">Guarda</span> apre il video in una nuova scheda del browser.</Bullet>
-            <Bullet><span className="font-medium">Audio:</span> ascoltabili con player integrato.</Bullet>
+            <Bullet>I contenuti sono divisi in tre tab separati: <span className="font-medium">Documenti</span>, <span className="font-medium">Foto</span> e <span className="font-medium">Video</span>.</Bullet>
+            <Bullet><span className="font-medium">Documenti:</span> PDF e altri file scaricabili direttamente.</Bullet>
+            <Bullet><span className="font-medium">Foto:</span> album fotografici sfogliabili con lightbox e swipe.</Bullet>
+            <Bullet><span className="font-medium">Video:</span> video (si apre in una nuova scheda) e podcast/audio ascoltabili con player integrato.</Bullet>
+            <Bullet>All&apos;interno di ogni tab i contenuti possono essere ulteriormente raggruppati per cartella.</Bullet>
           </ul>
         </section>
 

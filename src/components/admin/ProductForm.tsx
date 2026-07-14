@@ -83,7 +83,7 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
 
 function capitalizeFirst(s: string): string {
   if (!s) return s;
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 }
 
 function canonicalizeMaterial(raw: string): string {
@@ -143,6 +143,7 @@ function MaterialFieldWithPct({ label, value, onChange }: { label: string; value
             <input
               type="text" value={custom}
               onChange={(e) => { setCustom(e.target.value); emit(pct, e.target.value); }}
+              onBlur={(e) => { const n = capitalizeFirst(e.target.value); setCustom(n); emit(pct, n); }}
               placeholder="Specifica materiale…"
               className="mt-1.5 w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent"
             />
