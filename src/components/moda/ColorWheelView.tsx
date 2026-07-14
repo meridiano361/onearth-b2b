@@ -112,6 +112,14 @@ const GROUP_HARMONY_MAP: Record<string, string[]> = {
   'hero-neutrals': ['neutral'],
 };
 
+// ── Seasonal palette (abbigliamento PE27) ────────────────────────────────────
+
+const PALETTE_STAGIONALE = [
+  { code: '19-4122 TPG', name: 'Moonlit Ocean', hex: '#293B4D', hue: 210, lightness: 23 },
+  { code: '18-4036 TCX', name: 'Parisian Blue', hex: '#4F7CA4', hue: 208, lightness: 47 },
+  { code: '17-1449 TPG', name: '',              hex: '#C34121', hue: 12,  lightness: 45 },
+] as const;
+
 // ── SVG wheel constants ────────────────────────────────────────────────────────
 
 const CX = 200, CY = 200;
@@ -581,6 +589,7 @@ export default function ColorWheelView() {
   const [addingProductId, setAddingProductId]     = useState<string | null>(null);
   const [palettaCategoria, setPalettaCategoria]   = useState<string | null>(null);
   const [palettaPantoneKey, setPalettaPantoneKey] = useState<string | null>(null);
+  const [hoveredSeasonalIdx, setHoveredSeasonalIdx] = useState<number | null>(null);
 
   const { data: wheelData, isLoading: wheelLoading, isError, error, refetch } = useQuery<{ families: WheelFamily[] }>({
     queryKey: ['moda-color-wheel'],
@@ -930,6 +939,30 @@ export default function ColorWheelView() {
                 </g>
               );
             })}
+
+            {/* Seasonal palette markers — diamond shaped */}
+            {PALETTE_STAGIONALE.map((sp, i) => {
+              const r  = dotRadius(sp.lightness);
+              const pt = polar(CX, CY, r, sp.hue);
+              const isHov = hoveredSeasonalIdx === i;
+              const s = isHov ? 7 : 5.5;
+              return (
+                <g
+                  key={sp.code}
+                  onMouseEnter={() => setHoveredSeasonalIdx(i)}
+                  onMouseLeave={() => setHoveredSeasonalIdx(null)}
+                  className="cursor-default pointer-events-all"
+                >
+                  <circle cx={pt.x} cy={pt.y} r={12} fill="transparent" />
+                  <polygon
+                    points={`${pt.x},${pt.y - s} ${pt.x + s},${pt.y} ${pt.x},${pt.y + s} ${pt.x - s},${pt.y}`}
+                    fill={sp.hex}
+                    stroke="white"
+                    strokeWidth={isHov ? 2 : 1.5}
+                  />
+                </g>
+              );
+            })}
           </svg>
 
           {/* Hover info bar */}
@@ -1023,6 +1056,33 @@ export default function ColorWheelView() {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Palette Stagionale PE27 */}
+          <div className="w-full">
+            <p className="text-2xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
+              Palette Stagionale
+              <span className="font-normal text-gray-300 ml-1">— abbigliamento PE27</span>
+            </p>
+            <div className="space-y-0.5">
+              {PALETTE_STAGIONALE.map((sp, i) => (
+                <div
+                  key={sp.code}
+                  onMouseEnter={() => setHoveredSeasonalIdx(i)}
+                  onMouseLeave={() => setHoveredSeasonalIdx(null)}
+                  className={`flex items-center gap-2.5 px-2 py-1.5 rounded transition-colors ${
+                    hoveredSeasonalIdx === i ? 'bg-gray-100' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <span
+                    className="w-4 h-4 flex-shrink-0 border border-white shadow-sm"
+                    style={{ backgroundColor: sp.hex, clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' }}
+                  />
+                  <span className="font-mono text-2xs text-gray-500 flex-shrink-0">{sp.code}</span>
+                  {sp.name && <span className="text-xs text-gray-600 truncate">{sp.name}</span>}
+                </div>
+              ))}
             </div>
           </div>
 

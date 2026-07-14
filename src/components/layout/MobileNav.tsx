@@ -125,7 +125,7 @@ export default function MobileNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-black z-30"
+      className="md:hidden fixed bottom-0 left-0 right-0 bg-black z-30"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-stretch h-[56px]">
