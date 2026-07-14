@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Search, Pencil, Trash2, Eye, Power, PowerOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Shirt, Home, Copy, Download, Columns2 } from 'lucide-react';
+import { Plus, Upload, Search, Pencil, Trash2, Eye, Power, PowerOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Shirt, Home, Copy, Download, Columns2, Sparkles } from 'lucide-react';
 import { CONFERENTE_OPTIONS, STAGIONE_OPTIONS } from '@/lib/productConstants';
 import { formatCurrency, capitalize } from '@/lib/utils';
 import Button from '@/components/ui/Button';
@@ -1436,6 +1436,24 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
                     {(p as any).stagione && <span className="text-xs text-gray-600"><span className="text-gray-400">Stagione:</span> {(p as any).stagione}</span>}
                     {p.tranche && <span className="text-xs text-gray-600"><span className="text-gray-400">Tranche:</span> {p.tranche}</span>}
                   </div>
+                </div>
+              )}
+
+              {/* Lavorazione */}
+              {(p as any).lavorazione && (
+                <div className="flex items-center gap-2">
+                  <span className="text-2xs font-semibold uppercase tracking-widest text-gray-400">Lavorazione:</span>
+                  <span className="text-xs text-primary capitalize">{(p as any).lavorazione}</span>
+                  <a
+                    href={`https://www.perplexity.ai/search?q=${encodeURIComponent(`Cos'è la lavorazione tessile "${capitalize((p as any).lavorazione)}"?`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Chiedi all'AI cos'è "${(p as any).lavorazione}"`}
+                    className="flex items-center gap-1 text-2xs text-accent/70 hover:text-accent transition-colors"
+                  >
+                    <Sparkles size={10} />
+                    <span>Cos'è?</span>
+                  </a>
                 </div>
               )}
 

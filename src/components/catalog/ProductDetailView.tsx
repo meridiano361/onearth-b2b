@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ShoppingBag, Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Check, ChevronLeft, ChevronRight, Plus, Sparkles } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import { formatCurrency, isValidLotQuantity, capitalize } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
@@ -451,9 +451,29 @@ export default function ProductDetailView({ id }: Props) {
               <div>
                 <h2 className="label-luxury text-gray-400 mb-3">Materiali</h2>
                 <div className="space-y-2">
-                  {activeMaterialFields.map(({ key, label }) => (
-                    <FieldRow key={key} label={label} value={capitalize(String(p[key]))} />
-                  ))}
+                  {activeMaterialFields.map(({ key, label }) => {
+                    const val = capitalize(String(p[key]));
+                    if (key === 'lavorazione') {
+                      const aiUrl = `https://www.perplexity.ai/search?q=${encodeURIComponent(`Cos'è la lavorazione tessile "${val}"?`)}`;
+                      return (
+                        <div key={key} className="flex items-baseline gap-2">
+                          <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
+                          <span className="text-sm text-primary">{val}</span>
+                          <a
+                            href={aiUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Chiedi all'AI cos'è "${val}"`}
+                            className="flex items-center gap-1 text-2xs text-accent/70 hover:text-accent transition-colors ml-1 flex-shrink-0"
+                          >
+                            <Sparkles size={10} />
+                            <span>Cos'è?</span>
+                          </a>
+                        </div>
+                      );
+                    }
+                    return <FieldRow key={key} label={label} value={val} />;
+                  })}
                 </div>
               </div>
             )}
