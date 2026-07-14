@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { requireModaSession } from '@/lib/modaServer';
+import { requireModaSession, isMeridiano361Org } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 import { hexToHsl, getHueFamilyId, isColorNeutral, HUE_FAMILIES, inferHueFromColore } from '@/lib/colorHarmony';
-import { MODA_COLLEZIONE } from '@/lib/modaAccess';
+import { MODA_COLLEZIONE, RESTRICTED_MODA_FAMIGLIE } from '@/lib/modaAccess';
 
 
 type PantoneRow = {
@@ -19,8 +19,15 @@ export async function GET() {
   const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+  const hasFull = await isMeridiano361Org(session.user.role, session.user.organizationId);
+
   const products = await prisma.product.findMany({
-    where: { isActive: true, collezione: MODA_COLLEZIONE, gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' } },
+    where: {
+      isActive: true,
+      collezione: MODA_COLLEZIONE,
+      gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' },
+      ...(hasFull ? {} : { famiglia: { notIn: [...RESTRICTED_MODA_FAMIGLIE] } }),
+    },
     select: {
       id: true,
       code: true,

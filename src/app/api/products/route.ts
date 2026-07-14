@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
-import { canAccessModa } from '@/lib/modaAccess';
+import { canAccessModa, RESTRICTED_MODA_FAMIGLIE } from '@/lib/modaAccess';
+import { isMeridiano361Org } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
@@ -113,6 +114,13 @@ export async function GET(req: NextRequest) {
     // Non-admin users cannot see MODA products unless they have moda access
     if (!canAccessModa(session.user.role, session.user.email)) {
       where.NOT = [{ gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' } }];
+    } else if (!isAdmin) {
+      // Only Meridiano361 org accounts see abbigliamento/accessori persona
+      const hasFull = await isMeridiano361Org(session.user.role, session.user.organizationId);
+      if (!hasFull) {
+        if (!where.AND) where.AND = [];
+        where.AND.push({ famiglia: { notIn: [...RESTRICTED_MODA_FAMIGLIE] } });
+      }
     }
     // Caller can explicitly exclude MODA products (e.g. when adding to a CASA order)
     const excludeModa = searchParams.get('excludeModa');

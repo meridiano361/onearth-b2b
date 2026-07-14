@@ -7,6 +7,9 @@
 import { isAdminRole } from '@/lib/roles';
 
 export const MODA_COLLEZIONE = 'PE27';
+
+// Famiglie MODA visibili solo agli account dell'organizzazione Meridiano361
+export const RESTRICTED_MODA_FAMIGLIE = ['Abbigliamento', 'Accessori persona'] as const;
 export const MODA_BRANCH_ID = 'modaPE27' as const;
 export const CASA_BRANCH_ID = 'casa27' as const;
 

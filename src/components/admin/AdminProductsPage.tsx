@@ -22,7 +22,7 @@ type ActiveFilter = 'all' | 'active' | 'inactive';
 type FotoFilter = 'all' | 'con-foto' | 'senza-foto' | 'foto-multiple';
 type TemaColorePresenzaFilter = 'all' | 'con-tema' | 'senza-tema';
 type PantoneSourceFilter = 'all' | 'auto' | 'manual';
-type SortField = 'code' | 'name' | 'produttore' | 'collezione' | 'costPrice' | 'retailPrice';
+type SortField = 'code' | 'name' | 'produttore' | 'collezione' | 'costPrice' | 'retailPrice' | 'createdAt';
 type SortDir = 'asc' | 'desc';
 type ColKey =
   | 'costPrice' | 'costoIeConReso' | 'costoIeSenzaReso' | 'retailPrice' | 'sconto' | 'ricarico' | 'iva' | 'lotSize' | 'stock'
@@ -456,6 +456,11 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
 
     if (sortField) {
       filtered = [...filtered].sort((a, b) => {
+        if (sortField === 'createdAt') {
+          const aT = new Date(a.createdAt).getTime();
+          const bT = new Date(b.createdAt).getTime();
+          return sortDir === 'asc' ? aT - bT : bT - aT;
+        }
         const aVal = a[sortField] ?? '';
         const bVal = b[sortField] ?? '';
         if (typeof aVal === 'string' && typeof bVal === 'string') {
@@ -487,7 +492,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
       : <ChevronDown size={11} className="ml-1 text-accent inline" />;
   }
 
-  const hasFilters = !!(search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterTemaColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterStagione || filterActive !== 'all' || filterFoto !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto || filterTemaColorePresenza !== 'all' || filterPaese || filterConferente || filterModello || filterDettaglio || filterForma || filterTaglia || filterMisura || filterColore2 || filterColore3 || filterMateriale1 || filterMateriale2 || filterMateriale3 || filterComposizione || filterFantasia || filterLavorazione || filterBloccoColore || filterIva || filterCostoConFascia || filterCostoSenzaFascia || filterRetailFascia || filterPantoneSource !== 'all');
+  const hasFilters = !!(search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterTemaColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterStagione || filterActive !== 'all' || filterFoto !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto || filterTemaColorePresenza !== 'all' || filterPaese || filterConferente || filterModello || filterDettaglio || filterForma || filterTaglia || filterMisura || filterColore2 || filterColore3 || filterMateriale1 || filterMateriale2 || filterMateriale3 || filterComposizione || filterFantasia || filterLavorazione || filterBloccoColore || filterIva || filterCostoConFascia || filterCostoSenzaFascia || filterRetailFascia || filterPantoneSource !== 'all' || sortField === 'createdAt');
   const hasAdvancedFilters = !!(filterPaese || filterConferente || filterModello || filterDettaglio || filterForma || filterTaglia || filterMisura || filterColore2 || filterColore3 || filterMateriale1 || filterMateriale2 || filterMateriale3 || filterComposizione || filterFantasia || filterLavorazione || filterBloccoColore || filterIva || filterCostoConFascia || filterCostoSenzaFascia || filterRetailFascia || filterPantoneSource !== 'all');
 
   function resetFilters() {
@@ -504,6 +509,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
     setFilterComposizione(''); setFilterFantasia(''); setFilterLavorazione(''); setFilterBloccoColore('');
     setFilterIva(''); setFilterCostoConFascia(''); setFilterCostoSenzaFascia(''); setFilterRetailFascia('');
     setFilterPantoneSource('all');
+    if (sortField === 'createdAt') { setSortField(null); setSortDir('asc'); }
   }
 
   const allVisibleSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
@@ -859,6 +865,15 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
           <div className="w-56">
             <Input placeholder="Codice, descrizione, produttore..." value={search} onChange={(e) => setSearch(e.target.value)} icon={<Search size={14} />} />
           </div>
+          <button
+            onClick={() => {
+              if (sortField === 'createdAt' && sortDir === 'desc') { setSortField(null); setSortDir('asc'); }
+              else { setSortField('createdAt'); setSortDir('desc'); }
+            }}
+            className={`flex items-center gap-1 h-8 px-2 text-xs border rounded transition-colors ${sortField === 'createdAt' ? 'border-accent text-accent bg-accent/5' : 'border-border text-gray-500 hover:text-primary hover:bg-cream'}`}
+          >
+            Ultimi caricati
+          </button>
           {!lockedSection && (
             <select value={filterGruppo} onChange={(e) => setFilterGruppo(e.target.value)} className={selectClass}>
               <option value="">Gruppo merc.</option>

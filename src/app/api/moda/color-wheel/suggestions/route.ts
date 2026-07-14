@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireModaSession } from '@/lib/modaServer';
+import { requireModaSession, isMeridiano361Org } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
-import { MODA_COLLEZIONE } from '@/lib/modaAccess';
+import { MODA_COLLEZIONE, RESTRICTED_MODA_FAMIGLIE } from '@/lib/modaAccess';
 import { hexToHsl, getHueFamilyId, isColorNeutral, getHarmonyType, harmonyScore, generateDisplayGroups, inferHueFromColore } from '@/lib/colorHarmony';
 import type { PantoneInfo } from '@/lib/colorHarmony';
 
@@ -18,6 +18,8 @@ type PantoneRow = {
 export async function GET(req: NextRequest) {
   const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const hasFull = await isMeridiano361Org(session.user.role, session.user.organizationId);
 
   const productId = req.nextUrl.searchParams.get('productId');
   if (!productId) return NextResponse.json({ error: 'productId required' }, { status: 400 });
@@ -85,6 +87,7 @@ export async function GET(req: NextRequest) {
       collezione: MODA_COLLEZIONE,
       gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' },
       id: { not: productId },
+      ...(hasFull ? {} : { famiglia: { notIn: [...RESTRICTED_MODA_FAMIGLIE] } }),
     },
     select: {
       id: true, code: true, name: true,
