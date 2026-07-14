@@ -1030,126 +1030,96 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
         </div>
       )}
 
-      {/* ── Page header ──────────────────────────────────── */}
+      {/* ── Page header — compact single row ────────────── */}
       <div className="sticky top-0 z-20 bg-white border-b border-border">
-        <div className="px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href={routes.orders}
-              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-primary hover:bg-cream rounded transition-colors"
-            >
-              <ArrowLeft size={16} />
-            </Link>
-            <div>
-              <p className="text-2xs font-medium tracking-widest uppercase text-gray-400 leading-none">
-                {t('title')}
-              </p>
-              <p className="text-sm font-semibold text-primary tracking-wide">
-                {order.orderNumber ?? `#${order.id.slice(0, 8).toUpperCase()}`}
-              </p>
+        <div className="px-4 sm:px-6 py-2 flex items-center gap-2">
+          {/* Back */}
+          <Link
+            href={routes.orders}
+            className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-primary hover:bg-cream rounded transition-colors flex-shrink-0"
+          >
+            <ArrowLeft size={15} />
+          </Link>
+
+          {/* Order number */}
+          <p className="text-sm font-semibold text-primary tracking-wide flex-shrink-0">
+            {order.orderNumber ?? `#${order.id.slice(0, 8).toUpperCase()}`}
+          </p>
+
+          {/* Vista tabs — inline when mondiEspositivi */}
+          {mondiEspositivi && (
+            <div className="flex gap-1 ml-1 overflow-x-auto flex-shrink-0" style={{ scrollbarWidth: 'none' }}>
+              <button
+                onClick={() => setViewMode('ordine')}
+                className={`flex-shrink-0 text-xs px-2.5 py-1 rounded transition-colors ${viewMode === 'ordine' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-cream border border-border'}`}
+              >
+                Ordine
+              </button>
+              <button
+                onClick={() => setViewMode('mondi')}
+                className={`flex-shrink-0 flex items-center gap-1 text-xs px-2.5 py-1 rounded transition-colors ${viewMode === 'mondi' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-cream border border-border'}`}
+              >
+                <Layers size={11} />
+                Esposizione
+                {displayGroupCount > 0 && (
+                  <span className={`text-[9px] px-1 rounded-full font-semibold ${viewMode === 'mondi' ? 'bg-white/20 text-white' : 'bg-cream text-primary'}`}>{displayGroupCount}</span>
+                )}
+              </button>
+              <button
+                onClick={() => setViewMode('calendario')}
+                className={`flex-shrink-0 flex items-center gap-1 text-xs px-2.5 py-1 rounded transition-colors ${viewMode === 'calendario' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-cream border border-border'}`}
+              >
+                <CalendarDays size={11} />
+                Calendario
+              </button>
             </div>
-          </div>
-          <div className="text-right text-xs text-gray-500">
-            <p>{items.length} art. · {grandQty} pz.</p>
-            <p className="font-semibold text-primary text-sm">{formatCurrency(grandTotal)}</p>
-            {/* Budget bar */}
+          )}
+
+          <div className="flex-1" />
+
+          {/* Stats + budget — right side */}
+          <div className="text-right text-xs text-gray-500 flex-shrink-0">
+            <p>
+              <span className="font-semibold text-primary">{formatCurrency(grandTotal)}</span>
+              <span className="mx-1.5 text-gray-200">·</span>
+              {items.length} art. · {grandQty} pz.
+            </p>
             {mondiEspositivi && order.budgetPersonalizzato && !budgetEditing && (() => {
               const budget = Number(order.budgetPersonalizzato);
               const pct = Math.min(100, (grandTotal / budget) * 100);
               const over = grandTotal > budget;
               return (
-                <div className="mt-1 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <span className={`text-2xs ${over ? 'text-[#C17A5A]' : 'text-[#8FAF8F]'}`}>
-                      {over ? '+' : ''}{formatCurrency(grandTotal - budget)}
-                    </span>
-                    <button onClick={() => { setBudgetEditing(true); setBudgetInput(String(budget)); setBudgetNota(order.budgetNota ?? ''); }}
-                      className="text-gray-300 hover:text-gray-400 transition-colors">
-                      <Pencil size={10} />
-                    </button>
+                <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                  <div className="w-14 h-1 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: over ? '#C17A5A' : '#8FAF8F' }} />
                   </div>
-                  <div className="w-28 h-1.5 bg-gray-100 rounded-full overflow-hidden ml-auto mt-0.5">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, backgroundColor: over ? '#C17A5A' : '#8FAF8F' }}
-                    />
-                  </div>
-                  <p className="text-2xs text-gray-400 mt-0.5">budget {formatCurrency(budget)}</p>
+                  <span className={`text-2xs ${over ? 'text-[#C17A5A]' : 'text-[#8FAF8F]'}`}>
+                    {over ? '+' : ''}{formatCurrency(grandTotal - budget)}
+                  </span>
+                  <span className="text-2xs text-gray-300">/ {formatCurrency(budget)}</span>
+                  <button onClick={() => { setBudgetEditing(true); setBudgetInput(String(budget)); setBudgetNota(order.budgetNota ?? ''); }} className="text-gray-300 hover:text-gray-400 transition-colors">
+                    <Pencil size={9} />
+                  </button>
                 </div>
               );
             })()}
             {mondiEspositivi && !order.budgetPersonalizzato && !budgetEditing && (
-              <button
-                onClick={() => { setBudgetEditing(true); setBudgetInput(''); setBudgetNota(''); }}
-                className="text-2xs text-gray-300 hover:text-gray-400 mt-0.5 block ml-auto transition-colors"
-              >
+              <button onClick={() => { setBudgetEditing(true); setBudgetInput(''); setBudgetNota(''); }} className="text-2xs text-gray-300 hover:text-gray-400 mt-0.5 block ml-auto transition-colors">
                 + budget
               </button>
             )}
             {mondiEspositivi && budgetEditing && (
-              <div className="flex items-center gap-1 mt-1 justify-end">
-                <input
-                  type="number" min={0} step={100}
-                  value={budgetInput}
-                  onChange={e => setBudgetInput(e.target.value)}
-                  placeholder="Budget €"
-                  className="text-xs border border-border rounded px-1.5 py-0.5 w-24 text-right"
-                />
-                <button onClick={handleSaveBudget} disabled={savingBudget}
-                  className="text-[#8FAF8F] hover:opacity-70 disabled:opacity-50">
-                  {savingBudget ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+              <div className="flex items-center gap-1 mt-0.5 justify-end">
+                <input type="number" min={0} step={100} value={budgetInput} onChange={e => setBudgetInput(e.target.value)} placeholder="Budget €" className="text-xs border border-border rounded px-1.5 py-0.5 w-20 text-right" />
+                <button onClick={handleSaveBudget} disabled={savingBudget} className="text-[#8FAF8F] hover:opacity-70 disabled:opacity-50">
+                  {savingBudget ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
                 </button>
-                <button onClick={() => setBudgetEditing(false)} className="text-gray-400 hover:text-primary">
-                  <X size={12} />
-                </button>
+                <button onClick={() => setBudgetEditing(false)} className="text-gray-400 hover:text-primary"><X size={11} /></button>
               </div>
             )}
           </div>
         </div>
       </div>
-
-      {/* ── Vista toggle (Mondi Espositivi) ───────────────── */}
-      {mondiEspositivi && (
-        <div className="sticky top-[57px] z-20 bg-white border-b border-border px-3 sm:px-6 py-2 flex gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          <button
-            onClick={() => setViewMode('ordine')}
-            className={`flex-shrink-0 flex items-center gap-1.5 text-sm px-3 py-2 rounded transition-colors ${
-              viewMode === 'ordine'
-                ? 'bg-primary text-white'
-                : 'text-gray-500 hover:bg-cream border border-border'
-            }`}
-          >
-            Ordine
-          </button>
-          <button
-            onClick={() => setViewMode('mondi')}
-            className={`flex-shrink-0 flex items-center gap-1.5 text-sm px-3 py-2 rounded transition-colors ${
-              viewMode === 'mondi'
-                ? 'bg-primary text-white'
-                : 'text-gray-500 hover:bg-cream border border-border'
-            }`}
-          >
-            <Layers size={14} />
-            Esposizione
-            {displayGroupCount > 0 && (
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                viewMode === 'mondi' ? 'bg-white/20 text-white' : 'bg-cream text-primary'
-              }`}>{displayGroupCount}</span>
-            )}
-          </button>
-          <button
-            onClick={() => setViewMode('calendario')}
-            className={`flex-shrink-0 flex items-center gap-1.5 text-sm px-3 py-2 rounded transition-colors ${
-              viewMode === 'calendario'
-                ? 'bg-primary text-white'
-                : 'text-gray-500 hover:bg-cream border border-border'
-            }`}
-          >
-            <CalendarDays size={14} />
-            Calendario
-          </button>
-        </div>
-      )}
 
       {/* ── Mondi Espositivi view ──────────────────────────── */}
       {mondiEspositivi && viewMode === 'mondi' && (
@@ -1165,7 +1135,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
       {viewMode === 'ordine' && <>
 
       {/* ── Grouping tabs ─────────────────────────────────── */}
-      <div className="sticky z-10 bg-white border-b border-border" style={{ top: mondiEspositivi ? 104 : 57 }}>
+      <div className="sticky z-10 bg-white border-b border-border" style={{ top: 44 }}>
         <div
           ref={tabsRef}
           className="flex overflow-x-auto scrollbar-none px-4 sm:px-6"
@@ -1315,7 +1285,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
 
       {/* ── Fixed footer ──────────────────────────────────── */}
       <div className="
-        fixed above-mobile-nav left-0 right-0 z-20
+        fixed above-mobile-nav md:bottom-0 left-0 right-0 z-20
         lg:bottom-0 lg:right-80 xl:right-[340px]
         bg-white border-t border-border shadow-[0_-2px_8px_rgba(0,0,0,0.06)]
       ">
