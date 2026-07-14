@@ -113,6 +113,7 @@ export interface ProductPantoneEntry {
   system_type: string;
   sortOrder: number;
   isPrimary: boolean;
+  isAutoFilled: boolean;
 }
 
 export type TipoElementoParete = 'barra' | 'mensola' | 'frontale';

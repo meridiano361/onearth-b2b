@@ -502,7 +502,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     if (!hue) return;
     const match = nearestPantone(hue.hex, allPantoneColors);
     if (!match) return;
-    setPantoneSlot(0, { pantoneColorId: match.id, code: match.code, name: match.name, hex_code: match.hex_code, system_type: match.system_type, sortOrder: 0, isPrimary: true });
+    setPantoneSlot(0, { pantoneColorId: match.id, code: match.code, name: match.name, hex_code: match.hex_code, system_type: match.system_type, sortOrder: 0, isPrimary: true, isAutoFilled: true });
     setPantoneAutoFilled(prev => { const n = [...prev] as [boolean, boolean, boolean]; n[0] = true; return n; });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedColore, allPantoneColors.length]);
@@ -513,7 +513,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     if (!hue) return;
     const match = nearestPantone(hue.hex, allPantoneColors);
     if (!match) return;
-    setPantoneSlot(1, { pantoneColorId: match.id, code: match.code, name: match.name, hex_code: match.hex_code, system_type: match.system_type, sortOrder: 1, isPrimary: false });
+    setPantoneSlot(1, { pantoneColorId: match.id, code: match.code, name: match.name, hex_code: match.hex_code, system_type: match.system_type, sortOrder: 1, isPrimary: false, isAutoFilled: true });
     setPantoneAutoFilled(prev => { const n = [...prev] as [boolean, boolean, boolean]; n[1] = true; return n; });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedColore2, allPantoneColors.length]);
@@ -524,7 +524,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     if (!hue) return;
     const match = nearestPantone(hue.hex, allPantoneColors);
     if (!match) return;
-    setPantoneSlot(2, { pantoneColorId: match.id, code: match.code, name: match.name, hex_code: match.hex_code, system_type: match.system_type, sortOrder: 2, isPrimary: false });
+    setPantoneSlot(2, { pantoneColorId: match.id, code: match.code, name: match.name, hex_code: match.hex_code, system_type: match.system_type, sortOrder: 2, isPrimary: false, isAutoFilled: true });
     setPantoneAutoFilled(prev => { const n = [...prev] as [boolean, boolean, boolean]; n[2] = true; return n; });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedColore3, allPantoneColors.length]);
@@ -875,6 +875,12 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
           imageUrl5:      v.imageUrl5      || null,
           colorBlockIds:   [...selectedColorBlocks],
           pantoneColorIds: finalPantones.map((p) => p.pantoneColorId),
+          pantoneAutoFilledFlags: isModaProduct
+            ? (() => {
+                const filledIndices = pantoneSlots.map((s, i) => s ? i : null).filter((i) => i !== null) as number[];
+                return filledIndices.map((si) => pantoneAutoFilled[si]);
+              })()
+            : undefined,
           sizeVariants:    sizeVariants.filter((sv) => sv.taglia && sv.codice),
         }),
       });
@@ -1656,7 +1662,7 @@ function SinglePantoneField({
   }, []);
 
   function select(c: PantoneColor) {
-    onChange({ pantoneColorId: c.id, code: c.code, name: c.name, hex_code: c.hex_code, system_type: c.system_type, sortOrder: 0, isPrimary: false });
+    onChange({ pantoneColorId: c.id, code: c.code, name: c.name, hex_code: c.hex_code, system_type: c.system_type, sortOrder: 0, isPrimary: false, isAutoFilled: false });
     setSearch('');
     setOpen(false);
   }

@@ -86,6 +86,7 @@ export default function ProductPantoneForm({ value, onChange }: Props) {
       system_type: c.system_type,
       sortOrder: value.length,
       isPrimary: value.length === 0,
+      isAutoFilled: false,
     };
     onChange([...value, entry]);
     setSearch('');

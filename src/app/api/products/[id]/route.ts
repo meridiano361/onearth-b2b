@@ -76,6 +76,7 @@ const updateSchema = z.object({
   lavorazione: z.string().optional().nullable(),
   dettaglio: z.string().optional().nullable(),
   pantoneColorIds: z.array(z.coerce.number().int()).optional(),
+  pantoneAutoFilledFlags: z.array(z.boolean()).optional(),
   sizeVariants: z.array(z.object({ taglia: z.string(), codice: z.string() })).optional().nullable(),
 });
 
@@ -100,10 +101,10 @@ export async function GET(
       `,
       prisma.$queryRaw<{
         pantone_color_id: bigint; code: string; name: string;
-        hex_code: string; system_type: string; sort_order: number; is_primary: boolean;
+        hex_code: string; system_type: string; sort_order: number; is_primary: boolean; is_auto_filled: boolean;
       }[]>`
         SELECT pp.pantone_color_id, pc.code, pc.name, pc.hex_code, pc.system_type,
-               pp.sort_order, pp.is_primary
+               pp.sort_order, pp.is_primary, pp.is_auto_filled
         FROM   product_pantones pp
         JOIN   pantone_colors pc ON pc.id = pp.pantone_color_id
         WHERE  pp.product_id = ${params.id}
@@ -124,6 +125,7 @@ export async function GET(
           pantoneColorId: Number(pp.pantone_color_id),
           code: pp.code, name: pp.name, hex_code: pp.hex_code,
           system_type: pp.system_type, sortOrder: pp.sort_order, isPrimary: pp.is_primary,
+          isAutoFilled: pp.is_auto_filled,
         })),
       },
     });
@@ -144,7 +146,7 @@ export async function PATCH(
 
     const body = await req.json();
     const parsed = updateSchema.parse(body);
-    const { colorBlockIds, pantoneColorIds, sizeVariants, ...rest } = parsed;
+    const { colorBlockIds, pantoneColorIds, pantoneAutoFilledFlags, sizeVariants, ...rest } = parsed;
     const data = normalizeProductClassificationFields(rest);
     if (sizeVariants !== undefined) (data as any).sizeVariants = sizeVariants?.length ? sizeVariants : null;
 
@@ -184,9 +186,10 @@ export async function PATCH(
     if (pantoneColorIds !== undefined) {
       await prisma.$executeRaw`DELETE FROM product_pantones WHERE product_id = ${params.id}`;
       for (let i = 0; i < pantoneColorIds.length; i++) {
+        const autoFilled = pantoneAutoFilledFlags?.[i] ?? false;
         await prisma.$executeRaw`
-          INSERT INTO product_pantones (product_id, pantone_color_id, sort_order, is_primary)
-          VALUES (${params.id}, ${BigInt(pantoneColorIds[i])}, ${i}, ${i === 0})
+          INSERT INTO product_pantones (product_id, pantone_color_id, sort_order, is_primary, is_auto_filled)
+          VALUES (${params.id}, ${BigInt(pantoneColorIds[i])}, ${i}, ${i === 0}, ${autoFilled})
         `;
       }
     }

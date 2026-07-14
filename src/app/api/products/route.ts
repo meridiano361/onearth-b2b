@@ -76,6 +76,7 @@ const productSchema = z.object({
   lavorazione: z.string().optional().nullable(),
   dettaglio: z.string().optional().nullable(),
   pantoneColorIds: z.array(z.coerce.number().int()).optional(),
+  pantoneAutoFilledFlags: z.array(z.boolean()).optional(),
   sizeVariants: z.array(z.object({ taglia: z.string(), codice: z.string() })).optional().nullable(),
   costoIeSenzaReso: z.coerce.number().positive().optional().nullable(),
   costoIeConReso:   z.coerce.number().positive().optional().nullable(),
@@ -194,12 +195,12 @@ export async function GET(req: NextRequest) {
     type PpLink = {
       product_id: string; pantone_color_id: bigint; code: string;
       name: string; hex_code: string; system_type: string;
-      sort_order: number; is_primary: boolean;
+      sort_order: number; is_primary: boolean; is_auto_filled: boolean;
     };
     const ppLinks = productIds.length > 0
       ? await prisma.$queryRaw<PpLink[]>`
           SELECT pp.product_id, pp.pantone_color_id, pc.code, pc.name, pc.hex_code, pc.system_type,
-                 pp.sort_order, pp.is_primary
+                 pp.sort_order, pp.is_primary, pp.is_auto_filled
           FROM   product_pantones pp
           JOIN   pantone_colors pc ON pc.id = pp.pantone_color_id
           WHERE  pp.product_id = ANY(${productIds}::text[])
@@ -225,6 +226,7 @@ export async function GET(req: NextRequest) {
         pantoneColorId: Number(pp.pantone_color_id),
         code: pp.code, name: pp.name, hex_code: pp.hex_code,
         system_type: pp.system_type, sortOrder: pp.sort_order, isPrimary: pp.is_primary,
+        isAutoFilled: pp.is_auto_filled,
       })),
     }));
 
@@ -250,7 +252,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const parsed = productSchema.parse(body);
-    const { colorBlockIds, pantoneColorIds, sizeVariants, costoIeSenzaReso, costoIeConReso, ...rest } = parsed;
+    const { colorBlockIds, pantoneColorIds, pantoneAutoFilledFlags, sizeVariants, costoIeSenzaReso, costoIeConReso, ...rest } = parsed;
     const data = normalizeProductClassificationFields(rest);
 
     if (data.gruppoMerceologico?.toLowerCase() === 'moda' && (!pantoneColorIds || pantoneColorIds.length === 0)) {
@@ -339,9 +341,10 @@ export async function POST(req: NextRequest) {
       }
 
       for (let i = 0; i < (pantoneColorIds?.length ?? 0); i++) {
+        const autoFilled = pantoneAutoFilledFlags?.[i] ?? false;
         await prisma.$executeRaw`
-          INSERT INTO product_pantones (product_id, pantone_color_id, sort_order, is_primary)
-          VALUES (${product.id}, ${BigInt(pantoneColorIds![i])}, ${i}, ${i === 0})
+          INSERT INTO product_pantones (product_id, pantone_color_id, sort_order, is_primary, is_auto_filled)
+          VALUES (${product.id}, ${BigInt(pantoneColorIds![i])}, ${i}, ${i === 0}, ${autoFilled})
           ON CONFLICT (product_id, pantone_color_id) DO NOTHING
         `;
       }

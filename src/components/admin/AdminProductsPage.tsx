@@ -21,6 +21,7 @@ import toast from 'react-hot-toast';
 type ActiveFilter = 'all' | 'active' | 'inactive';
 type FotoFilter = 'all' | 'con-foto' | 'senza-foto' | 'foto-multiple';
 type TemaColorePresenzaFilter = 'all' | 'con-tema' | 'senza-tema';
+type PantoneSourceFilter = 'all' | 'auto' | 'manual';
 type SortField = 'code' | 'name' | 'produttore' | 'collezione' | 'costPrice' | 'retailPrice';
 type SortDir = 'asc' | 'desc';
 type ColKey =
@@ -241,6 +242,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
   const [filterCostoConFascia, setFilterCostoConFascia] = useState('');
   const [filterCostoSenzaFascia, setFilterCostoSenzaFascia] = useState('');
   const [filterRetailFascia, setFilterRetailFascia] = useState('');
+  const [filterPantoneSource, setFilterPantoneSource] = useState<PantoneSourceFilter>('all');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // Sort
@@ -423,6 +425,8 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
       if (filterLavorazione && pa.lavorazione !== filterLavorazione) return false;
       if (filterBloccoColore && pa.bloccoColore !== filterBloccoColore) return false;
       if (filterIva && String(p.iva ?? 22) !== filterIva) return false;
+      if (filterPantoneSource === 'auto' && !p.pantoneColors.some((pc) => pc.isAutoFilled)) return false;
+      if (filterPantoneSource === 'manual' && p.pantoneColors.some((pc) => pc.isAutoFilled)) return false;
       if (filterCostoConFascia) {
         const v = Number(pa.costoIeConReso ?? 0);
         if (filterCostoConFascia === '0-5' && v >= 5) return false;
@@ -464,7 +468,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
     }
 
     return filtered;
-  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterTemaColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterStagione, filterActive, filterFoto, filterFasciaSconto, filterFasciaRicarico, filterPrezzoCosto, filterTemaColorePresenza, filterPaese, filterConferente, filterModello, filterDettaglio, filterForma, filterTaglia, filterMisura, filterColore2, filterColore3, filterMateriale1, filterMateriale2, filterMateriale3, filterComposizione, filterFantasia, filterLavorazione, filterBloccoColore, filterIva, filterCostoConFascia, filterCostoSenzaFascia, filterRetailFascia, sortField, sortDir]);
+  }, [allProducts, search, filterGruppo, filterFamiglia, filterClasse, filterSottoclasse, filterGruppoOmogeneo, filterColore, filterTemaColore, filterCollezione, filterLinea, filterProduttore, filterTranche, filterStagione, filterActive, filterFoto, filterFasciaSconto, filterFasciaRicarico, filterPrezzoCosto, filterTemaColorePresenza, filterPaese, filterConferente, filterModello, filterDettaglio, filterForma, filterTaglia, filterMisura, filterColore2, filterColore3, filterMateriale1, filterMateriale2, filterMateriale3, filterComposizione, filterFantasia, filterLavorazione, filterBloccoColore, filterIva, filterCostoConFascia, filterCostoSenzaFascia, filterRetailFascia, filterPantoneSource, sortField, sortDir]);
 
   function handleColumnSort(field: SortField) {
     if (sortField === field) {
@@ -483,8 +487,8 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
       : <ChevronDown size={11} className="ml-1 text-accent inline" />;
   }
 
-  const hasFilters = !!(search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterTemaColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterStagione || filterActive !== 'all' || filterFoto !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto || filterTemaColorePresenza !== 'all' || filterPaese || filterConferente || filterModello || filterDettaglio || filterForma || filterTaglia || filterMisura || filterColore2 || filterColore3 || filterMateriale1 || filterMateriale2 || filterMateriale3 || filterComposizione || filterFantasia || filterLavorazione || filterBloccoColore || filterIva || filterCostoConFascia || filterCostoSenzaFascia || filterRetailFascia);
-  const hasAdvancedFilters = !!(filterPaese || filterConferente || filterModello || filterDettaglio || filterForma || filterTaglia || filterMisura || filterColore2 || filterColore3 || filterMateriale1 || filterMateriale2 || filterMateriale3 || filterComposizione || filterFantasia || filterLavorazione || filterBloccoColore || filterIva || filterCostoConFascia || filterCostoSenzaFascia || filterRetailFascia);
+  const hasFilters = !!(search || filterGruppo || filterFamiglia || filterClasse || filterSottoclasse || filterGruppoOmogeneo || filterColore || filterTemaColore || filterCollezione || filterLinea || filterProduttore || filterTranche || filterStagione || filterActive !== 'all' || filterFoto !== 'all' || filterFasciaSconto || filterFasciaRicarico || filterPrezzoCosto || filterTemaColorePresenza !== 'all' || filterPaese || filterConferente || filterModello || filterDettaglio || filterForma || filterTaglia || filterMisura || filterColore2 || filterColore3 || filterMateriale1 || filterMateriale2 || filterMateriale3 || filterComposizione || filterFantasia || filterLavorazione || filterBloccoColore || filterIva || filterCostoConFascia || filterCostoSenzaFascia || filterRetailFascia || filterPantoneSource !== 'all');
+  const hasAdvancedFilters = !!(filterPaese || filterConferente || filterModello || filterDettaglio || filterForma || filterTaglia || filterMisura || filterColore2 || filterColore3 || filterMateriale1 || filterMateriale2 || filterMateriale3 || filterComposizione || filterFantasia || filterLavorazione || filterBloccoColore || filterIva || filterCostoConFascia || filterCostoSenzaFascia || filterRetailFascia || filterPantoneSource !== 'all');
 
   function resetFilters() {
     setSearch(''); setFilterGruppo(''); setFilterFamiglia('');
@@ -499,6 +503,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
     setFilterMateriale1(''); setFilterMateriale2(''); setFilterMateriale3('');
     setFilterComposizione(''); setFilterFantasia(''); setFilterLavorazione(''); setFilterBloccoColore('');
     setFilterIva(''); setFilterCostoConFascia(''); setFilterCostoSenzaFascia(''); setFilterRetailFascia('');
+    setFilterPantoneSource('all');
   }
 
   const allVisibleSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
@@ -949,7 +954,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
             className={`flex items-center gap-1 h-8 px-2 text-xs border rounded transition-colors ${showAdvancedFilters || hasAdvancedFilters ? 'border-accent text-accent bg-accent/5' : 'border-border text-gray-500 hover:text-primary hover:bg-cream'}`}
           >
             {showAdvancedFilters ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-            {hasAdvancedFilters ? `Altri filtri (${[filterPaese,filterConferente,filterModello,filterDettaglio,filterForma,filterTaglia,filterMisura,filterColore2,filterColore3,filterMateriale1,filterMateriale2,filterMateriale3,filterComposizione,filterFantasia,filterLavorazione,filterBloccoColore,filterIva,filterCostoConFascia,filterCostoSenzaFascia,filterRetailFascia].filter(Boolean).length})` : 'Altri filtri'}
+            {hasAdvancedFilters ? `Altri filtri (${[filterPaese,filterConferente,filterModello,filterDettaglio,filterForma,filterTaglia,filterMisura,filterColore2,filterColore3,filterMateriale1,filterMateriale2,filterMateriale3,filterComposizione,filterFantasia,filterLavorazione,filterBloccoColore,filterIva,filterCostoConFascia,filterCostoSenzaFascia,filterRetailFascia].filter(Boolean).length + (filterPantoneSource !== 'all' ? 1 : 0)})` : 'Altri filtri'}
           </button>
           {hasFilters && (
             <button onClick={resetFilters} className="flex items-center gap-1 h-8 px-2 text-xs text-gray-500 hover:text-primary border border-border rounded hover:bg-cream transition-colors">
@@ -1058,6 +1063,13 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
             <select value={filterBloccoColore} onChange={(e) => setFilterBloccoColore(e.target.value)} className={selectClass}>
               <option value="">Blocco colore</option>
               {bloccoColoreOptions.map((v) => <option key={v} value={v}>{capitalize(v)}</option>)}
+            </select>
+
+            <span className="text-2xs font-semibold uppercase tracking-widest text-gray-400 w-full mb-0.5 mt-1">Pantone</span>
+            <select value={filterPantoneSource} onChange={(e) => setFilterPantoneSource(e.target.value as PantoneSourceFilter)} className={selectClass}>
+              <option value="all">Pantone: Tutti</option>
+              <option value="auto">Inserito automaticamente</option>
+              <option value="manual">Inserito da admin</option>
             </select>
           </div>
         )}
