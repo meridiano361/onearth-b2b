@@ -115,10 +115,15 @@ const GROUP_HARMONY_MAP: Record<string, string[]> = {
 // ── Seasonal palette (abbigliamento PE27) ────────────────────────────────────
 
 const PALETTE_STAGIONALE = [
-  { code: '19-4122 TPG', name: 'Moonlit Ocean', hex: '#293B4D', hue: 210, lightness: 23 },
-  { code: '18-4036 TCX', name: 'Parisian Blue', hex: '#4F7CA4', hue: 208, lightness: 47 },
-  { code: '17-1449 TPG', name: '',              hex: '#C34121', hue: 12,  lightness: 45 },
-] as const;
+  { hex: '#293B4D', hue: 210, lightness: 23, isNeutral: false },
+  { hex: '#4F7CA4', hue: 208, lightness: 47, isNeutral: false },
+  { hex: '#C34121', hue: 12,  lightness: 45, isNeutral: false },
+  { hex: '#2596be', hue: 196, lightness: 45, isNeutral: false },
+  { hex: '#b499e8', hue: 261, lightness: 75, isNeutral: false },
+  { hex: '#202028', hue: 240, lightness: 14, isNeutral: true  },
+  { hex: '#ecedf2', hue: 240, lightness: 94, isNeutral: true  },
+  { hex: '#76be3e', hue: 94,  lightness: 49, isNeutral: false },
+];
 
 // ── SVG wheel constants ────────────────────────────────────────────────────────
 
@@ -590,6 +595,7 @@ export default function ColorWheelView() {
   const [palettaCategoria, setPalettaCategoria]   = useState<string | null>(null);
   const [palettaPantoneKey, setPalettaPantoneKey] = useState<string | null>(null);
   const [hoveredSeasonalIdx, setHoveredSeasonalIdx] = useState<number | null>(null);
+  const [selectedSeasonalIdx, setSelectedSeasonalIdx] = useState<number | null>(null);
 
   const { data: wheelData, isLoading: wheelLoading, isError, error, refetch } = useQuery<{ families: WheelFamily[] }>({
     queryKey: ['moda-color-wheel'],
@@ -714,6 +720,21 @@ export default function ColorWheelView() {
       }))
       .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
   }, [famiglieConPalette, palettaCategoria, selectedHero]);
+
+  // ── Bigiotteria suggestions for selected seasonal color ──────────────────────
+
+  const bigiotteriaSuggestions = useMemo(() => {
+    if (selectedSeasonalIdx === null) return [];
+    const sp = PALETTE_STAGIONALE[selectedSeasonalIdx];
+    return allDots
+      .filter((p) => p.primaryPantone)
+      .map((p) => ({
+        ...p,
+        score: harmonyScore(sp.hue, p.hue, sp.isNeutral, p.isNeutral, sp.lightness, p.lightness),
+        harmonyType: getHarmonyType(sp.hue, p.hue, sp.isNeutral, p.isNeutral),
+      }))
+      .sort((a, b) => b.score - a.score);
+  }, [selectedSeasonalIdx, allDots]);
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -940,25 +961,28 @@ export default function ColorWheelView() {
               );
             })}
 
-            {/* Seasonal palette markers — diamond shaped */}
+            {/* Seasonal palette markers — diamond shaped (chromatic only) */}
             {PALETTE_STAGIONALE.map((sp, i) => {
+              if (sp.isNeutral) return null;
               const r  = dotRadius(sp.lightness);
               const pt = polar(CX, CY, r, sp.hue);
               const isHov = hoveredSeasonalIdx === i;
-              const s = isHov ? 7 : 5.5;
+              const isSel = selectedSeasonalIdx === i;
+              const s = isSel ? 8 : isHov ? 7 : 5.5;
               return (
                 <g
-                  key={sp.code}
+                  key={sp.hex}
+                  onClick={() => setSelectedSeasonalIdx((prev) => prev === i ? null : i)}
                   onMouseEnter={() => setHoveredSeasonalIdx(i)}
                   onMouseLeave={() => setHoveredSeasonalIdx(null)}
-                  className="cursor-default pointer-events-all"
+                  className="cursor-pointer pointer-events-all"
                 >
-                  <circle cx={pt.x} cy={pt.y} r={12} fill="transparent" />
+                  <circle cx={pt.x} cy={pt.y} r={13} fill="transparent" />
                   <polygon
                     points={`${pt.x},${pt.y - s} ${pt.x + s},${pt.y} ${pt.x},${pt.y + s} ${pt.x - s},${pt.y}`}
                     fill={sp.hex}
-                    stroke="white"
-                    strokeWidth={isHov ? 2 : 1.5}
+                    stroke={isSel ? '#111' : 'white'}
+                    strokeWidth={isSel ? 2 : isHov ? 2 : 1.5}
                   />
                 </g>
               );
@@ -1059,30 +1083,41 @@ export default function ColorWheelView() {
             </div>
           </div>
 
-          {/* Palette Stagionale PE27 */}
+          {/* Palette Abbigliamento PE27 */}
           <div className="w-full">
-            <p className="text-2xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
-              Palette Stagionale
-              <span className="font-normal text-gray-300 ml-1">— abbigliamento PE27</span>
-            </p>
-            <div className="space-y-0.5">
-              {PALETTE_STAGIONALE.map((sp, i) => (
-                <div
-                  key={sp.code}
-                  onMouseEnter={() => setHoveredSeasonalIdx(i)}
-                  onMouseLeave={() => setHoveredSeasonalIdx(null)}
-                  className={`flex items-center gap-2.5 px-2 py-1.5 rounded transition-colors ${
-                    hoveredSeasonalIdx === i ? 'bg-gray-100' : 'hover:bg-gray-50'
-                  }`}
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-2xs font-semibold text-gray-400 uppercase tracking-widest">
+                Abbigliamento PE27
+              </p>
+              {selectedSeasonalIdx !== null && (
+                <button
+                  onClick={() => setSelectedSeasonalIdx(null)}
+                  className="text-2xs text-accent hover:text-primary transition-colors"
                 >
-                  <span
-                    className="w-4 h-4 flex-shrink-0 border border-white shadow-sm"
-                    style={{ backgroundColor: sp.hex, clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' }}
+                  Reset
+                </button>
+              )}
+            </div>
+            <p className="text-2xs text-gray-400 mb-2">Clicca un colore per gli abbinamenti bigiotteria</p>
+            <div className="flex flex-wrap gap-1.5">
+              {PALETTE_STAGIONALE.map((sp, i) => {
+                const isSel = selectedSeasonalIdx === i;
+                const isHov = hoveredSeasonalIdx === i;
+                return (
+                  <button
+                    key={sp.hex}
+                    onClick={() => setSelectedSeasonalIdx((prev) => prev === i ? null : i)}
+                    onMouseEnter={() => setHoveredSeasonalIdx(i)}
+                    onMouseLeave={() => setHoveredSeasonalIdx(null)}
+                    title={sp.hex}
+                    className={`w-7 h-7 rounded transition-all ${isSel ? 'ring-2 ring-offset-1 ring-primary scale-110' : isHov ? 'scale-105 ring-1 ring-offset-1 ring-gray-400' : ''}`}
+                    style={{
+                      backgroundColor: sp.hex,
+                      clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+                    }}
                   />
-                  <span className="font-mono text-2xs text-gray-500 flex-shrink-0">{sp.code}</span>
-                  {sp.name && <span className="text-xs text-gray-600 truncate">{sp.name}</span>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -1145,6 +1180,70 @@ export default function ColorWheelView() {
               {filteredProducts.length}{visibleProducts.length !== filteredProducts.length ? `/${visibleProducts.length}` : ''} prodotti
             </span>
           </div>
+
+          {/* ── Bigiotteria suggestions for selected seasonal color ── */}
+          {selectedSeasonalIdx !== null && bigiotteriaSuggestions.length > 0 && (() => {
+            const sp = PALETTE_STAGIONALE[selectedSeasonalIdx];
+            const high   = bigiotteriaSuggestions.filter((p) => p.score >= 70);
+            const medium = bigiotteriaSuggestions.filter((p) => p.score >= 50 && p.score < 70);
+            return (
+              <div className="border-b border-border/50 px-4 sm:px-6 py-4 bg-gray-50/50">
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-4">
+                  <span
+                    className="w-6 h-6 flex-shrink-0 border-2 border-white shadow"
+                    style={{ backgroundColor: sp.hex, clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' }}
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-primary leading-none">Abbinamenti bigiotteria</p>
+                    <p className="text-2xs text-gray-400 mt-0.5">
+                      {bigiotteriaSuggestions.length} prodotti analizzati · {high.length} alta armonia · {medium.length} compatibili
+                    </p>
+                  </div>
+                  <button onClick={() => setSelectedSeasonalIdx(null)} className="ml-auto text-gray-400 hover:text-primary transition-colors">
+                    <X size={14} />
+                  </button>
+                </div>
+
+                {/* Legend */}
+                <div className="flex items-center gap-4 text-2xs text-gray-400 mb-3">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> Alta armonia (≥70)</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-300 inline-block" /> Compatibile (50–69)</span>
+                </div>
+
+                {/* Product rows */}
+                {bigiotteriaSuggestions.filter((p) => p.score >= 50).length === 0 ? (
+                  <p className="text-xs text-gray-400">Nessun prodotto con Pantone assegnato supera la soglia di armonia.</p>
+                ) : (
+                  <div className="space-y-0.5">
+                    {bigiotteriaSuggestions.filter((p) => p.score >= 50).slice(0, 20).map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleProductClick(p.id)}
+                        className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-left hover:bg-white transition-colors"
+                      >
+                        {p.imageUrl
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={p.imageUrl} alt="" className="w-8 h-8 object-cover rounded border border-border/40 flex-shrink-0" />
+                          : <span className="w-8 h-8 rounded flex-shrink-0" style={{ backgroundColor: p.primaryPantone?.hex_code ?? '#ccc' }} />
+                        }
+                        <span className="font-mono text-2xs font-semibold text-primary w-20 flex-shrink-0 truncate">{p.code}</span>
+                        <span className="text-xs text-gray-600 flex-1 truncate">{p.name}</span>
+                        {p.primaryPantone && (
+                          <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 border border-border/40" style={{ backgroundColor: p.primaryPantone.hex_code }} />
+                        )}
+                        <span className={`text-2xs px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium ${
+                          p.score >= 70 ? HARMONY_COLORS[p.harmonyType] ?? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {HARMONY_LABELS[p.harmonyType] ?? p.harmonyType}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="p-4 sm:p-6">
             {filteredProducts.length === 0 ? (
