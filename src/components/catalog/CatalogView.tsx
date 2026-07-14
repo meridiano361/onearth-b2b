@@ -175,7 +175,6 @@ export default function CatalogView({
   const [search, setSearch]               = useState(() => searchParams.get('q') || '');
   const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get('q') || '');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
-  const [novitaFilter, setNovitaFilter] = useState<'all' | 'novita' | 'continuativi'>('all');
 
   // ── Mobile drawer state ──────────────────────────────────────
   const [bloccoColoreFilter, setBloccoColoreFilter] = useState<{ id: number; name: string } | null>(() => {
@@ -363,33 +362,20 @@ export default function CatalogView({
     if (tranche)            result = result.filter((p) => p.tranche            === tranche);
     if (bloccoColoreFilter) result = result.filter((p) => (p.colorBlockIds ?? []).includes(bloccoColoreFilter.id));
     if (onlyFavorites)      result = result.filter((p) => favoriteIds.has(p.id));
-    if (novitaFilter === 'novita')       result = result.filter((p) => isModa ? !p.isContinuativo : p.collezione === 'CA27');
-    if (novitaFilter === 'continuativi') result = result.filter((p) => isModa ? p.isContinuativo  : p.collezione !== 'CA27');
+    if (sortBy === 'novita')       result = result.filter((p) => isModa ? !p.isContinuativo : p.collezione === 'CA27');
+    if (sortBy === 'continuativi') result = result.filter((p) => isModa ? p.isContinuativo  : p.collezione !== 'CA27');
 
-    if (sortBy === 'az')         result = [...result].sort((a, b) => a.name.localeCompare(b.name, 'it'));
-    else if (sortBy === 'za')    result = [...result].sort((a, b) => b.name.localeCompare(a.name, 'it'));
+    if (sortBy === 'az')        result = [...result].sort((a, b) => a.name.localeCompare(b.name, 'it'));
+    else if (sortBy === 'za')   result = [...result].sort((a, b) => b.name.localeCompare(a.name, 'it'));
     else if (sortBy === 'price-asc')  result = [...result].sort((a, b) => Number(a.costPrice) - Number(b.costPrice));
     else if (sortBy === 'price-desc') result = [...result].sort((a, b) => Number(b.costPrice) - Number(a.costPrice));
-    else if (sortBy === 'novita') result = [...result].sort((a, b) => {
-      const aNew = a.collezione === 'CA27' ? 0 : 1;
-      const bNew = b.collezione === 'CA27' ? 0 : 1;
-      if (aNew !== bNew) return aNew - bNew;
-      return a.code.localeCompare(b.code, 'it');
-    });
-    else if (sortBy === 'continuativi') result = [...result].sort((a, b) => {
-      const aCont = a.collezione && a.collezione !== 'CA27' ? 0 : 1;
-      const bCont = b.collezione && b.collezione !== 'CA27' ? 0 : 1;
-      if (aCont !== bCont) return aCont - bCont;
-      if (aCont === 0 && bCont === 0) return (b.collezione ?? '').localeCompare(a.collezione ?? '', 'it');
-      return 0;
-    });
 
     return result;
-  }, [branchProducts, debouncedSearch, filters, bloccoColoreFilter, onlyFavorites, favoriteIds, sortBy, novitaFilter]);
+  }, [branchProducts, debouncedSearch, filters, bloccoColoreFilter, onlyFavorites, favoriteIds, sortBy]);
 
   const PAGE_SIZE = 60;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [debouncedSearch, filters, onlyFavorites, sortBy, novitaFilter]);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [debouncedSearch, filters, onlyFavorites, sortBy]);
   const visibleProducts = filteredProducts.slice(0, visibleCount);
   const hasMore = visibleCount < filteredProducts.length;
 
@@ -433,7 +419,7 @@ export default function CatalogView({
   return (
     <div className="flex h-full">
       {/* Filters sidebar — desktop only */}
-      <div className="hidden md:block">
+      <div className="hidden md:block h-full overflow-hidden">
         <CatalogFilters {...desktopFilterProps} />
       </div>
 
@@ -601,22 +587,6 @@ export default function CatalogView({
             </div>
           </div>
 
-          {/* Novità / Continuativi chips */}
-          <div className="flex items-center gap-1.5 px-4 sm:px-6 pb-2.5">
-            {(['all', 'novita', 'continuativi'] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setNovitaFilter(v)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex-shrink-0 ${
-                  novitaFilter === v
-                    ? 'bg-primary text-background border-primary'
-                    : 'bg-white text-gray-500 border-border hover:bg-cream'
-                }`}
-              >
-                {v === 'all' ? 'Tutti' : v === 'novita' ? 'Novità' : 'Continuativi'}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Scrollable content */}
