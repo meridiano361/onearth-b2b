@@ -219,7 +219,7 @@ const FIELD_LABELS: Record<string, string> = {
   isActive:           'Attivo',
   imageUrl:           'URL Immagine',
   // MODA
-  modello:            'Modello',
+  modello:            'Linea',
   dettaglio:          'Dettaglio',
   forma:              'Forma',
   materiale1:         'Materiale 1',

@@ -41,7 +41,7 @@ const TIPI_MODA = [
   { tipo: 'classe', label: 'Classe' },
   { tipo: 'sottoclasse', label: 'Sottoclasse' },
   { tipo: 'gruppoOmogeneo', label: 'Gruppo omogeneo' },
-  { tipo: 'modello', label: 'Modello' },
+  { tipo: 'modello', label: 'Linea' },
   { tipo: 'taglia', label: 'Taglia' },
   { tipo: 'bloccoColore', label: 'Blocco colore' },
 ];
