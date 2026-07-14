@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Database, ChevronDown, HelpCircle } from 'lucide-react';
+import { Database, ChevronDown } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Order } from '@/types';
 import toast from 'react-hot-toast';
@@ -33,11 +33,11 @@ async function markExported(orderId: string) {
 }
 
 const DEMETRA_STEPS = [
-  { key: 1, text: <>Vai in <strong>Proposte di prenotazione</strong> › <strong>Proposte attive</strong> › <strong>Nuova prenotazione</strong>, compila i campi e clicca <strong>Crea prenotazione</strong> (Cliente: <strong>Prenotazioni dirette</strong>).</> },
-  { key: 2, text: <>Nella finestra successiva inserisci la destinazione e gli altri campi, poi clicca il pulsante blu <strong>Carica da file</strong>.</> },
-  { key: 3, text: <>Si apre una nuova finestra. Clicca il pulsante grigio <strong>Scegli file</strong> e seleziona il CSV o XLSX scaricato dall&apos;app.</> },
-  { key: 4, text: <>Clicca il pulsante verde <strong>Carica da file</strong>. In fondo premi <strong>Inserisci</strong> per aggiungere gli articoli (o <strong>Annulla</strong>).</> },
-  { key: 5, text: <>Clicca <strong>Conferma e invia</strong> per confermare la prenotazione.</> },
+  { key: 1, text: <>Vai in <strong>Proposte di prenotazione › Proposte attive › Nuova prenotazione</strong>, compila i campi e clicca <strong>Crea prenotazione</strong> (Cliente: <strong>Prenotazioni dirette</strong>).</> },
+  { key: 2, text: <>Inserisci la destinazione e gli altri campi, poi clicca il pulsante blu <strong>Carica da file</strong>.</> },
+  { key: 3, text: <>Clicca il pulsante grigio <strong>Scegli file</strong> e seleziona il CSV o XLSX scaricato dall&apos;app.</> },
+  { key: 4, text: <>Clicca il pulsante verde <strong>Carica da file</strong>, poi in fondo premi <strong>Inserisci</strong>.</> },
+  { key: 5, text: <>Clicca <strong>Conferma e invia</strong> per confermare.</> },
 ];
 
 export default function OrderDemetraExport({ order, onExported }: Props) {
@@ -45,7 +45,7 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
   const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const [helpPos, setHelpPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
-  const helpBtnRef = useRef<HTMLButtonElement>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shortId = order.orderNumber ?? order.id.slice(0, 8).toUpperCase();
   const items = order.items ?? [];
   const tranchePresenti = [...new Set(
@@ -59,12 +59,7 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, [pos]);
 
-  useEffect(() => {
-    if (!helpPos) return;
-    function onMouseDown() { setHelpPos(null); }
-    document.addEventListener('mousedown', onMouseDown);
-    return () => document.removeEventListener('mousedown', onMouseDown);
-  }, [helpPos]);
+  useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
 
   function toggleMenu(e: React.MouseEvent) {
     e.stopPropagation();
@@ -72,7 +67,6 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
     setHelpPos(null);
     const rect = btnRef.current!.getBoundingClientRect();
     const right = window.innerWidth - rect.right;
-    // Open upward when closer to bottom half of screen
     if (rect.bottom > window.innerHeight / 2) {
       setPos({ bottom: window.innerHeight - rect.top + 4, right });
     } else {
@@ -80,17 +74,24 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
     }
   }
 
-  function toggleHelp(e: React.MouseEvent) {
-    e.stopPropagation();
-    if (helpPos) { setHelpPos(null); return; }
-    setPos(null);
-    const rect = helpBtnRef.current!.getBoundingClientRect();
+  function showHelp() {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
     const right = window.innerWidth - rect.right;
     if (rect.bottom > window.innerHeight / 2) {
-      setHelpPos({ bottom: window.innerHeight - rect.top + 4, right });
+      setHelpPos({ bottom: window.innerHeight - rect.top + 6, right });
     } else {
-      setHelpPos({ top: rect.bottom + 4, right });
+      setHelpPos({ top: rect.bottom + 6, right });
     }
+  }
+
+  function scheduleHideHelp() {
+    hideTimer.current = setTimeout(() => setHelpPos(null), 120);
+  }
+
+  function cancelHideHelp() {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
   }
 
   async function handleCSV(e: React.MouseEvent, tranche?: string) {
@@ -145,6 +146,8 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
       <button
         ref={btnRef}
         onClick={toggleMenu}
+        onMouseEnter={showHelp}
+        onMouseLeave={scheduleHideHelp}
         className="text-xs bg-black text-white border border-black rounded px-2 py-1.5 hover:bg-gray-800 transition-all flex items-center gap-1"
       >
         <Database size={11} />
@@ -153,16 +156,6 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
           size={9}
           className={`transition-transform duration-150 ${pos ? (pos.bottom != null ? '' : 'rotate-180') : ''}`}
         />
-      </button>
-
-      {/* Help button */}
-      <button
-        ref={helpBtnRef}
-        onClick={toggleHelp}
-        title="Come importare in Demetra"
-        className={`flex items-center justify-center w-6 h-[30px] rounded border transition-colors ${helpPos ? 'border-gray-400 text-gray-700 bg-gray-50' : 'border-border text-gray-400 hover:text-gray-600 hover:border-gray-400'}`}
-      >
-        <HelpCircle size={12} />
       </button>
 
       {/* Export dropdown portal */}
@@ -199,19 +192,20 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
           document.body
         )}
 
-      {/* Help tooltip portal */}
-      {helpPos &&
+      {/* Help tooltip on hover — compact, non-interactive */}
+      {helpPos && !pos &&
         createPortal(
           <div
-            style={{ position: 'fixed', top: helpPos.top, bottom: helpPos.bottom, right: helpPos.right, zIndex: 9999 }}
-            className="bg-white border border-border rounded shadow-luxury p-4 w-[288px]"
-            onMouseDown={(e) => e.stopPropagation()}
+            style={{ position: 'fixed', top: helpPos.top, bottom: helpPos.bottom, right: helpPos.right, zIndex: 9998 }}
+            className="bg-gray-900 text-white rounded-lg shadow-xl p-3 w-56"
+            onMouseEnter={cancelHideHelp}
+            onMouseLeave={scheduleHideHelp}
           >
-            <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Come importare in Demetra</p>
-            <ol className="space-y-2.5">
+            <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Come importare in Demetra</p>
+            <ol className="space-y-1.5">
               {DEMETRA_STEPS.map(({ key, text }) => (
-                <li key={key} className="flex gap-2.5 text-xs text-gray-600 leading-relaxed">
-                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-gray-100 text-gray-500 text-2xs font-semibold flex items-center justify-center mt-0.5">{key}</span>
+                <li key={key} className="flex gap-2 text-[10px] text-gray-300 leading-snug">
+                  <span className="flex-shrink-0 text-gray-500 font-semibold w-3">{key}.</span>
                   <span>{text}</span>
                 </li>
               ))}
