@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CalendarDays, Check, Copy, GitMerge, Layers, Loader2, Pencil, ScanEye, Search, Trash2, TrendingUp, Wallet, X } from 'lucide-react';
+import { CalendarDays, Check, GitMerge, Layers, Loader2, Pencil, ScanEye, Search, Trash2, Wallet, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
@@ -36,7 +36,6 @@ function orderProjections(order: Order) {
 }
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import OrderDemetraExport from '@/components/orders/OrderDemetraExport';
-import OrderExcelExport from '@/components/orders/OrderExcelExport';
 import type { Order } from '@/types';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
@@ -159,7 +158,6 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
   );
   function handleProductSortChange(v: string) { setProductSort(v); localStorage.setItem(PREVIEW_SORT_KEY, v); }
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
-  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [authCheckPending, setAuthCheckPending] = useState<{ orderId: string; action: 'edit' | 'delete' } | null>(null);
 
   function requiresAuthCheck(order: Order) {
@@ -189,34 +187,6 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
     } finally {
       setDeletingId(null);
       setConfirmingId(null);
-    }
-  }
-
-  async function handleDuplicate(order: Order) {
-    setDuplicatingId(order.id);
-    try {
-      const items = (order.items ?? []).map((i: any) => ({
-        productId: i.productId,
-        quantity: i.quantity,
-        unitPrice: i.unitPrice,
-      }));
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items }),
-      });
-      if (!res.ok) {
-        const body = await res.json();
-        throw new Error(body.error ?? 'Errore');
-      }
-      const { data: newOrder } = await res.json();
-      toast.success(t('duplicateSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-      router.push(routes.orderPreview(newOrder.id));
-    } catch (e: any) {
-      toast.error(e.message ?? 'Errore');
-    } finally {
-      setDuplicatingId(null);
     }
   }
 
@@ -564,25 +534,8 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                   );
                 })()}
 
-                {/* Bottom: action buttons */}
+                {/* Bottom: action buttons — row 1 */}
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                  {/* Modifica */}
-                  {!isExported && (
-                    <button
-                      onClick={() => {
-                        if (requiresAuthCheck(order)) {
-                          setAuthCheckPending({ orderId: order.id, action: 'edit' });
-                        } else {
-                          router.push(routes.orderPreview(order.id));
-                        }
-                      }}
-                      className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
-                    >
-                      <Pencil size={11} />
-                      <span className="hidden sm:inline">{t('edit')}</span>
-                    </button>
-                  )}
-
                   {/* Budget */}
                   {budgetEditingOrderId === order.id ? (
                     <div className="flex items-center gap-1.5">
@@ -643,50 +596,28 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                     <span className="hidden sm:inline">{t('preview')}</span>
                   </button>
 
-                  {/* Esporta (Demetra) */}
+                  {/* Modifica */}
+                  {!isExported && (
+                    <button
+                      onClick={() => {
+                        if (requiresAuthCheck(order)) {
+                          setAuthCheckPending({ orderId: order.id, action: 'edit' });
+                        } else {
+                          router.push(routes.orderPreview(order.id));
+                        }
+                      }}
+                      className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
+                    >
+                      <Pencil size={11} />
+                      <span className="hidden sm:inline">{t('edit')}</span>
+                    </button>
+                  )}
+
+                  {/* Esporta in Demetra */}
                   <OrderDemetraExport
                     order={order}
                     onExported={() => queryClient.invalidateQueries({ queryKey: ['my-orders'] })}
                   />
-
-                  {/* Esporta Excel completo */}
-                  <OrderExcelExport orderId={order.id} />
-
-                  {/* Duplica — solo per ordini esportati */}
-                  {isExported && (
-                    <button
-                      onClick={() => handleDuplicate(order)}
-                      disabled={duplicatingId === order.id}
-                      className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors disabled:opacity-50"
-                    >
-                      <Copy size={11} />
-                      <span className="hidden sm:inline">
-                        {duplicatingId === order.id ? t('duplicating') : t('duplicateOrder')}
-                      </span>
-                    </button>
-                  )}
-
-                  {/* Mondi Espositivi / Calendario */}
-                  {mondiEspositivi && (
-                    <>
-                      <button
-                        onClick={() => router.push(routes.orderPreview(order.id, 'esposizione'))}
-                        className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
-                        title="Esposizione"
-                      >
-                        <Layers size={11} />
-                        <span className="hidden sm:inline">Esposizione</span>
-                      </button>
-                      <button
-                        onClick={() => router.push(routes.orderPreview(order.id, 'calendario'))}
-                        className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
-                        title="Calendario Esposizione"
-                      >
-                        <CalendarDays size={11} />
-                        <span className="hidden sm:inline">Calendario</span>
-                      </button>
-                    </>
-                  )}
 
                   {/* Elimina */}
                   {isConfirming ? (
@@ -725,6 +656,28 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                     </button>
                   )}
                 </div>
+
+                {/* Row 2: Esposizione + Calendario */}
+                {mondiEspositivi && (
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <button
+                      onClick={() => router.push(routes.orderPreview(order.id, 'esposizione'))}
+                      className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
+                      title="Esposizione"
+                    >
+                      <Layers size={11} />
+                      <span className="hidden sm:inline">Esposizione</span>
+                    </button>
+                    <button
+                      onClick={() => router.push(routes.orderPreview(order.id, 'calendario'))}
+                      className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
+                      title="Calendario Esposizione"
+                    >
+                      <CalendarDays size={11} />
+                      <span className="hidden sm:inline">Calendario</span>
+                    </button>
+                  </div>
+                )}
                 </div>
               </div>
             );
