@@ -307,8 +307,15 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     return [existing[0] ?? null, existing[1] ?? null, existing[2] ?? null];
   });
   const [pantoneError, setPantoneError] = useState<string | null>(null);
-  // true = filled automatically from color; false = manually chosen or empty
-  const [pantoneAutoFilled, setPantoneAutoFilled] = useState<[boolean, boolean, boolean]>([false, false, false]);
+  // true = filled automatically (from color match or migration); false = manually chosen or empty
+  const [pantoneAutoFilled, setPantoneAutoFilled] = useState<[boolean, boolean, boolean]>(() => {
+    const existing = isModaInit ? (src?.pantoneColors ?? []) : [];
+    return [
+      !!(existing[0] as any)?.isAutoFilled,
+      !!(existing[1] as any)?.isAutoFilled,
+      !!(existing[2] as any)?.isAutoFilled,
+    ] as [boolean, boolean, boolean];
+  });
   // true = user manually touched this slot → don't auto-override
   const [pantoneManuallySet, setPantoneManuallySet] = useState<[boolean, boolean, boolean]>(() => {
     const existing = isModaInit ? (src?.pantoneColors ?? []) : [];
