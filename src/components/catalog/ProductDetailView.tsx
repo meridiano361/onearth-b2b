@@ -453,8 +453,15 @@ export default function ProductDetailView({ id }: Props) {
                 <div className="space-y-2">
                   {activeMaterialFields.map(({ key, label }) => {
                     const val = capitalize(String(p[key]));
-                    if (key === 'lavorazione') {
-                      const aiUrl = `https://www.perplexity.ai/search?q=${encodeURIComponent(`Cos'è la lavorazione tessile "${val}"?`)}`;
+                    const aiQuery: Record<string, string> = {
+                      materiale1:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
+                      materiale2:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
+                      materiale3:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
+                      fantasia:    `Cos'è la fantasia tessile "${val}"?`,
+                      lavorazione: `Cos'è la lavorazione tessile "${val}"?`,
+                    };
+                    if (aiQuery[key]) {
+                      const aiUrl = `https://www.perplexity.ai/search?q=${encodeURIComponent(aiQuery[key])}`;
                       return (
                         <div key={key} className="flex items-baseline gap-2">
                           <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
