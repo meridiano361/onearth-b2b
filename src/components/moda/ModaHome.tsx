@@ -69,7 +69,7 @@ export default function ModaHome() {
           {isExpired ? <Lock size={10} /> : <Clock size={10} />}
           {isExpired
             ? `Prenotazioni chiuse il ${formatDeadline(deadline)}`
-            : `Aperte fino al ${formatDeadline(deadline)}`}
+            : `Prenotazioni aperte fino al ${formatDeadline(deadline)}`}
         </div>
       )}
 
