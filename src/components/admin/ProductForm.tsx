@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRef, useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Languages, Loader2, AlertTriangle, X, Plus, Link, Search, ChevronUp, ChevronDown } from 'lucide-react';
+import { Languages, Loader2, AlertTriangle, X, Plus, Link, Search, ChevronUp, ChevronDown, Wand2 } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import PaeseSelect from '@/components/ui/PaeseSelect';
@@ -26,9 +26,27 @@ import {
   STAGIONE_OPTIONS,
 } from '@/lib/productConstants';
 import { splitColori, hasColorSeparator } from '@/lib/coloriUtils';
+import { inferHueFromColore } from '@/lib/colorHarmony';
 import ProductPantoneForm from './ProductPantoneForm';
 
 const IVA_OPTIONS = [0, 4, 5, 10, 22];
+
+function hexToRgb(hex: string) {
+  const h = hex.replace('#', '');
+  return { r: parseInt(h.slice(0, 2), 16) || 0, g: parseInt(h.slice(2, 4), 16) || 0, b: parseInt(h.slice(4, 6), 16) || 0 };
+}
+function rgbDist(h1: string, h2: string) {
+  const a = hexToRgb(h1), b = hexToRgb(h2);
+  return Math.sqrt((a.r - b.r) ** 2 + (a.g - b.g) ** 2 + (a.b - b.b) ** 2);
+}
+function nearestPantone(targetHex: string, colors: PantoneColor[]): PantoneColor | null {
+  let best: PantoneColor | null = null, bestDist = Infinity;
+  for (const c of colors) {
+    const d = rgbDist(targetHex, c.hex_code);
+    if (d < bestDist) { bestDist = d; best = c; }
+  }
+  return best;
+}
 
 interface PantoneColor {
   id: number;
@@ -287,10 +305,23 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     return [existing[0] ?? null, existing[1] ?? null, existing[2] ?? null];
   });
   const [pantoneError, setPantoneError] = useState<string | null>(null);
+  // true = filled automatically from color; false = manually chosen or empty
+  const [pantoneAutoFilled, setPantoneAutoFilled] = useState<[boolean, boolean, boolean]>([false, false, false]);
+  // true = user manually touched this slot → don't auto-override
+  const [pantoneManuallySet, setPantoneManuallySet] = useState<[boolean, boolean, boolean]>(() => {
+    const existing = isModaInit ? (src?.pantoneColors ?? []) : [];
+    return [!!existing[0], !!existing[1], !!existing[2]] as [boolean, boolean, boolean];
+  });
 
   function setPantoneSlot(i: number, entry: ProductPantoneEntry | null) {
     setPantoneSlots((prev) => { const n = [...prev] as (ProductPantoneEntry | null)[]; n[i] = entry; return n; });
     if (entry) setPantoneError(null);
+  }
+
+  function handleManualPantone(i: number, entry: ProductPantoneEntry | null) {
+    setPantoneSlot(i, entry);
+    setPantoneManuallySet((prev) => { const n = [...prev] as [boolean, boolean, boolean]; n[i] = true; return n; });
+    setPantoneAutoFilled((prev) => { const n = [...prev] as [boolean, boolean, boolean]; n[i] = false; return n; });
   }
   const [fotoPicker, setFotoPicker] = useState<{
     slot: 'imageUrl' | 'imageUrl2' | 'imageUrl3' | 'imageUrl4' | 'imageUrl5' | null;
@@ -315,6 +346,14 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     queryKey: ['cls-gm-options'],
     queryFn: async () => (await (await fetch('/api/classificazione/gruppoMerceologico')).json()).data,
     staleTime: 60_000,
+  });
+
+  // Same query key as SinglePantoneField → cache hit; isModaInit avoids forward-reference to isModa
+  const { data: allPantoneColors = [] } = useQuery<PantoneColor[]>({
+    queryKey: ['pantone-colors-fhi-tcx'],
+    queryFn: async () => (await (await fetch('/api/pantone-colors')).json()).data ?? [],
+    staleTime: 600_000,
+    enabled: isModaInit,
   });
 
   // ── Form ─────────────────────────────────────────────────────────────────
@@ -415,6 +454,8 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
   const watchedDettaglio = watch('dettaglio');
   const watchedModello   = watch('modello');
   const watchedColore    = watch('colore');
+  const watchedColore2   = watch('colore2');
+  const watchedColore3   = watch('colore3');
   const watchedTaglia    = watch('taglia');
   const watchedForma     = watch('forma');
   const watchedCollezione = watch('collezione');
@@ -436,6 +477,40 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       return prev;
     });
   }, [watchedImageUrl]);
+
+  // Auto-fill Pantone slots from Italian color names when pantone colors are loaded
+  useEffect(() => {
+    if (!isModa || !allPantoneColors.length || !watchedColore?.trim() || pantoneManuallySet[0]) return;
+    const hue = inferHueFromColore(watchedColore);
+    if (!hue) return;
+    const match = nearestPantone(hue.hex, allPantoneColors);
+    if (!match) return;
+    setPantoneSlot(0, { pantoneColorId: match.id, code: match.code, name: match.name, hex_code: match.hex_code, system_type: match.system_type, sortOrder: 0, isPrimary: true });
+    setPantoneAutoFilled(prev => { const n = [...prev] as [boolean, boolean, boolean]; n[0] = true; return n; });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedColore, allPantoneColors.length]);
+
+  useEffect(() => {
+    if (!isModa || !allPantoneColors.length || !watchedColore2?.trim() || pantoneManuallySet[1]) return;
+    const hue = inferHueFromColore(watchedColore2);
+    if (!hue) return;
+    const match = nearestPantone(hue.hex, allPantoneColors);
+    if (!match) return;
+    setPantoneSlot(1, { pantoneColorId: match.id, code: match.code, name: match.name, hex_code: match.hex_code, system_type: match.system_type, sortOrder: 1, isPrimary: false });
+    setPantoneAutoFilled(prev => { const n = [...prev] as [boolean, boolean, boolean]; n[1] = true; return n; });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedColore2, allPantoneColors.length]);
+
+  useEffect(() => {
+    if (!isModa || !allPantoneColors.length || !watchedColore3?.trim() || pantoneManuallySet[2]) return;
+    const hue = inferHueFromColore(watchedColore3);
+    if (!hue) return;
+    const match = nearestPantone(hue.hex, allPantoneColors);
+    if (!match) return;
+    setPantoneSlot(2, { pantoneColorId: match.id, code: match.code, name: match.name, hex_code: match.hex_code, system_type: match.system_type, sortOrder: 2, isPrimary: false });
+    setPantoneAutoFilled(prev => { const n = [...prev] as [boolean, boolean, boolean]; n[2] = true; return n; });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedColore3, allPantoneColors.length]);
 
   const modaNameMountRef = useRef(true);
   useEffect(() => {
@@ -899,15 +974,15 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
                     setValue('colore', capitalizeFirst(c1)); setValue('colore2', capitalizeFirst(c2)); setValue('colore3', capitalizeFirst(c3));
                   } else { setValue('colore', capitalizeFirst(v)); }
                 }} />
-              <SinglePantoneField label="Pantone 1 *" value={pantoneSlots[0]} onChange={(v) => setPantoneSlot(0, v)} />
+              <SinglePantoneField label="Pantone 1 *" value={pantoneSlots[0]} onChange={(v) => handleManualPantone(0, v)} isAutoFilled={pantoneAutoFilled[0]} />
             </div>
             <div className="space-y-2">
-              <Combobox label="Colore 2" field="colore" value={watch('colore2') || ''} onChange={(v) => setValue('colore2', capitalizeFirst(v))} placeholder="es. blu" />
-              <SinglePantoneField label="Pantone 2" value={pantoneSlots[1]} onChange={(v) => setPantoneSlot(1, v)} />
+              <Combobox label="Colore 2" field="colore" value={watchedColore2 || ''} onChange={(v) => setValue('colore2', capitalizeFirst(v))} placeholder="es. blu" />
+              <SinglePantoneField label="Pantone 2" value={pantoneSlots[1]} onChange={(v) => handleManualPantone(1, v)} isAutoFilled={pantoneAutoFilled[1]} />
             </div>
             <div className="space-y-2">
-              <Combobox label="Colore 3" field="colore" value={watch('colore3') || ''} onChange={(v) => setValue('colore3', capitalizeFirst(v))} placeholder="es. bianco" />
-              <SinglePantoneField label="Pantone 3" value={pantoneSlots[2]} onChange={(v) => setPantoneSlot(2, v)} />
+              <Combobox label="Colore 3" field="colore" value={watchedColore3 || ''} onChange={(v) => setValue('colore3', capitalizeFirst(v))} placeholder="es. bianco" />
+              <SinglePantoneField label="Pantone 3" value={pantoneSlots[2]} onChange={(v) => handleManualPantone(2, v)} isAutoFilled={pantoneAutoFilled[2]} />
             </div>
           </div>
           <Input label="Altri colori" {...register('altriColori')} placeholder="es. oro, argento, avorio chiaro…" />
@@ -1391,10 +1466,12 @@ function SinglePantoneField({
   label,
   value,
   onChange,
+  isAutoFilled = false,
 }: {
   label: string;
   value: ProductPantoneEntry | null;
   onChange: (v: ProductPantoneEntry | null) => void;
+  isAutoFilled?: boolean;
 }) {
   const { data: colors = [] } = useQuery<PantoneColor[]>({
     queryKey: ['pantone-colors-fhi-tcx'],
@@ -1437,6 +1514,11 @@ function SinglePantoneField({
           <div className="w-3.5 h-3.5 rounded-full flex-shrink-0 border border-border/60" style={{ backgroundColor: value.hex_code }} />
           <span className="text-xs font-medium text-primary">{value.code}</span>
           <span className="text-xs text-gray-500 truncate flex-1">{value.name}</span>
+          {isAutoFilled && (
+            <span className="flex items-center gap-0.5 text-2xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 flex-shrink-0 ml-1" title="Suggerito automaticamente dal colore — verifica e correggi se necessario">
+              <Wand2 size={9} /> Auto
+            </span>
+          )}
           <button type="button" onClick={() => onChange(null)} className="text-gray-300 hover:text-red-400 transition-colors ml-auto flex-shrink-0">
             <X size={11} />
           </button>
