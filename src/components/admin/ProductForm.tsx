@@ -48,6 +48,12 @@ function nearestPantone(targetHex: string, colors: PantoneColor[]): PantoneColor
   return best;
 }
 
+function sortedPantones(targetHex: string, colors: PantoneColor[], limit = 20): PantoneColor[] {
+  return [...colors]
+    .sort((a, b) => rgbDist(targetHex, a.hex_code) - rgbDist(targetHex, b.hex_code))
+    .slice(0, limit);
+}
+
 interface PantoneColor {
   id: number;
   code: string;
@@ -307,6 +313,12 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     return [existing[0] ?? null, existing[1] ?? null, existing[2] ?? null];
   });
   const [pantoneError, setPantoneError] = useState<string | null>(null);
+  const [pantoneProposal, setPantoneProposal] = useState<{
+    candidates: PantoneColor[];
+    idx: number;
+    pendingValues: any;
+  } | null>(null);
+  const forcedPantoneRef = useRef<ProductPantoneEntry[] | null>(null);
   // true = filled automatically (from color match or migration); false = manually chosen or empty
   const [pantoneAutoFilled, setPantoneAutoFilled] = useState<[boolean, boolean, boolean]>(() => {
     const existing = isModaInit ? (src?.pantoneColors ?? []) : [];
@@ -431,7 +443,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       certificazione1: src.certificazione1 || '',
       certificazione2: src.certificazione2 || '',
       certificazione3: src.certificazione3 || '',
-      fantasia: src.fantasia || '',
+      fantasia: src.fantasia || (isModaInit ? 'TINTA UNITA' : ''),
       temaColore:   src.temaColore   || '',
       temaColore2:  src.temaColore2  || '',
       temaColore3:  src.temaColore3  || '',
@@ -647,6 +659,13 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     setValue('composizione', buildComposizione(watchedMat1 || '', watchedMat2 || '', watchedMat3 || ''), { shouldDirty: true });
   }, [watchedMat1, watchedMat2, watchedMat3]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Imposta fantasia di default TINTA UNITA per prodotti MODA senza fantasia
+  useEffect(() => {
+    if (!isModa) return;
+    if (!getValues('fantasia')?.trim()) setValue('fantasia', 'TINTA UNITA', { shouldDirty: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModa]);
+
   // Deduce la stagione dal prefisso della collezione (pe → PE, ai → AI)
   useEffect(() => {
     const prefix = (watchedCollezione || '').trim().slice(0, 2).toLowerCase();
@@ -807,9 +826,11 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     const v = values as unknown as z.output<typeof schema>;
 
     const isModaProduct = (v.gruppoMerceologico ?? '').toLowerCase() === 'moda';
-    const finalPantones: ProductPantoneEntry[] = isModaProduct
+    const forced = forcedPantoneRef.current;
+    forcedPantoneRef.current = null;
+    const finalPantones: ProductPantoneEntry[] = forced ?? (isModaProduct
       ? (pantoneSlots.filter(Boolean) as ProductPantoneEntry[]).map((p, i) => ({ ...p, sortOrder: i, isPrimary: i === 0 }))
-      : selectedPantones;
+      : selectedPantones);
     setPantoneError(null);
 
     if (isModaProduct) {
@@ -822,6 +843,16 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       if (missing.length > 0) {
         toast.error(`Campi obbligatori per MODA mancanti: ${missing.join(', ')}`);
         return;
+      }
+
+      // Se nessun Pantone selezionato, proponi il migliore automaticamente
+      if (finalPantones.length === 0 && !forced && allPantoneColors.length > 0) {
+        const hue = inferHueFromColore(v.colore || '');
+        const candidates = sortedPantones(hue?.hex ?? '#888888', allPantoneColors, 20);
+        if (candidates.length > 0) {
+          setPantoneProposal({ candidates, idx: 0, pendingValues: values });
+          return;
+        }
       }
     }
 
@@ -910,6 +941,32 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
 
   function clearTemaFrom(n: number) {
     for (let i = n - 1; i < TEMA_FIELDS.length; i++) setValue(TEMA_FIELDS[i], '');
+  }
+
+  function handleApproveProposal() {
+    if (!pantoneProposal) return;
+    const c = pantoneProposal.candidates[pantoneProposal.idx];
+    const entry: ProductPantoneEntry = {
+      pantoneColorId: c.id, code: c.code, name: c.name,
+      hex_code: c.hex_code, system_type: c.system_type,
+      sortOrder: 0, isPrimary: true, isAutoFilled: true,
+    };
+    setPantoneSlot(0, entry);
+    setPantoneAutoFilled((prev) => { const n = [...prev] as [boolean, boolean, boolean]; n[0] = true; return n; });
+    forcedPantoneRef.current = [entry];
+    setPantoneProposal(null);
+    handleSubmit(onSubmit)();
+  }
+
+  function handleNextProposal() {
+    if (!pantoneProposal) return;
+    const next = pantoneProposal.idx + 1;
+    if (next >= pantoneProposal.candidates.length) {
+      toast('Nessun altro Pantone disponibile. Selezionane uno manualmente.');
+      setPantoneProposal(null);
+      return;
+    }
+    setPantoneProposal((prev) => prev ? { ...prev, idx: next } : null);
   }
 
   // ── JSX ───────────────────────────────────────────────────────────────────
@@ -1632,6 +1689,50 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
           <Button type="submit" loading={isSubmitting}>{isEdit ? 'Salva modifiche' : 'Crea prodotto'}</Button>
         </div>
       </div>
+
+      {/* ── Proposta Pantone automatica ──────────────────────────── */}
+      {pantoneProposal && (() => {
+        const c = pantoneProposal.candidates[pantoneProposal.idx];
+        return (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 w-72 flex flex-col items-center gap-4">
+              <p className="text-sm font-semibold text-primary text-center">Pantone suggerito</p>
+              <div
+                className="w-20 h-20 rounded-full border-4 border-white shadow-md"
+                style={{ backgroundColor: c.hex_code }}
+              />
+              <div className="text-center">
+                <p className="text-xs text-gray-400 font-mono tracking-wider">{c.code}</p>
+                <p className="text-sm font-medium text-primary mt-0.5">{c.name}</p>
+              </div>
+              <p className="text-2xs text-gray-400">{pantoneProposal.idx + 1} / {pantoneProposal.candidates.length}</p>
+              <div className="flex gap-2 w-full">
+                <button
+                  type="button"
+                  onClick={handleApproveProposal}
+                  className="flex-1 h-9 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent/90 transition-colors"
+                >
+                  Approva
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextProposal}
+                  className="flex-1 h-9 border border-border rounded-lg text-sm text-primary hover:bg-cream transition-colors"
+                >
+                  Proponi un altro
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPantoneProposal(null)}
+                className="text-2xs text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                Annulla
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
     </form>
   );

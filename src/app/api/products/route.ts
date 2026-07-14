@@ -342,7 +342,7 @@ export async function POST(req: NextRequest) {
         certificazione1: data.certificazione1 || null,
         certificazione2: data.certificazione2 || null,
         certificazione3: data.certificazione3 || null,
-        fantasia: data.fantasia || null,
+        fantasia: data.fantasia || (data.gruppoMerceologico?.toLowerCase() === 'moda' ? 'TINTA UNITA' : null),
         lavorazione: data.lavorazione || null,
         dettaglio: data.dettaglio || null,
         sizeVariants: sizeVariants?.length ? (sizeVariants as any) : undefined,
