@@ -196,6 +196,9 @@ const schema = z
     fantasia: z.string().optional(),
     materialeBottoni: z.string().optional(),
     nomeStampa: z.string().optional(),
+    materiale1Bio: z.boolean().default(false),
+    materiale2Bio: z.boolean().default(false),
+    materiale3Bio: z.boolean().default(false),
     temaColore:   z.string().optional(),
     temaColore2:  z.string().optional(),
     temaColore3:  z.string().optional(),
@@ -448,6 +451,9 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       fantasia: src.fantasia || (isModaInit ? 'TINTA UNITA' : ''),
       materialeBottoni: src.materialeBottoni || '',
       nomeStampa: src.nomeStampa || '',
+      materiale1Bio: src.materiale1Bio ?? false,
+      materiale2Bio: src.materiale2Bio ?? false,
+      materiale3Bio: src.materiale3Bio ?? false,
       temaColore:   src.temaColore   || '',
       temaColore2:  src.temaColore2  || '',
       temaColore3:  src.temaColore3  || '',
@@ -898,6 +904,9 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
           fantasia:       (v as any).fantasia       || null,
           materialeBottoni: (v as any).materialeBottoni || null,
           nomeStampa:       (v as any).nomeStampa       || null,
+          materiale1Bio:    (v as any).materiale1Bio    ?? false,
+          materiale2Bio:    (v as any).materiale2Bio    ?? false,
+          materiale3Bio:    (v as any).materiale3Bio    ?? false,
           temaColore:     v.temaColore     || null,
           temaColore2:    (v as any).temaColore2    || null,
           temaColore3:    (v as any).temaColore3    || null,
@@ -1132,9 +1141,39 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
         <>
           {/* Materiali */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <MaterialFieldWithPct label="Materiale 1 *" value={watch('materiale1') || ''} onChange={(v) => setValue('materiale1', v)} />
-            <MaterialFieldWithPct label="Materiale 2"   value={watch('materiale2') || ''} onChange={(v) => setValue('materiale2', v)} />
-            <MaterialFieldWithPct label="Materiale 3"   value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
+            <div>
+              <MaterialFieldWithPct label="Materiale 1 *" value={watch('materiale1') || ''} onChange={(v) => {
+                const lower = v.toLowerCase();
+                if (lower.endsWith(' bio')) { setValue('materiale1', v.slice(0, -4).trim()); setValue('materiale1Bio', true); }
+                else { setValue('materiale1', v); }
+              }} />
+              <label className="flex items-center gap-1.5 mt-1 text-xs text-gray-500 cursor-pointer">
+                <input type="checkbox" {...register('materiale1Bio')} className="w-3.5 h-3.5 accent-accent" />
+                BIO
+              </label>
+            </div>
+            <div>
+              <MaterialFieldWithPct label="Materiale 2" value={watch('materiale2') || ''} onChange={(v) => {
+                const lower = v.toLowerCase();
+                if (lower.endsWith(' bio')) { setValue('materiale2', v.slice(0, -4).trim()); setValue('materiale2Bio', true); }
+                else { setValue('materiale2', v); }
+              }} />
+              <label className="flex items-center gap-1.5 mt-1 text-xs text-gray-500 cursor-pointer">
+                <input type="checkbox" {...register('materiale2Bio')} className="w-3.5 h-3.5 accent-accent" />
+                BIO
+              </label>
+            </div>
+            <div>
+              <MaterialFieldWithPct label="Materiale 3" value={watch('materiale3') || ''} onChange={(v) => {
+                const lower = v.toLowerCase();
+                if (lower.endsWith(' bio')) { setValue('materiale3', v.slice(0, -4).trim()); setValue('materiale3Bio', true); }
+                else { setValue('materiale3', v); }
+              }} />
+              <label className="flex items-center gap-1.5 mt-1 text-xs text-gray-500 cursor-pointer">
+                <input type="checkbox" {...register('materiale3Bio')} className="w-3.5 h-3.5 accent-accent" />
+                BIO
+              </label>
+            </div>
           </div>
 
           <input type="hidden" {...register('composizione')} />
@@ -1238,9 +1277,39 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <MaterialFieldWithPct label="Materiale 1" value={watch('materiale1') || ''} onChange={(v) => setValue('materiale1', v)} />
-            <MaterialFieldWithPct label="Materiale 2" value={watch('materiale2') || ''} onChange={(v) => setValue('materiale2', v)} />
-            <MaterialFieldWithPct label="Materiale 3" value={watch('materiale3') || ''} onChange={(v) => setValue('materiale3', v)} />
+            <div>
+              <MaterialFieldWithPct label="Materiale 1" value={watch('materiale1') || ''} onChange={(v) => {
+                const lower = v.toLowerCase();
+                if (lower.endsWith(' bio')) { setValue('materiale1', v.slice(0, -4).trim()); setValue('materiale1Bio', true); }
+                else { setValue('materiale1', v); }
+              }} />
+              <label className="flex items-center gap-1.5 mt-1 text-xs text-gray-500 cursor-pointer">
+                <input type="checkbox" {...register('materiale1Bio')} className="w-3.5 h-3.5 accent-accent" />
+                BIO
+              </label>
+            </div>
+            <div>
+              <MaterialFieldWithPct label="Materiale 2" value={watch('materiale2') || ''} onChange={(v) => {
+                const lower = v.toLowerCase();
+                if (lower.endsWith(' bio')) { setValue('materiale2', v.slice(0, -4).trim()); setValue('materiale2Bio', true); }
+                else { setValue('materiale2', v); }
+              }} />
+              <label className="flex items-center gap-1.5 mt-1 text-xs text-gray-500 cursor-pointer">
+                <input type="checkbox" {...register('materiale2Bio')} className="w-3.5 h-3.5 accent-accent" />
+                BIO
+              </label>
+            </div>
+            <div>
+              <MaterialFieldWithPct label="Materiale 3" value={watch('materiale3') || ''} onChange={(v) => {
+                const lower = v.toLowerCase();
+                if (lower.endsWith(' bio')) { setValue('materiale3', v.slice(0, -4).trim()); setValue('materiale3Bio', true); }
+                else { setValue('materiale3', v); }
+              }} />
+              <label className="flex items-center gap-1.5 mt-1 text-xs text-gray-500 cursor-pointer">
+                <input type="checkbox" {...register('materiale3Bio')} className="w-3.5 h-3.5 accent-accent" />
+                BIO
+              </label>
+            </div>
           </div>
 
           <Input label="Composizione" {...register('composizione')} placeholder="es. 80% cotone, 20% poliestere" />

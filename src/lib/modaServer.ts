@@ -19,21 +19,48 @@ export async function requireModaSession(): Promise<Session | null> {
   return session;
 }
 
-/**
- * Returns true when the user's organization is Meridiano361.
- * Admins always return true. Customers always return false.
- * Operators: checked via DB lookup on their organizationId.
- */
+const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE', 'MAGAZZINO'];
+
+async function getOrgName(organizationId: string | null | undefined): Promise<string> {
+  if (!organizationId) return '';
+  const org = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { nome: true },
+  });
+  return org?.nome?.toLowerCase().replace(/[\s_-]/g, '') ?? '';
+}
+
+/** Returns true when the user's organization is Meridiano361. Admins always return true. */
 export async function isMeridiano361Org(
   role: string | null | undefined,
   organizationId: string | null | undefined,
 ): Promise<boolean> {
   if (!role) return false;
-  if (['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE', 'MAGAZZINO'].includes(role)) return true;
-  if (!organizationId) return false;
-  const org = await prisma.organization.findUnique({
-    where: { id: organizationId },
-    select: { nome: true },
-  });
-  return !!org?.nome?.toLowerCase().replace(/[\s_-]/g, '').includes('meridiano361');
+  if (ADMIN_ROLES.includes(role)) return true;
+  return (await getOrgName(organizationId)).includes('meridiano361');
+}
+
+/**
+ * Returns true when the user can access Abbigliamento + Accessori persona families.
+ * Granted to: admins, Meridiano361 org, La Bottega Solidale org.
+ */
+export async function canAccessFullModa(
+  role: string | null | undefined,
+  organizationId: string | null | undefined,
+): Promise<boolean> {
+  if (!role) return false;
+  if (ADMIN_ROLES.includes(role)) return true;
+  const name = await getOrgName(organizationId);
+  return name.includes('meridiano361') || name.includes('bottegasolidale');
+}
+
+/**
+ * Returns true when the user can access the Visual/Pareti section.
+ * Granted to: admins, Meridiano361 org, La Bottega Solidale org.
+ */
+export async function canAccessVisual(
+  role: string | null | undefined,
+  organizationId: string | null | undefined,
+): Promise<boolean> {
+  return canAccessFullModa(role, organizationId);
 }

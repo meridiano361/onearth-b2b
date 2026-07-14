@@ -101,6 +101,9 @@ export interface Product {
   dettaglio: string | null;
   materialeBottoni: string | null;
   nomeStampa: string | null;
+  materiale1Bio: boolean;
+  materiale2Bio: boolean;
+  materiale3Bio: boolean;
   isContinuativo: boolean;
   pantoneColors: ProductPantoneEntry[];
   sizeVariants: Array<{ taglia: string; codice: string }> | null;

@@ -464,7 +464,9 @@ export default function ProductDetailView({ id }: Props) {
                   <FieldRow key={key} label={label} value={capitalize(String(p[key]))} />
                 ))}
                 {activeMaterialFields.map(({ key, label }) => {
-                  const val = capitalize(String(p[key]));
+                  const bioKey = key === 'materiale1' ? 'materiale1Bio' : key === 'materiale2' ? 'materiale2Bio' : key === 'materiale3' ? 'materiale3Bio' : null;
+                  const isBio = bioKey ? !!(p as any)[bioKey] : false;
+                  const val = capitalize(String(p[key])) + (isBio ? ' bio' : '');
                   const aiQuery: Record<string, string> = {
                     materiale1:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
                     materiale2:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
@@ -508,7 +510,9 @@ export default function ProductDetailView({ id }: Props) {
                   <h2 className="label-luxury text-gray-400 mb-3">Materiali</h2>
                   <div className="space-y-2">
                     {activeMaterialFields.map(({ key, label }) => {
-                      const val = capitalize(String(p[key]));
+                      const bioKey = key === 'materiale1' ? 'materiale1Bio' : key === 'materiale2' ? 'materiale2Bio' : key === 'materiale3' ? 'materiale3Bio' : null;
+                      const isBio = bioKey ? !!(p as any)[bioKey] : false;
+                      const val = capitalize(String(p[key])) + (isBio ? ' bio' : '');
                       const aiQuery: Record<string, string> = {
                         materiale1:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,
                         materiale2:  `Cos'è il materiale "${val}" nel settore tessile e arredamento?`,

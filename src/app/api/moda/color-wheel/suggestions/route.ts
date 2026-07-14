@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireModaSession, isMeridiano361Org } from '@/lib/modaServer';
+import { requireModaSession, canAccessFullModa } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 import { MODA_COLLEZIONE, RESTRICTED_MODA_FAMIGLIE } from '@/lib/modaAccess';
 import { hexToHsl, getHueFamilyId, isColorNeutral, getHarmonyType, harmonyScore, generateDisplayGroups, inferHueFromColore } from '@/lib/colorHarmony';
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const hasFull = await isMeridiano361Org(session.user.role, session.user.organizationId);
+  const hasFull = await canAccessFullModa(session.user.role, session.user.organizationId);
 
   const productId = req.nextUrl.searchParams.get('productId');
   if (!productId) return NextResponse.json({ error: 'productId required' }, { status: 400 });

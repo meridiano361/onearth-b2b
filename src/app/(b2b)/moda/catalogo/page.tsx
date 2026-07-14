@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { canAccessModa } from '@/lib/modaAccess';
-import { isMeridiano361Org } from '@/lib/modaServer';
+import { canAccessFullModa } from '@/lib/modaServer';
 import CatalogView from '@/components/catalog/CatalogView';
 
 export const metadata: Metadata = { title: 'Catalogo Moda PE27 — ON EARTH' };
@@ -13,7 +13,7 @@ export default async function ModaCatalogoPage() {
   const session = await getServerSession(authOptions);
   if (!session || !canAccessModa(session.user?.role, session.user?.email)) redirect('/home');
 
-  const hasFull = await isMeridiano361Org(session.user?.role, session.user?.organizationId);
+  const hasFull = await canAccessFullModa(session.user?.role, session.user?.organizationId);
 
   return (
     <Suspense fallback={null}>

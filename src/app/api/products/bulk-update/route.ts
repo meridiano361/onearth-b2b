@@ -53,6 +53,9 @@ const schema = z.object({
     lavorazione:         strOpt,
     materialeBottoni:    strOpt,
     nomeStampa:          strOpt,
+    materiale1Bio:       z.boolean().optional(),
+    materiale2Bio:       z.boolean().optional(),
+    materiale3Bio:       z.boolean().optional(),
     // Certificazioni
     certificazione1:     strOpt,
     certificazione2:     strOpt,
@@ -109,6 +112,9 @@ export async function PATCH(req: NextRequest) {
     if (normalized.costoIeSenzaReso !== undefined) updateData.costoIeSenzaReso = normalized.costoIeSenzaReso ?? null;
     if (normalized.fasciaSconto !== undefined) updateData.fasciaSconto = normalized.fasciaSconto ?? null;
     if (normalized.isActive !== undefined) updateData.isActive = normalized.isActive;
+    if (normalized.materiale1Bio !== undefined) updateData.materiale1Bio = normalized.materiale1Bio;
+    if (normalized.materiale2Bio !== undefined) updateData.materiale2Bio = normalized.materiale2Bio;
+    if (normalized.materiale3Bio !== undefined) updateData.materiale3Bio = normalized.materiale3Bio;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });

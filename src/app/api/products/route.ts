@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { canAccessModa, RESTRICTED_MODA_FAMIGLIE } from '@/lib/modaAccess';
-import { isMeridiano361Org } from '@/lib/modaServer';
+import { canAccessFullModa } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
@@ -79,6 +79,9 @@ const productSchema = z.object({
   dettaglio: z.string().optional().nullable(),
   materialeBottoni: z.string().optional().nullable(),
   nomeStampa: z.string().optional().nullable(),
+  materiale1Bio: z.boolean().default(false),
+  materiale2Bio: z.boolean().default(false),
+  materiale3Bio: z.boolean().default(false),
   pantoneColorIds: z.array(z.coerce.number().int()).optional(),
   pantoneAutoFilledFlags: z.array(z.boolean()).optional(),
   sizeVariants: z.array(z.object({ taglia: z.string(), codice: z.string() })).optional().nullable(),
@@ -119,7 +122,7 @@ export async function GET(req: NextRequest) {
       where.NOT = [{ gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' } }];
     } else if (!isAdmin) {
       // Only Meridiano361 org accounts see abbigliamento/accessori persona
-      const hasFull = await isMeridiano361Org(session.user.role, session.user.organizationId);
+      const hasFull = await canAccessFullModa(session.user.role, session.user.organizationId);
       if (!hasFull) {
         if (!where.AND) where.AND = [];
         where.AND.push({ famiglia: { notIn: [...RESTRICTED_MODA_FAMIGLIE] } });
@@ -349,6 +352,9 @@ export async function POST(req: NextRequest) {
         dettaglio: data.dettaglio || null,
         materialeBottoni: data.materialeBottoni || null,
         nomeStampa: data.nomeStampa || null,
+        materiale1Bio: data.materiale1Bio ?? false,
+        materiale2Bio: data.materiale2Bio ?? false,
+        materiale3Bio: data.materiale3Bio ?? false,
         sizeVariants: sizeVariants?.length ? (sizeVariants as any) : undefined,
       },
       include: { category: true },

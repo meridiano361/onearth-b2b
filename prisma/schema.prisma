@@ -114,6 +114,9 @@ model Product {
   dettaglio          String?
   materialeBottoni   String?  @map("materiale_bottoni")
   nomeStampa         String?  @map("nome_stampa")
+  materiale1Bio      Boolean  @default(false) @map("materiale1_bio")
+  materiale2Bio      Boolean  @default(false) @map("materiale2_bio")
+  materiale3Bio      Boolean  @default(false) @map("materiale3_bio")
   isContinuativo     Boolean  @default(false)
   sizeVariants       Json?    @map("size_variants")
   descrizioneEn      String?

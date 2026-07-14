@@ -117,6 +117,7 @@ export const MATERIALE_OPTIONS = [
   'Cashmere',
   'Corno',
   'Cotone',
+  'Elastan',
   'Fibra arancia',
   'Ferro',
   'Fibra latte',
