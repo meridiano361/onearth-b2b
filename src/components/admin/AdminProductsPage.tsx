@@ -859,8 +859,8 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
       </div>
 
       {/* Filter bar */}
-      <div className="mb-4 space-y-2">
-        {/* Base filters */}
+      <div className="mb-4 space-y-1.5">
+        {/* Riga 1 — Ricerca · Stato · Collezione */}
         <div className="flex flex-wrap gap-2 items-center">
           <div className="w-56">
             <Input placeholder="Codice, descrizione, produttore..." value={search} onChange={(e) => setSearch(e.target.value)} icon={<Search size={14} />} />
@@ -874,6 +874,50 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
           >
             Ultimi caricati
           </button>
+          <div className="h-5 w-px bg-border/60 flex-shrink-0" />
+          <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as ActiveFilter)} className={selectClass}>
+            <option value="all">Stato: Tutti</option>
+            <option value="active">Solo attivi</option>
+            <option value="inactive">Solo non attivi</option>
+          </select>
+          <select value={filterFoto} onChange={(e) => setFilterFoto(e.target.value as FotoFilter)} className={selectClass}>
+            <option value="all">Foto: Tutti</option>
+            <option value="con-foto">Con foto</option>
+            <option value="senza-foto">Senza foto</option>
+            <option value="foto-multiple">Foto multiple</option>
+          </select>
+          <div className="h-5 w-px bg-border/60 flex-shrink-0" />
+          <select value={filterCollezione} onChange={(e) => setFilterCollezione(e.target.value)} className={selectClass}>
+            <option value="">Collezione</option>
+            <option value="__empty__">(nessuna)</option>
+            {collezioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+          <select value={filterTranche} onChange={(e) => setFilterTranche(e.target.value)} className={selectClass}>
+            <option value="">Tranche</option>
+            {trancheOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+          <select value={filterStagione} onChange={(e) => setFilterStagione(e.target.value)} className={selectClass}>
+            <option value="">Stagione</option>
+            {stagioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+          <div className="h-5 w-px bg-border/60 flex-shrink-0" />
+          <button
+            onClick={() => setShowAdvancedFilters((v) => !v)}
+            className={`flex items-center gap-1 h-8 px-2 text-xs border rounded transition-colors ${showAdvancedFilters || hasAdvancedFilters ? 'border-accent text-accent bg-accent/5' : 'border-border text-gray-500 hover:text-primary hover:bg-cream'}`}
+          >
+            {showAdvancedFilters ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+            {hasAdvancedFilters ? `Altri filtri (${[filterPaese,filterConferente,filterModello,filterDettaglio,filterForma,filterTaglia,filterMisura,filterColore2,filterColore3,filterMateriale1,filterMateriale2,filterMateriale3,filterComposizione,filterFantasia,filterLavorazione,filterBloccoColore,filterIva,filterCostoConFascia,filterCostoSenzaFascia,filterRetailFascia].filter(Boolean).length + (filterPantoneSource !== 'all' ? 1 : 0)})` : 'Altri filtri'}
+          </button>
+          {hasFilters && (
+            <button onClick={resetFilters} className="flex items-center gap-1 h-8 px-2 text-xs text-gray-500 hover:text-primary border border-border rounded hover:bg-cream transition-colors">
+              <RotateCcw size={11} />
+              Reset
+            </button>
+          )}
+        </div>
+
+        {/* Riga 2 — Tassonomia · Fornitore */}
+        <div className="flex flex-wrap gap-2 items-center">
           {!lockedSection && (
             <select value={filterGruppo} onChange={(e) => setFilterGruppo(e.target.value)} className={selectClass}>
               <option value="">Gruppo merc.</option>
@@ -896,6 +940,19 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
             <option value="">Gr. omogeneo</option>
             {gruppoOmogeneoOptions.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
+          <div className="h-5 w-px bg-border/60 flex-shrink-0" />
+          <select value={filterProduttore} onChange={(e) => setFilterProduttore(e.target.value)} className={selectClass}>
+            <option value="">Produttore</option>
+            {produttoreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+          <select value={filterLinea} onChange={(e) => setFilterLinea(e.target.value)} className={selectClass}>
+            <option value="">Linea</option>
+            {lineaOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </div>
+
+        {/* Riga 3 — Colore · Prezzi */}
+        <div className="flex flex-wrap gap-2 items-center">
           <select value={filterColore} onChange={(e) => setFilterColore(e.target.value)} className={selectClass}>
             <option value="">Colore 1</option>
             {coloreOptions.map((v) => <option key={v} value={v}>{capitalize(v)}</option>)}
@@ -909,27 +966,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
             <option value="con-tema">Con tema</option>
             <option value="senza-tema">Senza tema</option>
           </select>
-          <select value={filterCollezione} onChange={(e) => setFilterCollezione(e.target.value)} className={selectClass}>
-            <option value="">Collezione</option>
-            <option value="__empty__">(nessuna)</option>
-            {collezioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
-          </select>
-          <select value={filterLinea} onChange={(e) => setFilterLinea(e.target.value)} className={selectClass}>
-            <option value="">Linea</option>
-            {lineaOptions.map((v) => <option key={v} value={v}>{v}</option>)}
-          </select>
-          <select value={filterProduttore} onChange={(e) => setFilterProduttore(e.target.value)} className={selectClass}>
-            <option value="">Produttore</option>
-            {produttoreOptions.map((v) => <option key={v} value={v}>{v}</option>)}
-          </select>
-          <select value={filterTranche} onChange={(e) => setFilterTranche(e.target.value)} className={selectClass}>
-            <option value="">Tranche</option>
-            {trancheOptions.map((v) => <option key={v} value={v}>{v}</option>)}
-          </select>
-          <select value={filterStagione} onChange={(e) => setFilterStagione(e.target.value)} className={selectClass}>
-            <option value="">Stagione</option>
-            {stagioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
-          </select>
+          <div className="h-5 w-px bg-border/60 flex-shrink-0" />
           <select value={filterFasciaSconto} onChange={(e) => setFilterFasciaSconto(e.target.value)} className={selectClass}>
             <option value="">Fascia sconto</option>
             <option value="0-30">&lt; 30%</option>
@@ -953,30 +990,6 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
             <option value="20-50">20–50 €</option>
             <option value="50+">&gt; 50 €</option>
           </select>
-          <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as ActiveFilter)} className={selectClass}>
-            <option value="all">Stato: Tutti</option>
-            <option value="active">Solo attivi</option>
-            <option value="inactive">Solo non attivi</option>
-          </select>
-          <select value={filterFoto} onChange={(e) => setFilterFoto(e.target.value as FotoFilter)} className={selectClass}>
-            <option value="all">Foto: Tutti</option>
-            <option value="con-foto">Con foto</option>
-            <option value="senza-foto">Senza foto</option>
-            <option value="foto-multiple">Foto multiple</option>
-          </select>
-          <button
-            onClick={() => setShowAdvancedFilters((v) => !v)}
-            className={`flex items-center gap-1 h-8 px-2 text-xs border rounded transition-colors ${showAdvancedFilters || hasAdvancedFilters ? 'border-accent text-accent bg-accent/5' : 'border-border text-gray-500 hover:text-primary hover:bg-cream'}`}
-          >
-            {showAdvancedFilters ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-            {hasAdvancedFilters ? `Altri filtri (${[filterPaese,filterConferente,filterModello,filterDettaglio,filterForma,filterTaglia,filterMisura,filterColore2,filterColore3,filterMateriale1,filterMateriale2,filterMateriale3,filterComposizione,filterFantasia,filterLavorazione,filterBloccoColore,filterIva,filterCostoConFascia,filterCostoSenzaFascia,filterRetailFascia].filter(Boolean).length + (filterPantoneSource !== 'all' ? 1 : 0)})` : 'Altri filtri'}
-          </button>
-          {hasFilters && (
-            <button onClick={resetFilters} className="flex items-center gap-1 h-8 px-2 text-xs text-gray-500 hover:text-primary border border-border rounded hover:bg-cream transition-colors">
-              <RotateCcw size={11} />
-              Reset
-            </button>
-          )}
         </div>
 
         {/* Advanced filters */}
