@@ -1289,7 +1289,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
         lg:bottom-0 lg:right-80 xl:right-[340px]
         bg-white border-t border-border shadow-[0_-2px_8px_rgba(0,0,0,0.06)]
       ">
-        <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+        <div className="px-4 sm:px-6 py-3 flex items-center gap-3">
           {/* Back */}
           <Link
             href={routes.orders}
@@ -1340,12 +1340,6 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
               order={order}
               onExported={() => setShowDemetraInstructions(true)}
             />
-          </div>
-
-          {/* Total */}
-          <div className="text-right flex-shrink-0">
-            <p className="text-2xs text-gray-400 uppercase tracking-widest hidden sm:block">{t('total')}</p>
-            <p className="text-base font-bold text-primary">{formatCurrency(grandTotal)}</p>
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import CartSidebar from './CartSidebar';
 
 const HIDDEN_EXACT = ['/catalog', '/home'];
-const HIDDEN_PATHS = ['/catalog/orders', '/orders', '/catalog/destinazioni', '/moda/pareti', '/moda/visual'];
+const HIDDEN_PATHS = ['/catalog/orders', '/orders', '/catalog/destinazioni', '/moda/pareti', '/moda/visual', '/moda/ordini'];
 
 function forwardWheelToMain(e: React.WheelEvent<HTMLElement>) {
   document.querySelector('main')?.scrollBy(0, e.deltaY);
