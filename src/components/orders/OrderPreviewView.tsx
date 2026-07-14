@@ -761,6 +761,19 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   const grandTotal = useMemo(() => items.reduce((s, it) => s + it.effectiveSubtotal, 0), [items]);
   const grandQty   = useMemo(() => items.reduce((s, it) => s + it.effectiveQty, 0),   [items]);
 
+  // Extra-sconto Altraqualità abbigliamento PE27
+  const altraqualitaBanner = useMemo(() => {
+    const aqItems = items.filter(
+      (it) =>
+        it.product?.conferente?.toLowerCase().includes('altraqualit') &&
+        it.product?.famiglia === 'Abbigliamento',
+    );
+    if (aqItems.length === 0) return null;
+    const total = aqItems.reduce((s, it) => s + it.effectiveSubtotal, 0);
+    const extraPct = total > 7000 ? 5 : total > 3000 ? 3 : 0;
+    return { total, extraPct, effective: total * (1 - extraPct / 100) };
+  }, [items]);
+
   function handleQtyChange(itemId: string, qty: number) {
     if (qty < 1) return;
     // Immediate optimistic update
@@ -1201,6 +1214,29 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
               Cambia
             </button>
           )}
+        </div>
+      )}
+
+      {/* ── Extra-sconto Altraqualità abbigliamento ──────── */}
+      {altraqualitaBanner && (
+        <div className={`mx-4 sm:mx-6 mt-4 rounded-lg border px-4 py-3 text-xs ${altraqualitaBanner.extraPct > 0 ? 'border-[#8FAF8F]/60 bg-[#8FAF8F]/8' : 'border-border bg-cream/50'}`}>
+          <p className="font-semibold text-primary mb-0.5">
+            Altraqualità — Abbigliamento PE27
+          </p>
+          <p className="text-gray-500">
+            Totale i.e.: <span className="font-medium text-primary">{formatCurrency(altraqualitaBanner.total)}</span>
+            {altraqualitaBanner.extraPct > 0 ? (
+              <>
+                <span className="mx-1.5 text-gray-300">·</span>
+                <span className="text-[#8FAF8F] font-semibold">Extrasconto {altraqualitaBanner.extraPct}%</span>
+                {' '}per acquisti &gt; {altraqualitaBanner.extraPct === 5 ? '7.000' : '3.000'} €
+                <span className="mx-1.5 text-gray-300">→</span>
+                Costo effettivo: <span className="font-semibold text-primary">{formatCurrency(altraqualitaBanner.effective)}</span>
+              </>
+            ) : (
+              <span className="ml-2 text-gray-400 text-2xs">Extrasconto 3% oltre 3.000 € · 5% oltre 7.000 €</span>
+            )}
+          </p>
         </div>
       )}
 
