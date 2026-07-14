@@ -113,6 +113,11 @@ export async function GET(req: NextRequest) {
     if (!canAccessModa(session.user.role, session.user.email)) {
       where.NOT = [{ gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' } }];
     }
+    // Caller can explicitly exclude MODA products (e.g. when adding to a CASA order)
+    const excludeModa = searchParams.get('excludeModa');
+    if (excludeModa === 'true' && !where.NOT) {
+      where.NOT = [{ gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' } }];
+    }
     if (categoryId) where.categoryId = categoryId;
     if (collectionId) where.collectionId = collectionId;
     if (search) {

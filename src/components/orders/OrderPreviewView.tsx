@@ -197,6 +197,7 @@ function AddProductsModal({
   addLabel,
   orderProductIds,
   orderItems,
+  baseFilters,
 }: {
   orderId: string;
   onClose: () => void;
@@ -208,6 +209,7 @@ function AddProductsModal({
   addLabel: string;
   orderProductIds: Set<string>;
   orderItems: OrderItem[];
+  baseFilters: Record<string, string>;
 }) {
   const [tab, setTab] = useState<'ricerca' | 'catalogo'>('ricerca');
   const [search, setSearch] = useState('');
@@ -268,15 +270,16 @@ function AddProductsModal({
   const fo = filterOptions ?? {};
 
   const catalogParams = useMemo(() => {
-    const p = new URLSearchParams({ active: 'true', limit: '9999' });
+    const p = new URLSearchParams({ active: 'true', limit: '9999', ...baseFilters });
     const keys = [
       'stagione','colore','temaColore','collezione','tranche',
       'nomLinea','famiglia','sottofamiglia','gruppoOmogeneo',
       'classe','sottoclasse','gruppoMerceologico','produttore',
     ];
-    keys.forEach(k => { if (filters[k]) p.set(k, filters[k]); });
+    // User-selectable filters only apply if they don't conflict with a baseFilter key
+    keys.forEach(k => { if (filters[k] && !baseFilters[k]) p.set(k, filters[k]); });
     return p.toString();
-  }, [filters]);
+  }, [filters, baseFilters]);
 
   const { data: catalogProducts, isLoading: catalogLoading } = useQuery<Product[]>({
     queryKey: ['products-catalog-browse', catalogParams],
@@ -298,9 +301,9 @@ function AddProductsModal({
   }
 
   const { data: products, isLoading } = useQuery<Product[]>({
-    queryKey: ['products-for-order', debouncedSearch],
+    queryKey: ['products-for-order', debouncedSearch, baseFilters],
     queryFn: async () => {
-      const params = new URLSearchParams({ active: 'true', limit: '9999' });
+      const params = new URLSearchParams({ active: 'true', limit: '9999', ...baseFilters });
       if (debouncedSearch) params.set('search', debouncedSearch);
       const res = await fetch(`/api/products?${params}`);
       if (!res.ok) throw new Error();
@@ -873,6 +876,10 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
 
   const currentGroupLabel = GROUPINGS.find((g) => g.value === groupBy)?.label ?? '';
 
+  const addProductsBaseFilters: Record<string, string> = routes.collectionId === 'moda'
+    ? { famiglia: 'Bigiotteria e gioielleria' }
+    : { excludeModa: 'true' };
+
   // ── Loading / error states ─────────────────────────────────
   if (isLoading) return <LoadingSpinner fullPage text={t('loadingOrder')} />;
   if (error || !order) {
@@ -939,6 +946,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
           addLabel={t('add')}
           orderProductIds={new Set((order?.items ?? []).map(i => i.productId))}
           orderItems={order?.items ?? []}
+          baseFilters={addProductsBaseFilters}
           onAdded={() => {
             queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
             queryClient.invalidateQueries({ queryKey: ['my-orders'] });
