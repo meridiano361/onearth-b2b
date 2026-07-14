@@ -39,8 +39,10 @@ function serializeOrder(order: any) {
       product: item.product
         ? {
             ...item.product,
-            costPrice: Number(item.product.costPrice),
-            retailPrice: Number(item.product.retailPrice),
+            costPrice:         Number(item.product.costPrice),
+            retailPrice:       Number(item.product.retailPrice),
+            costoIeConReso:    item.product.costoIeConReso   != null ? Number(item.product.costoIeConReso)   : null,
+            costoIeSenzaReso:  item.product.costoIeSenzaReso != null ? Number(item.product.costoIeSenzaReso) : null,
             createdAt: item.product.createdAt?.toISOString(),
             updatedAt: item.product.updatedAt?.toISOString(),
           }

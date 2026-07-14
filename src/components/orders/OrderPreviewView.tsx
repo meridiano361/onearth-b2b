@@ -77,6 +77,16 @@ const GROUPING_KEYS = [
 
 type QtyMap = Record<string, number>;
 
+// Usa costoIeConReso → costoIeSenzaReso → unitPrice come fallback,
+// identico alla logica di CartItem per mostrare sempre il costo reale.
+function effectiveCost(product: any, unitPrice: number): number {
+  const conReso   = Number(product?.costoIeConReso);
+  const senzaReso = Number(product?.costoIeSenzaReso);
+  if (conReso > 0) return conReso;
+  if (senzaReso > 0) return senzaReso;
+  return unitPrice;
+}
+
 // ── Product card ───────────────────────────────────────────────
 function ProductCard({
   item,
@@ -136,7 +146,7 @@ function ProductCard({
             PVP: <span className="text-gray-600 font-medium">{formatCurrency(product.retailPrice)}</span>
           </p>
           <p className="text-2xs text-gray-400">
-            Costo I.E.: <span className="text-gray-600 font-medium">{formatCurrency(item.unitPrice)}</span>
+            Costo I.E.: <span className="text-gray-600 font-medium">{formatCurrency(effectiveCost(item.product, Number(item.unitPrice)))}</span>
           </p>
         </div>
 
@@ -698,14 +708,17 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     setSavingBudget(false);
   }
 
-  // Items with effective qty / subtotal (local optimistic overrides)
+  // Items with effective qty / subtotal (local optimistic overrides).
+  // Il costo unitario usa costoIeConReso → costoIeSenzaReso → unitPrice
+  // così i totali riflettono sempre il costo reale del prodotto.
   const items = useMemo(
     () =>
       (order?.items ?? [])
         .filter((it) => it.product != null)
         .map((it) => {
-          const qty = qtyOverrides[it.id] ?? it.quantity;
-          return { ...it, effectiveQty: qty, effectiveSubtotal: qty * Number(it.unitPrice) };
+          const qty      = qtyOverrides[it.id] ?? it.quantity;
+          const unitCost = effectiveCost(it.product, Number(it.unitPrice));
+          return { ...it, effectiveQty: qty, effectiveUnitCost: unitCost, effectiveSubtotal: qty * unitCost };
         }),
     [order?.items, qtyOverrides]
   );
