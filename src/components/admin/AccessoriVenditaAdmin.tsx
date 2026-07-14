@@ -8,7 +8,7 @@ import Link from 'next/link';
 import type { TipoSupporto, TonoLegno } from '@/types/jewelry';
 import { LABEL_SUPPORTO } from '@/types/jewelry';
 
-const TIPI_VENDIBILI: TipoSupporto[] = ['busto_legno', 'cono_legno', 'portaorecchini', 'espositore_onearth'];
+const TIPI_VENDIBILI: TipoSupporto[] = ['busto_legno', 'cono_legno', 'portaorecchini', 'portanelli', 'espositore_onearth'];
 
 interface Supporto {
   id: string;
@@ -41,6 +41,7 @@ const TIPO_COLOR: Record<TipoSupporto, string> = {
   busto_legno:        'bg-rose-50 text-rose-700 border-rose-200',
   cono_legno:         'bg-amber-50 text-amber-700 border-amber-200',
   portaorecchini:     'bg-violet-50 text-violet-700 border-violet-200',
+  portanelli:         'bg-sky-50 text-sky-700 border-sky-200',
   parete_ganci:       'bg-gray-50 text-gray-500 border-gray-200',
   espositore_onearth: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };

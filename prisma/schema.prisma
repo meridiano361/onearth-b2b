@@ -914,6 +914,7 @@ enum TipoSupporto {
   busto_legno
   cono_legno
   portaorecchini
+  portanelli
   parete_ganci
   espositore_onearth
 

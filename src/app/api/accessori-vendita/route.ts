@@ -5,12 +5,11 @@ import { prisma } from '@/lib/prisma';
 import { LABEL_SUPPORTO } from '@/types/jewelry';
 import type { TipoSupporto } from '@/types/jewelry';
 
-// Mappa categoria gioiello → tipi supporto compatibili (espositore_onearth è universale per tutti)
 const TIPO_MAP: Record<string, TipoSupporto[]> = {
   collana:   ['busto_legno',    'espositore_onearth'],
   bracciale: ['cono_legno',     'espositore_onearth'],
   orecchini: ['portaorecchini', 'espositore_onearth'],
-  anello:    ['cono_legno',     'espositore_onearth'],
+  anello:    ['portanelli'],
 };
 
 // Normalizza classe/sottofamiglia prodotto → chiave di TIPO_MAP

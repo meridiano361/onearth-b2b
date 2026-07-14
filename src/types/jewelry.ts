@@ -1,15 +1,16 @@
 // ─── Tipi dominio: Jewelry Display Rendering ─────────────────────────────────
 
-export type TipoSupporto = 'busto_legno' | 'cono_legno' | 'portaorecchini' | 'parete_ganci' | 'espositore_onearth';
+export type TipoSupporto = 'busto_legno' | 'cono_legno' | 'portaorecchini' | 'portanelli' | 'parete_ganci' | 'espositore_onearth';
 export type TonoLegno = 'chiaro' | 'scuro';
 export type CategoriaGioiello = 'collana' | 'bracciale' | 'orecchino' | 'anello';
 export type StatoCompositingJob = 'pending' | 'processing' | 'completed' | 'failed';
 
 export const LABEL_SUPPORTO: Record<TipoSupporto, string> = {
-  busto_legno:       'Busto in legno',
-  cono_legno:        'Cono in legno',
-  portaorecchini:    'Portaorecchini',
-  parete_ganci:      'Parete con ganci',
+  busto_legno:        'Busto in legno',
+  cono_legno:         'Cono in legno',
+  portaorecchini:     'Portaorecchini',
+  portanelli:         'Portanelli',
+  parete_ganci:       'Parete con ganci',
   espositore_onearth: 'Espositore On Earth',
 };
 
@@ -25,7 +26,7 @@ export const SUPPORTI_COMPATIBILI: Record<CategoriaGioiello, TipoSupporto[]> = {
   collana:   ['busto_legno',    'parete_ganci', 'espositore_onearth'],
   bracciale: ['cono_legno',     'parete_ganci', 'espositore_onearth'],
   orecchino: ['portaorecchini', 'parete_ganci', 'espositore_onearth'],
-  anello:    ['cono_legno',     'parete_ganci'],
+  anello:    ['portanelli',     'parete_ganci'],
 };
 
 export interface SupportoEspositivo {

@@ -25,7 +25,9 @@ export const ZONE_DEFAULT: ZoneDefaults = {
   },
   cono_legno: {
     bracciale: { categoria: 'bracciale', anchorX: 0.50, anchorY: 0.38, maxLarghezzaPx: 200, maxAltezzaPx: 90 },
-    anello:    { categoria: 'anello',    anchorX: 0.50, anchorY: 0.25, maxLarghezzaPx: 110, maxAltezzaPx: 60 },
+  },
+  portanelli: {
+    anello: { categoria: 'anello', anchorX: 0.50, anchorY: 0.35, maxLarghezzaPx: 110, maxAltezzaPx: 60 },
   },
   portaorecchini: {
     orecchino: { categoria: 'orecchino', anchorX: 0.50, anchorY: 0.28, maxLarghezzaPx: 160, maxAltezzaPx: 220 },
