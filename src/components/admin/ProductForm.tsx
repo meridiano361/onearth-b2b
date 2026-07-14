@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRef, useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Languages, Loader2, AlertTriangle, X, Plus, Link, Search, ChevronUp, ChevronDown, Wand2 } from 'lucide-react';
+import { Languages, Loader2, AlertTriangle, X, Plus, Link, Search, ChevronUp, ChevronDown, Wand2, RotateCcw, RotateCw } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import PaeseSelect from '@/components/ui/PaeseSelect';
@@ -323,6 +323,22 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     setPantoneManuallySet((prev) => { const n = [...prev] as [boolean, boolean, boolean]; n[i] = true; return n; });
     setPantoneAutoFilled((prev) => { const n = [...prev] as [boolean, boolean, boolean]; n[i] = false; return n; });
   }
+
+  // ── Undo / Redo ──────────────────────────────────────────────────────────
+  type Snapshot = {
+    values: Record<string, any>;
+    pantoneSlots: (ProductPantoneEntry | null)[];
+    colorBlocks: number[];
+    sizeVariants: SizeVariant[];
+    selectedPantones: ProductPantoneEntry[];
+    pantoneManuallySet: [boolean, boolean, boolean];
+  };
+  const historyRef    = useRef<Snapshot[]>([]);
+  const historyIdxRef = useRef(-1);
+  const isRestoringRef = useRef(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
   const [fotoPicker, setFotoPicker] = useState<{
     slot: 'imageUrl' | 'imageUrl2' | 'imageUrl3' | 'imageUrl4' | 'imageUrl5' | null;
     options: { url: string; name: string }[];
@@ -363,6 +379,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     setValue,
     watch,
     getValues,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -511,6 +528,94 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     setPantoneAutoFilled(prev => { const n = [...prev] as [boolean, boolean, boolean]; n[2] = true; return n; });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedColore3, allPantoneColors.length]);
+
+  // ── Undo/Redo effects ────────────────────────────────────────────────────
+  // Debounced snapshot: fires 800ms after any form value or external state changes
+  const formJson = JSON.stringify(watch());
+  useEffect(() => {
+    if (isRestoringRef.current) return;
+    const timer = setTimeout(() => {
+      const snap: Snapshot = {
+        values: getValues(),
+        pantoneSlots: pantoneSlots,
+        colorBlocks: Array.from(selectedColorBlocks),
+        sizeVariants: sizeVariants,
+        selectedPantones: selectedPantones,
+        pantoneManuallySet: pantoneManuallySet,
+      };
+      historyRef.current = historyRef.current.slice(0, historyIdxRef.current + 1);
+      if (historyRef.current.length >= 50) historyRef.current.shift();
+      else historyIdxRef.current++;
+      historyRef.current[historyIdxRef.current] = snap;
+      setCanUndo(historyIdxRef.current > 0);
+      setCanRedo(false);
+    }, 800);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formJson, pantoneSlots, selectedColorBlocks, sizeVariants, selectedPantones]);
+
+  // Initial snapshot (empty history → index 0 = "pristine" state)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const snap: Snapshot = {
+        values: getValues(),
+        pantoneSlots: pantoneSlots,
+        colorBlocks: Array.from(selectedColorBlocks),
+        sizeVariants: sizeVariants,
+        selectedPantones: selectedPantones,
+        pantoneManuallySet: pantoneManuallySet,
+      };
+      historyRef.current = [snap];
+      historyIdxRef.current = 0;
+      setCanUndo(false);
+      setCanRedo(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keyboard shortcuts: Cmd/Ctrl+Z = undo, Cmd/Ctrl+Shift+Z or Ctrl+Y = redo
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!e.metaKey && !e.ctrlKey) return;
+      if (e.key === 'z' && !e.shiftKey) {
+        if (historyIdxRef.current <= 0) return;
+        e.preventDefault();
+        historyIdxRef.current--;
+        const snap = historyRef.current[historyIdxRef.current];
+        isRestoringRef.current = true;
+        reset(snap.values as any);
+        setPantoneSlots(snap.pantoneSlots);
+        setSelectedColorBlocks(new Set(snap.colorBlocks));
+        setSizeVariants(snap.sizeVariants);
+        setSelectedPantones(snap.selectedPantones);
+        setPantoneManuallySet(snap.pantoneManuallySet);
+        setPantoneAutoFilled([false, false, false]);
+        setCanUndo(historyIdxRef.current > 0);
+        setCanRedo(historyIdxRef.current < historyRef.current.length - 1);
+        setTimeout(() => { isRestoringRef.current = false; }, 100);
+      } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+        if (historyIdxRef.current >= historyRef.current.length - 1) return;
+        e.preventDefault();
+        historyIdxRef.current++;
+        const snap = historyRef.current[historyIdxRef.current];
+        isRestoringRef.current = true;
+        reset(snap.values as any);
+        setPantoneSlots(snap.pantoneSlots);
+        setSelectedColorBlocks(new Set(snap.colorBlocks));
+        setSizeVariants(snap.sizeVariants);
+        setSelectedPantones(snap.selectedPantones);
+        setPantoneManuallySet(snap.pantoneManuallySet);
+        setPantoneAutoFilled([false, false, false]);
+        setCanUndo(historyIdxRef.current > 0);
+        setCanRedo(historyIdxRef.current < historyRef.current.length - 1);
+        setTimeout(() => { isRestoringRef.current = false; }, 100);
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const modaNameMountRef = useRef(true);
   useEffect(() => {
@@ -1451,7 +1556,57 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
             Traduci automaticamente
           </button>
         )}
-        <div className="flex gap-3 ml-auto">
+        <div className="flex gap-3 ml-auto items-center">
+          <div className="flex items-center gap-0.5 border border-border rounded px-0.5 py-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                if (historyIdxRef.current <= 0) return;
+                historyIdxRef.current--;
+                const snap = historyRef.current[historyIdxRef.current];
+                isRestoringRef.current = true;
+                reset(snap.values as any);
+                setPantoneSlots(snap.pantoneSlots);
+                setSelectedColorBlocks(new Set(snap.colorBlocks));
+                setSizeVariants(snap.sizeVariants);
+                setSelectedPantones(snap.selectedPantones);
+                setPantoneManuallySet(snap.pantoneManuallySet);
+                setPantoneAutoFilled([false, false, false]);
+                setCanUndo(historyIdxRef.current > 0);
+                setCanRedo(historyIdxRef.current < historyRef.current.length - 1);
+                setTimeout(() => { isRestoringRef.current = false; }, 100);
+              }}
+              disabled={!canUndo}
+              title="Annulla (⌘Z)"
+              className="p-1.5 rounded text-gray-400 hover:text-primary hover:bg-cream transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <RotateCcw size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (historyIdxRef.current >= historyRef.current.length - 1) return;
+                historyIdxRef.current++;
+                const snap = historyRef.current[historyIdxRef.current];
+                isRestoringRef.current = true;
+                reset(snap.values as any);
+                setPantoneSlots(snap.pantoneSlots);
+                setSelectedColorBlocks(new Set(snap.colorBlocks));
+                setSizeVariants(snap.sizeVariants);
+                setSelectedPantones(snap.selectedPantones);
+                setPantoneManuallySet(snap.pantoneManuallySet);
+                setPantoneAutoFilled([false, false, false]);
+                setCanUndo(historyIdxRef.current > 0);
+                setCanRedo(historyIdxRef.current < historyRef.current.length - 1);
+                setTimeout(() => { isRestoringRef.current = false; }, 100);
+              }}
+              disabled={!canRedo}
+              title="Ripristina (⌘⇧Z)"
+              className="p-1.5 rounded text-gray-400 hover:text-primary hover:bg-cream transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <RotateCw size={13} />
+            </button>
+          </div>
           <Button variant="ghost" type="button" onClick={onCancel}>Annulla</Button>
           <Button type="submit" loading={isSubmitting}>{isEdit ? 'Salva modifiche' : 'Crea prodotto'}</Button>
         </div>
