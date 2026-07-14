@@ -12,6 +12,7 @@ import { normalizeProductName } from '@/lib/normalizeProductName';
 import { syncProductClassification } from '@/lib/syncClassification';
 import { translateProduct } from '@/lib/translate';
 import { autoLinkPhotosForProduct } from '@/lib/autoLinkPhotos';
+import { autoComposizione } from '@/lib/autoComposizione';
 
 const productSchema = z.object({
   colorBlockIds: z.array(z.coerce.number().int()).optional(),
@@ -337,7 +338,7 @@ export async function POST(req: NextRequest) {
         materiale1: data.materiale1 || null,
         materiale2: data.materiale2 || null,
         materiale3: data.materiale3 || null,
-        composizione: data.composizione || null,
+        composizione: autoComposizione(data.materiale1, data.materiale2, data.materiale3, data.composizione),
         certificazione1: data.certificazione1 || null,
         certificazione2: data.certificazione2 || null,
         certificazione3: data.certificazione3 || null,

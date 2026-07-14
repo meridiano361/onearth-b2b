@@ -8,6 +8,7 @@ import { normalizeProductClassificationFields } from '@/lib/normalizeClassificat
 import { normalizeProductName } from '@/lib/normalizeProductName';
 import { syncProductClassification } from '@/lib/syncClassification';
 import { translateProduct } from '@/lib/translate';
+import { autoComposizione } from '@/lib/autoComposizione';
 
 const updateSchema = z.object({
   colorBlockIds: z.array(z.coerce.number().int()).optional(),
@@ -164,6 +165,22 @@ export async function PATCH(
         ? data.nomLinea
         : (await prisma.product.findUnique({ where: { id: params.id }, select: { nomLinea: true } }))?.nomLinea;
       data.name = normalizeProductName(data.name, linea);
+    }
+
+    // Auto-composizione: se almeno un materiale è nel payload e composizione è vuota
+    const materialInPatch = ('materiale1' in rest) || ('materiale2' in rest) || ('materiale3' in rest);
+    if (materialInPatch && !data.composizione?.trim()) {
+      const cur = await prisma.product.findUnique({
+        where: { id: params.id },
+        select: { materiale1: true, materiale2: true, materiale3: true, composizione: true },
+      });
+      if (cur && !cur.composizione?.trim()) {
+        const m1 = 'materiale1' in rest ? (data as any).materiale1 : cur.materiale1;
+        const m2 = 'materiale2' in rest ? (data as any).materiale2 : cur.materiale2;
+        const m3 = 'materiale3' in rest ? (data as any).materiale3 : cur.materiale3;
+        const comp = autoComposizione(m1, m2, m3, null);
+        if (comp) (data as any).composizione = comp;
+      }
     }
 
     const product = await prisma.product.update({
