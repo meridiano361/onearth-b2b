@@ -194,6 +194,7 @@ const schema = z
     certificazione2: z.string().optional(),
     certificazione3: z.string().optional(),
     fantasia: z.string().optional(),
+    materialeBottoni: z.string().optional(),
     temaColore:   z.string().optional(),
     temaColore2:  z.string().optional(),
     temaColore3:  z.string().optional(),
@@ -444,6 +445,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       certificazione2: src.certificazione2 || '',
       certificazione3: src.certificazione3 || '',
       fantasia: src.fantasia || (isModaInit ? 'TINTA UNITA' : ''),
+      materialeBottoni: src.materialeBottoni || '',
       temaColore:   src.temaColore   || '',
       temaColore2:  src.temaColore2  || '',
       temaColore3:  src.temaColore3  || '',
@@ -892,6 +894,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
           certificazione2:(v as any).certificazione2|| null,
           certificazione3:(v as any).certificazione3|| null,
           fantasia:       (v as any).fantasia       || null,
+          materialeBottoni: (v as any).materialeBottoni || null,
           temaColore:     v.temaColore     || null,
           temaColore2:    (v as any).temaColore2    || null,
           temaColore3:    (v as any).temaColore3    || null,
@@ -1170,6 +1173,10 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
           <Combobox label="Fantasia" field="fantasia" value={watch('fantasia') || ''} onChange={(v) => setValue('fantasia', v)} />
 
           <Combobox label="Lavorazione" field="lavorazione" value={watch('lavorazione') || ''} onChange={(v) => setValue('lavorazione', v)} />
+
+          {watchedFamiglia === 'Abbigliamento' && (
+            <Input label="Materiale bottoni" {...register('materialeBottoni')} placeholder="es. COCCO, MADREPERLA, METALLO…" />
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input label="Certificazione 1" {...register('certificazione1')} placeholder="es. GOTS" />

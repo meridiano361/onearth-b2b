@@ -76,6 +76,7 @@ const updateSchema = z.object({
   fantasia: z.string().optional().nullable(),
   lavorazione: z.string().optional().nullable(),
   dettaglio: z.string().optional().nullable(),
+  materialeBottoni: z.string().optional().nullable(),
   pantoneColorIds: z.array(z.coerce.number().int()).optional(),
   pantoneAutoFilledFlags: z.array(z.boolean()).optional(),
   sizeVariants: z.array(z.object({ taglia: z.string(), codice: z.string() })).optional().nullable(),

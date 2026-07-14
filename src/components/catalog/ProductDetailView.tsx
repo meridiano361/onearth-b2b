@@ -143,8 +143,9 @@ export default function ProductDetailView({ id }: Props) {
     { key: 'materiale2',   label: 'Materiale 2' },
     { key: 'materiale3',   label: 'Materiale 3' },
     { key: 'composizione', label: 'Composizione' },
-    { key: 'fantasia',     label: 'Fantasia' },
-    { key: 'lavorazione',  label: 'Lavorazione' },
+    { key: 'fantasia',          label: 'Fantasia' },
+    { key: 'lavorazione',       label: 'Lavorazione' },
+    { key: 'materialeBottoni',  label: 'Materiale bottoni' },
   ];
 
   const certFields: { key: string; label: string }[] = [
