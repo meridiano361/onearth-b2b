@@ -100,6 +100,7 @@ export interface Product {
   lavorazione: string | null;
   dettaglio: string | null;
   materialeBottoni: string | null;
+  nomeStampa: string | null;
   isContinuativo: boolean;
   pantoneColors: ProductPantoneEntry[];
   sizeVariants: Array<{ taglia: string; codice: string }> | null;

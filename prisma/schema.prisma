@@ -113,6 +113,7 @@ model Product {
   lavorazione        String?
   dettaglio          String?
   materialeBottoni   String?  @map("materiale_bottoni")
+  nomeStampa         String?  @map("nome_stampa")
   isContinuativo     Boolean  @default(false)
   sizeVariants       Json?    @map("size_variants")
   descrizioneEn      String?

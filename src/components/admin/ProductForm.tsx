@@ -195,6 +195,7 @@ const schema = z
     certificazione3: z.string().optional(),
     fantasia: z.string().optional(),
     materialeBottoni: z.string().optional(),
+    nomeStampa: z.string().optional(),
     temaColore:   z.string().optional(),
     temaColore2:  z.string().optional(),
     temaColore3:  z.string().optional(),
@@ -446,6 +447,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       certificazione3: src.certificazione3 || '',
       fantasia: src.fantasia || (isModaInit ? 'TINTA UNITA' : ''),
       materialeBottoni: src.materialeBottoni || '',
+      nomeStampa: src.nomeStampa || '',
       temaColore:   src.temaColore   || '',
       temaColore2:  src.temaColore2  || '',
       temaColore3:  src.temaColore3  || '',
@@ -895,6 +897,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
           certificazione3:(v as any).certificazione3|| null,
           fantasia:       (v as any).fantasia       || null,
           materialeBottoni: (v as any).materialeBottoni || null,
+          nomeStampa:       (v as any).nomeStampa       || null,
           temaColore:     v.temaColore     || null,
           temaColore2:    (v as any).temaColore2    || null,
           temaColore3:    (v as any).temaColore3    || null,
@@ -1171,6 +1174,10 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
           {pantoneError && <p className="text-xs text-red-500">{pantoneError}</p>}
 
           <Combobox label="Fantasia" field="fantasia" value={watch('fantasia') || ''} onChange={(v) => setValue('fantasia', v)} />
+
+          {['STAMPA', 'STAMPATO'].includes((watch('fantasia') || '').toUpperCase()) && (
+            <Input label="Nome stampa" {...register('nomeStampa')} placeholder="es. Fiori selvatici, Geometrico astratto…" />
+          )}
 
           <Combobox label="Lavorazione" field="lavorazione" value={watch('lavorazione') || ''} onChange={(v) => setValue('lavorazione', v)} />
 

@@ -144,6 +144,7 @@ export default function ProductDetailView({ id }: Props) {
     { key: 'materiale3',   label: 'Materiale 3' },
     { key: 'composizione', label: 'Composizione' },
     { key: 'fantasia',          label: 'Fantasia' },
+    { key: 'nomeStampa',        label: 'Nome stampa' },
     { key: 'lavorazione',       label: 'Lavorazione' },
     { key: 'materialeBottoni',  label: 'Materiale bottoni' },
   ];
