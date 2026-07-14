@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag, Plus, ArrowLeftRight, Check } from 'lucide-react';
-import Link from 'next/link';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
@@ -355,12 +354,12 @@ export default function CartSidebar() {
       {/* ── 4. BOTTONE "AGGIUNGI PRODOTTI" ─────────────────────────── */}
       {cartId && (
         <div className="px-4 py-3 border-b border-border flex-shrink-0">
-          <Link
-            href={routes.catalog}
+          <button
+            onClick={() => router.push(routes.catalog)}
             className="w-full py-2 text-xs font-semibold rounded bg-primary text-background flex items-center justify-center gap-1.5 hover:bg-warm-darker transition-colors"
           >
             <Plus size={12} /> Aggiungi prodotti
-          </Link>
+          </button>
         </div>
       )}
 
@@ -375,7 +374,7 @@ export default function CartSidebar() {
         </div>
       ) : (
         <>
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="flex-1 overflow-y-auto min-h-0" onWheel={(e) => e.stopPropagation()}>
             {/* Avviso lotti */}
             {hasWarnings && (
               <div className="mx-4 mt-3 mb-0 flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded">

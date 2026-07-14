@@ -136,7 +136,7 @@ function ProductCard({
             PVP: <span className="text-gray-600 font-medium">{formatCurrency(product.retailPrice)}</span>
           </p>
           <p className="text-2xs text-gray-400">
-            Costo I.E.: <span className="text-gray-600 font-medium">{formatCurrency(product.costPrice)}</span>
+            Costo I.E.: <span className="text-gray-600 font-medium">{formatCurrency(item.unitPrice)}</span>
           </p>
         </div>
 
