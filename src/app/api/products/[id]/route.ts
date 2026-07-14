@@ -214,6 +214,17 @@ export async function PATCH(
 
     void syncProductClassification(data);
 
+    // Memorizza fantasia/lavorazione nel vocabolario per i suggerimenti futuri
+    for (const [campo, valore] of [['fantasia', (data as any).fantasia], ['lavorazione', (data as any).lavorazione]] as const) {
+      if (valore?.trim()) {
+        void prisma.vocabolarioCampo.upsert({
+          where: { campo_valore: { campo, valore: valore.trim() } },
+          update: {},
+          create: { campo, valore: valore.trim() },
+        }).catch(() => {});
+      }
+    }
+
     // Memorizza produttore → paese nella lookup table
     const produttoreVal = data.produttore?.trim() ?? product.produttore?.trim();
     const paeseVal = data.paese ?? product.paese;

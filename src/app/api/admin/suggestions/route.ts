@@ -65,10 +65,31 @@ export async function GET(req: NextRequest) {
   }
 
   if (field === 'fantasia') {
+    const vocRows = await prisma.vocabolarioCampo.findMany({
+      where: {
+        campo: 'fantasia',
+        ...(lower ? { valore: { contains: lower, mode: 'insensitive' } } : {}),
+      },
+      orderBy: { valore: 'asc' },
+    });
+    const vocValues = vocRows.map((r) => r.valore);
     const staticFiltered = (FANTASIA_OPTIONS as readonly string[])
       .filter((o) => !lower || o.toLowerCase().includes(lower));
-    const merged = [...new Set([...dbValues, ...staticFiltered])].sort();
-    return NextResponse.json({ data: merged.slice(0, 15) });
+    const merged = [...new Set([...dbValues, ...vocValues, ...staticFiltered])].sort();
+    return NextResponse.json({ data: merged.slice(0, 20) });
+  }
+
+  if (field === 'lavorazione') {
+    const vocRows = await prisma.vocabolarioCampo.findMany({
+      where: {
+        campo: 'lavorazione',
+        ...(lower ? { valore: { contains: lower, mode: 'insensitive' } } : {}),
+      },
+      orderBy: { valore: 'asc' },
+    });
+    const vocValues = vocRows.map((r) => r.valore);
+    const merged = [...new Set([...dbValues, ...vocValues])].sort();
+    return NextResponse.json({ data: merged.slice(0, 20) });
   }
 
   return NextResponse.json({ data: dbValues.slice(0, 8) });

@@ -385,6 +385,17 @@ export async function POST(req: NextRequest) {
     // Auto-link orphan bucket photos matching this product code
     void autoLinkPhotosForProduct(product.id, product.code).catch(() => {});
 
+    // Memorizza fantasia/lavorazione nel vocabolario per i suggerimenti futuri
+    for (const [campo, valore] of [['fantasia', data.fantasia], ['lavorazione', data.lavorazione]] as const) {
+      if (valore?.trim()) {
+        void prisma.vocabolarioCampo.upsert({
+          where: { campo_valore: { campo, valore: valore.trim() } },
+          update: {},
+          create: { campo, valore: valore.trim() },
+        }).catch(() => {});
+      }
+    }
+
     // Auto-translate alla creazione
     const testoPerTrad = data.description || data.name;
     void translateProduct(testoPerTrad).then((trad) =>

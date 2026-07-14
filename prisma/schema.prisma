@@ -1002,3 +1002,11 @@ model CompositingJob {
   @@map("compositing_job")
 }
 
+
+model VocabolarioCampo {
+  campo  String
+  valore String
+
+  @@id([campo, valore])
+  @@map("vocabolario_campo")
+}
