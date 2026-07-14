@@ -145,6 +145,8 @@ interface BulkEditValues {
   composizione: string;
   fantasia: string;
   lavorazione: string;
+  materialeBottoni: string;
+  nomeStampa: string;
   // Certificazioni
   certificazione1: string;
   certificazione2: string;
@@ -169,7 +171,7 @@ const EMPTY_BULK: BulkEditValues = {
   nomLinea: '', stagione: '', collezione: '', tranche: '', modello: '', dettaglio: '', forma: '', taglia: '',
   colore: '', colore2: '', colore3: '', altriColori: '', bloccoColore: '',
   temaColore: '', temaColore2: '', temaColore3: '', temaColore4: '', temaColore5: '', temaColoreBulkMode: 'sostituisci',
-  materiale1: '', materiale2: '', materiale3: '', composizione: '', fantasia: '', lavorazione: '',
+  materiale1: '', materiale2: '', materiale3: '', composizione: '', fantasia: '', lavorazione: '', materialeBottoni: '', nomeStampa: '',
   certificazione1: '', certificazione2: '', certificazione3: '',
   lotSize: '', iva: '', costPrice: '', retailPrice: '', costoIeConReso: '', costoIeSenzaReso: '',
   fasciaRicarico: '', fasciaSconto: '',
@@ -598,6 +600,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
       'nomLinea', 'stagione', 'collezione', 'tranche', 'modello', 'dettaglio', 'forma', 'taglia',
       'colore', 'colore2', 'colore3', 'altriColori', 'bloccoColore',
       'materiale1', 'materiale2', 'materiale3', 'composizione', 'fantasia', 'lavorazione',
+      'materialeBottoni', 'nomeStampa',
       'certificazione1', 'certificazione2', 'certificazione3',
       'fasciaRicarico', 'notes',
     ];
@@ -624,13 +627,27 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
     if (b.fasciaSconto.trim()) { const n = parseFloat(b.fasciaSconto); if (!isNaN(n)) payload.fasciaSconto = n; }
     if (b.isActive !== '') payload.isActive = b.isActive === 'true';
 
-    // Aggiungi mode: per-product update to fill first empty temaColore slot
+    // Aggiungi mode: per-product update to fill first empty temaColore slot.
+    // First flush any non-temaColore fields via bulk-update, then do per-product temaColore.
     if (b.temaColoreBulkMode === 'aggiungi' && b.temaColore.trim()) {
       const newTema = b.temaColore.trim();
       const selectedProds = allProducts.filter((p) => selectedIds.has(p.id));
       if (selectedProds.length === 0) { toast.error('Nessun prodotto selezionato'); return; }
       setIsBulkUpdating(true);
       try {
+        // 1. Save any other filled fields via bulk-update
+        if (Object.keys(payload).length > 0) {
+          const res = await fetch('/api/products/bulk-update', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: Array.from(selectedIds), data: payload }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Errore salvataggio campi');
+          }
+        }
+        // 2. Add temaColore to first empty slot per-product
         let updated = 0;
         await Promise.all(selectedProds.map(async (p) => {
           const slots = ['temaColore', 'temaColore2', 'temaColore3', 'temaColore4', 'temaColore5'] as const;
@@ -648,8 +665,8 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
         setSelectedIds(new Set());
         await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
         toast.success(`Tema colore aggiunto a ${updated} prodott${updated === 1 ? 'o' : 'i'}`);
-      } catch {
-        toast.error('Impossibile aggiornare i prodotti');
+      } catch (err: any) {
+        toast.error(err.message || 'Impossibile aggiornare i prodotti');
       } finally {
         setIsBulkUpdating(false);
       }
@@ -669,19 +686,18 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
         body: JSON.stringify({ ids: Array.from(selectedIds), data: payload }),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed');
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Errore salvataggio');
       }
       const { updated } = await res.json();
       setShowBulkEdit(false);
       setBulkEditValues(EMPTY_BULK);
       setSelectedIds(new Set());
-      // Se tranche era nel payload, reset del filtro tranche per mostrare i prodotti aggiornati
       if (payload.tranche !== undefined) setFilterTranche('');
       await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success(`${updated} prodott${updated === 1 ? 'o aggiornato' : 'i aggiornati'}`);
-    } catch {
-      toast.error('Impossibile aggiornare i prodotti');
+    } catch (err: any) {
+      toast.error(err.message || 'Impossibile aggiornare i prodotti');
     } finally {
       setIsBulkUpdating(false);
     }
@@ -1670,6 +1686,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
             {([
               ['materiale1', 'Materiale 1'], ['materiale2', 'Materiale 2'], ['materiale3', 'Materiale 3'],
               ['composizione', 'Composizione'], ['fantasia', 'Fantasia'], ['lavorazione', 'Lavorazione'],
+              ['materialeBottoni', 'Materiale bottoni'], ['nomeStampa', 'Nome stampa'],
             ] as [keyof BulkEditValues, string][]).map(([k, label]) => (
               <div key={k}>
                 <label className={bulkLabelClass}>{label}</label>

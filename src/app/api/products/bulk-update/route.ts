@@ -51,6 +51,8 @@ const schema = z.object({
     composizione:        strOpt,
     fantasia:            strOpt,
     lavorazione:         strOpt,
+    materialeBottoni:    strOpt,
+    nomeStampa:          strOpt,
     // Certificazioni
     certificazione1:     strOpt,
     certificazione2:     strOpt,
@@ -77,6 +79,7 @@ const ALL_STR_FIELDS = [
   'colore', 'colore2', 'colore3', 'altriColori', 'bloccoColore',
   'temaColore', 'temaColore2', 'temaColore3', 'temaColore4', 'temaColore5',
   'materiale1', 'materiale2', 'materiale3', 'composizione', 'fantasia', 'lavorazione',
+  'materialeBottoni', 'nomeStampa',
   'certificazione1', 'certificazione2', 'certificazione3',
   'fasciaRicarico', 'notes',
 ] as const;
@@ -118,9 +121,10 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ updated: count });
   } catch (err: any) {
+    console.error('[bulk-update] Error:', err);
     if (err.name === 'ZodError') {
-      return NextResponse.json({ error: 'Invalid data', details: err.errors }, { status: 400 });
+      return NextResponse.json({ error: 'Dati non validi', details: err.errors }, { status: 400 });
     }
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Errore interno del server' }, { status: 500 });
   }
 }
