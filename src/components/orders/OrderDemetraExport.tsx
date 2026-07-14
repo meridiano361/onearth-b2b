@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Database, ChevronDown } from 'lucide-react';
+import { Database, ChevronDown, HelpCircle } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Order } from '@/types';
 import toast from 'react-hot-toast';
@@ -32,10 +32,20 @@ async function markExported(orderId: string) {
   });
 }
 
+const DEMETRA_STEPS = [
+  { key: 1, text: <>Vai in <strong>Proposte di prenotazione</strong> › <strong>Proposte attive</strong> › <strong>Nuova prenotazione</strong>, compila i campi e clicca <strong>Crea prenotazione</strong> (Cliente: <strong>Prenotazioni dirette</strong>).</> },
+  { key: 2, text: <>Nella finestra successiva inserisci la destinazione e gli altri campi, poi clicca il pulsante blu <strong>Carica da file</strong>.</> },
+  { key: 3, text: <>Si apre una nuova finestra. Clicca il pulsante grigio <strong>Scegli file</strong> e seleziona il CSV o XLSX scaricato dall&apos;app.</> },
+  { key: 4, text: <>Clicca il pulsante verde <strong>Carica da file</strong>. In fondo premi <strong>Inserisci</strong> per aggiungere gli articoli (o <strong>Annulla</strong>).</> },
+  { key: 5, text: <>Clicca <strong>Conferma e invia</strong> per confermare la prenotazione.</> },
+];
+
 export default function OrderDemetraExport({ order, onExported }: Props) {
   const queryClient = useQueryClient();
   const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
+  const [helpPos, setHelpPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
+  const helpBtnRef = useRef<HTMLButtonElement>(null);
   const shortId = order.orderNumber ?? order.id.slice(0, 8).toUpperCase();
   const items = order.items ?? [];
   const tranchePresenti = [...new Set(
@@ -49,9 +59,17 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, [pos]);
 
+  useEffect(() => {
+    if (!helpPos) return;
+    function onMouseDown() { setHelpPos(null); }
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [helpPos]);
+
   function toggleMenu(e: React.MouseEvent) {
     e.stopPropagation();
     if (pos) { setPos(null); return; }
+    setHelpPos(null);
     const rect = btnRef.current!.getBoundingClientRect();
     const right = window.innerWidth - rect.right;
     // Open upward when closer to bottom half of screen
@@ -59,6 +77,19 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
       setPos({ bottom: window.innerHeight - rect.top + 4, right });
     } else {
       setPos({ top: rect.bottom + 4, right });
+    }
+  }
+
+  function toggleHelp(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (helpPos) { setHelpPos(null); return; }
+    setPos(null);
+    const rect = helpBtnRef.current!.getBoundingClientRect();
+    const right = window.innerWidth - rect.right;
+    if (rect.bottom > window.innerHeight / 2) {
+      setHelpPos({ bottom: window.innerHeight - rect.top + 4, right });
+    } else {
+      setHelpPos({ top: rect.bottom + 4, right });
     }
   }
 
@@ -124,7 +155,17 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
         />
       </button>
 
-      {/* Render outside overflow-hidden parent via portal */}
+      {/* Help button */}
+      <button
+        ref={helpBtnRef}
+        onClick={toggleHelp}
+        title="Come importare in Demetra"
+        className={`flex items-center justify-center w-6 h-[30px] rounded border transition-colors ${helpPos ? 'border-gray-400 text-gray-700 bg-gray-50' : 'border-border text-gray-400 hover:text-gray-600 hover:border-gray-400'}`}
+      >
+        <HelpCircle size={12} />
+      </button>
+
+      {/* Export dropdown portal */}
       {pos &&
         createPortal(
           <div
@@ -154,6 +195,27 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
             >
               Excel (.xlsx)
             </button>
+          </div>,
+          document.body
+        )}
+
+      {/* Help tooltip portal */}
+      {helpPos &&
+        createPortal(
+          <div
+            style={{ position: 'fixed', top: helpPos.top, bottom: helpPos.bottom, right: helpPos.right, zIndex: 9999 }}
+            className="bg-white border border-border rounded shadow-luxury p-4 w-[288px]"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Come importare in Demetra</p>
+            <ol className="space-y-2.5">
+              {DEMETRA_STEPS.map(({ key, text }) => (
+                <li key={key} className="flex gap-2.5 text-xs text-gray-600 leading-relaxed">
+                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-gray-100 text-gray-500 text-2xs font-semibold flex items-center justify-center mt-0.5">{key}</span>
+                  <span>{text}</span>
+                </li>
+              ))}
+            </ol>
           </div>,
           document.body
         )}

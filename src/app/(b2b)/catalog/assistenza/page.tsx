@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-14 (Filtro Modello; chip Novità/Continuativi anche in MODA; badge CO)
+// AGGIORNATO: 2026-07-14 (Filtro Modello; chip Novità/Continuativi anche in MODA; badge CO; istruzioni Demetra aggiornate)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -306,9 +306,10 @@ export default function AssistenzaPage() {
             <Bullet>Il pulsante <span className="font-medium">Esporta in Demetra</span> apre un menu con le opzioni: <span className="font-medium">CSV completo</span>, <span className="font-medium">CSV tranche</span> (una per ogni tranche presente nell&apos;ordine) e <span className="font-medium">Excel (.xlsx)</span>. Il menu è disponibile sia nella lista ordini sia nella pagina di modifica/anteprima.</Bullet>
             <Bullet>Dopo l&apos;export l&apos;ordine diventa <span className="font-medium">Esportato</span> e non è più modificabile.</Bullet>
             <Bullet>Puoi duplicarlo per creare un nuovo ordine basato su quello esportato.</Bullet>
-            <Bullet>Su Demetra vai in <span className="font-medium">Proposte di prenotazione</span> › <span className="font-medium">Proposte attive</span> › <span className="font-medium">Nuova prenotazione</span>, compila i campi e poi clicca su <span className="font-medium">Crea prenotazione</span> (in Cliente seleziona <span className="font-medium">Prenotazioni dirette</span>).</Bullet>
+            <Bullet>Su Demetra vai in <span className="font-medium">Proposte di prenotazione</span> › <span className="font-medium">Proposte attive</span> › <span className="font-medium">Nuova prenotazione</span>, compila i campi richiesti e poi clicca su <span className="font-medium">Crea prenotazione</span> (in Cliente seleziona <span className="font-medium">Prenotazioni dirette</span>).</Bullet>
             <Bullet>Nella finestra successiva inserisci la destinazione e compila gli altri campi necessari, poi clicca sul pulsante blu <span className="font-medium">Carica da file</span>.</Bullet>
-            <Bullet>Si apre una nuova finestra. Clicca sul pulsante grigio <span className="font-medium">Scegli file</span> e poi di nuovo sul pulsante verde <span className="font-medium">Carica da file</span> per confermare il caricamento. In fondo alla pagina premi <span className="font-medium">Inserisci</span> per aggiungere gli articoli alla prenotazione, oppure <span className="font-medium">Annulla</span> per annullare l&apos;inserimento.</Bullet>
+            <Bullet>Si apre una nuova finestra. Clicca sul pulsante grigio <span className="font-medium">Scegli file</span>. Seleziona il file CSV o XLSX scaricato dall&apos;app.</Bullet>
+            <Bullet>Clicca sul pulsante verde <span className="font-medium">Carica da file</span> per confermare il caricamento. In fondo alla pagina premi <span className="font-medium">Inserisci</span> per aggiungere gli articoli alla prenotazione, oppure <span className="font-medium">Annulla</span> per annullare l&apos;inserimento.</Bullet>
             <Bullet>Prosegui e clicca <span className="font-medium">Conferma e invia</span> per confermare in via definitiva la prenotazione.</Bullet>
           </ul>
         </section>
