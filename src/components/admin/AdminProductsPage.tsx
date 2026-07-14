@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Search, Pencil, Trash2, Eye, EyeOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Shirt, Home, Copy, Download, Columns2 } from 'lucide-react';
+import { Plus, Upload, Search, Pencil, Trash2, Eye, Power, PowerOff, X, RotateCcw, ImagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Languages, Loader2, Shirt, Home, Copy, Download, Columns2 } from 'lucide-react';
 import { CONFERENTE_OPTIONS, STAGIONE_OPTIONS } from '@/lib/productConstants';
 import { formatCurrency, capitalize } from '@/lib/utils';
 import Button from '@/components/ui/Button';
@@ -1371,7 +1371,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
                         <button onClick={() => setEditingProduct(product)} className="p-1.5 text-gray-400 hover:text-primary rounded hover:bg-cream transition-colors" title="Modifica"><Pencil size={13} /></button>
                         <button onClick={() => setDuplicatingProduct(product)} className="p-1.5 text-gray-400 hover:text-accent rounded hover:bg-cream transition-colors" title="Duplica"><Copy size={13} /></button>
                         <button onClick={() => handleToggleActive(product)} className={`p-1.5 rounded transition-colors ${product.isActive ? 'text-green-500 hover:text-gray-400 hover:bg-gray-50' : 'text-gray-300 hover:text-green-500 hover:bg-green-50'}`} title={product.isActive ? 'Disattiva' : 'Attiva'}>
-                          {product.isActive ? <Eye size={13} /> : <EyeOff size={13} />}
+                          {product.isActive ? <Power size={13} /> : <PowerOff size={13} />}
                         </button>
                         <button onClick={() => handleDelete(product)} className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors" title="Elimina"><Trash2 size={13} /></button>
                       </div>
