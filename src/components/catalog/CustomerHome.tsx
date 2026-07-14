@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { Globe, Mic, ChevronRight, Clock, Lock, X, FlaskConical } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useBranchStore, type ActiveBranch } from '@/store/branchStore';
 
@@ -44,12 +44,19 @@ type NotificationItem = {
   coloreTesto: string;
   linkUrl?: string | null;
   linkTesto?: string | null;
+  letta: boolean;
 };
 
 function NotificationPopup({ notification, onClose }: { notification: NotificationItem; onClose: () => void }) {
+  const qc = useQueryClient();
   async function handleClose() {
     onClose();
-    try { await fetch(`/api/notifications/${notification.id}/read`, { method: 'POST' }); } catch {}
+    try {
+      await fetch(`/api/notifications/${notification.id}/read`, { method: 'POST' });
+      qc.setQueryData<NotificationItem[]>(['notifications'], (prev) =>
+        prev ? prev.map((n) => (n.id === notification.id ? { ...n, letta: true } : n)) : []
+      );
+    } catch {}
   }
 
   return (
@@ -97,7 +104,8 @@ export default function CustomerHome({ canSeeModa }: { canSeeModa: boolean }) {
 
   const popupNotification = (() => {
     if (popupDismissed || !notifications?.length) return null;
-    const first = notifications[0];
+    const first = notifications.find((n) => !n.letta);
+    if (!first) return null;
     if (typeof window !== 'undefined' && sessionStorage.getItem(`notif-popup-${first.id}`) === '1') return null;
     return first;
   })();
