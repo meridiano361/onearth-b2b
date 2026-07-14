@@ -4,18 +4,17 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag, Plus, ArrowLeftRight, ChevronDown, Check } from 'lucide-react';
+import { ShoppingCart, Trash2, AlertTriangle, Send, Loader2, ShoppingBag, Plus, ArrowLeftRight, Check } from 'lucide-react';
 import Link from 'next/link';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
-import { formatCurrency, cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import { usePreview } from '@/contexts/PreviewContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { computeProjections } from './CartSummary';
 import CartItem from './CartItem';
-import CartSummary from './CartSummary';
 import { useCollectionRoutes } from '@/hooks/useCollectionRoutes';
 import type { Destinazione, Product } from '@/types';
 
@@ -36,7 +35,6 @@ export default function CartSidebar() {
   const queryClient = useQueryClient();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [itemsExpanded, setItemsExpanded] = useState(true);
   const [editingDest, setEditingDest] = useState(false);
   const [editCanaleId, setEditCanaleId] = useState('');
   const [editBudgetChoice, setEditBudgetChoice] = useState<'dest' | 'custom' | null>(null);
@@ -68,7 +66,7 @@ export default function CartSidebar() {
   const suggestions = suggestionsData?.data ?? [];
 
   const budget = budgetPersonalizzato;
-  const { costTotal } = useMemo(() => computeProjections(items), [items]);
+  const { costTotal, venditeII, margine } = useMemo(() => computeProjections(items), [items]);
   const budgetPct = budget && budget > 0 ? (costTotal / budget) * 100 : 0;
   const budgetRemaining = budget != null ? budget - costTotal : null;
 
@@ -132,20 +130,18 @@ export default function CartSidebar() {
     }
   }
 
-  async function handleCreateOrder() {
-    if (isSubmitting || isEmpty) return;
-    await submitOrder();
-  }
-
   const barColor =
     budgetPct > 100 ? 'bg-red-500' :
     budgetPct > 90  ? 'bg-orange-400' :
     budgetPct > 70  ? 'bg-yellow-400' :
     'bg-emerald-500';
 
+  const showMetrics = !!cartId && (!isEmpty || (budget != null && ordine.mostraBudget));
+
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
+
+      {/* ── 1. HEADER ──────────────────────────────────────────────── */}
       <div className="px-4 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <ShoppingCart size={15} className="text-gray-500 flex-shrink-0" />
@@ -192,7 +188,7 @@ export default function CartSidebar() {
         </div>
       </div>
 
-      {/* Destination strip — operators only */}
+      {/* ── 2. DESTINAZIONE (operators only) ───────────────────────── */}
       {isOperator && cartId && (
         <div className="px-4 py-2.5 border-b border-border bg-cream/20 flex-shrink-0">
           {!editingDest ? (
@@ -200,14 +196,9 @@ export default function CartSidebar() {
               <div className="min-w-0">
                 <p className="text-2xs text-gray-400 uppercase tracking-wide mb-0.5">Destinazione</p>
                 {canale ? (
-                  <>
-                    <p className="text-xs text-primary font-medium truncate">
-                      {canale.nome || canale.tipo}{canale.citta ? ` · ${canale.citta}` : ''}
-                    </p>
-                    {budgetPersonalizzato != null && (
-                      <p className="text-2xs text-gray-400 mt-0.5">Budget: {formatCurrency(budgetPersonalizzato)}</p>
-                    )}
-                  </>
+                  <p className="text-xs text-primary font-medium truncate">
+                    {canale.nome || canale.tipo}{canale.citta ? ` · ${canale.citta}` : ''}
+                  </p>
                 ) : (
                   <p className="text-xs text-gray-400 italic">Non impostata</p>
                 )}
@@ -284,19 +275,96 @@ export default function CartSidebar() {
         </div>
       )}
 
-      {/* Aggiungi prodotti */}
+      {/* ── 3. RIEPILOGO BUDGET / METRICHE ─────────────────────────── */}
+      {showMetrics && (
+        <div className="px-4 py-3 border-b border-border bg-cream/30 flex-shrink-0 space-y-1.5">
+
+          {/* Budget + barra progresso */}
+          {ordine.mostraBudget && budget != null && (
+            <>
+              <div className="flex justify-between text-2xs">
+                <span className="text-gray-400 uppercase tracking-wide">{ts('budgetChannel')}</span>
+                <span className="font-semibold text-primary">{formatCurrency(budget)}</span>
+              </div>
+              {ordine.mostraCosto && (
+                <div className="flex justify-between text-2xs">
+                  <span className="text-gray-400">{ts('budgetUsed')}</span>
+                  <span className="font-medium text-primary">{formatCurrency(costTotal)}</span>
+                </div>
+              )}
+              {ordine.mostraRimanente && (
+                <div className="flex justify-between text-2xs">
+                  <span className="text-gray-400">{ts('budgetRemaining')}</span>
+                  <span className={`font-medium ${budgetRemaining! < 0 ? 'text-red-500' : 'text-primary'}`}>
+                    {formatCurrency(budgetRemaining ?? 0)}
+                  </span>
+                </div>
+              )}
+              <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${barColor}`}
+                  style={{ width: `${Math.min(budgetPct, 100)}%` }}
+                />
+              </div>
+              {budgetPct > 100 && (
+                <p className="text-2xs text-red-500 font-medium">{ts('budgetExceeded', { amount: formatCurrency(costTotal - budget) })}</p>
+              )}
+              {budgetPct > 90 && budgetPct <= 100 && (
+                <p className="text-2xs text-orange-500 font-medium">{ts('budgetWarning')}</p>
+              )}
+              {!isEmpty && <div className="h-px bg-border/40 my-0.5" />}
+            </>
+          )}
+
+          {/* Righe e pezzi */}
+          {!isEmpty && (
+            <div className="flex justify-between text-2xs text-gray-400">
+              <span>{ts('lines')}: <span className="font-medium text-primary">{totalLines}</span></span>
+              <span>{ts('totalPieces')}: <span className="font-medium text-primary">{totalItems}</span></span>
+            </div>
+          )}
+
+          {/* Costo ordine */}
+          {!isEmpty && ordine.mostraCosto && (
+            <div className="flex justify-between text-2xs">
+              <span className="text-gray-400 uppercase tracking-wide">{ts('costOrder')}</span>
+              <span className="font-semibold text-primary">{formatCurrency(costTotal)}</span>
+            </div>
+          )}
+
+          {/* Vendite potenziali */}
+          {!isEmpty && ordine.mostraVendite && (
+            <div className="flex justify-between text-2xs">
+              <span className="text-gray-400 uppercase tracking-wide">{ts('potentialSales')}</span>
+              <span className="font-medium text-primary">
+                {formatCurrency(venditeII)} <span className="text-gray-400">(i.i.)</span>
+              </span>
+            </div>
+          )}
+
+          {/* Margine medio */}
+          {!isEmpty && ordine.mostraMargine && (
+            <div className="flex justify-between text-2xs">
+              <span className="text-gray-400 uppercase tracking-wide">{ts('avgMargin')}</span>
+              <span className="font-medium text-primary">{margine.toFixed(1)}%</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 4. BOTTONE "AGGIUNGI PRODOTTI" ─────────────────────────── */}
       {cartId && (
-        <div className="px-4 pt-2 pb-2 flex-shrink-0">
+        <div className="px-4 py-3 border-b border-border flex-shrink-0">
           <Link
             href={routes.catalog}
-            className="w-full py-1.5 text-xs font-medium rounded border border-dashed border-border text-gray-400 hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1.5"
+            className="w-full py-2 text-xs font-semibold rounded bg-primary text-background flex items-center justify-center gap-1.5 hover:bg-warm-darker transition-colors"
           >
-            <Plus size={11} /> Aggiungi prodotti
+            <Plus size={12} /> Aggiungi prodotti
           </Link>
         </div>
       )}
 
-      {/* Empty state */}
+      {/* ── 5. LISTA PRODOTTI + 6. SUGGERITI ───────────────────────── */}
       {isEmpty ? (
         <div className="flex-1 flex flex-col items-center justify-center py-12 px-4 text-center">
           <ShoppingCart size={32} className="text-gray-200 mb-3" />
@@ -307,104 +375,49 @@ export default function CartSidebar() {
         </div>
       ) : (
         <>
-          {/* Summary strip */}
-          <div className="px-4 py-2.5 border-b border-border bg-cream/30 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <span className="text-2xs text-gray-400">
-                {totalLines} {totalLines === 1 ? 'riga' : 'righe'} · {totalItems} pz
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-primary">{formatCurrency(costTotal)}</span>
-                <button
-                  onClick={() => setItemsExpanded((v) => !v)}
-                  className="text-gray-400 hover:text-primary transition-colors p-0.5"
-                  title={itemsExpanded ? 'Comprimi lista' : 'Espandi lista'}
-                >
-                  <ChevronDown size={13} className={cn('transition-transform duration-200', itemsExpanded ? '' : '-rotate-90')} />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Lista prodotti */}
           <div className="flex-1 overflow-y-auto min-h-0">
-            {itemsExpanded && (
-              <div>
-                {hasWarnings && (
-                  <div className="mx-4 mt-3 mb-0 flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded">
-                    <AlertTriangle size={13} className="text-amber-500 flex-shrink-0" />
-                    <p className="text-2xs text-amber-700">{t('lotWarning')}</p>
-                  </div>
-                )}
-                {items.map((item) => (
-                  <CartItem key={item.productId + '||' + (item.taglia ?? '')} item={item} />
-                ))}
+            {/* Avviso lotti */}
+            {hasWarnings && (
+              <div className="mx-4 mt-3 mb-0 flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded">
+                <AlertTriangle size={13} className="text-amber-500 flex-shrink-0" />
+                <p className="text-2xs text-amber-700">{t('lotWarning')}</p>
+              </div>
+            )}
 
-                {ordine.mostraBudget && budget != null && (
-                  <div className="px-4 pt-3 pb-0 border-t border-border bg-cream/20">
-                    <div className="flex justify-between text-2xs text-gray-400 mb-1">
-                      <span className="uppercase tracking-wide">{ts('budgetChannel')}</span>
-                      <span className="font-semibold text-primary">{formatCurrency(budget)}</span>
-                    </div>
-                    <div className="flex justify-between text-2xs text-gray-400 mb-1.5">
-                      {ordine.mostraCosto && (
-                        <span>{ts('budgetUsed')}: <span className="font-medium text-primary">{formatCurrency(costTotal)}</span></span>
-                      )}
-                      {ordine.mostraRimanente && (
-                        <span>{ts('budgetRemaining')}: <span className={`font-medium ${budgetRemaining! < 0 ? 'text-red-500' : 'text-primary'}`}>{formatCurrency(budgetRemaining ?? 0)}</span></span>
-                      )}
-                    </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
-                      <div
-                        className={`h-full rounded-full transition-all ${barColor}`}
-                        style={{ width: `${Math.min(budgetPct, 100)}%` }}
-                      />
-                    </div>
-                    {budgetPct > 100 && (
-                      <div className="text-2xs text-red-500 font-medium mb-1">
-                        {ts('budgetExceeded', { amount: formatCurrency(costTotal - budget) })}
+            {/* Prodotti nel carrello */}
+            {items.map((item) => (
+              <CartItem key={item.productId + '||' + (item.taglia ?? '')} item={item} />
+            ))}
+
+            {/* Prodotti consigliati — sempre dopo i prodotti aggiunti */}
+            {suggestions.length > 0 && (
+              <div className="px-4 pb-3 border-t border-border/60">
+                <p className="text-2xs text-gray-400 uppercase tracking-wider mt-3 mb-2">{ts('suggestions')}</p>
+                <div className="space-y-2">
+                  {suggestions.map((p) => (
+                    <div key={p.id} className="flex items-center gap-2 bg-cream/50 rounded p-2">
+                      <div className="w-10 h-10 flex-shrink-0 rounded bg-white overflow-hidden border border-border">
+                        <ProductImage src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
                       </div>
-                    )}
-                    {budgetPct > 90 && budgetPct <= 100 && (
-                      <div className="text-2xs text-orange-500 font-medium mb-1">
-                        {ts('budgetWarning')}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-2xs font-mono text-gray-400 truncate">{p.code}</p>
+                        <p className="text-xs text-primary truncate leading-snug">{p.name}</p>
+                        <p className="text-2xs text-gray-400">{formatCurrency(p.costPrice)}</p>
                       </div>
-                    )}
-                  </div>
-                )}
-
-                <CartSummary />
-
-                {suggestions.length > 0 && (
-                  <div className="px-4 pb-3 border-t border-border/60">
-                    <p className="text-2xs text-gray-400 uppercase tracking-wider mt-3 mb-2">{ts('suggestions')}</p>
-                    <div className="space-y-2">
-                      {suggestions.map((p) => (
-                        <div key={p.id} className="flex items-center gap-2 bg-cream/50 rounded p-2">
-                          <div className="w-10 h-10 flex-shrink-0 rounded bg-white overflow-hidden border border-border">
-                            <ProductImage src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-2xs font-mono text-gray-400 truncate">{p.code}</p>
-                            <p className="text-xs text-primary truncate leading-snug">{p.name}</p>
-                            <p className="text-2xs text-gray-400">{formatCurrency(p.costPrice)}</p>
-                          </div>
-                          <button
-                            onClick={() => setPendingProduct({ product: p as any, quantity: p.lotSize || 1 })}
-                            className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-primary text-white rounded hover:bg-warm-darker transition-colors"
-                          >
-                            <ShoppingBag size={11} />
-                          </button>
-                        </div>
-                      ))}
+                      <button
+                        onClick={() => setPendingProduct({ product: p as any, quantity: p.lotSize || 1 })}
+                        className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-primary text-white rounded hover:bg-warm-darker transition-colors"
+                      >
+                        <ShoppingBag size={11} />
+                      </button>
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Crea Ordine */}
+          {/* ── 7. CREA ORDINE (pinnato in fondo) ─────────────────── */}
           <div className="px-4 pt-3 pb-3 border-t border-border flex-shrink-0">
             {preview ? (
               <div className="w-full py-2 text-xs font-medium rounded flex items-center justify-center gap-2 bg-amber-100 text-amber-700 cursor-not-allowed">
@@ -416,7 +429,7 @@ export default function CartSidebar() {
               </div>
             ) : (
               <button
-                onClick={handleCreateOrder}
+                onClick={async () => { if (!isSubmitting) await submitOrder(); }}
                 disabled={isSubmitting}
                 className="w-full py-2 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker disabled:opacity-60 disabled:cursor-not-allowed"
               >
