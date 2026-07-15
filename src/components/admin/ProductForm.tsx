@@ -265,7 +265,9 @@ function extractPct(raw: string): number {
 }
 
 function buildComposizione(mat1: string, mat2: string, mat3: string): string {
-  return [mat1, mat2, mat3].filter(Boolean).join(', ');
+  const mats = [mat1, mat2, mat3].filter(Boolean);
+  if (mats.length === 1) return '100%';
+  return mats.join(', ');
 }
 
 function buildModaName(
