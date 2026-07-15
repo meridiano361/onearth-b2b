@@ -836,6 +836,15 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
       setBulkEditValues(EMPTY_BULK);
       setSelectedIds(new Set());
       if (payload.tranche !== undefined) setFilterTranche('');
+      if (payload.nomLinea !== undefined) setFilterLinea('');
+      if (payload.collezione !== undefined) setFilterCollezione('');
+      if (payload.stagione !== undefined) setFilterStagione('');
+      if (payload.colore !== undefined) setFilterColore('');
+      if (payload.gruppoMerceologico !== undefined) setFilterGruppo('');
+      if (payload.famiglia !== undefined) setFilterFamiglia('');
+      if (payload.classe !== undefined) setFilterClasse('');
+      if (payload.sottoclasse !== undefined) setFilterSottoclasse('');
+      if (payload.gruppoOmogeneo !== undefined) setFilterGruppoOmogeneo('');
       await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success(`${updated} prodott${updated === 1 ? 'o aggiornato' : 'i aggiornati'}`);
     } catch (err: any) {
