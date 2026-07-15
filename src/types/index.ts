@@ -421,6 +421,7 @@ declare module 'next-auth' {
       destinazioneId?: string;
       destinazioneName?: string;
       featureMondiEspositivi?: boolean;
+      canAccessVisual?: boolean;
     };
   }
 
@@ -448,5 +449,6 @@ declare module 'next-auth/jwt' {
     destinazioneId?: string;
     destinazioneName?: string;
     featureMondiEspositivi?: boolean;
+    canAccessVisual?: boolean;
   }
 }

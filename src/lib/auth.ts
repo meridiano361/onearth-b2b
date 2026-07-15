@@ -19,6 +19,22 @@ async function repairOperatorOrg(token: any) {
   if (op?.organizationId) token.organizationId = op.organizationId;
 }
 
+function orgCanAccessVisual(orgNome: string): boolean {
+  const n = orgNome.toLowerCase().replace(/[\s_-]/g, '');
+  return n.includes('meridiano361') || n.includes('bottegasolidale');
+}
+
+async function computeCanAccessVisual(token: any) {
+  if (token.role !== 'OPERATOR') return;
+  if (token.canAccessVisual !== undefined) return;
+  if (!token.organizationId) return;
+  const org = await prisma.organization.findUnique({
+    where: { id: token.organizationId as string },
+    select: { nome: true },
+  });
+  if (org?.nome) token.canAccessVisual = orgCanAccessVisual(org.nome);
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -74,7 +90,8 @@ export const authOptions: NextAuthOptions = {
             customerCode: '',
             organizationId: operator.organizationId,
             featureMondiEspositivi: operator.featureMondiEspositivi,
-          };
+            orgNome: operator.organization.nome,
+          } as any;
         }
 
         // No operator matched — check if any inactive operator has this email
@@ -115,9 +132,13 @@ export const authOptions: NextAuthOptions = {
         token.customerCode = user.customerCode;
         if (user.organizationId) token.organizationId = user.organizationId;
         if (user.featureMondiEspositivi !== undefined) token.featureMondiEspositivi = user.featureMondiEspositivi;
+        // Compute canAccessVisual at login from org name (already fetched)
+        if ((user as any).orgNome) token.canAccessVisual = orgCanAccessVisual((user as any).orgNome);
       }
       // Repair old OPERATOR sessions missing organizationId
       await repairOperatorOrg(token);
+      // Compute canAccessVisual for sessions that don't have it yet
+      await computeCanAccessVisual(token);
       // Allow session.update({ destinazioneId, destinazioneName }) from client
       if (trigger === 'update' && session) {
         if (session.destinazioneId !== undefined) token.destinazioneId = session.destinazioneId;
@@ -142,6 +163,7 @@ export const authOptions: NextAuthOptions = {
         if (token.canaleId && !token.destinazioneId) session.user.destinazioneId = token.canaleId as string;
         if (token.canaleName && !token.destinazioneName) session.user.destinazioneName = token.canaleName as string;
         if (token.featureMondiEspositivi !== undefined) session.user.featureMondiEspositivi = token.featureMondiEspositivi as boolean;
+        if (token.canAccessVisual !== undefined) (session.user as any).canAccessVisual = token.canAccessVisual as boolean;
       }
       return session;
     },
