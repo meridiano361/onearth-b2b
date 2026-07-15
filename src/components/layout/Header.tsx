@@ -23,14 +23,20 @@ const CASA_NAV_CONFIG: Record<string, { href: string; isActive: (p: string) => b
 };
 
 const MODA_NAV = [
-  { key: 'catalogo',  href: '/moda/catalogo',      label: 'Catalogo',  isActive: (p: string) => p.startsWith('/moda/catalogo') },
-  { key: 'preferiti', href: '/moda/preferiti',      label: 'Preferiti', isActive: (p: string) => p.startsWith('/moda/preferiti') },
-  { key: 'carrelli',  href: '/moda/carrelli',       label: 'Carrelli',  isActive: (p: string) => p.startsWith('/moda/carrelli') },
-  { key: 'ordini',    href: '/moda/ordini',         label: 'Ordini',    isActive: (p: string) => p.startsWith('/moda/ordini') },
+  { key: 'catalogo', href: '/moda/catalogo', label: 'Catalogo', isActive: (p: string) => p.startsWith('/moda/catalogo') },
+  { key: 'carrelli', href: '/moda/carrelli', label: 'Carrelli', isActive: (p: string) => p.startsWith('/moda/carrelli') },
+  { key: 'ordini',   href: '/moda/ordini',   label: 'Ordini',   isActive: (p: string) => p.startsWith('/moda/ordini') },
+];
+
+const MODA_RISORSE_ITEMS = [
+  { href: '/moda/risorse?tab=documenti', label: 'Documenti', isActive: (p: string) => p.startsWith('/moda/risorse') },
+  { href: '/moda/risorse?tab=foto',      label: 'Foto',      isActive: (p: string) => false },
+  { href: '/moda/risorse?tab=video',     label: 'Video',     isActive: (p: string) => false },
 ];
 
 const MODA_VISUAL_ITEMS = [
-  { href: '/moda/pareti', label: 'Visual Moda', isActive: (p: string) => p.startsWith('/moda/pareti') },
+  { href: '/moda/ruota-cromatica', label: 'Ruota Cromatica', isActive: (p: string) => p.startsWith('/moda/ruota-cromatica') },
+  { href: '/moda/pareti',          label: 'Esposizione',      isActive: (p: string) => p.startsWith('/moda/pareti') },
 ];
 
 interface HeaderProps {
@@ -106,33 +112,59 @@ export default function Header({ session }: HeaderProps) {
                     {label}
                   </Link>
                 ))}
-                {/* Visual dropdown — Meridiano361, Bottega Solidale e admin */}
-                {(isAdmin || mondiEspositivi) && <div className="relative group">
+                {/* Risorse dropdown — visibile a tutti */}
+                <div className="relative group">
                   <button
                     className={cn(
                       'text-xs px-3 py-1.5 rounded transition-colors',
-                      MODA_VISUAL_ITEMS.some((i) => i.isActive(pathname))
+                      pathname.startsWith('/moda/risorse')
                         ? 'text-primary font-semibold bg-cream'
                         : 'text-gray-400 hover:text-primary hover:bg-cream'
                     )}
                   >
-                    Visual
+                    Risorse
                   </button>
-                  <div className="absolute top-full left-0 hidden group-hover:block bg-white shadow-lg border border-border rounded py-1 min-w-[168px] z-50">
-                    {MODA_VISUAL_ITEMS.map((item) => (
+                  <div className="absolute top-full left-0 hidden group-hover:block bg-white shadow-lg border border-border rounded py-1 min-w-[160px] z-50">
+                    {MODA_RISORSE_ITEMS.map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
-                        className={cn(
-                          'block px-4 py-2 text-xs transition-colors',
-                          item.isActive(pathname) ? 'text-primary font-semibold bg-cream' : 'text-gray-600 hover:text-primary hover:bg-cream'
-                        )}
+                        className="block px-4 py-2 text-xs text-gray-600 hover:text-primary hover:bg-cream transition-colors"
                       >
                         {item.label}
                       </Link>
                     ))}
                   </div>
-                </div>}
+                </div>
+                {/* Visual dropdown — solo Meridiano361, Bottega Solidale e admin */}
+                {(isAdmin || mondiEspositivi) && (
+                  <div className="relative group">
+                    <button
+                      className={cn(
+                        'text-xs px-3 py-1.5 rounded transition-colors',
+                        MODA_VISUAL_ITEMS.some((i) => i.isActive(pathname))
+                          ? 'text-primary font-semibold bg-cream'
+                          : 'text-gray-400 hover:text-primary hover:bg-cream'
+                      )}
+                    >
+                      Visual
+                    </button>
+                    <div className="absolute top-full left-0 hidden group-hover:block bg-white shadow-lg border border-border rounded py-1 min-w-[168px] z-50">
+                      {MODA_VISUAL_ITEMS.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={cn(
+                            'block px-4 py-2 text-xs transition-colors',
+                            item.isActive(pathname) ? 'text-primary font-semibold bg-cream' : 'text-gray-600 hover:text-primary hover:bg-cream'
+                          )}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             : menu.ordine
                 .filter((key) => menu.items[key]?.visibile && CASA_NAV_CONFIG[key])

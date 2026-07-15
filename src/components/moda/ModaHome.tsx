@@ -91,10 +91,10 @@ export default function ModaHome() {
         <ContentCard href="/moda/risorse?tab=video"     icon={Film}      label="Video"     />
       </div>
 
-      {/* Ruota cromatica — visibile a tutti; Visual solo Meridiano361, Bottega Solidale e admin */}
+      {/* Ruota cromatica sempre; Esposizione solo per org autorizzate */}
       <div className={`grid gap-3 mt-3 ${showVisual ? 'grid-cols-2' : 'grid-cols-1'}`}>
         <NavCard href="/moda/ruota-cromatica" icon={Palette} label="Ruota Cromatica" />
-        {showVisual && <NavCard href="/moda/pareti" icon={Layout} label="Visual" />}
+        {showVisual && <NavCard href="/moda/pareti" icon={Layout} label="Esposizione" />}
       </div>
     </div>
   );
