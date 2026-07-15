@@ -341,6 +341,7 @@ model Organization {
   operatori Operator[]
   canali    Canale[]
   ordini    Order[]
+  pareti    PareteAttrezzata[]
 
   @@map("organizations")
 }
@@ -902,13 +903,15 @@ model LookProdotto {
 }
 
 model PareteAttrezzata {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   nome           String
-  collezione     String   @default("PE27")
-  ordine         Int      @default(0)
-  configurazione Json     @default("[]")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  collezione     String        @default("PE27")
+  ordine         Int           @default(0)
+  configurazione Json          @default("[]")
+  organizationId String?       @map("organization_id")
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   @@map("pareti_attrezzate")
 }
