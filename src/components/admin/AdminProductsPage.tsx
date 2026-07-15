@@ -181,6 +181,61 @@ const EMPTY_BULK: BulkEditValues = {
   notes: '', isActive: '',
 };
 
+const _BLBL = 'block text-xs font-medium text-gray-600 mb-1';
+const _BSEL = 'h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent';
+
+function BulkMaterialRow({ label, value, bioValue, onChangeValue, onChangeBio }: {
+  label: string; value: string; bioValue: string;
+  onChangeValue: (v: string) => void; onChangeBio: (v: string) => void;
+}) {
+  const parseMat = (v: string) => {
+    const m = (v || '').match(/^(\d+(?:\.\d+)?)\s*%\s+(.+)$/);
+    const raw = m ? m[2] : (v || '');
+    const canon = (MATERIALE_OPTIONS as readonly string[]).find((o) => o.toLowerCase() === raw.toLowerCase()) ?? '';
+    return { pct: m ? m[1] : '', mat: canon };
+  };
+  const init = parseMat(value);
+  const [pct, setPct] = useState(init.pct);
+  const [mat, setMat] = useState(init.mat);
+
+  function emit(p: string, m: string) {
+    if (!m) { onChangeValue(''); return; }
+    onChangeValue(p.trim() ? `${p.trim()}% ${m}` : m);
+  }
+
+  return (
+    <div className="grid grid-cols-[1fr_120px] gap-2 items-end">
+      <div>
+        <label className={_BLBL}>{label}</label>
+        <div className="flex gap-1.5">
+          <div className="relative w-[72px] flex-shrink-0">
+            <input
+              type="number" min="0" max="100" step="1"
+              value={pct}
+              onChange={(e) => { setPct(e.target.value); emit(e.target.value, mat); }}
+              placeholder="—"
+              className="w-full h-9 border border-border rounded pl-2 pr-5 text-sm focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-gray-300"
+            />
+            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">%</span>
+          </div>
+          <select value={mat} onChange={(e) => { setMat(e.target.value); emit(pct, e.target.value); }} className={`flex-1 ${_BSEL}`}>
+            <option value="">— non modificare —</option>
+            {MATERIALE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className={_BLBL}>Bio</label>
+        <select value={bioValue} onChange={(e) => onChangeBio(e.target.value)} className={`w-full ${_BSEL}`}>
+          <option value="">—</option>
+          <option value="true">Sì</option>
+          <option value="false">No</option>
+        </select>
+      </div>
+    </div>
+  );
+}
+
 function uniqueSorted(products: Product[], key: keyof Product): string[] {
   const set = new Set<string>();
   for (const p of products) {
@@ -220,7 +275,7 @@ function computeCommonBulkValues(products: Product[]): BulkEditValues {
     conferente: cStr('conferente'),
     misura: cStr('misura'),
     paese: cStr('paese'),
-    stock: (() => { const vals = ps.map((p) => p.stock); if (!vals.every((v) => v === vals[0])) return ''; return vals[0] != null ? String(vals[0]) : ''; })(),
+    stock: '',
     gruppoMerceologico: cStr('gruppoMerceologico'),
     famiglia: cStr('famiglia'),
     classe: cStr('classe'),
@@ -1695,10 +1750,6 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
               <label className={bulkLabelClass}>Misure</label>
               <input value={bulkEditValues.misura} onChange={(e) => setBulk('misura', e.target.value)} placeholder="—" className={bulkInputClass} />
             </div>
-            <div>
-              <label className={bulkLabelClass}>Stock</label>
-              <input type="number" min="0" step="1" value={bulkEditValues.stock} onChange={(e) => setBulk('stock', e.target.value)} placeholder="—" className={bulkInputClass} />
-            </div>
           </div>
           <PaeseSelect label="Paese" value={bulkEditValues.paese} onChange={(v) => setBulk('paese', v)} placeholder="— non modificare —" />
 
@@ -1787,30 +1838,10 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
           </div>
 
           <p className={bulkSectionClass}>Materiali e Tessuti</p>
-          <div className="space-y-2">
-            {([
-              ['materiale1', 'materiale1Bio', 'Materiale 1'],
-              ['materiale2', 'materiale2Bio', 'Materiale 2'],
-              ['materiale3', 'materiale3Bio', 'Materiale 3'],
-            ] as [keyof BulkEditValues, keyof BulkEditValues, string][]).map(([matKey, bioKey, label]) => (
-              <div key={matKey as string} className="grid grid-cols-[1fr_140px] gap-2">
-                <div>
-                  <label className={bulkLabelClass}>{label}</label>
-                  <select value={bulkEditValues[matKey] as string} onChange={(e) => setBulk(matKey, e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
-                    <option value="">— non modificare —</option>
-                    {MATERIALE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={bulkLabelClass}>Bio</label>
-                  <select value={bulkEditValues[bioKey] as string} onChange={(e) => setBulk(bioKey, e.target.value as any)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
-                    <option value="">—</option>
-                    <option value="true">Sì</option>
-                    <option value="false">No</option>
-                  </select>
-                </div>
-              </div>
-            ))}
+          <div className="space-y-3">
+            <BulkMaterialRow label="Materiale 1" value={bulkEditValues.materiale1} bioValue={bulkEditValues.materiale1Bio} onChangeValue={(v) => setBulk('materiale1', v)} onChangeBio={(v) => setBulk('materiale1Bio', v as '' | 'true' | 'false')} />
+            <BulkMaterialRow label="Materiale 2" value={bulkEditValues.materiale2} bioValue={bulkEditValues.materiale2Bio} onChangeValue={(v) => setBulk('materiale2', v)} onChangeBio={(v) => setBulk('materiale2Bio', v as '' | 'true' | 'false')} />
+            <BulkMaterialRow label="Materiale 3" value={bulkEditValues.materiale3} bioValue={bulkEditValues.materiale3Bio} onChangeValue={(v) => setBulk('materiale3', v)} onChangeBio={(v) => setBulk('materiale3Bio', v as '' | 'true' | 'false')} />
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={bulkLabelClass}>Composizione</label>
