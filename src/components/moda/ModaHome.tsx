@@ -5,6 +5,7 @@ import { LayoutGrid, Heart, ShoppingCart, Package2, FileText, ImageIcon, Film, C
 import { useSettings } from '@/contexts/SettingsContext';
 import { useSession } from 'next-auth/react';
 import { isAdminRole } from '@/lib/roles';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 function decodeCollezione(code: string): string {
   const prefix = code.slice(0, 2).toUpperCase();
@@ -50,6 +51,8 @@ export default function ModaHome() {
   const { collections } = useSettings();
   const { data: session } = useSession();
   const isAdmin = isAdminRole(session?.user?.role);
+  const { mondiEspositivi } = useFeatureFlags();
+  const showVisual = isAdmin || mondiEspositivi;
   const deadline = collections.moda.bookingDeadline;
   const isExpired = deadline ? new Date(deadline) < new Date() : false;
 
@@ -88,10 +91,10 @@ export default function ModaHome() {
         <ContentCard href="/moda/risorse?tab=video"     icon={Film}      label="Video"     />
       </div>
 
-      {/* Ruota cromatica — visibile a tutti; Visual solo admin */}
-      <div className={`grid gap-3 mt-3 ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      {/* Ruota cromatica — visibile a tutti; Visual solo Meridiano361, Bottega Solidale e admin */}
+      <div className={`grid gap-3 mt-3 ${showVisual ? 'grid-cols-2' : 'grid-cols-1'}`}>
         <NavCard href="/moda/ruota-cromatica" icon={Palette} label="Ruota Cromatica" />
-        {isAdmin && <NavCard href="/moda/pareti" icon={Layout} label="Visual" />}
+        {showVisual && <NavCard href="/moda/pareti" icon={Layout} label="Visual" />}
       </div>
     </div>
   );
