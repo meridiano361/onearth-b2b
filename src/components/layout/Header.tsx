@@ -11,6 +11,7 @@ import Image from 'next/image';
 import NotificationBell from '@/components/layout/NotificationBell';
 import { useSettings } from '@/contexts/SettingsContext';
 import { isAdminRole } from '@/lib/roles';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 const CASA_NAV_CONFIG: Record<string, { href: string; isActive: (p: string) => boolean }> = {
   catalogo:     { href: '/catalog/products',    isActive: (p) => p.startsWith('/catalog/products') },
@@ -45,6 +46,7 @@ export default function Header({ session }: HeaderProps) {
   const isInModa = pathname.startsWith('/moda');
   const isInCasa = pathname.startsWith('/casa') || pathname.startsWith('/catalog/');
   const isAdmin = isAdminRole(session.user.role);
+  const { mondiEspositivi } = useFeatureFlags();
 
   const modaInfo = collections.lista.find((c) => c.id === 'moda');
   const casaInfo = collections.lista.find((c) => c.id === 'casa');
@@ -104,8 +106,8 @@ export default function Header({ session }: HeaderProps) {
                     {label}
                   </Link>
                 ))}
-                {/* Visual dropdown — solo admin */}
-                {isAdmin && <div className="relative group">
+                {/* Visual dropdown — Meridiano361, Bottega Solidale e admin */}
+                {(isAdmin || mondiEspositivi) && <div className="relative group">
                   <button
                     className={cn(
                       'text-xs px-3 py-1.5 rounded transition-colors',
