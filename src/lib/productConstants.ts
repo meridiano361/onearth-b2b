@@ -110,6 +110,7 @@ export const FANTASIA_OPTIONS = [
 ] as const;
 
 export const MATERIALE_OPTIONS = [
+  'Agata',
   'Alluminio',
   'Alpaca',
   'Carta',
