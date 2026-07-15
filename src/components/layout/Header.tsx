@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
-import { LogOut, UserCircle, HelpCircle, Home, Settings } from 'lucide-react';
+import { LogOut, UserCircle, HelpCircle, Home, Settings, Heart } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -53,6 +53,8 @@ export default function Header({ session }: HeaderProps) {
   const isInCasa = pathname.startsWith('/casa') || pathname.startsWith('/catalog/');
   const isAdmin = isAdminRole(session.user.role);
   const { mondiEspositivi } = useFeatureFlags();
+  const preferitiHref = isInModa ? '/moda/preferiti' : '/catalog/preferiti';
+  const isInPreferiti = pathname.startsWith('/moda/preferiti') || pathname.startsWith('/catalog/preferiti');
 
   const modaInfo = collections.lista.find((c) => c.id === 'moda');
   const casaInfo = collections.lista.find((c) => c.id === 'casa');
@@ -167,7 +169,7 @@ export default function Header({ session }: HeaderProps) {
                 )}
               </>
             : menu.ordine
-                .filter((key) => menu.items[key]?.visibile && CASA_NAV_CONFIG[key])
+                .filter((key) => key !== 'preferiti' && menu.items[key]?.visibile && CASA_NAV_CONFIG[key])
                 .map((key) => {
                   const config = CASA_NAV_CONFIG[key];
                   const label = menu.items[key]?.label ?? key;
@@ -218,6 +220,25 @@ export default function Header({ session }: HeaderProps) {
           Home
         </span>
       </div>
+
+      {/* Preferiti — icona cuore, desktop only */}
+      {!isHome && (
+        <div className="relative group hidden md:block">
+          <Link
+            href={preferitiHref}
+            className={cn(
+              'flex p-1.5 transition-colors',
+              isInPreferiti ? 'text-primary' : 'text-gray-400 hover:text-primary'
+            )}
+            aria-label="Preferiti"
+          >
+            <Heart size={19} fill={isInPreferiti ? 'currentColor' : 'none'} />
+          </Link>
+          <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 text-[10px] font-semibold tracking-wider uppercase bg-gray-900 text-white rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+            Preferiti
+          </span>
+        </div>
+      )}
 
       {/* Notification bell */}
       <NotificationBell />
