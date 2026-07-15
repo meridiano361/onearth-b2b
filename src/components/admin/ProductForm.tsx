@@ -1027,7 +1027,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       {isModa && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Combobox label="Dettaglio *" field="dettaglio" value={watch('dettaglio') || ''} onChange={(v) => setValue('dettaglio', v)} />
-          <Combobox label="Linea *"   field="modello"   value={watch('modello') || ''}   onChange={(v) => setValue('modello', v)} />
+          <Combobox label="Linea *"   field="nomLinea"   value={watch('nomLinea') || ''}   onChange={(v) => setValue('nomLinea', v)} />
         </div>
       )}
 
