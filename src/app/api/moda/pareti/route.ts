@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireModaSession } from '@/lib/modaServer';
+import { requireModaSession, canAccessVisual } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 
-export async function GET() {
+async function guard() {
   const session = await requireModaSession();
-  if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!session) return null;
+  const ok = await canAccessVisual(session.user?.role, session.user?.organizationId);
+  return ok ? session : null;
+}
+
+export async function GET() {
+  if (!await guard()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const pareti = await prisma.pareteAttrezzata.findMany({
     where: { collezione: 'PE27' },
@@ -15,8 +21,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireModaSession();
-  if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!await guard()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
   const { nome } = body;

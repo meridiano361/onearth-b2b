@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireModaSession } from '@/lib/modaServer';
+import { requireModaSession, canAccessVisual } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+async function guard() {
   const session = await requireModaSession();
-  if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!session) return null;
+  const ok = await canAccessVisual(session.user?.role, session.user?.organizationId);
+  return ok ? session : null;
+}
+
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  if (!await guard()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const parete = await prisma.pareteAttrezzata.findUnique({ where: { id: params.id } });
   if (!parete || parete.collezione !== 'PE27') {
@@ -15,8 +21,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireModaSession();
-  if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!await guard()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
   const data: Record<string, unknown> = {};
@@ -29,8 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireModaSession();
-  if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!await guard()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   await prisma.pareteAttrezzata.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
