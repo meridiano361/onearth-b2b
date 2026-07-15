@@ -10,19 +10,23 @@ async function guard() {
   return ok ? session : null;
 }
 
-function orgFilter(session: Awaited<ReturnType<typeof guard>>) {
-  if (!session) return null;
-  if (isAdminRole(session.user.role)) return null;
-  return session.user.organizationId ?? null;
+function getOwnerId(session: NonNullable<Awaited<ReturnType<typeof guard>>>): string | null | 'empty' {
+  if (isAdminRole(session.user.role)) return null;          // null = admin-owned rows
+  return session.user.organizationId ?? 'empty';
+}
+
+function owns(parete: { organizationId: string | null }, ownerId: string | null | 'empty'): boolean {
+  if (ownerId === 'empty') return false;
+  return parete.organizationId === ownerId;
 }
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await guard();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const organizationId = orgFilter(session);
+  const ownerId = getOwnerId(session);
   const parete = await prisma.pareteAttrezzata.findUnique({ where: { id: params.id } });
-  if (!parete || parete.collezione !== 'PE27' || parete.organizationId !== organizationId) {
+  if (!parete || parete.collezione !== 'PE27' || !owns(parete, ownerId)) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
@@ -33,9 +37,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const session = await guard();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const organizationId = orgFilter(session);
+  const ownerId = getOwnerId(session);
   const existing = await prisma.pareteAttrezzata.findUnique({ where: { id: params.id } });
-  if (!existing || existing.organizationId !== organizationId) {
+  if (!existing || !owns(existing, ownerId)) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
@@ -53,9 +57,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const session = await guard();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const organizationId = orgFilter(session);
+  const ownerId = getOwnerId(session);
   const existing = await prisma.pareteAttrezzata.findUnique({ where: { id: params.id } });
-  if (!existing || existing.organizationId !== organizationId) {
+  if (!existing || !owns(existing, ownerId)) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 

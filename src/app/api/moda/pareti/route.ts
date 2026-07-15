@@ -10,21 +10,30 @@ async function guard() {
   return ok ? session : null;
 }
 
-// Admins see pareti with organizationId=null; operators see their own org's pareti.
-function orgFilter(session: Awaited<ReturnType<typeof guard>>) {
-  if (!session) return null;
-  if (isAdminRole(session.user.role)) return null; // null = admin-owned
-  return session.user.organizationId ?? null;
+type OrgScope =
+  | { type: 'admin' }                     // admin → organization_id IS NULL
+  | { type: 'org'; organizationId: string } // operatore → filtra per la sua org
+  | { type: 'empty' };                    // operatore senza org → lista vuota
+
+function getScope(session: NonNullable<Awaited<ReturnType<typeof guard>>>): OrgScope {
+  if (isAdminRole(session.user.role)) return { type: 'admin' };
+  const organizationId = session.user.organizationId;
+  if (!organizationId) return { type: 'empty' };
+  return { type: 'org', organizationId };
 }
 
 export async function GET() {
   const session = await guard();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const organizationId = orgFilter(session);
+  const scope = getScope(session);
+  if (scope.type === 'empty') return NextResponse.json({ data: [] });
 
   const pareti = await prisma.pareteAttrezzata.findMany({
-    where: { collezione: 'PE27', organizationId },
+    where: {
+      collezione: 'PE27',
+      organizationId: scope.type === 'admin' ? null : scope.organizationId,
+    },
     orderBy: { ordine: 'asc' },
   });
 
@@ -35,11 +44,14 @@ export async function POST(req: NextRequest) {
   const session = await guard();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+  const scope = getScope(session);
+  if (scope.type === 'empty') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   const body = await req.json();
   const { nome } = body;
   if (!nome?.trim()) return NextResponse.json({ error: 'Nome obbligatorio' }, { status: 400 });
 
-  const organizationId = orgFilter(session);
+  const organizationId = scope.type === 'admin' ? null : scope.organizationId;
 
   const maxOrdine = await prisma.pareteAttrezzata.aggregate({
     _max: { ordine: true },
