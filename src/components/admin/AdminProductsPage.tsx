@@ -210,7 +210,8 @@ function computeCommonBulkValues(products: Product[]): BulkEditValues {
   function cBool(key: string): '' | 'true' | 'false' {
     const vals = ps.map((p) => !!(p[key] as boolean));
     if (!vals.every((v) => v === vals[0])) return '';
-    return vals[0] ? 'true' : 'false';
+    // Only pre-fill 'true'; leave '' for false so the field is not sent to API unless user explicitly sets it
+    return vals[0] ? 'true' : '';
   }
 
   return {
@@ -219,7 +220,7 @@ function computeCommonBulkValues(products: Product[]): BulkEditValues {
     conferente: cStr('conferente'),
     misura: cStr('misura'),
     paese: cStr('paese'),
-    stock: (() => { const vals = ps.map((p) => p.stock ?? 0); return vals.every((v: number) => v === vals[0]) ? String(vals[0]) : ''; })(),
+    stock: (() => { const vals = ps.map((p) => p.stock); if (!vals.every((v) => v === vals[0])) return ''; return vals[0] != null ? String(vals[0]) : ''; })(),
     gruppoMerceologico: cStr('gruppoMerceologico'),
     famiglia: cStr('famiglia'),
     classe: cStr('classe'),
@@ -258,7 +259,7 @@ function computeCommonBulkValues(products: Product[]): BulkEditValues {
     certificazione2: cStr('certificazione2'),
     certificazione3: cStr('certificazione3'),
     lotSize: cNum('lotSize'),
-    iva: (() => { const vals = ps.map((p) => p.iva ?? 0); return vals.every((v: number) => v === vals[0]) ? String(vals[0]) : ''; })(),
+    iva: cNum('iva'),
     costPrice: cNum('costPrice'),
     retailPrice: cNum('retailPrice'),
     costoIeConReso: cNum('costoIeConReso'),
@@ -783,7 +784,8 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
       await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success(`${updated} prodott${updated === 1 ? 'o aggiornato' : 'i aggiornati'}`);
     } catch (err: any) {
-      toast.error(err.message || 'Impossibile aggiornare i prodotti');
+      console.error('[bulk-update]', err);
+      toast.error(err.message || 'Impossibile aggiornare i prodotti', { duration: 6000 });
     } finally {
       setIsBulkUpdating(false);
     }
