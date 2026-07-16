@@ -32,6 +32,13 @@ export async function requireVisualSession(): Promise<Session | null> {
 
 const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE', 'MAGAZZINO'];
 
+// Operatori individuali con accesso completo a Abbigliamento + Visual/Esposizione
+const FULL_MODA_EMAILS = new Set([
+  'roberta.beltrami@giusteterre.it',
+  'sara.fidone@pacesviluppo.org',
+  'verbania@raggioverde.com',
+]);
+
 async function getOrgName(organizationId: string | null | undefined): Promise<string> {
   if (!organizationId) return '';
   const org = await prisma.organization.findUnique({
@@ -65,6 +72,7 @@ export async function canAccessFullModa(
   if (ADMIN_ROLES.includes(role)) return true;
   const name = await getOrgName(organizationId);
   if (name.includes('meridiano361') || name.includes('bottegasolidale')) return true;
+  if (email && FULL_MODA_EMAILS.has(email.toLowerCase().trim())) return true;
   return false;
 }
 

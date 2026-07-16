@@ -24,9 +24,16 @@ function orgCanAccessVisual(orgNome: string): boolean {
   return n.includes('meridiano361') || n.includes('bottegasolidale');
 }
 
+const FULL_MODA_EMAILS = new Set([
+  'roberta.beltrami@giusteterre.it',
+  'sara.fidone@pacesviluppo.org',
+  'verbania@raggioverde.com',
+]);
+
 async function computeCanAccessVisual(token: any) {
   if (token.role !== 'OPERATOR') return;
   if (token.canAccessVisual !== undefined) return;
+  if (token.email && FULL_MODA_EMAILS.has(token.email as string)) { token.canAccessVisual = true; return; }
   if (!token.organizationId) return;
   const org = await prisma.organization.findUnique({
     where: { id: token.organizationId as string },
@@ -132,8 +139,9 @@ export const authOptions: NextAuthOptions = {
         token.customerCode = user.customerCode;
         if (user.organizationId) token.organizationId = user.organizationId;
         if (user.featureMondiEspositivi !== undefined) token.featureMondiEspositivi = user.featureMondiEspositivi;
-        // canAccessVisual: only meridiano361 and bottega solidale org operators
+        // canAccessVisual: meridiano361/bottega solidale orgs + 3 specific operators
         if ((user as any).orgNome) token.canAccessVisual = orgCanAccessVisual((user as any).orgNome);
+        if (email && FULL_MODA_EMAILS.has(email)) token.canAccessVisual = true;
       }
       // Repair old OPERATOR sessions missing organizationId
       await repairOperatorOrg(token);
