@@ -42,25 +42,35 @@ export async function isMeridiano361Org(
 
 /**
  * Returns true when the user can access Abbigliamento + Accessori persona families.
- * Granted to: admins, Meridiano361 org, La Bottega Solidale org.
+ * Granted to: admins, Meridiano361 org, La Bottega Solidale org, operators with featureMondiEspositivi=true.
  */
 export async function canAccessFullModa(
   role: string | null | undefined,
   organizationId: string | null | undefined,
+  email?: string | null,
 ): Promise<boolean> {
   if (!role) return false;
   if (ADMIN_ROLES.includes(role)) return true;
   const name = await getOrgName(organizationId);
-  return name.includes('meridiano361') || name.includes('bottegasolidale');
+  if (name.includes('meridiano361') || name.includes('bottegasolidale')) return true;
+  if (email) {
+    const op = await prisma.operator.findFirst({
+      where: { email: email.toLowerCase().trim(), featureMondiEspositivi: true },
+      select: { id: true },
+    });
+    if (op) return true;
+  }
+  return false;
 }
 
 /**
  * Returns true when the user can access the Visual/Pareti section.
- * Granted to: admins, Meridiano361 org, La Bottega Solidale org.
+ * Granted to: admins, Meridiano361 org, La Bottega Solidale org, operators with featureMondiEspositivi=true.
  */
 export async function canAccessVisual(
   role: string | null | undefined,
   organizationId: string | null | undefined,
+  email?: string | null,
 ): Promise<boolean> {
-  return canAccessFullModa(role, organizationId);
+  return canAccessFullModa(role, organizationId, email);
 }

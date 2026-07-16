@@ -9,10 +9,11 @@ export async function GET() {
 
   const role = session.user.role;
   const organizationId = session.user.organizationId;
+  const email = session.user.email;
 
   const [visual, fullModa] = await Promise.all([
-    canAccessVisual(role, organizationId),
-    canAccessFullModa(role, organizationId),
+    canAccessVisual(role, organizationId, email),
+    canAccessFullModa(role, organizationId, email),
   ]);
 
   return NextResponse.json({ canAccessVisual: visual, canAccessFullModa: fullModa });

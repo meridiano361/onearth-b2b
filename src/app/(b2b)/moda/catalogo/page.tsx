@@ -13,7 +13,7 @@ export default async function ModaCatalogoPage() {
   const session = await getServerSession(authOptions);
   if (!session || !canAccessModa(session.user?.role, session.user?.email)) redirect('/home');
 
-  const hasFull = await canAccessFullModa(session.user?.role, session.user?.organizationId);
+  const hasFull = await canAccessFullModa(session.user?.role, session.user?.organizationId, session.user?.email);
 
   return (
     <Suspense fallback={null}>

@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 async function guard() {
   const session = await requireModaSession();
   if (!session) return null;
-  const ok = await canAccessVisual(session.user?.role, session.user?.organizationId);
+  const ok = await canAccessVisual(session.user?.role, session.user?.organizationId, session.user?.email);
   return ok ? session : null;
 }
 

@@ -122,7 +122,7 @@ export async function GET(req: NextRequest) {
       where.NOT = [{ gruppoMerceologico: { equals: 'Moda', mode: 'insensitive' } }];
     } else if (!isAdmin) {
       // Only Meridiano361 org accounts see abbigliamento/accessori persona
-      const hasFull = await canAccessFullModa(session.user.role, session.user.organizationId);
+      const hasFull = await canAccessFullModa(session.user.role, session.user.organizationId, session.user.email);
       if (!hasFull) {
         if (!where.AND) where.AND = [];
         where.AND.push({ famiglia: { notIn: [...RESTRICTED_MODA_FAMIGLIE] } });

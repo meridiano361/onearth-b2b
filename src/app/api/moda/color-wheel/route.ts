@@ -19,7 +19,7 @@ export async function GET() {
   const session = await requireModaSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const hasFull = await canAccessFullModa(session.user.role, session.user.organizationId);
+  const hasFull = await canAccessFullModa(session.user.role, session.user.organizationId, session.user.email);
 
   const products = await prisma.product.findMany({
     where: {
