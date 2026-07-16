@@ -1,3 +1,17 @@
+/**
+ * Estrae nomLinea dal nome prodotto cercando la prima sequenza di parole in MAIUSCOLO.
+ * Il nome moda segue il pattern: "[Tipo] [LINEA] [resto in minuscolo]"
+ * Ritorna la linea in title case, o null se non trovata.
+ */
+export function extractLineaFromName(name: string): string | null {
+  if (!name?.trim()) return null;
+  const match = name.trim().match(/\b([A-ZÀÈÉÌÒÙ]{2,}(?:\s+[A-ZÀÈÉÌÒÙ]{2,})*)\b/);
+  if (!match) return null;
+  return match[1]
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

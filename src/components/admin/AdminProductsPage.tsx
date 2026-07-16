@@ -411,6 +411,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
   const [isModaExporting, setIsModaExporting] = useState(false);
   const [isModaImporting, setIsModaImporting] = useState(false);
   const [modaImportResult, setModaImportResult] = useState<{ created: number; updated: number; errors: { row: number; code: string; error: string }[] } | null>(null);
+  const [isDeriving, setIsDeriving] = useState(false);
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -971,6 +972,21 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
     }
   }
 
+  async function handleDeriveLinea() {
+    setIsDeriving(true);
+    try {
+      const res = await fetch('/api/admin/products/derive-linea', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Errore');
+      toast.success(`Linea derivata per ${data.updated} prodotti${data.skipped ? ` · ${data.skipped} saltati (nome non leggibile)` : ''}`);
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    } catch (err: any) {
+      toast.error(err.message ?? 'Errore durante la derivazione');
+    } finally {
+      setIsDeriving(false);
+    }
+  }
+
   async function handleModaImport(file: File) {
     setIsModaImporting(true);
     setModaImportResult(null);
@@ -1017,6 +1033,11 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
           <Button variant="secondary" icon={<Languages size={13} />} onClick={() => setShowTranslateConfirm(true)}>
             <span className="hidden sm:inline">Traduci tutti</span>
           </Button>
+          {lockedSection === 'moda' && (
+            <Button variant="secondary" icon={isDeriving ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} onClick={handleDeriveLinea} disabled={isDeriving}>
+              <span className="hidden sm:inline">Deriva Linea</span>
+            </Button>
+          )}
           <Button icon={<Plus size={13} />} onClick={() => {
             if (lockedSection) { setCreateCollectionHint(lockedSection); setShowCreateForm(true); }
             else setShowCollectionPicker(true);
