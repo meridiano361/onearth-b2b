@@ -20,8 +20,7 @@ export async function requireModaSession(): Promise<Session | null> {
 }
 
 /**
- * Guard for Visual/Esposizione/Looks API routes: stricter than requireModaSession.
- * Only Meridiano361, La Bottega Solidale, and featureMondiEspositivi operators.
+ * Guard for Visual/Esposizione/Looks API routes: only Meridiano361 and La Bottega Solidale.
  */
 export async function requireVisualSession(): Promise<Session | null> {
   const session = await getServerSession(authOptions);
@@ -71,20 +70,12 @@ export async function canAccessFullModa(
 
 /**
  * Returns true when the user can access the Visual/Pareti/Esposizione/Looks section.
- * Granted to: same as canAccessFullModa PLUS operators with featureMondiEspositivi=true.
+ * Granted to: same as canAccessFullModa (admins, Meridiano361, La Bottega Solidale).
  */
 export async function canAccessVisual(
   role: string | null | undefined,
   organizationId: string | null | undefined,
   email?: string | null,
 ): Promise<boolean> {
-  if (await canAccessFullModa(role, organizationId, email)) return true;
-  if (email) {
-    const op = await prisma.operator.findFirst({
-      where: { email: email.toLowerCase().trim(), featureMondiEspositivi: true },
-      select: { id: true },
-    });
-    if (op) return true;
-  }
-  return false;
+  return canAccessFullModa(role, organizationId, email);
 }

@@ -27,7 +27,6 @@ function orgCanAccessVisual(orgNome: string): boolean {
 async function computeCanAccessVisual(token: any) {
   if (token.role !== 'OPERATOR') return;
   if (token.canAccessVisual !== undefined) return;
-  if (token.featureMondiEspositivi === true) { token.canAccessVisual = true; return; }
   if (!token.organizationId) return;
   const org = await prisma.organization.findUnique({
     where: { id: token.organizationId as string },
@@ -133,10 +132,8 @@ export const authOptions: NextAuthOptions = {
         token.customerCode = user.customerCode;
         if (user.organizationId) token.organizationId = user.organizationId;
         if (user.featureMondiEspositivi !== undefined) token.featureMondiEspositivi = user.featureMondiEspositivi;
-        // Compute canAccessVisual at login from org name (already fetched)
+        // canAccessVisual: only meridiano361 and bottega solidale org operators
         if ((user as any).orgNome) token.canAccessVisual = orgCanAccessVisual((user as any).orgNome);
-        // Individual operator override: featureMondiEspositivi grants visual access
-        if ((user as any).featureMondiEspositivi === true) token.canAccessVisual = true;
       }
       // Repair old OPERATOR sessions missing organizationId
       await repairOperatorOrg(token);
