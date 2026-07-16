@@ -888,6 +888,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
 
   const selectClass = 'h-8 border border-border rounded px-2 text-xs text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent';
   const bulkInputClass = 'w-full h-9 border border-border rounded px-3 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-gray-300';
+  const bulkSelectClass = 'w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent';
   const bulkLabelClass = 'block text-xs font-medium text-gray-600 mb-1';
   const bulkSectionClass = 'text-2xs font-semibold tracking-widest uppercase text-gray-400 mb-2 pt-2';
 
@@ -1750,7 +1751,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
             </div>
             <div>
               <label className={bulkLabelClass}>Conferente</label>
-              <select value={bulkEditValues.conferente} onChange={(e) => setBulk('conferente', e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+              <select value={bulkEditValues.conferente} onChange={(e) => setBulk('conferente', e.target.value)} className={bulkSelectClass}>
                 <option value="">— non modificare —</option>
                 {CONFERENTE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
@@ -1764,35 +1765,66 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
 
           <p className={bulkSectionClass}>Classificazione</p>
           <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={bulkLabelClass}>Gruppo merceologico</label>
+              <select value={bulkEditValues.gruppoMerceologico} onChange={(e) => setBulk('gruppoMerceologico', e.target.value)} className={bulkSelectClass}>
+                <option value="">— non modificare —</option>
+                {gruppoOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Famiglia</label>
+              <select value={bulkEditValues.famiglia} onChange={(e) => setBulk('famiglia', e.target.value)} className={bulkSelectClass}>
+                <option value="">— non modificare —</option>
+                {famigliaOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Classe</label>
+              <select value={bulkEditValues.classe} onChange={(e) => setBulk('classe', e.target.value)} className={bulkSelectClass}>
+                <option value="">— non modificare —</option>
+                {classeOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Sottoclasse</label>
+              <select value={bulkEditValues.sottoclasse} onChange={(e) => setBulk('sottoclasse', e.target.value)} className={bulkSelectClass}>
+                <option value="">— non modificare —</option>
+                {sottoclasseOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={bulkLabelClass}>Gruppo omogeneo</label>
+              <select value={bulkEditValues.gruppoOmogeneo} onChange={(e) => setBulk('gruppoOmogeneo', e.target.value)} className={bulkSelectClass}>
+                <option value="">— non modificare —</option>
+                {gruppoOmogeneoOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
             {([
-              ['gruppoMerceologico', 'Gruppo merceologico'], ['famiglia', 'Famiglia'],
-              ['classe', 'Classe'], ['sottoclasse', 'Sottoclasse'],
-              ['gruppoOmogeneo', 'Gruppo omogeneo'], ['nomLinea', 'Linea'],
-              ['tranche', 'Tranche'], ['dettaglio', 'Dettaglio'],
-              ['forma', 'Forma'],
+              ['nomLinea', 'Linea'], ['tranche', 'Tranche'], ['dettaglio', 'Dettaglio'], ['forma', 'Forma'],
             ] as [keyof BulkEditValues, string][]).map(([k, label]) => (
-              <div key={k}>
+              <div key={k as string}>
                 <label className={bulkLabelClass}>{label}</label>
                 <input value={bulkEditValues[k] as string} onChange={(e) => setBulk(k, e.target.value)} placeholder="—" className={bulkInputClass} />
               </div>
             ))}
             <div>
               <label className={bulkLabelClass}>Stagione</label>
-              <select value={bulkEditValues.stagione} onChange={(e) => setBulk('stagione', e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+              <select value={bulkEditValues.stagione} onChange={(e) => setBulk('stagione', e.target.value)} className={bulkSelectClass}>
                 <option value="">— non modificare —</option>
                 {STAGIONE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
             </div>
             <div>
               <label className={bulkLabelClass}>Collezione</label>
-              <select value={bulkEditValues.collezione} onChange={(e) => setBulk('collezione', e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+              <select value={bulkEditValues.collezione} onChange={(e) => setBulk('collezione', e.target.value)} className={bulkSelectClass}>
                 <option value="">— non modificare —</option>
                 {collezioneOptions.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
             </div>
             <div>
               <label className={bulkLabelClass}>Taglia</label>
-              <select value={bulkEditValues.taglia} onChange={(e) => setBulk('taglia', e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+              <select value={bulkEditValues.taglia} onChange={(e) => setBulk('taglia', e.target.value)} className={bulkSelectClass}>
                 <option value="">— non modificare —</option>
                 {TAGLIA_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
@@ -1804,7 +1836,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
             {(['colore', 'colore2', 'colore3'] as const).map((k, i) => (
               <div key={k}>
                 <label className={bulkLabelClass}>Colore {i + 1}</label>
-                <select value={bulkEditValues[k]} onChange={(e) => setBulk(k, e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+                <select value={bulkEditValues[k]} onChange={(e) => setBulk(k, e.target.value)} className={bulkSelectClass}>
                   <option value="">— non modificare —</option>
                   {COLORE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>
@@ -1858,7 +1890,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
               </div>
               <div>
                 <label className={bulkLabelClass}>Fantasia</label>
-                <select value={bulkEditValues.fantasia} onChange={(e) => setBulk('fantasia', e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+                <select value={bulkEditValues.fantasia} onChange={(e) => setBulk('fantasia', e.target.value)} className={bulkSelectClass}>
                   <option value="">— non modificare —</option>
                   {FANTASIA_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>
@@ -1920,7 +1952,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
             </div>
             <div>
               <label className={bulkLabelClass}>IVA (%)</label>
-              <select value={bulkEditValues.iva} onChange={(e) => setBulk('iva', e.target.value)} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+              <select value={bulkEditValues.iva} onChange={(e) => setBulk('iva', e.target.value)} className={bulkSelectClass}>
                 <option value="">— non modificare —</option>
                 {[0, 4, 5, 10, 22].map((v) => <option key={v} value={String(v)}>{v}%</option>)}
               </select>
@@ -1934,7 +1966,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
           </div>
           <div>
             <label className={bulkLabelClass}>Stato</label>
-            <select value={bulkEditValues.isActive} onChange={(e) => setBulk('isActive', e.target.value as BulkEditValues['isActive'])} className="w-full h-9 border border-border rounded px-2 text-sm text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent">
+            <select value={bulkEditValues.isActive} onChange={(e) => setBulk('isActive', e.target.value as BulkEditValues['isActive'])} className={bulkSelectClass}>
               <option value="">— non modificare —</option>
               <option value="true">Attivo</option>
               <option value="false">Non attivo</option>
