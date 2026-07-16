@@ -104,6 +104,7 @@ function groupItems(items: ItemRow[], key: string): Map<string, ItemRow[]> {
 
 function buildGroupingSheet(ws: ExcelJS.Worksheet, items: ItemRow[], key: string) {
   COL_WIDTHS.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  [12, 13, 14].forEach(c => { ws.getColumn(c).numFmt = CURRENCY; });
   ws.views = [{ state: 'frozen', ySplit: 1 }];
 
   // Column header row
@@ -196,6 +197,7 @@ function buildGroupingSheet(ws: ExcelJS.Worksheet, items: ItemRow[], key: string
 function buildSummarySheet(ws: ExcelJS.Worksheet, items: ItemRow[]) {
   const NC_S = 5;
   [30, 12, 12, 18, 20].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  [4, 5].forEach(c => { ws.getColumn(c).numFmt = CURRENCY; });
 
   const COLS = ['Gruppo', 'Articoli', 'Pezzi', 'Costo totale', 'Vendite pot. (i.i.)'];
 
