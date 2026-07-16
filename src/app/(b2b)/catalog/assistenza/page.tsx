@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-14 (Modello→Linea; filtro Materiale aggiunto; chip Novità/Continuativi; badge CO; istruzioni Demetra; Anteprima→Modifica Anteprima)
+// AGGIORNATO: 2026-07-16 (fix costo bigiotteria in export Excel: usa costoIeConReso/costoIeSenzaReso come priorità)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,

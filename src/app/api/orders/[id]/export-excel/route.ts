@@ -65,10 +65,18 @@ type FlatProduct = {
   tranche: string | null;
   lotSize: number;
   costPrice: number;
+  costoIeConReso: number | null;
+  costoIeSenzaReso: number | null;
   retailPrice: number;
 };
 
 type ItemRow = { product: FlatProduct; quantity: number };
+
+function effectiveCost(p: FlatProduct): number {
+  return (p.costoIeConReso ?? 0) > 0 ? p.costoIeConReso!
+       : (p.costoIeSenzaReso ?? 0) > 0 ? p.costoIeSenzaReso!
+       : p.costPrice;
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -111,7 +119,7 @@ function buildGroupingSheet(ws: ExcelJS.Worksheet, items: ItemRow[], key: string
   const groups = groupItems(items, key);
 
   for (const [name, grpItems] of groups) {
-    const grpCost = grpItems.reduce((s, it) => s + it.quantity * it.product.costPrice, 0);
+    const grpCost = grpItems.reduce((s, it) => s + it.quantity * effectiveCost(it.product), 0);
     const grpPcs  = grpItems.reduce((s, it) => s + it.quantity, 0);
     const title   = `${name.toUpperCase()}  —  ${grpItems.length} ${grpItems.length === 1 ? 'articolo' : 'articoli'}  —  ${formatEur(grpCost)}`;
 
@@ -129,7 +137,8 @@ function buildGroupingSheet(ws: ExcelJS.Worksheet, items: ItemRow[], key: string
     // Product rows
     grpItems.forEach((item, idx) => {
       const bg      = idx % 2 === 0 ? C.white : C.lgray;
-      const subtotal = item.quantity * item.product.costPrice;
+      const unitCost = effectiveCost(item.product);
+      const subtotal = item.quantity * unitCost;
       const row = ws.addRow([
         item.product.code,
         item.product.name,
@@ -142,7 +151,7 @@ function buildGroupingSheet(ws: ExcelJS.Worksheet, items: ItemRow[], key: string
         item.product.sottoclasse   ?? '',
         item.product.lotSize,
         item.quantity,
-        item.product.costPrice,
+        unitCost,
         item.product.retailPrice,
         subtotal,
       ]);
@@ -171,7 +180,7 @@ function buildGroupingSheet(ws: ExcelJS.Worksheet, items: ItemRow[], key: string
   }
 
   // Grand total row (yellow)
-  const grandCost = items.reduce((s, it) => s + it.quantity * it.product.costPrice, 0);
+  const grandCost = items.reduce((s, it) => s + it.quantity * effectiveCost(it.product), 0);
   const grandPcs  = items.reduce((s, it) => s + it.quantity, 0);
   const grandCells: (string | number | null)[] = Array(NC).fill(null);
   grandCells[0]  = 'TOTALE GENERALE';
@@ -216,7 +225,7 @@ function buildSummarySheet(ws: ExcelJS.Worksheet, items: ItemRow[]) {
     for (const [name, grpItems] of groups) {
       const art    = grpItems.length;
       const pcs    = grpItems.reduce((s, it) => s + it.quantity, 0);
-      const cost   = grpItems.reduce((s, it) => s + it.quantity * it.product.costPrice, 0);
+      const cost   = grpItems.reduce((s, it) => s + it.quantity * effectiveCost(it.product), 0);
       const retail = grpItems.reduce((s, it) => s + it.quantity * it.product.retailPrice, 0);
       secCost   += cost;
       secPcs    += pcs;
@@ -245,7 +254,7 @@ function buildSummarySheet(ws: ExcelJS.Worksheet, items: ItemRow[]) {
   // Grand total
   const gArt    = items.length;
   const gPcs    = items.reduce((s, it) => s + it.quantity, 0);
-  const gCost   = items.reduce((s, it) => s + it.quantity * it.product.costPrice, 0);
+  const gCost   = items.reduce((s, it) => s + it.quantity * effectiveCost(it.product), 0);
   const gRetail = items.reduce((s, it) => s + it.quantity * it.product.retailPrice, 0);
 
   const grand = ws.addRow(['TOTALE GENERALE', gArt, gPcs, gCost, gRetail]);
@@ -291,8 +300,10 @@ export async function GET(
       .map((it) => ({
         product: {
           ...(it.product as any),
-          costPrice:   Number(it.product!.costPrice),
-          retailPrice: Number(it.product!.retailPrice),
+          costPrice:        Number(it.product!.costPrice),
+          costoIeConReso:   it.product!.costoIeConReso != null ? Number(it.product!.costoIeConReso) : null,
+          costoIeSenzaReso: it.product!.costoIeSenzaReso != null ? Number(it.product!.costoIeSenzaReso) : null,
+          retailPrice:      Number(it.product!.retailPrice),
         },
         quantity: it.quantity,
       }));
