@@ -16,6 +16,12 @@ import {
 import { MODA_COLLEZIONE } from '@/lib/modaAccess';
 import type { Product } from '@/types';
 
+function modaCost(p: Product): number {
+  const con = Number(p.costoIeConReso);
+  const senza = Number(p.costoIeSenzaReso);
+  return con > 0 ? con : senza > 0 ? senza : Number(p.costPrice);
+}
+
 function ModaProductCard({ product }: { product: Product }) {
   const { setPendingProduct, getItemQuantity } = useCartStore();
   const inCart = getItemQuantity(product.id) > 0;
@@ -49,7 +55,7 @@ function ModaProductCard({ product }: { product: Product }) {
           <p className="text-xs text-white/30 mt-0.5">{capitalize(product.colore)}</p>
         )}
         {MODA_CARD_FIELDS.showCostPrice && (
-          <p className="text-xs text-white/60 mt-1">{formatCurrency(Number(product.costPrice))}</p>
+          <p className="text-xs text-white/60 mt-1">{formatCurrency(modaCost(product))}</p>
         )}
       </div>
     </Link>
@@ -60,8 +66,8 @@ function sortProducts(products: Product[], sort: ModaSortOption): Product[] {
   return [...products].sort((a, b) => {
     if (sort === 'name_asc') return a.name.localeCompare(b.name);
     if (sort === 'name_desc') return b.name.localeCompare(a.name);
-    if (sort === 'price_asc') return Number(a.costPrice) - Number(b.costPrice);
-    if (sort === 'price_desc') return Number(b.costPrice) - Number(a.costPrice);
+    if (sort === 'price_asc') return modaCost(a) - modaCost(b);
+    if (sort === 'price_desc') return modaCost(b) - modaCost(a);
     return 0;
   });
 }

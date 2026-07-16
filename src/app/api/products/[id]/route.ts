@@ -157,6 +157,11 @@ export async function PATCH(
     const data = normalizeProductClassificationFields(rest);
     if (sizeVariants !== undefined) (data as any).sizeVariants = sizeVariants?.length ? sizeVariants : null;
 
+    // Keep costPrice in sync with costoIeSenzaReso
+    if ((data as any).costoIeSenzaReso != null && (data as any).costoIeSenzaReso > 0 && !((data as any).costPrice > 0)) {
+      (data as any).costPrice = (data as any).costoIeSenzaReso;
+    }
+
     if (data.gruppoMerceologico?.toLowerCase() === 'moda' && (!pantoneColorIds || pantoneColorIds.length === 0)) {
       return NextResponse.json({ error: 'Il Pantone è obbligatorio per i prodotti MODA' }, { status: 400 });
     }

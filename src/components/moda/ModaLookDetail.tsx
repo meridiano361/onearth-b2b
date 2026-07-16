@@ -23,7 +23,8 @@ type LookProdotto = {
   tipo: LookProductTipo;
   product: {
     id: string; code: string; name: string; description: string | null;
-    imageUrl: string | null; costPrice: number; retailPrice: number;
+    imageUrl: string | null; costPrice: number; costoIeConReso: number | null;
+    costoIeSenzaReso: number | null; retailPrice: number;
     lotSize: number; iva: number; colore: string | null; famiglia: string | null;
     nomLinea: string | null; stagione: string | null;
   };
@@ -191,7 +192,9 @@ function LookSection({
                 {lp.product.name}
               </Link>
               {lp.product.colore && <p className="text-xs text-white/30 mt-0.5">{capitalize(lp.product.colore)}</p>}
-              <p className="text-xs text-white/50 mt-0.5">{formatCurrency(Number(lp.product.costPrice))}</p>
+              <p className="text-xs text-white/50 mt-0.5">{formatCurrency(
+                (() => { const c = Number(lp.product.costoIeConReso); const s = Number(lp.product.costoIeSenzaReso); return c > 0 ? c : s > 0 ? s : lp.product.costPrice; })()
+              )}</p>
               {lp.note && <p className="text-xs text-white/30 italic mt-0.5">{lp.note}</p>}
             </div>
             <div className="flex flex-col gap-1.5 flex-shrink-0">

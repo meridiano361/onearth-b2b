@@ -29,14 +29,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const hasModaProducts = cart.items.some((i) => i.product.collezione === MODA_COLLEZIONE);
   const catalogBranch = hasModaProducts ? MODA_BRANCH_ID : CASA_BRANCH_ID;
 
-  const orderItems = cart.items.map((item) => ({
-    productId: item.productId,
-    taglia: (item as any).taglia ?? '',
-    quantity: item.quantity,
-    unitPrice: item.product.costPrice,
-    subtotal: Number(item.product.costPrice) * item.quantity,
-    mercePronta: 0,
-  }));
+  const orderItems = cart.items.map((item) => {
+    const p = item.product as any;
+    const con = Number(p.costoIeConReso);
+    const sen = Number(p.costoIeSenzaReso);
+    const unitPrice = con > 0 ? con : sen > 0 ? sen : Number(p.costPrice);
+    return {
+      productId: item.productId,
+      taglia: p.taglia ?? '',
+      quantity: item.quantity,
+      unitPrice,
+      subtotal: unitPrice * item.quantity,
+      mercePronta: 0,
+    };
+  });
 
   const totalValue = orderItems.reduce((sum, i) => sum + Number(i.unitPrice) * i.quantity, 0);
   const totalItems = orderItems.reduce((sum, i) => sum + i.quantity, 0);

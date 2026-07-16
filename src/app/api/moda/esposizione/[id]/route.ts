@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma';
 const PRODUCT_SELECT = {
   id: true, code: true, name: true,
   imageUrl: true, imageUrl2: true, imageUrl3: true,
-  costPrice: true, retailPrice: true, lotSize: true, iva: true,
+  costPrice: true, costoIeConReso: true, costoIeSenzaReso: true,
+  retailPrice: true, lotSize: true, iva: true,
   colore: true, famiglia: true, sottofamiglia: true, classe: true, descrizione: true,
 } as const;
 

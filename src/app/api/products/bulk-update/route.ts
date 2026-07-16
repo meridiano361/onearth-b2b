@@ -110,7 +110,12 @@ export async function PATCH(req: NextRequest) {
     if (normalized.costPrice !== undefined) updateData.costPrice = normalized.costPrice;
     if (normalized.retailPrice !== undefined) updateData.retailPrice = normalized.retailPrice;
     if (normalized.costoIeConReso !== undefined) updateData.costoIeConReso = normalized.costoIeConReso ?? null;
-    if (normalized.costoIeSenzaReso !== undefined) updateData.costoIeSenzaReso = normalized.costoIeSenzaReso ?? null;
+    if (normalized.costoIeSenzaReso !== undefined) {
+      updateData.costoIeSenzaReso = normalized.costoIeSenzaReso ?? null;
+      if ((normalized.costoIeSenzaReso ?? 0) > 0 && !(updateData.costPrice as number > 0)) {
+        updateData.costPrice = normalized.costoIeSenzaReso;
+      }
+    }
     if (normalized.fasciaSconto !== undefined) updateData.fasciaSconto = normalized.fasciaSconto ?? null;
     if (normalized.isActive !== undefined) updateData.isActive = normalized.isActive;
     if (normalized.materiale1Bio !== undefined) updateData.materiale1Bio = normalized.materiale1Bio;

@@ -16,7 +16,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
             select: {
               id: true, code: true, name: true, description: true,
               imageUrl: true, imageUrl2: true, imageUrl3: true, imageUrl4: true,
-              costPrice: true, retailPrice: true, lotSize: true, iva: true,
+              costPrice: true, costoIeConReso: true, costoIeSenzaReso: true,
+              retailPrice: true, lotSize: true, iva: true,
               colore: true, famiglia: true, nomLinea: true, stagione: true,
             },
           },

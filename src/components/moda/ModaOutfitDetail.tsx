@@ -20,7 +20,8 @@ import type { Product } from '@/types';
 type OutfitProduct = {
   id: string; code: string; name: string;
   imageUrl: string | null; imageUrl2: string | null; imageUrl3: string | null;
-  costPrice: number; retailPrice: number; lotSize: number; iva: number;
+  costPrice: number; costoIeConReso: number | null; costoIeSenzaReso: number | null;
+  retailPrice: number; lotSize: number; iva: number;
   colore: string | null; famiglia: string | null; sottofamiglia: string | null;
   classe: string | null; descrizione: string | null;
 };
@@ -125,7 +126,9 @@ function ZoneColumn({
                 {item.product.colore && (
                   <p className="text-2xs text-white/30 mt-0.5">{capitalize(item.product.colore)}</p>
                 )}
-                <p className="text-xs text-white/50 mt-1">{formatCurrency(Number(item.product.costPrice))}</p>
+                <p className="text-xs text-white/50 mt-1">{formatCurrency(
+                  (() => { const c = Number(item.product.costoIeConReso); const s = Number(item.product.costoIeSenzaReso); return c > 0 ? c : s > 0 ? s : item.product.costPrice; })()
+                )}</p>
               </div>
 
               <div className="absolute right-2 top-2 flex flex-col gap-1">
