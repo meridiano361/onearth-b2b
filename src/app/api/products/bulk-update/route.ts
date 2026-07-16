@@ -125,7 +125,7 @@ export async function PATCH(req: NextRequest) {
     if (updateData.nomLinea !== undefined) {
       const products = await prisma.product.findMany({
         where: { id: { in: ids } },
-        select: { id: true, name: true, nomLinea: true },
+        select: { id: true, name: true, nomLinea: true, dettaglio: true },
       });
       await prisma.$transaction(
         products.map((p) =>
@@ -133,7 +133,12 @@ export async function PATCH(req: NextRequest) {
             where: { id: p.id },
             data: {
               ...updateData,
-              name: normalizeProductName(p.name, updateData.nomLinea as string | null, p.nomLinea),
+              name: normalizeProductName(
+                p.name,
+                updateData.nomLinea as string | null,
+                p.nomLinea,
+                p.dettaglio,
+              ),
             },
           })
         )

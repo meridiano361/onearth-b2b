@@ -171,13 +171,14 @@ export async function PATCH(
     if (namePresent || nomLineaChanging) {
       const cur = await prisma.product.findUnique({
         where: { id: params.id },
-        select: { nomLinea: true, name: true },
+        select: { nomLinea: true, name: true, dettaglio: true },
       });
       const oldLinea = cur?.nomLinea ?? null;
       const newLinea = nomLineaChanging ? data.nomLinea : oldLinea;
+      const dettaglio = data.dettaglio !== undefined ? data.dettaglio : cur?.dettaglio;
       const baseName = data.name ?? cur?.name ?? '';
       if (baseName) {
-        data.name = normalizeProductName(baseName, newLinea, oldLinea);
+        data.name = normalizeProductName(baseName, newLinea, oldLinea, dettaglio);
       }
     }
 
