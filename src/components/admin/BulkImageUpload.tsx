@@ -6,6 +6,34 @@ import Button from '@/components/ui/Button';
 import toast from 'react-hot-toast';
 import { parseImageFilename, invalidReason } from '@/lib/parseImageFilename';
 
+const MAX_DIM = 1920;
+const JPEG_QUALITY = 0.85;
+
+async function compressImage(file: File): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+      const outName = file.name.replace(/\.[^.]+$/, '.jpg');
+      canvas.toBlob(
+        (blob) => resolve(blob ? new File([blob], outName, { type: 'image/jpeg' }) : file),
+        'image/jpeg',
+        JPEG_QUALITY,
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 interface FileEntry {
   file: File;
   preview: string;
@@ -33,6 +61,7 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -84,15 +113,19 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
     const validEntries = entries.filter((e) => e.valid);
     if (!validEntries.length) return;
 
+    setIsCompressing(true);
+    const compressed = await Promise.all(validEntries.map((e) => compressImage(e.file)));
+    setIsCompressing(false);
+
     setIsUploading(true);
-    setUploadProgress({ done: 0, total: validEntries.length });
+    setUploadProgress({ done: 0, total: compressed.length });
 
     try {
       // Step 1: ottieni URL firmati da Supabase (richiesta leggera, solo nomi file)
       const urlRes = await fetch('/api/admin/products/upload-urls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filenames: validEntries.map((e) => e.file.name) }),
+        body: JSON.stringify({ filenames: compressed.map((f) => f.name) }),
       });
       if (!urlRes.ok) {
         const err = await urlRes.json();
@@ -104,21 +137,21 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
 
       // Step 2: carica ogni file direttamente su Supabase (bypass Vercel)
       const completed: { filename: string; path: string }[] = [];
-      for (let i = 0; i < validEntries.length; i++) {
-        const { file } = validEntries[i];
+      for (let i = 0; i < compressed.length; i++) {
+        const file = compressed[i];
         const urlEntry = urls.find((u) => u.filename === file.name);
         if (!urlEntry) continue;
 
         const uploadRes = await fetch(urlEntry.signedUrl, {
           method: 'PUT',
           body: file,
-          headers: { 'Content-Type': file.type || 'image/jpeg' },
+          headers: { 'Content-Type': 'image/jpeg' },
         });
         if (!uploadRes.ok) {
           throw new Error(`Upload fallito per ${file.name}: ${uploadRes.status}`);
         }
         completed.push({ filename: file.name, path: urlEntry.path });
-        setUploadProgress({ done: i + 1, total: validEntries.length });
+        setUploadProgress({ done: i + 1, total: compressed.length });
       }
 
       // Step 3: aggiorna il database con i path caricati
@@ -142,6 +175,7 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
       toast.error(err.message || 'Errore durante il caricamento');
     } finally {
       setIsUploading(false);
+      setIsCompressing(false);
       setUploadProgress(null);
     }
   }
@@ -312,10 +346,12 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
         <Button variant="ghost" onClick={reset} disabled={!entries.length}>Azzera</Button>
         <Button
           onClick={handleUpload}
-          disabled={!validCount || isUploading}
-          icon={isUploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+          disabled={!validCount || isUploading || isCompressing}
+          icon={<Loader2 size={13} className={isUploading || isCompressing ? 'animate-spin' : 'hidden'} />}
         >
-          {isUploading && uploadProgress
+          {isCompressing
+            ? 'Ottimizzazione...'
+            : isUploading && uploadProgress
             ? `${uploadProgress.done}/${uploadProgress.total} foto...`
             : isUploading
             ? 'Caricamento...'
