@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import { normalizeProductClassificationFields } from '@/lib/normalizeClassification';
+import { normalizeProductClassificationFields, ensureHubeqCode } from '@/lib/normalizeClassification';
 import { normalizeProductName } from '@/lib/normalizeProductName';
 import { syncProductClassification } from '@/lib/syncClassification';
 import { translateProduct } from '@/lib/translate';
@@ -166,8 +166,15 @@ export async function PATCH(
       return NextResponse.json({ error: 'Il Pantone è obbligatorio per i prodotti MODA' }, { status: 400 });
     }
 
-    // Normalize code to uppercase (consistent with POST)
-    if (data.code) data.code = data.code.toUpperCase().trim();
+    // Normalize code to uppercase and apply HUBEQ prefix for equomercato
+    if (data.code) {
+      data.code = data.code.toUpperCase().trim();
+      // Determine conferente: from patch body or from current product
+      const conferente = (data as any).conferente !== undefined
+        ? (data as any).conferente
+        : (await prisma.product.findUnique({ where: { id: params.id }, select: { conferente: true } }))?.conferente;
+      data.code = ensureHubeqCode(data.code, conferente);
+    }
 
     // When nomLinea changes (or name is present), regenerate name with correct linea casing
     const nomLineaChanging = data.nomLinea !== undefined;

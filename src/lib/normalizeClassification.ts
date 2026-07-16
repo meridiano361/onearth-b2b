@@ -44,5 +44,17 @@ export function normalizeProductClassificationFields<T extends Record<string, an
       result[field] = (result[field] as string).trim() || null;
     }
   }
+  // Normalize gruppoMerceologico: "moda", "MODA", etc. → always "Moda"
+  if (result.gruppoMerceologico?.toLowerCase() === 'moda') {
+    result.gruppoMerceologico = 'Moda';
+  }
   return result as T;
+}
+
+/** Applies the "HUBEQ" prefix to equomercato product codes. Idempotent. */
+export function ensureHubeqCode(code: string, conferente?: string | null): string {
+  if (conferente?.trim() === 'Equomercato' && !code.startsWith('HUBEQ')) {
+    return 'HUBEQ' + code;
+  }
+  return code;
 }

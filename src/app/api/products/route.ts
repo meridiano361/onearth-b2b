@@ -7,7 +7,7 @@ import { canAccessFullModa } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
-import { normalizeProductClassificationFields } from '@/lib/normalizeClassification';
+import { normalizeProductClassificationFields, ensureHubeqCode } from '@/lib/normalizeClassification';
 import { normalizeProductName } from '@/lib/normalizeProductName';
 import { syncProductClassification } from '@/lib/syncClassification';
 import { translateProduct } from '@/lib/translate';
@@ -287,7 +287,7 @@ export async function POST(req: NextRequest) {
 
     const product = await prisma.product.create({
       data: {
-        code: data.code.toUpperCase().trim(),
+        code: ensureHubeqCode(data.code.toUpperCase().trim(), data.conferente),
         name: normalizeProductName(data.name, data.nomLinea),
         description: data.description || null,
         costPrice: effectiveCostPrice,

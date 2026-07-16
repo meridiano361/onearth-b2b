@@ -113,6 +113,7 @@ export const MATERIALE_OPTIONS = [
   'Agata',
   'Alluminio',
   'Alpaca',
+  'Canvas',
   'Carta',
   'Carta seta',
   'Cashmere',
