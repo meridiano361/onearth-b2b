@@ -84,22 +84,34 @@ function ProductRow({ product }: { product: Product }) {
       </Link>
 
       {/* Prices — desktop */}
+      {(cs.prezzoCosto || cs.pvp) && (
       <div className="hidden sm:flex items-center gap-4 flex-shrink-0 text-right">
+        {cs.prezzoCosto && (
         <div>
           <p className="text-2xs text-gray-400 uppercase tracking-wide">Costo i.e.</p>
           <p className="text-sm font-semibold text-primary">{formatCurrency(product.costPrice)}</p>
         </div>
+        )}
+        {cs.pvp && (
         <div>
           <p className="text-2xs text-gray-400 uppercase tracking-wide">PVP</p>
           <p className="text-xs text-gray-500">{formatCurrency(product.retailPrice)}</p>
         </div>
+        )}
       </div>
+      )}
 
       {/* Price — mobile only */}
+      {(cs.prezzoCosto || cs.pvp) && (
       <div className="sm:hidden flex-shrink-0 text-right">
-        <p className="text-sm font-semibold text-primary">{formatCurrency(product.costPrice)}</p>
-        <p className="text-2xs text-gray-400">{formatCurrency(product.retailPrice)}</p>
+        {cs.prezzoCosto && (
+          <p className="text-xs font-semibold text-primary">{formatCurrency(product.costPrice)}</p>
+        )}
+        {cs.pvp && (
+          <p className="text-xs text-gray-500">{formatCurrency(product.retailPrice)}</p>
+        )}
       </div>
+      )}
 
       {/* Add button */}
       <button

@@ -40,13 +40,20 @@ function LookbookCard({ product }: { product: Product }) {
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
         {/* Name + price overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-3">
+        <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-3 pr-12 sm:pr-12">
           <p className="text-white text-xs font-semibold leading-snug line-clamp-2 drop-shadow">
             {product.name}
           </p>
-          <p className="text-white/75 text-2xs mt-0.5">
-            {formatCurrency(product.costPrice)}
-          </p>
+          {(cs.prezzoCosto || cs.pvp) && (
+            <p className="text-white/80 text-2xs mt-1 flex gap-2 flex-wrap">
+              {cs.prezzoCosto && (
+                <span>Costo <span className="font-semibold">{formatCurrency(product.costPrice)}</span></span>
+              )}
+              {cs.pvp && (
+                <span>PVP <span className="font-semibold">{formatCurrency(product.retailPrice)}</span></span>
+              )}
+            </p>
+          )}
         </div>
       </Link>
 
