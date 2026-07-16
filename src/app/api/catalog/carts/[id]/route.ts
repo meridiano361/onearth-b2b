@@ -15,6 +15,7 @@ function serializeCart(cart: any) {
   return {
     ...cart,
     budgetPersonalizzato: cart.budgetPersonalizzato != null ? Number(cart.budgetPersonalizzato) : null,
+    budgetConferenti: cart.budgetConferenti ?? null,
     createdAt: cart.createdAt?.toISOString(),
     updatedAt: cart.updatedAt?.toISOString(),
     canale: cart.canale
@@ -70,6 +71,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (typeof body.notes === 'string' || body.notes === null) data.notes = body.notes;
     if (typeof body.canaleId !== 'undefined') data.canaleId = body.canaleId ?? null;
     if (typeof body.budgetPersonalizzato !== 'undefined') data.budgetPersonalizzato = body.budgetPersonalizzato ?? null;
+    if (typeof body.budgetConferenti !== 'undefined') data.budgetConferenti = body.budgetConferenti ?? null;
 
     const updated = await prisma.cart.update({
       where: { id: params.id },

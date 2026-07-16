@@ -356,6 +356,7 @@ export interface Cart {
   notes: string | null;
   canaleId: string | null;
   budgetPersonalizzato: number | null;
+  budgetConferenti: Record<string, number> | null;
   canale?: Destinazione | null;
   createdAt: string;
   updatedAt: string;

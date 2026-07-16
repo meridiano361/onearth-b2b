@@ -58,6 +58,8 @@ export default function CartsView({ collection }: CartsViewProps) {
   const [renameInput, setRenameInput] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [editingBudgetConfId, setEditingBudgetConfId] = useState<string | null>(null);
+  const [budgetConfInputs, setBudgetConfInputs] = useState<Record<string, string>>({});
 
   // Inline new destination form
   const [showNewDest, setShowNewDest] = useState(false);
@@ -221,6 +223,28 @@ export default function CartsView({ collection }: CartsViewProps) {
       toast.error('Errore rinomina');
     } finally {
       setRenamingId(null);
+    }
+  }
+
+  async function handleSaveBudgetConferenti(cart: Cart) {
+    const parsed: Record<string, number> = {};
+    for (const [k, v] of Object.entries(budgetConfInputs)) {
+      const n = parseFloat(v);
+      if (!isNaN(n) && n > 0) parsed[k] = n;
+    }
+    try {
+      const res = await fetch(`/api/catalog/carts/${cart.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ budgetConferenti: Object.keys(parsed).length > 0 ? parsed : null }),
+      });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: ['my-carts'] });
+      toast.success('Budget per conferente salvato');
+    } catch {
+      toast.error('Errore salvataggio budget');
+    } finally {
+      setEditingBudgetConfId(null);
     }
   }
 
@@ -498,15 +522,71 @@ export default function CartsView({ collection }: CartsViewProps) {
                         confMap.set(conf, { count: e.count + 1, pz: e.pz + item.quantity, cost: e.cost + effectivePrice(item.product) * item.quantity });
                       }
                       if (confMap.size <= 1) return null;
+                      const isEditingBudget = editingBudgetConfId === cart.id;
+                      const budgetConf = cart.budgetConferenti ?? {};
                       return (
-                        <div className="mt-2 pt-2 border-t border-border/40 space-y-0.5">
-                          <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Costo per conferente</p>
-                          {[...confMap.entries()].map(([conf, data]) => (
-                            <div key={conf} className="flex items-center justify-between">
-                              <span className="text-xs text-primary font-medium">{conf}</span>
-                              <span className="text-2xs text-gray-500">{data.count} art. · {data.pz} pz · <span className="font-semibold text-primary">{formatCurrency(data.cost)}</span></span>
+                        <div className="mt-2 pt-2 border-t border-border/40">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider">Costo per conferente</p>
+                            {!isEditingBudget && (
+                              <button
+                                onClick={() => {
+                                  const init: Record<string, string> = {};
+                                  confMap.forEach((_, conf) => { init[conf] = budgetConf[conf] != null ? String(budgetConf[conf]) : ''; });
+                                  setBudgetConfInputs(init);
+                                  setEditingBudgetConfId(cart.id);
+                                }}
+                                className="text-2xs text-gray-400 hover:text-primary transition-colors flex items-center gap-0.5"
+                              >
+                                <Pencil size={9} /> Budget
+                              </button>
+                            )}
+                          </div>
+                          {isEditingBudget ? (
+                            <div className="space-y-1.5">
+                              {[...confMap.entries()].map(([conf]) => (
+                                <div key={conf} className="flex items-center gap-2">
+                                  <span className="text-xs text-primary font-medium flex-1 truncate">{conf}</span>
+                                  <div className="relative flex-shrink-0">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-2xs">€</span>
+                                    <input
+                                      type="number" min="0" step="50"
+                                      value={budgetConfInputs[conf] ?? ''}
+                                      onChange={e => setBudgetConfInputs(p => ({ ...p, [conf]: e.target.value }))}
+                                      placeholder="—"
+                                      className="w-24 pl-5 pr-2 h-7 border border-border rounded text-xs text-primary focus:outline-none focus:border-accent bg-white"
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                              <div className="flex gap-2 pt-1">
+                                <button onClick={() => setEditingBudgetConfId(null)} className="flex-1 py-1 text-2xs border border-border rounded text-gray-500 hover:bg-cream transition-colors">Annulla</button>
+                                <button onClick={() => handleSaveBudgetConferenti(cart)} className="flex-1 py-1 text-2xs bg-primary text-background rounded hover:bg-warm-darker transition-colors flex items-center justify-center gap-1"><Check size={9} /> Salva</button>
+                              </div>
                             </div>
-                          ))}
+                          ) : (
+                            <div className="space-y-0.5">
+                              {[...confMap.entries()].map(([conf, data]) => {
+                                const bud = budgetConf[conf];
+                                const over = bud != null && data.cost > bud;
+                                return (
+                                  <div key={conf} className="flex items-center justify-between">
+                                    <span className="text-xs text-primary font-medium">{conf}</span>
+                                    <span className="text-2xs text-gray-500">
+                                      {data.count} art. · {data.pz} pz ·{' '}
+                                      {bud != null ? (
+                                        <span className={`font-semibold ${over ? 'text-red-500' : 'text-primary'}`}>
+                                          {formatCurrency(data.cost)} / {formatCurrency(bud)}
+                                        </span>
+                                      ) : (
+                                        <span className="font-semibold text-primary">{formatCurrency(data.cost)}</span>
+                                      )}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })()}

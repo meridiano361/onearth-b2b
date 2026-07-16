@@ -15,6 +15,7 @@ function serializeCart(cart: any) {
   return {
     ...cart,
     budgetPersonalizzato: cart.budgetPersonalizzato != null ? Number(cart.budgetPersonalizzato) : null,
+    budgetConferenti: cart.budgetConferenti ?? null,
     createdAt: cart.createdAt?.toISOString(),
     updatedAt: cart.updatedAt?.toISOString(),
     canale: cart.canale
