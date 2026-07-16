@@ -848,7 +848,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
     if (isModaProduct) {
       const missing: string[] = [];
       if (!(v as any).dettaglio?.trim())  missing.push('Dettaglio');
-      if (!(v as any).modello?.trim())    missing.push('Linea');
+      if (!v.nomLinea?.trim())             missing.push('Linea');
       if (!(v as any).materiale1?.trim()) missing.push('Materiale 1');
       if (!v.colore?.trim())              missing.push('Colore');
       if (v.famiglia === 'Abbigliamento' && sizeVariants.length === 0 && !(v as any).taglia?.trim()) missing.push('Taglia');

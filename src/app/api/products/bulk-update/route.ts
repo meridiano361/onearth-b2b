@@ -5,6 +5,7 @@ import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { normalizeProductClassificationFields } from '@/lib/normalizeClassification';
+import { normalizeProductName } from '@/lib/normalizeProductName';
 
 const strOpt = z.string().optional().nullable();
 const numOpt = z.coerce.number().optional().nullable();
@@ -118,6 +119,23 @@ export async function PATCH(req: NextRequest) {
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+    }
+
+    // When nomLinea changes, regenerate each product's name to uppercase the linea part
+    if (updateData.nomLinea !== undefined) {
+      const products = await prisma.product.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, name: true },
+      });
+      await prisma.$transaction(
+        products.map((p) =>
+          prisma.product.update({
+            where: { id: p.id },
+            data: { ...updateData, name: normalizeProductName(p.name, updateData.nomLinea as string | null) },
+          })
+        )
+      );
+      return NextResponse.json({ updated: products.length });
     }
 
     const { count } = await prisma.product.updateMany({
