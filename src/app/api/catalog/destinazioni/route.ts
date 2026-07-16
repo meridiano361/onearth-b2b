@@ -32,10 +32,18 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Customers: fetch their own destinations
+  if (session.user.role === 'CUSTOMER') {
+    const canali = await prisma.canale.findMany({
+      where: { customerId: session.user.id },
+      orderBy: { createdAt: 'asc' },
+    });
+    return NextResponse.json({ data: canali.map(serialize) });
+  }
+
   const preview = getPreviewFromSession(session);
   let organizationId = preview?.organizationId ?? session.user.organizationId;
 
-  // Fallback for old OPERATOR sessions missing organizationId
   if (!organizationId && session.user.role === 'OPERATOR') {
     const op = await prisma.operator.findUnique({ where: { id: session.user.id }, select: { organizationId: true } });
     organizationId = op?.organizationId;
@@ -61,18 +69,32 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Resolve organizationId — fallback to DB lookup for old sessions missing the field
+  const body = await req.json();
+  const data = createSchema.parse(body);
+  const nome = data.nome?.trim() || buildNome(data.tipo, data.citta);
+
+  // Customers: create destination owned by the customer
+  if (session.user.role === 'CUSTOMER') {
+    const canale = await prisma.canale.create({
+      data: {
+        nome,
+        tipo: data.tipo,
+        citta: data.citta?.trim() || null,
+        indirizzo: data.indirizzo?.trim() || null,
+        budget: data.budget ?? null,
+        customerId: session.user.id,
+      },
+    });
+    return NextResponse.json({ data: serialize(canale) }, { status: 201 });
+  }
+
+  // Operators / admins: resolve organizationId
   let organizationId = session.user.organizationId;
   if (!organizationId && session.user.role === 'OPERATOR') {
     const op = await prisma.operator.findUnique({ where: { id: session.user.id }, select: { organizationId: true } });
     organizationId = op?.organizationId;
   }
   if (!organizationId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-
-  const body = await req.json();
-  const data = createSchema.parse(body);
-
-  const nome = data.nome?.trim() || buildNome(data.tipo, data.citta);
 
   const canale = await prisma.canale.create({
     data: {

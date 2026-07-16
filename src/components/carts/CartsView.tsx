@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
   AlertCircle, Check, ChevronDown, ChevronUp,
-  Loader2, Pencil, Plus, Send, ShoppingCart, Trash2, X,
+  Loader2, MapPin, Pencil, Plus, Send, ShoppingCart, Trash2, X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn, formatCurrency, isValidLotQuantity } from '@/lib/utils';
@@ -16,6 +16,8 @@ import { ProductImage } from '@/components/ui/ProductImage';
 import QuantitySelector from '@/components/catalog/QuantitySelector';
 import { getCollectionRoutes } from '@/lib/collectionRoutes';
 import type { Cart, Destinazione } from '@/types';
+
+const CANAL_TIPI = ['BOTTEGA', 'EMPORIO', 'DISTRETTO', 'STORE', 'OUTLET', 'TENDONE', 'FIERA', 'ONLINE', 'ALTRO'] as const;
 
 interface CartsViewProps {
   collection: string; // 'moda' | 'casa'
@@ -43,7 +45,6 @@ export default function CartsView({ collection }: CartsViewProps) {
   const { data: destinazioni = [] } = useQuery<Destinazione[]>({
     queryKey: ['destinazioni'],
     queryFn: () => fetch('/api/catalog/destinazioni').then(r => r.json()).then(d => d.data ?? []),
-    enabled: isOperator,
   });
 
   const [newName, setNewName] = useState('');
@@ -58,9 +59,15 @@ export default function CartsView({ collection }: CartsViewProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
 
+  // Inline new destination form
+  const [showNewDest, setShowNewDest] = useState(false);
+  const [newDestNome, setNewDestNome] = useState('');
+  const [newDestTipo, setNewDestTipo] = useState<typeof CANAL_TIPI[number]>('BOTTEGA');
+  const [newDestCitta, setNewDestCitta] = useState('');
+
   // Auto-fill cart name from selected destination
   useEffect(() => {
-    if (newCanaleId) {
+    if (newCanaleId && newCanaleId !== '__new__') {
       const dest = destinazioni.find(d => d.id === newCanaleId);
       if (dest && !newName) setNewName(dest.nome || dest.tipo);
     }
@@ -76,9 +83,26 @@ export default function CartsView({ collection }: CartsViewProps) {
     setNewCanaleId('');
     setNewBudgetChoice(null);
     setNewBudgetCustom('');
+    setShowNewDest(false);
+    setNewDestNome('');
+    setNewDestTipo('BOTTEGA');
+    setNewDestCitta('');
   }
 
-  const canCreate = !!newName.trim() && (!isOperator || !!newCanaleId);
+  function handleDestSelect(val: string) {
+    setNewBudgetChoice(null);
+    setNewBudgetCustom('');
+    if (val === '__new__') {
+      setNewCanaleId('__new__');
+      setShowNewDest(true);
+    } else {
+      setNewCanaleId(val);
+      setShowNewDest(false);
+    }
+  }
+
+  // Cart can be created when name is set; for operators destination is still required
+  const canCreate = !!newName.trim() && (!isOperator || (!!newCanaleId && newCanaleId !== '__new__') || showNewDest);
 
   async function handleConvert(cartId: string) {
     setConvertingId(cartId);
@@ -106,6 +130,29 @@ export default function CartsView({ collection }: CartsViewProps) {
     if (!canCreate) return;
     setCreating(true);
     try {
+      let resolvedCanaleId = newCanaleId !== '__new__' ? newCanaleId : null;
+
+      // Create new destination inline if needed
+      if (showNewDest) {
+        const destRes = await fetch('/api/catalog/destinazioni', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome: newDestNome.trim() || undefined,
+            tipo: newDestTipo,
+            citta: newDestCitta.trim() || undefined,
+          }),
+        });
+        const destBody = await destRes.json();
+        if (!destRes.ok) throw new Error(destBody.error ?? 'Errore creazione destinazione');
+        resolvedCanaleId = destBody.data.id;
+        queryClient.invalidateQueries({ queryKey: ['destinazioni'] });
+        // Auto-fill cart name from new destination if still empty
+        if (!newName.trim()) {
+          setNewName(destBody.data.nome);
+        }
+      }
+
       let budgetFinal: number | null = null;
       if (newBudgetChoice === 'dest' && newDestBudget != null) {
         budgetFinal = newDestBudget;
@@ -115,9 +162,9 @@ export default function CartsView({ collection }: CartsViewProps) {
       }
 
       const body: any = { name: newName.trim(), collectionId: collection };
-      if (isOperator && newCanaleId) {
-        body.canaleId = newCanaleId;
-        if (budgetFinal != null) body.budgetPersonalizzato = budgetFinal;
+      if (resolvedCanaleId) {
+        body.canaleId = resolvedCanaleId;
+        if (isOperator && budgetFinal != null) body.budgetPersonalizzato = budgetFinal;
       }
 
       const res = await fetch('/api/catalog/carts', {
@@ -232,23 +279,66 @@ export default function CartsView({ collection }: CartsViewProps) {
         <div className="mb-4 bg-white border border-border rounded p-4 space-y-3">
           <p className="text-xs font-semibold text-primary">Nuovo carrello</p>
 
-          {/* Destination — operators only */}
-          {isOperator && (
-            <div>
-              <label className="block text-2xs text-gray-500 uppercase tracking-wide mb-1">Destinazione *</label>
-              <select
-                value={newCanaleId}
-                onChange={e => { setNewCanaleId(e.target.value); setNewBudgetChoice(null); setNewBudgetCustom(''); }}
-                className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent bg-white"
-                autoFocus
-              >
-                <option value="">— Scegli destinazione —</option>
-                {destinazioni.map(d => (
-                  <option key={d.id} value={d.id}>
-                    {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
-                  </option>
-                ))}
-              </select>
+          {/* Destination picker */}
+          <div>
+            <label className="block text-2xs text-gray-500 uppercase tracking-wide mb-1">
+              Destinazione{isOperator ? ' *' : ''}
+            </label>
+            <select
+              value={newCanaleId}
+              onChange={e => handleDestSelect(e.target.value)}
+              className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent bg-white"
+              autoFocus
+            >
+              <option value="">— {destinazioni.length === 0 ? 'Nessuna destinazione salvata' : 'Scegli destinazione'} —</option>
+              {destinazioni.map(d => (
+                <option key={d.id} value={d.id}>
+                  {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
+                </option>
+              ))}
+              <option value="__new__">+ Crea nuova destinazione</option>
+            </select>
+          </div>
+
+          {/* Inline new destination form */}
+          {showNewDest && (
+            <div className="border border-accent/30 rounded-lg p-3 space-y-2.5 bg-accent/5">
+              <div className="flex items-center gap-1.5 mb-1">
+                <MapPin size={12} className="text-accent flex-shrink-0" />
+                <p className="text-2xs font-semibold text-accent uppercase tracking-wide">Nuova destinazione</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-2xs text-gray-500 mb-1">Tipo</label>
+                  <select
+                    value={newDestTipo}
+                    onChange={e => setNewDestTipo(e.target.value as typeof CANAL_TIPI[number])}
+                    className="w-full h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none focus:ring-1 focus:ring-accent bg-white"
+                  >
+                    {CANAL_TIPI.map(t => <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-2xs text-gray-500 mb-1">Città</label>
+                  <input
+                    type="text"
+                    value={newDestCitta}
+                    onChange={e => setNewDestCitta(e.target.value)}
+                    placeholder="es. Milano"
+                    className="w-full h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-2xs text-gray-500 mb-1">Nome (opzionale)</label>
+                <input
+                  type="text"
+                  value={newDestNome}
+                  onChange={e => setNewDestNome(e.target.value)}
+                  placeholder={newDestCitta ? `${newDestTipo} — ${newDestCitta}` : newDestTipo}
+                  className="w-full h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+              </div>
             </div>
           )}
 
@@ -258,13 +348,13 @@ export default function CartsView({ collection }: CartsViewProps) {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && canCreate) handleCreate(); if (e.key === 'Escape') resetCreateForm(); }}
-            autoFocus={!isOperator}
-            placeholder="es. Natale 2026, Riassortimento Milano…"
+            autoFocus={false}
+            placeholder="Nome carrello (es. Natale 2026, Riassortimento…)"
             className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent"
           />
 
-          {/* Budget — operators only */}
-          {isOperator && newCanaleId && (
+          {/* Budget — operators only, when existing destination selected */}
+          {isOperator && newCanaleId && newCanaleId !== '__new__' && (
             <div>
               <label className="block text-2xs text-gray-500 uppercase tracking-wide mb-2">Budget ordine</label>
               {newDestBudget != null ? (

@@ -312,6 +312,7 @@ model Customer {
 
   orders                 Order[]
   carts                  Cart[]
+  canali                 Canale[]
   customerNotifReads     CustomerNotificationRead[]
   surveyRecipients       SurveyRecipient[]
   surveyResponses        SurveyResponse[]
@@ -423,11 +424,13 @@ model Canale {
   citta          String?
   indirizzo      String?
   budget         Float?
-  organizationId String
+  organizationId String?
+  customerId     String?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer?     @relation(fields: [customerId], references: [id], onDelete: Cascade)
   ordini       Order[]
   carts        Cart[]
 

@@ -27,17 +27,20 @@ function serialize(c: any) {
   };
 }
 
-async function resolveCanale(id: string, orgId: string) {
+async function resolveCanale(id: string, session: any) {
+  if (session.user.role === 'CUSTOMER') {
+    return prisma.canale.findFirst({ where: { id, customerId: session.user.id } });
+  }
+  const orgId = session.user.organizationId;
+  if (!orgId) return null;
   return prisma.canale.findFirst({ where: { id, organizationId: orgId } });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user.organizationId) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const existing = await resolveCanale(params.id, session.user.organizationId);
+  const existing = await resolveCanale(params.id, session);
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const body = await req.json();
@@ -63,11 +66,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user.organizationId) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const existing = await resolveCanale(params.id, session.user.organizationId);
+  const existing = await resolveCanale(params.id, session);
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   await prisma.$transaction([
