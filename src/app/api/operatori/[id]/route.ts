@@ -5,6 +5,7 @@ import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { titleCase } from '@/lib/normalizeClassification';
 
 const updateSchema = z.object({
   nome: z.string().min(1).optional(),
@@ -30,6 +31,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     updateData.passwordHash = await bcrypt.hash(data.newPassword, 12);
   }
   if (data.email) updateData.email = data.email.toLowerCase();
+  if (data.nome) updateData.nome = titleCase(data.nome);
+  if (data.cognome) updateData.cognome = titleCase(data.cognome);
 
   const operator = await prisma.operator.update({
     where: { id: params.id },

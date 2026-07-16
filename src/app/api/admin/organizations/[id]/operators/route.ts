@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { sendCredenziali } from '@/lib/email';
+import { titleCase } from '@/lib/normalizeClassification';
 
 const createSchema = z.object({
   nome: z.string().min(1),
@@ -38,8 +39,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const passwordHash = await bcrypt.hash(data.password, 12);
     const operator = await prisma.operator.create({
       data: {
-        nome: data.nome.trim(),
-        cognome: data.cognome.trim(),
+        nome: titleCase(data.nome),
+        cognome: titleCase(data.cognome),
         email,
         telefono: data.telefono ? data.telefono.replace(/\s/g, '') : null,
         ruolo: data.ruolo || null,
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (data.inviaMail) {
       const org = await prisma.organization.findUnique({ where: { id: params.id }, select: { nome: true } });
       const result = await sendCredenziali({
-        nome: data.nome.trim(),
+        nome: titleCase(data.nome),
         email,
         password: data.password,
         orgNome: org?.nome ?? '',

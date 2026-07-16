@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
+import { titleCase } from '@/lib/normalizeClassification';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const nome = typeof body.nome === 'string' ? body.nome.trim() : '';
+    const nome = typeof body.nome === 'string' ? titleCase(body.nome) : '';
     if (!nome) {
       return NextResponse.json({ error: 'Nome obbligatorio' }, { status: 400 });
     }
