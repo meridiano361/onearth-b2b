@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireModaSession } from '@/lib/modaServer';
+import { requireVisualSession } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 import type { OutfitZona } from '@/lib/modaEsposizioneConfig';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireModaSession();
+  const session = await requireVisualSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireModaSession();
+  const session = await requireVisualSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { searchParams } = new URL(req.url);

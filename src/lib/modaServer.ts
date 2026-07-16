@@ -19,6 +19,18 @@ export async function requireModaSession(): Promise<Session | null> {
   return session;
 }
 
+/**
+ * Guard for Visual/Esposizione/Looks API routes: stricter than requireModaSession.
+ * Only Meridiano361, La Bottega Solidale, and featureMondiEspositivi operators.
+ */
+export async function requireVisualSession(): Promise<Session | null> {
+  const session = await getServerSession(authOptions);
+  if (!session) return null;
+  const allowed = await canAccessVisual(session.user?.role, session.user?.organizationId, session.user?.email);
+  if (!allowed) return null;
+  return session;
+}
+
 const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'COMMERCIALE', 'MAGAZZINO'];
 
 async function getOrgName(organizationId: string | null | undefined): Promise<string> {

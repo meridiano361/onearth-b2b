@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireModaSession } from '@/lib/modaServer';
+import { requireVisualSession } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireModaSession();
+  const session = await requireVisualSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const look = await prisma.look.findUnique({
@@ -33,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireModaSession();
+  const session = await requireVisualSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
@@ -49,7 +49,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await requireModaSession();
+  const session = await requireVisualSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   await prisma.look.delete({ where: { id: params.id } });

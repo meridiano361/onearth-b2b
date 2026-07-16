@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireModaSession } from '@/lib/modaServer';
+import { requireVisualSession } from '@/lib/modaServer';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
-  const session = await requireModaSession();
+  const session = await requireVisualSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const looks = await prisma.look.findMany({
@@ -29,7 +29,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireModaSession();
+  const session = await requireVisualSession();
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
