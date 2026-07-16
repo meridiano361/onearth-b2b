@@ -847,7 +847,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
 
     if (isModaProduct) {
       const missing: string[] = [];
-      if (!(v as any).dettaglio?.trim())  missing.push('Dettaglio');
+      if (!(v as any).dettaglio?.trim())  missing.push('Tipo');
       if (!v.nomLinea?.trim())             missing.push('Linea');
       if (!(v as any).materiale1?.trim()) missing.push('Materiale 1');
       if (!v.colore?.trim())              missing.push('Colore');
@@ -1023,10 +1023,10 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
         </div>
       )}
 
-      {/* Moda: Dettaglio + Modello */}
+      {/* Moda: Tipo + Modello */}
       {isModa && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Combobox label="Dettaglio *" field="dettaglio" value={watch('dettaglio') || ''} onChange={(v) => setValue('dettaglio', v)} />
+          <Combobox label="Tipo *" field="dettaglio" value={watch('dettaglio') || ''} onChange={(v) => setValue('dettaglio', v)} />
           <Combobox label="Linea *"   field="nomLinea"   value={watch('nomLinea') || ''}   onChange={(v) => setValue('nomLinea', v)} />
         </div>
       )}

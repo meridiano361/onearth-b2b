@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
   ws.getRow(HEADER_ROW).eachCell((cell, colNumber) => {
     const h = str(cell.value).replace(/\s*\*\s*$/, '').trim().toLowerCase();
     colMap[h] = colNumber;
+    if (h === 'tipo') colMap['dettaglio'] = colNumber; // 'Tipo' è alias di 'dettaglio'
   });
 
   function get(row: ExcelJS.Row, header: string): ExcelJS.CellValue {

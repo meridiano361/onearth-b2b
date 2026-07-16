@@ -64,7 +64,7 @@ const COL_GROUPS: { label: string; cols: { key: ColKey; label: string }[] }[] = 
   ]},
   { label: 'MODA / Dettagli', cols: [
     { key: 'modello',      label: 'Modello'      },
-    { key: 'dettaglio',    label: 'Dettaglio'    },
+    { key: 'dettaglio',    label: 'Tipo'          },
     { key: 'forma',        label: 'Forma'        },
     { key: 'taglia',       label: 'Taglia'       },
     { key: 'materiale1',   label: 'Materiale 1'  },
@@ -1212,7 +1212,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
               {modelloOptions.map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
             <select value={filterDettaglio} onChange={(e) => setFilterDettaglio(e.target.value)} className={selectClass}>
-              <option value="">Dettaglio</option>
+              <option value="">Tipo</option>
               {dettaglioOptions.map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
             <select value={filterForma} onChange={(e) => setFilterForma(e.target.value)} className={selectClass}>
@@ -1407,7 +1407,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
               {visibleCols.has('gruppoOmogeneo')     && <th className="w-24">Gr. omog.</th>}
               {/* MODA */}
               {visibleCols.has('modello')      && <th className="w-24">Modello</th>}
-              {visibleCols.has('dettaglio')    && <th className="w-24">Dettaglio</th>}
+              {visibleCols.has('dettaglio')    && <th className="w-24">Tipo</th>}
               {visibleCols.has('forma')        && <th className="w-20">Forma</th>}
               {visibleCols.has('taglia')       && <th className="w-16">Taglia</th>}
               {visibleCols.has('materiale1')   && <th className="w-24">Mat. 1</th>}
@@ -1801,7 +1801,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
               </select>
             </div>
             {([
-              ['nomLinea', 'Linea'], ['tranche', 'Tranche'], ['dettaglio', 'Dettaglio'], ['forma', 'Forma'],
+              ['nomLinea', 'Linea'], ['tranche', 'Tranche'], ['dettaglio', 'Tipo'], ['forma', 'Forma'],
             ] as [keyof BulkEditValues, string][]).map(([k, label]) => (
               <div key={k as string}>
                 <label className={bulkLabelClass}>{label}</label>

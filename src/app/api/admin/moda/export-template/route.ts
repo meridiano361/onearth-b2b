@@ -23,7 +23,7 @@ const COLS = [
   { key: 'classe',            header: 'Classe',                      width: 18 },
   { key: 'sottoclasse',       header: 'Sottoclasse',                 width: 20 },
   { key: 'gruppoOmogeneo',    header: 'Gruppo omogeneo',             width: 22 },
-  { key: 'dettaglio',         header: 'Dettaglio',                   width: 18 },
+  { key: 'dettaglio',         header: 'Tipo',                        width: 18 },
   { key: 'misura',            header: 'Modello',                     width: 16 },
   { key: 'taglia',            header: 'Taglia',                      width: 10 },
   { key: 'taglie_varianti',   header: 'Taglie varianti (S:COD1;M:COD2)', width: 28 },

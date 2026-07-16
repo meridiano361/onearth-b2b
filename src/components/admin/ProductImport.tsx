@@ -124,8 +124,8 @@ const COLUMN_MAP: Record<string, string> = {
   // Modello
   'modello': 'modello', 'model': 'modello', 'modello prodotto': 'modello',
 
-  // Dettaglio
-  'dettaglio': 'dettaglio', 'detail': 'dettaglio', 'det': 'dettaglio',
+  // Tipo (ex Dettaglio)
+  'tipo': 'dettaglio', 'dettaglio': 'dettaglio', 'detail': 'dettaglio', 'det': 'dettaglio',
 
   // Forma
   'forma': 'forma', 'shape': 'forma',
@@ -220,7 +220,7 @@ const FIELD_LABELS: Record<string, string> = {
   imageUrl:           'URL Immagine',
   // MODA
   modello:            'Linea',
-  dettaglio:          'Dettaglio',
+  dettaglio:          'Tipo',
   forma:              'Forma',
   materiale1:         'Materiale 1',
   materiale2:         'Materiale 2',
