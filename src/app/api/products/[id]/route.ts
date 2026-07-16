@@ -164,12 +164,21 @@ export async function PATCH(
     // Normalize code to uppercase (consistent with POST)
     if (data.code) data.code = data.code.toUpperCase().trim();
 
-    // Normalize name only for automated flows (imports), not manual admin edits
-    if (data.name && !(body as any).skipNameNormalization) {
-      const linea = data.nomLinea !== undefined
-        ? data.nomLinea
-        : (await prisma.product.findUnique({ where: { id: params.id }, select: { nomLinea: true } }))?.nomLinea;
-      data.name = normalizeProductName(data.name, linea);
+    // When nomLinea changes (or name is present), regenerate name with correct linea casing
+    const nomLineaChanging = data.nomLinea !== undefined;
+    const namePresent = !!(data.name && !(body as any).skipNameNormalization);
+
+    if (namePresent || nomLineaChanging) {
+      const cur = await prisma.product.findUnique({
+        where: { id: params.id },
+        select: { nomLinea: true, name: true },
+      });
+      const oldLinea = cur?.nomLinea ?? null;
+      const newLinea = nomLineaChanging ? data.nomLinea : oldLinea;
+      const baseName = data.name ?? cur?.name ?? '';
+      if (baseName) {
+        data.name = normalizeProductName(baseName, newLinea, oldLinea);
+      }
     }
 
     // Auto-composizione: se almeno un materiale è nel payload e composizione è vuota

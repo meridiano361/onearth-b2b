@@ -1,4 +1,8 @@
-export function normalizeProductName(name: string, nomLinea?: string | null): string {
+export function normalizeProductName(
+  name: string,
+  nomLinea?: string | null,
+  oldNomLinea?: string | null,
+): string {
   let result = name
     .replace(/[,;:.]/g, '')
     .replace(/&/g, ' ');
@@ -9,16 +13,26 @@ export function normalizeProductName(name: string, nomLinea?: string | null): st
     result = result.charAt(0).toUpperCase() + result.slice(1);
   }
 
-  if (nomLinea) {
-    const linea = nomLinea.trim();
-    if (linea) {
-      const lineaLower = linea.toLowerCase();
-      const idx = result.toLowerCase().indexOf(lineaLower);
-      if (idx !== -1) {
+  if (nomLinea?.trim()) {
+    const newLinea = nomLinea.trim();
+    const newLineaLower = newLinea.toLowerCase();
+    const idx = result.toLowerCase().indexOf(newLineaLower);
+
+    if (idx !== -1) {
+      // New linea found in name — uppercase it
+      result =
+        result.slice(0, idx) +
+        result.slice(idx, idx + newLineaLower.length).toUpperCase() +
+        result.slice(idx + newLineaLower.length);
+    } else if (oldNomLinea?.trim()) {
+      // New linea not found — replace old linea with new linea (uppercased)
+      const oldLineaLower = oldNomLinea.trim().toLowerCase();
+      const oldIdx = result.toLowerCase().indexOf(oldLineaLower);
+      if (oldIdx !== -1) {
         result =
-          result.slice(0, idx) +
-          result.slice(idx, idx + lineaLower.length).toUpperCase() +
-          result.slice(idx + lineaLower.length);
+          result.slice(0, oldIdx) +
+          newLinea.toUpperCase() +
+          result.slice(oldIdx + oldLineaLower.length);
       }
     }
   }

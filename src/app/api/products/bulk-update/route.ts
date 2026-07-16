@@ -121,17 +121,20 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
-    // When nomLinea changes, regenerate each product's name to uppercase the linea part
+    // When nomLinea changes, regenerate each product's name replacing old linea with new
     if (updateData.nomLinea !== undefined) {
       const products = await prisma.product.findMany({
         where: { id: { in: ids } },
-        select: { id: true, name: true },
+        select: { id: true, name: true, nomLinea: true },
       });
       await prisma.$transaction(
         products.map((p) =>
           prisma.product.update({
             where: { id: p.id },
-            data: { ...updateData, name: normalizeProductName(p.name, updateData.nomLinea as string | null) },
+            data: {
+              ...updateData,
+              name: normalizeProductName(p.name, updateData.nomLinea as string | null, p.nomLinea),
+            },
           })
         )
       );
