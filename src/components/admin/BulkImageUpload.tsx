@@ -156,24 +156,39 @@ export default function BulkImageUpload({ onSuccess }: BulkImageUploadProps) {
   const invalidCount = entries.filter((e) => !e.valid).length;
 
   if (result) {
+    const allOk = result.uploaded > 0 && result.errors.length === 0 && (result.nonConforming?.length ?? 0) === 0;
+
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          {result.uploaded > 0 ? (
+        {allOk ? (
+          <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
             <CheckCircle size={24} className="text-green-500 flex-shrink-0" />
-          ) : (
-            <AlertCircle size={24} className="text-red-500 flex-shrink-0" />
-          )}
-          <div>
-            <p className="font-medium text-primary">Caricamento completato</p>
-            <p className="text-sm text-gray-500">
-              {result.uploadedLinked > 0 && `${result.uploadedLinked} collegate · `}
-              {result.uploadedOrphan > 0 && `${result.uploadedOrphan} in attesa del prodotto · `}
-              {result.errors.length > 0 && `${result.errors.length} errori · `}
-              {(result.nonConforming?.length ?? 0) > 0 && `${result.nonConforming.length} non conformi`}
-            </p>
+            <div>
+              <p className="font-semibold text-green-700 uppercase tracking-wide">Foto caricate con successo</p>
+              <p className="text-sm text-green-600">
+                {result.uploadedLinked > 0 && `${result.uploadedLinked} collegate · `}
+                {result.uploadedOrphan > 0 && `${result.uploadedOrphan} in attesa del prodotto`}
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            {result.uploaded > 0 ? (
+              <CheckCircle size={24} className="text-green-500 flex-shrink-0" />
+            ) : (
+              <AlertCircle size={24} className="text-red-500 flex-shrink-0" />
+            )}
+            <div>
+              <p className="font-medium text-primary">Caricamento completato</p>
+              <p className="text-sm text-gray-500">
+                {result.uploadedLinked > 0 && `${result.uploadedLinked} collegate · `}
+                {result.uploadedOrphan > 0 && `${result.uploadedOrphan} in attesa del prodotto · `}
+                {result.errors.length > 0 && `${result.errors.length} errori · `}
+                {(result.nonConforming?.length ?? 0) > 0 && `${result.nonConforming.length} non conformi`}
+              </p>
+            </div>
+          </div>
+        )}
 
         {result.uploadedOrphan > 0 && (
           <div className="border border-blue-200 rounded bg-blue-50 p-3">
