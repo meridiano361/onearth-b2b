@@ -142,7 +142,7 @@ export const authOptions: NextAuthOptions = {
         if (user.featureMondiEspositivi !== undefined) token.featureMondiEspositivi = user.featureMondiEspositivi;
         // canAccessVisual: meridiano361/bottega solidale orgs + 3 specific operators
         if ((user as any).orgNome) token.canAccessVisual = orgCanAccessVisual((user as any).orgNome);
-        if (email && FULL_MODA_EMAILS.has(email)) token.canAccessVisual = true;
+        if (user.email && FULL_MODA_EMAILS.has(user.email)) token.canAccessVisual = true;
       }
       // Repair old OPERATOR sessions missing organizationId
       await repairOperatorOrg(token);
