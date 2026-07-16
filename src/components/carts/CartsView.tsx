@@ -489,6 +489,27 @@ export default function CartsView({ collection }: CartsViewProps) {
                     {cart.budgetPersonalizzato != null && (
                       <p className="text-2xs text-gray-400">Budget: {formatCurrency(cart.budgetPersonalizzato)}</p>
                     )}
+                    {/* Costo per conferente — visibile subito se 2+ conferenti */}
+                    {(() => {
+                      const confMap = new Map<string, { count: number; pz: number; cost: number }>();
+                      for (const item of items) {
+                        const conf = (item.product as any).conferente ?? '—';
+                        const e = confMap.get(conf) ?? { count: 0, pz: 0, cost: 0 };
+                        confMap.set(conf, { count: e.count + 1, pz: e.pz + item.quantity, cost: e.cost + effectivePrice(item.product) * item.quantity });
+                      }
+                      if (confMap.size <= 1) return null;
+                      return (
+                        <div className="mt-2 pt-2 border-t border-border/40 space-y-0.5">
+                          <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Costo per conferente</p>
+                          {[...confMap.entries()].map(([conf, data]) => (
+                            <div key={conf} className="flex items-center justify-between">
+                              <span className="text-xs text-primary font-medium">{conf}</span>
+                              <span className="text-2xs text-gray-500">{data.count} art. · {data.pz} pz · <span className="font-semibold text-primary">{formatCurrency(data.cost)}</span></span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Icon actions */}
@@ -568,29 +589,6 @@ export default function CartsView({ collection }: CartsViewProps) {
               {/* Expanded product list */}
               {isExpanded && itemCount > 0 && (
                 <div className="border-t border-border/60">
-                  {/* Riepilogo per conferente — solo se 2+ conferenti diversi */}
-                  {(() => {
-                    const confMap = new Map<string, { count: number; pz: number; cost: number }>();
-                    for (const item of items) {
-                      const conf = (item.product as any).conferente ?? '—';
-                      const e = confMap.get(conf) ?? { count: 0, pz: 0, cost: 0 };
-                      confMap.set(conf, { count: e.count + 1, pz: e.pz + item.quantity, cost: e.cost + effectivePrice(item.product) * item.quantity });
-                    }
-                    if (confMap.size <= 1) return null;
-                    return (
-                      <div className="px-4 py-3 bg-cream/40 border-b border-border/60">
-                        <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Costo per conferente</p>
-                        <div className="space-y-1">
-                          {[...confMap.entries()].map(([conf, data]) => (
-                            <div key={conf} className="flex items-center justify-between">
-                              <span className="text-xs text-primary font-medium">{conf}</span>
-                              <span className="text-2xs text-gray-500">{data.count} art. · {data.pz} pz · <span className="font-semibold text-primary">{formatCurrency(data.cost)}</span></span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
                   {items.map((item) => {
                     const hasLotWarning = !isValidLotQuantity(item.quantity, item.product.lotSize);
                     return (
