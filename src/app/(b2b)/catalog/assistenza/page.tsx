@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-16 (fix costo bigiotteria in export Excel: usa costoIeConReso/costoIeSenzaReso come priorità)
+// AGGIORNATO: 2026-07-16 (raggruppamento per Conferente in Modifica Anteprima; riepilogo conferente nel carrello; CSV Demetra per conferente)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,

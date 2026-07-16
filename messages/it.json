@@ -321,6 +321,7 @@
         "stagione": "Stagione",
         "collezione": "Collezione",
         "produttore": "Produttore",
-        "tranche": "Tranche"
+        "tranche": "Tranche",
+        "conferente": "Conferente"
     }
 }

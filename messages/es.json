@@ -321,6 +321,7 @@
         "stagione": "Temporada",
         "collezione": "Colección",
         "produttore": "Productor",
-        "tranche": "Tramo"
+        "tranche": "Tramo",
+        "conferente": "Proveedor"
     }
 }

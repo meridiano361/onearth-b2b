@@ -73,6 +73,7 @@ const GROUPING_KEYS = [
   'collezione',
   'produttore',
   'tranche',
+  'conferente',
 ] as const;
 
 type QtyMap = Record<string, number>;

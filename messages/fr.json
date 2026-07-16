@@ -321,6 +321,7 @@
         "stagione": "Saison",
         "collezione": "Collection",
         "produttore": "Producteur",
-        "tranche": "Tranche"
+        "tranche": "Tranche",
+        "conferente": "Fournisseur"
     }
 }

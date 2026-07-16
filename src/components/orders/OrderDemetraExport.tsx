@@ -51,6 +51,9 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
   const tranchePresenti = [...new Set(
     items.map(it => (it.product as any)?.tranche as string | undefined).filter((t): t is string => Boolean(t))
   )];
+  const conferentiPresenti = [...new Set(
+    items.map(it => (it.product as any)?.conferente as string | undefined).filter((c): c is string => Boolean(c))
+  )];
 
   useEffect(() => {
     if (!pos) return;
@@ -94,20 +97,22 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
     if (hideTimer.current) clearTimeout(hideTimer.current);
   }
 
-  async function handleCSV(e: React.MouseEvent, tranche?: string) {
+  async function handleCSV(e: React.MouseEvent, filter?: { field: 'tranche' | 'conferente'; value: string }) {
     e.stopPropagation();
     setPos(null);
-    const filtered = tranche ? items.filter(it => (it.product as any)?.tranche === tranche) : items;
+    const filtered = filter
+      ? items.filter(it => (it.product as any)?.[filter.field] === filter.value)
+      : items;
     const lines = [
       'Codice;Quantità',
       ...filtered.map((it) => `${it.product?.code ?? ''};${it.quantity}`),
     ];
-    const filename = tranche
-      ? `Demetra-${shortId}-${tranche}.csv`
+    const filename = filter
+      ? `Demetra-${shortId}-${filter.value}.csv`
       : `Demetra-${shortId}-completo.csv`;
     // UTF-8 BOM so Italian Excel opens it correctly
     download('﻿' + lines.join('\r\n'), filename, 'text/csv;charset=utf-8;');
-    toast.success(`CSV ${tranche ?? 'completo'} pronto`);
+    toast.success(`CSV ${filter ? filter.value : 'completo'} pronto`);
     await markExported(order.id);
     queryClient.invalidateQueries({ queryKey: ['my-orders'] });
     onExported?.();
@@ -170,15 +175,24 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
               onClick={(e) => handleCSV(e)}
               className="flex items-center w-full text-left px-4 py-2.5 text-xs text-primary hover:bg-cream transition-colors"
             >
-              {tranchePresenti.length <= 1 ? 'CSV' : 'CSV completo'}
+              {tranchePresenti.length <= 1 && conferentiPresenti.length <= 1 ? 'CSV' : 'CSV completo'}
             </button>
             {tranchePresenti.length > 1 && tranchePresenti.map((tr) => (
               <button
                 key={tr}
-                onClick={(e) => handleCSV(e, tr)}
+                onClick={(e) => handleCSV(e, { field: 'tranche', value: tr })}
                 className="flex items-center w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-cream transition-colors"
               >
                 CSV tranche {tr}
+              </button>
+            ))}
+            {conferentiPresenti.length > 1 && conferentiPresenti.map((conf) => (
+              <button
+                key={conf}
+                onClick={(e) => handleCSV(e, { field: 'conferente', value: conf })}
+                className="flex items-center w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-cream transition-colors"
+              >
+                CSV {conf}
               </button>
             ))}
             <div className="border-t border-border/50" />

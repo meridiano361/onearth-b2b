@@ -15,4 +15,5 @@ export const CART_PRODUCT_SELECT = {
   imageUrl4: true,
   imageUrl5: true,
   collezione: true,
+  conferente: true,
 } as const;
