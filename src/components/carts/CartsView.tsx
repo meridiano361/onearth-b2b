@@ -253,8 +253,14 @@ export default function CartsView({ collection }: CartsViewProps) {
     );
   }
 
+  function effectivePrice(product: Cart['items'][number]['product']) {
+    const c = Number((product as any).costoIeConReso);
+    const s = Number((product as any).costoIeSenzaReso);
+    return c > 0 ? c : s > 0 ? s : Number(product.costPrice);
+  }
+
   const totalValue = (cart: Cart) =>
-    (cart.items ?? []).reduce((s, i) => s + Number(i.product.costPrice) * i.quantity, 0);
+    (cart.items ?? []).reduce((s, i) => s + effectivePrice(i.product) * i.quantity, 0);
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
@@ -594,7 +600,7 @@ export default function CartsView({ collection }: CartsViewProps) {
                               compact
                             />
                             <span className="text-xs font-medium text-primary ml-auto">
-                              {formatCurrency(Number(item.product.costPrice) * item.quantity)}
+                              {formatCurrency(effectivePrice(item.product) * item.quantity)}
                             </span>
                           </div>
                           {hasLotWarning && (
