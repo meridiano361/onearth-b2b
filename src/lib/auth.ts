@@ -32,8 +32,9 @@ const FULL_MODA_EMAILS = new Set([
 
 async function computeCanAccessVisual(token: any) {
   if (token.role !== 'OPERATOR') return;
-  if (token.canAccessVisual !== undefined) return;
+  // Check specific emails first — must run even if canAccessVisual is already set
   if (token.email && FULL_MODA_EMAILS.has(token.email as string)) { token.canAccessVisual = true; return; }
+  if (token.canAccessVisual !== undefined) return;
   if (!token.organizationId) return;
   const org = await prisma.organization.findUnique({
     where: { id: token.organizationId as string },
