@@ -3,12 +3,14 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Loader2, Plus, ShoppingCart, X } from 'lucide-react';
+import { Check, Loader2, MapPin, Plus, ShoppingCart, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
 import { useCollectionRoutes } from '@/hooks/useCollectionRoutes';
 import type { Cart, Destinazione } from '@/types';
+
+const CANAL_TIPI = ['BOTTEGA', 'EMPORIO', 'DISTRETTO', 'STORE', 'OUTLET', 'TENDONE', 'FIERA', 'ONLINE', 'ALTRO'] as const;
 
 /** Loads the active cart from server on login, handles collection switching, and shows the select-cart modal when needed. */
 export default function CartSetup() {
@@ -93,6 +95,10 @@ export default function CartSetup() {
   const [budgetCustom, setBudgetCustom] = useState('');
   const [creating, setCreating] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [showNewDest, setShowNewDest] = useState(false);
+  const [newDestTipo, setNewDestTipo] = useState<typeof CANAL_TIPI[number]>('BOTTEGA');
+  const [newDestCitta, setNewDestCitta] = useState('');
+  const [newDestNome, setNewDestNome] = useState('');
 
   const { data: carts = [] } = useQuery<Cart[]>({
     queryKey: ['my-carts', collectionId],
@@ -106,7 +112,7 @@ export default function CartSetup() {
   const { data: destinazioni = [] } = useQuery<Destinazione[]>({
     queryKey: ['destinazioni'],
     queryFn: () => fetch('/api/catalog/destinazioni').then(r => r.json()).then(d => d.data ?? []),
-    enabled: status === 'authenticated' && isOperator,
+    enabled: status === 'authenticated',
   });
 
   const selectedDest = useMemo(() => destinazioni.find(d => d.id === newCanaleId) ?? null, [destinazioni, newCanaleId]);
@@ -164,29 +170,64 @@ export default function CartSetup() {
     toast.success(`Aggiunto a "${cart.name}"`);
   }
 
+  function handleDestSelect(val: string) {
+    setBudgetChoice(null);
+    setBudgetCustom('');
+    if (val === '__new__') {
+      setNewCanaleId('__new__');
+      setShowNewDest(true);
+    } else {
+      setNewCanaleId(val);
+      setShowNewDest(false);
+    }
+  }
+
   function resetCreateForm() {
     setShowCreate(false);
     setNewName('');
     setNewCanaleId('');
     setBudgetChoice(null);
     setBudgetCustom('');
+    setShowNewDest(false);
+    setNewDestTipo('BOTTEGA');
+    setNewDestCitta('');
+    setNewDestNome('');
   }
 
   const budgetFinal: number | null = isOperator
     ? (budgetChoice === 'dest' && destBudget != null ? destBudget : parseFloat(budgetCustom) || null)
     : null;
 
-  const canCreate = !!newName.trim() && (!isOperator || !!newCanaleId);
+  const canCreate = !!newName.trim() && (!isOperator || (!!newCanaleId && newCanaleId !== '__new__') || showNewDest);
 
   async function handleCreateAndAdd() {
     if (!newName.trim()) return;
     setCreating(true);
     try {
-      const body: any = { name: newName.trim(), collectionId };
-      if (isOperator && newCanaleId) {
-        body.canaleId = newCanaleId;
-        if (budgetFinal != null && !isNaN(budgetFinal)) body.budgetPersonalizzato = budgetFinal;
+      let resolvedCanaleId = newCanaleId !== '__new__' ? (newCanaleId || null) : null;
+
+      if (showNewDest) {
+        const destRes = await fetch('/api/catalog/destinazioni', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome: newDestNome.trim() || undefined,
+            tipo: newDestTipo,
+            citta: newDestCitta.trim() || undefined,
+          }),
+        });
+        const destBody = await destRes.json();
+        if (!destRes.ok) throw new Error(destBody.error ?? 'Errore creazione destinazione');
+        resolvedCanaleId = destBody.data.id;
+        queryClient.invalidateQueries({ queryKey: ['destinazioni'] });
       }
+
+      const body: any = { name: newName.trim(), collectionId };
+      if (resolvedCanaleId) {
+        body.canaleId = resolvedCanaleId;
+        if (isOperator && budgetFinal != null && !isNaN(budgetFinal)) body.budgetPersonalizzato = budgetFinal;
+      }
+
       const res = await fetch('/api/catalog/carts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -251,23 +292,66 @@ export default function CartSetup() {
 
           {showCreate ? (
             <div className="space-y-3 pt-1">
-              {/* Destination — operators only */}
-              {isOperator && (
-                <div>
-                  <label className="block text-2xs text-gray-500 uppercase tracking-wide mb-1">Destinazione *</label>
-                  <select
-                    value={newCanaleId}
-                    onChange={e => setNewCanaleId(e.target.value)}
-                    className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent bg-white"
-                    autoFocus
-                  >
-                    <option value="">— Scegli destinazione —</option>
-                    {destinazioni.map(d => (
-                      <option key={d.id} value={d.id}>
-                        {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
-                      </option>
-                    ))}
-                  </select>
+              {/* Destination — all users */}
+              <div>
+                <label className="block text-2xs text-gray-500 uppercase tracking-wide mb-1">
+                  Destinazione{isOperator ? ' *' : ''}
+                </label>
+                <select
+                  value={newCanaleId}
+                  onChange={e => handleDestSelect(e.target.value)}
+                  className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent bg-white"
+                  autoFocus
+                >
+                  <option value="">— {destinazioni.length === 0 ? 'Nessuna destinazione salvata' : 'Scegli destinazione'} —</option>
+                  {destinazioni.map(d => (
+                    <option key={d.id} value={d.id}>
+                      {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
+                    </option>
+                  ))}
+                  <option value="__new__">+ Crea nuova destinazione</option>
+                </select>
+              </div>
+
+              {/* Inline new destination form */}
+              {showNewDest && (
+                <div className="border border-accent/30 rounded-lg p-3 space-y-2.5 bg-accent/5">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin size={12} className="text-accent flex-shrink-0" />
+                    <p className="text-2xs font-semibold text-accent uppercase tracking-wide">Nuova destinazione</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-2xs text-gray-500 mb-1">Tipo</label>
+                      <select
+                        value={newDestTipo}
+                        onChange={e => setNewDestTipo(e.target.value as typeof CANAL_TIPI[number])}
+                        className="w-full h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none focus:ring-1 focus:ring-accent bg-white"
+                      >
+                        {CANAL_TIPI.map(t => <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-2xs text-gray-500 mb-1">Città</label>
+                      <input
+                        type="text"
+                        value={newDestCitta}
+                        onChange={e => setNewDestCitta(e.target.value)}
+                        placeholder="es. Milano"
+                        className="w-full h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-2xs text-gray-500 mb-1">Nome (opzionale)</label>
+                    <input
+                      type="text"
+                      value={newDestNome}
+                      onChange={e => setNewDestNome(e.target.value)}
+                      placeholder={newDestCitta ? `${newDestTipo} — ${newDestCitta}` : newDestTipo}
+                      className="w-full h-8 border border-border rounded px-2 text-xs text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -275,7 +359,7 @@ export default function CartSetup() {
               <div>
                 <label className="block text-2xs text-gray-500 uppercase tracking-wide mb-1">Nome carrello *</label>
                 <input
-                  autoFocus={!isOperator}
+                  autoFocus={false}
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
