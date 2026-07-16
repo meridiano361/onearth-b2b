@@ -1,3 +1,12 @@
+function escapeRegex(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function findWholeWord(text: string, word: string): number {
+  const m = text.match(new RegExp(`(?<![\\w])${escapeRegex(word)}(?![\\w])`, 'i'));
+  return m?.index ?? -1;
+}
+
 export function normalizeProductName(
   name: string,
   nomLinea?: string | null,
@@ -16,18 +25,18 @@ export function normalizeProductName(
   if (nomLinea?.trim()) {
     const newLinea = nomLinea.trim();
     const newLineaLower = newLinea.toLowerCase();
-    const idx = result.toLowerCase().indexOf(newLineaLower);
+    const idx = findWholeWord(result, newLineaLower);
 
     if (idx !== -1) {
-      // New linea found in name — uppercase it
+      // New linea found as standalone word — uppercase it
       result =
         result.slice(0, idx) +
         result.slice(idx, idx + newLineaLower.length).toUpperCase() +
         result.slice(idx + newLineaLower.length);
     } else if (oldNomLinea?.trim()) {
-      // New linea not found — replace old linea with new linea (uppercased)
+      // New linea not in name — replace old linea with new linea (uppercased)
       const oldLineaLower = oldNomLinea.trim().toLowerCase();
-      const oldIdx = result.toLowerCase().indexOf(oldLineaLower);
+      const oldIdx = findWholeWord(result, oldLineaLower);
       if (oldIdx !== -1) {
         result =
           result.slice(0, oldIdx) +
