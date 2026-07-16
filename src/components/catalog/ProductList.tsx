@@ -89,7 +89,7 @@ function ProductRow({ product }: { product: Product }) {
         {cs.prezzoCosto && (
         <div>
           <p className="text-2xs text-gray-400 uppercase tracking-wide">Costo i.e.</p>
-          <p className="text-sm font-semibold text-primary">{formatCurrency(product.costPrice)}</p>
+          <p className="text-sm font-semibold text-primary">{formatCurrency((() => { const c = Number((product as any).costoIeConReso); const s = Number((product as any).costoIeSenzaReso); return c > 0 ? c : s > 0 ? s : product.costPrice; })())}</p>
         </div>
         )}
         {cs.pvp && (
@@ -105,7 +105,7 @@ function ProductRow({ product }: { product: Product }) {
       {(cs.prezzoCosto || cs.pvp) && (
       <div className="sm:hidden flex-shrink-0 text-right">
         {cs.prezzoCosto && (
-          <p className="text-xs font-semibold text-primary">{formatCurrency(product.costPrice)}</p>
+          <p className="text-xs font-semibold text-primary">{formatCurrency((() => { const c = Number((product as any).costoIeConReso); const s = Number((product as any).costoIeSenzaReso); return c > 0 ? c : s > 0 ? s : product.costPrice; })())}</p>
         )}
         {cs.pvp && (
           <p className="text-xs text-gray-500">{formatCurrency(product.retailPrice)}</p>

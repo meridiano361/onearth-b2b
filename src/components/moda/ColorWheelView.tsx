@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { HUE_FAMILIES, type HueFamily, harmonyScore, getHarmonyType } from '@/lib/colorHarmony';
 import { isAdminRole } from '@/lib/roles';
+import { formatCurrency } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { nanoid } from 'nanoid';
 
@@ -31,6 +32,8 @@ interface WheelProduct {
   colore: string | null;
   famiglia: string | null;
   costPrice: number;
+  costoIeConReso: number | null;
+  costoIeSenzaReso: number | null;
   retailPrice: number;
   primaryPantone: PrimaryPantone | null;
   hueFamilyId: string;
@@ -52,6 +55,8 @@ interface ScoredProduct {
   sottoclasse: string | null;
   gruppoOmogeneo: string | null;
   costPrice: number;
+  costoIeConReso: number | null;
+  costoIeSenzaReso: number | null;
   retailPrice: number;
   primaryPantone: { code: string; name: string; hex_code: string; inferred?: boolean };
   harmonyType: string;
@@ -664,7 +669,11 @@ export default function ColorWheelView() {
     return [...list].sort((a, b) => {
       if (sortBy === 'name')   return a.name.localeCompare(b.name, 'it');
       if (sortBy === 'colore') return (a.colore ?? '').localeCompare(b.colore ?? '', 'it');
-      if (sortBy === 'price')  return a.costPrice - b.costPrice;
+      if (sortBy === 'price') {
+        const ea = (a.costoIeConReso ?? 0) > 0 ? a.costoIeConReso! : (a.costoIeSenzaReso ?? 0) > 0 ? a.costoIeSenzaReso! : a.costPrice;
+        const eb = (b.costoIeConReso ?? 0) > 0 ? b.costoIeConReso! : (b.costoIeSenzaReso ?? 0) > 0 ? b.costoIeSenzaReso! : b.costPrice;
+        return ea - eb;
+      }
       return a.code.localeCompare(b.code);
     });
   }, [visibleProducts, searchQuery, sortBy]);
@@ -1701,6 +1710,13 @@ function ProductCard({
               )}
             </div>
           )}
+          <p className="text-2xs font-semibold text-primary mt-0.5">
+            {formatCurrency(
+              (product.costoIeConReso ?? 0) > 0 ? product.costoIeConReso! :
+              (product.costoIeSenzaReso ?? 0) > 0 ? product.costoIeSenzaReso! :
+              product.costPrice
+            )}
+          </p>
         </div>
       </button>
       {onAddToParete && (

@@ -43,6 +43,8 @@ export async function GET() {
       classe: true,
       gruppoOmogeneo: true,
       costPrice: true,
+      costoIeConReso: true,
+      costoIeSenzaReso: true,
       retailPrice: true,
     },
     orderBy: { code: 'asc' },
@@ -137,6 +139,8 @@ export async function GET() {
         colore: p.colore,
         famiglia: p.famiglia,
         costPrice: Number(p.costPrice),
+        costoIeConReso: p.costoIeConReso != null ? Number(p.costoIeConReso) : null,
+        costoIeSenzaReso: p.costoIeSenzaReso != null ? Number(p.costoIeSenzaReso) : null,
         retailPrice: Number(p.retailPrice),
         primaryPantone: pantone
           ? {

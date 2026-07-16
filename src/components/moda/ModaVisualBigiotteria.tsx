@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { formatCurrency } from '@/lib/utils';
 import type { CategoriaGioiello, SupportoEspositivo, CompositeResponse } from '@/types/jewelry';
 import { LABEL_CATEGORIA, SUPPORTI_COMPATIBILI } from '@/types/jewelry';
 
@@ -14,6 +15,9 @@ interface Product {
   imageUrl3: string | null;
   imageUrl4: string | null;
   imageUrl5: string | null;
+  costPrice: number;
+  costoIeConReso: number | null;
+  costoIeSenzaReso: number | null;
 }
 
 const CATEGORIE: CategoriaGioiello[] = ['collana', 'bracciale', 'orecchino', 'anello'];
@@ -168,6 +172,13 @@ export default function ModaVisualBigiotteria() {
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-primary leading-tight line-clamp-2">{p.name}</p>
                       <p className="text-2xs text-gray-400 mt-0.5">{p.code}</p>
+                      <p className="text-2xs font-semibold text-primary mt-0.5">
+                        {formatCurrency(
+                          (p.costoIeConReso ?? 0) > 0 ? p.costoIeConReso! :
+                          (p.costoIeSenzaReso ?? 0) > 0 ? p.costoIeSenzaReso! :
+                          p.costPrice
+                        )}
+                      </p>
                     </div>
                   </div>
                   {/* Photo picker when product is selected and has multiple photos */}
