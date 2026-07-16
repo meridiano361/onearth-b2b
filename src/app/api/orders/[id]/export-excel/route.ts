@@ -43,7 +43,7 @@ const C = {
   yellow: 'FFFFF0CC',
 };
 
-const CURRENCY = '€#,##0.00';
+const CURRENCY = '#,##0.00';
 const UNCLASSIFIED = '— Non classificato —';
 
 // ── Types ───────────────────────────────────────────────────────────────────
