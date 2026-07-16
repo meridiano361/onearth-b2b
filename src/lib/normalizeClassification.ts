@@ -58,3 +58,23 @@ export function ensureHubeqCode(code: string, conferente?: string | null): strin
   }
   return code;
 }
+
+/**
+ * Normalizes an Equomercato product name:
+ * first letter uppercase + rest lowercase, except nomLinea which stays ALL CAPS.
+ * Idempotent and safe to call on any casing.
+ */
+export function normalizeEquomercatoName(name: string, nomLinea?: string | null): string {
+  const t = name.trim();
+  if (!t) return t;
+  // lowercase everything, then capitalize first char
+  let n = t.toLowerCase();
+  n = n.charAt(0).toUpperCase() + n.slice(1);
+  // restore nomLinea as ALL CAPS wherever it appears
+  if (nomLinea?.trim()) {
+    const linea = nomLinea.trim();
+    const escaped = linea.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    n = n.replace(new RegExp(escaped, 'g'), linea.toUpperCase());
+  }
+  return n;
+}
