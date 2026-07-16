@@ -54,7 +54,8 @@ export async function isMeridiano361Org(
 
 /**
  * Returns true when the user can access Abbigliamento + Accessori persona families.
- * Granted to: admins, Meridiano361 org, La Bottega Solidale org, operators with featureMondiEspositivi=true.
+ * Granted to: admins, Meridiano361 org, La Bottega Solidale org ONLY.
+ * Operators with featureMondiEspositivi get visual access but NOT this.
  */
 export async function canAccessFullModa(
   role: string | null | undefined,
@@ -65,6 +66,19 @@ export async function canAccessFullModa(
   if (ADMIN_ROLES.includes(role)) return true;
   const name = await getOrgName(organizationId);
   if (name.includes('meridiano361') || name.includes('bottegasolidale')) return true;
+  return false;
+}
+
+/**
+ * Returns true when the user can access the Visual/Pareti/Esposizione/Looks section.
+ * Granted to: same as canAccessFullModa PLUS operators with featureMondiEspositivi=true.
+ */
+export async function canAccessVisual(
+  role: string | null | undefined,
+  organizationId: string | null | undefined,
+  email?: string | null,
+): Promise<boolean> {
+  if (await canAccessFullModa(role, organizationId, email)) return true;
   if (email) {
     const op = await prisma.operator.findFirst({
       where: { email: email.toLowerCase().trim(), featureMondiEspositivi: true },
@@ -73,16 +87,4 @@ export async function canAccessFullModa(
     if (op) return true;
   }
   return false;
-}
-
-/**
- * Returns true when the user can access the Visual/Pareti section.
- * Granted to: admins, Meridiano361 org, La Bottega Solidale org, operators with featureMondiEspositivi=true.
- */
-export async function canAccessVisual(
-  role: string | null | undefined,
-  organizationId: string | null | undefined,
-  email?: string | null,
-): Promise<boolean> {
-  return canAccessFullModa(role, organizationId, email);
 }
