@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
+import { CART_PRODUCT_SELECT } from '@/lib/cartProductSelect';
 
 function userWhere(session: { user: { id: string; role: string } }) {
   if (session.user.role === 'CUSTOMER') return { customerId: session.user.id };
@@ -27,8 +28,8 @@ function serializeCart(cart: any) {
         ...item.product,
         costPrice: Number(item.product.costPrice),
         retailPrice: Number(item.product.retailPrice),
-        createdAt: item.product.createdAt?.toISOString(),
-        updatedAt: item.product.updatedAt?.toISOString(),
+        costoIeConReso: item.product.costoIeConReso != null ? Number(item.product.costoIeConReso) : null,
+        costoIeSenzaReso: item.product.costoIeSenzaReso != null ? Number(item.product.costoIeSenzaReso) : null,
       } : undefined,
     })),
   };
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
         _count: { select: { items: true } },
         canale: true,
         items: {
-          include: { product: { include: { category: true } } },
+          include: { product: { select: CART_PRODUCT_SELECT } },
           orderBy: { createdAt: 'asc' },
         },
       },
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
         budgetPersonalizzato: budgetPersonalizzato ?? null,
         ...where,
       },
-      include: { canale: true, items: { include: { product: { include: { category: true } } } } },
+      include: { canale: true, items: { include: { product: { select: CART_PRODUCT_SELECT } } } },
     });
 
     return NextResponse.json({ data: serializeCart(cart) }, { status: 201 });

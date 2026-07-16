@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
+import { CART_PRODUCT_SELECT } from '@/lib/cartProductSelect';
 
 function ownsCart(cart: { customerId: string | null; operatorId: string | null }, session: { user: { id: string; role: string } }) {
   if (session.user.role === 'CUSTOMER') return cart.customerId === session.user.id;
@@ -27,8 +28,8 @@ function serializeCart(cart: any) {
         ...item.product,
         costPrice: Number(item.product.costPrice),
         retailPrice: Number(item.product.retailPrice),
-        createdAt: item.product.createdAt?.toISOString(),
-        updatedAt: item.product.updatedAt?.toISOString(),
+        costoIeConReso: item.product.costoIeConReso != null ? Number(item.product.costoIeConReso) : null,
+        costoIeSenzaReso: item.product.costoIeSenzaReso != null ? Number(item.product.costoIeSenzaReso) : null,
       } : undefined,
     })),
   };
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     const cart = await prisma.cart.findUnique({
       where: { id: params.id },
-      include: { canale: true, items: { include: { product: { include: { category: true } } }, orderBy: { createdAt: 'asc' } } },
+      include: { canale: true, items: { include: { product: { select: CART_PRODUCT_SELECT } }, orderBy: { createdAt: 'asc' } } },
     });
 
     if (!cart) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -73,7 +74,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const updated = await prisma.cart.update({
       where: { id: params.id },
       data,
-      include: { canale: true, items: { include: { product: { include: { category: true } } }, orderBy: { createdAt: 'asc' } } },
+      include: { canale: true, items: { include: { product: { select: CART_PRODUCT_SELECT } }, orderBy: { createdAt: 'asc' } } },
     });
 
     return NextResponse.json({ data: serializeCart(updated) });
