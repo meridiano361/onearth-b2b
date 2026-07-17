@@ -166,6 +166,7 @@ function buildCreateData(
   if (fieldsToCheck.includes('colore')) {
     Object.assign(data, buildColorFields(row));
   }
+  if (!data.tranche) data.tranche = '1';
   return data;
 }
 

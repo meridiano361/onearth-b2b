@@ -336,7 +336,7 @@ export async function POST(req: NextRequest) {
         fasciaRicarico: data.fasciaRicarico || null,
         fasciaSconto: data.fasciaSconto ?? null,
         collezione: data.collezione || null,
-        tranche: data.tranche || null,
+        tranche: data.tranche || '1',
         paese: data.paese || null,
         iva: data.iva ?? 22,
         conferente: data.conferente || null,
