@@ -729,6 +729,20 @@ model AlbumFoto {
   @@map("album_foto")
 }
 
+model Collegamento {
+  id          String   @id @default(cuid())
+  nome        String
+  url         String
+  descrizione String?
+  cartella    String?
+  collezione  String?
+  visibile    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("collegamenti")
+}
+
 model OutfitEspositivo {
   id          String   @id @default(cuid())
   titolo      String

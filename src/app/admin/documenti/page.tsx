@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   FileText, Film, Music2, File as FileIcon, Plus, Trash2, Upload, Play, X,
   ImageIcon, Eye, EyeOff, Folder, FolderPlus, FolderInput, Pencil, Check,
-  Loader2, Minimize2,
+  Loader2, Minimize2, Link as LinkIcon, ExternalLink,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -31,6 +31,7 @@ function getTipoConfig(tipo: string): TipoConfig { return TIPO_CONFIG[tipo] ?? T
 
 interface Doc { id: string; nome: string; tipo: string; cartella?: string | null; collezione?: string | null; descrizione?: string | null; url: string; size: number; mimeType?: string | null; visibile: boolean; createdAt: string; }
 interface Album { id: string; nome: string; cartella?: string | null; collezione?: string | null; descrizione: string | null; copertina: string | null; visibile: boolean; nFoto: number; ordine: number; createdAt: string; }
+interface Collegamento { id: string; nome: string; url: string; descrizione?: string | null; cartella?: string | null; collezione?: string | null; visibile: boolean; createdAt: string; }
 
 const COLLEZIONE_COLORS = [
   'bg-purple-100 text-purple-700',
@@ -679,14 +680,143 @@ function AlbumCard({ album, cartelle, onOpen, onDelete, onToggleVisibile, onMove
 
 const SENZA = '__senza__';
 
-function CartellaView({ cartella, docs, albums, cartelle, cartellaCollezioneMap, onRefreshDocs, onRefreshAlbums }: {
+// ─── Link section ─────────────────────────────────────────────────────────────
+
+function LinkSection({ cartella, links, cartellaValue, cartellaCollezioneMap, onRefresh }: {
+  cartella: string;
+  links: Collegamento[];
+  cartellaValue: string | null;
+  cartellaCollezioneMap: Record<string, string>;
+  onRefresh: () => void;
+}) {
+  const isSenza = cartella === SENZA;
+  const filtered = links.filter((l) => isSenza ? !l.cartella : l.cartella === cartella);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newNome, setNewNome] = useState('');
+  const [newUrl, setNewUrl] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [editNome, setEditNome] = useState('');
+  const [editUrl, setEditUrl] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function handleAdd() {
+    if (!newNome.trim() || !newUrl.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/collegamenti', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: newNome.trim(), url: newUrl.trim(), descrizione: newDesc.trim() || null, cartella: cartellaValue, collezione: cartellaValue ? cartellaCollezioneMap[cartellaValue] || null : null }),
+      });
+      if (!res.ok) throw new Error();
+      setNewNome(''); setNewUrl(''); setNewDesc(''); setShowAdd(false);
+      onRefresh();
+    } catch { toast.error('Errore aggiunta link'); }
+    finally { setSaving(false); }
+  }
+
+  async function handleEdit(id: string) {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/collegamenti/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: editNome.trim(), url: editUrl.trim(), descrizione: editDesc.trim() || null }),
+      });
+      if (!res.ok) throw new Error();
+      setEditId(null); onRefresh();
+    } catch { toast.error('Errore salvataggio'); }
+    finally { setSaving(false); }
+  }
+
+  async function handleDelete(id: string) {
+    const res = await fetch(`/api/admin/collegamenti/${id}`, { method: 'DELETE' });
+    if (!res.ok) { toast.error('Errore eliminazione'); return; }
+    setDeleteId(null); onRefresh();
+  }
+
+  const sectionHead = 'flex items-center justify-between mb-3';
+  const sectionLabel = 'text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-2';
+  const addBtn = 'flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent/80 transition-colors';
+
+  return (
+    <div className="mb-8">
+      <div className={sectionHead}>
+        <span className={sectionLabel}><LinkIcon size={13} />Link</span>
+        <button onClick={() => { setShowAdd(true); }} className={addBtn}><Plus size={12} />Aggiungi</button>
+      </div>
+
+      {filtered.length === 0 && !showAdd ? (
+        <p className="text-xs text-gray-400 py-4 text-center border border-dashed border-gray-200 rounded-lg">
+          Nessun link. <button onClick={() => setShowAdd(true)} className="text-accent hover:underline">Aggiungi</button>
+        </p>
+      ) : (
+        <div className="bg-white border border-border rounded-xl overflow-hidden divide-y divide-border/50">
+          {filtered.map((l) => (
+            <div key={l.id} className="px-4 py-3">
+              {editId === l.id ? (
+                <div className="space-y-2">
+                  <input value={editNome} onChange={e => setEditNome(e.target.value)} placeholder="Nome" className="w-full text-sm border border-border rounded px-3 py-1.5 focus:outline-none focus:border-accent" />
+                  <input value={editUrl} onChange={e => setEditUrl(e.target.value)} placeholder="URL" className="w-full text-sm border border-border rounded px-3 py-1.5 focus:outline-none focus:border-accent" />
+                  <input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Descrizione (opzionale)" className="w-full text-sm border border-border rounded px-3 py-1.5 focus:outline-none focus:border-accent" />
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEdit(l.id)} disabled={saving || !editNome.trim() || !editUrl.trim()} className="px-3 py-1 text-xs bg-primary text-white rounded hover:bg-warm-darker disabled:opacity-50 flex items-center gap-1"><Check size={11} />Salva</button>
+                    <button onClick={() => setEditId(null)} className="px-3 py-1 text-xs border border-border rounded text-gray-500 hover:bg-cream">Annulla</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <a href={l.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-accent">
+                      <ExternalLink size={12} className="flex-shrink-0 text-gray-400" />{l.nome}
+                    </a>
+                    <p className="text-xs text-gray-400 truncate mt-0.5">{l.url}</p>
+                    {l.descrizione && <p className="text-xs text-gray-500 mt-0.5">{l.descrizione}</p>}
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button onClick={() => { setEditId(l.id); setEditNome(l.nome); setEditUrl(l.url); setEditDesc(l.descrizione ?? ''); }} className="p-1.5 text-gray-400 hover:text-primary" title="Modifica"><Pencil size={13} /></button>
+                    {deleteId === l.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => handleDelete(l.id)} className="text-2xs font-medium text-red-600 hover:text-red-800">Elimina</button>
+                        <button onClick={() => setDeleteId(null)} className="text-2xs text-gray-400">Annulla</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setDeleteId(l.id)} className="p-1.5 text-gray-400 hover:text-red-500" title="Elimina"><Trash2 size={13} /></button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {showAdd && (
+            <div className="px-4 py-3 space-y-2 bg-accent/5">
+              <input autoFocus value={newNome} onChange={e => setNewNome(e.target.value)} placeholder="Nome del link *" className="w-full text-sm border border-border rounded px-3 py-1.5 focus:outline-none focus:border-accent" />
+              <input value={newUrl} onChange={e => setNewUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && newNome.trim() && newUrl.trim()) handleAdd(); }} placeholder="URL * (es. https://…)" className="w-full text-sm border border-border rounded px-3 py-1.5 focus:outline-none focus:border-accent" />
+              <input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Descrizione (opzionale)" className="w-full text-sm border border-border rounded px-3 py-1.5 focus:outline-none focus:border-accent" />
+              <div className="flex gap-2">
+                <button onClick={handleAdd} disabled={saving || !newNome.trim() || !newUrl.trim()} className="px-3 py-1 text-xs bg-primary text-white rounded hover:bg-warm-darker disabled:opacity-50 flex items-center gap-1"><Check size={11} />Aggiungi</button>
+                <button onClick={() => { setShowAdd(false); setNewNome(''); setNewUrl(''); setNewDesc(''); }} className="px-3 py-1 text-xs border border-border rounded text-gray-500 hover:bg-cream">Annulla</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CartellaView({ cartella, docs, albums, links, cartelle, cartellaCollezioneMap, onRefreshDocs, onRefreshAlbums, onRefreshLinks }: {
   cartella: string;
   docs: Doc[];
   albums: Album[];
+  links: Collegamento[];
   cartelle: string[];
   cartellaCollezioneMap: Record<string, string>;
   onRefreshDocs: () => void;
   onRefreshAlbums: () => void;
+  onRefreshLinks: () => void;
 }) {
   const router = useRouter();
   const isSenza = cartella === SENZA;
@@ -797,6 +927,15 @@ function CartellaView({ cartella, docs, albums, cartelle, cartellaCollezioneMap,
           : <DocTable items={videoItems} cartelle={cartelle} onReplace={setReplaceDoc} onDelete={deleteDoc} onPreview={setPreviewDoc} onToggleVisibile={toggleVisibile} onMove={moveDoc} />}
       </div>
 
+      {/* Link */}
+      <LinkSection
+        cartella={cartella}
+        links={links}
+        cartellaValue={cartellaValue}
+        cartellaCollezioneMap={cartellaCollezioneMap}
+        onRefresh={onRefreshLinks}
+      />
+
       {/* Modals */}
       {showUploadDoc && <UploadModal defaultCartella={cartellaValue ?? ''} defaultCollezione={cartellaValue ? cartellaCollezioneMap[cartellaValue] : ''} defaultTipo="Catalogo PDF" cartelle={cartelle} onClose={() => setShowUploadDoc(false)} onDone={() => { setShowUploadDoc(false); onRefreshDocs(); }} />}
       {showUploadVideo && <UploadModal defaultCartella={cartellaValue ?? ''} defaultCollezione={cartellaValue ? cartellaCollezioneMap[cartellaValue] : ''} defaultTipo="Video presentazione" cartelle={cartelle} onClose={() => setShowUploadVideo(false)} onDone={() => { setShowUploadVideo(false); onRefreshDocs(); }} />}
@@ -820,6 +959,7 @@ export default function DocumentiPage() {
   const [renamingCartella, setRenamingCartella] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [renaming, setRenaming] = useState(false);
+  const [deletingCartella, setDeletingCartella] = useState<string | null>(null);
 
   const { data: docsData, refetch: refetchDocs } = useQuery<{ data: Doc[] }>({
     queryKey: ['admin-documents'],
@@ -829,13 +969,19 @@ export default function DocumentiPage() {
     queryKey: ['admin-albums'],
     queryFn: () => fetch('/api/admin/albums').then((r) => r.json()),
   });
+  const { data: linksData, refetch: refetchLinks } = useQuery<{ data: Collegamento[] }>({
+    queryKey: ['admin-collegamenti'],
+    queryFn: () => fetch('/api/admin/collegamenti').then((r) => r.json()),
+  });
 
   const docs   = docsData?.data   ?? [];
   const albums = albumsData?.data ?? [];
+  const links  = linksData?.data  ?? [];
 
   const dbCartelle = Array.from(new Set([
     ...docs.map((d) => d.cartella).filter(Boolean) as string[],
     ...albums.map((a) => a.cartella).filter(Boolean) as string[],
+    ...links.map((l) => l.cartella).filter(Boolean) as string[],
   ])).sort();
 
   const allCartelle = Array.from(new Set([...dbCartelle, ...localCartelle])).sort();
@@ -886,6 +1032,26 @@ export default function DocumentiPage() {
     }
   }
 
+  async function handleDeleteCartella(nome: string) {
+    try {
+      await fetch('/api/admin/documents/delete-cartella', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cartella: nome }),
+      });
+      setLocalCartelle((prev) => prev.filter((c) => c !== nome));
+      if (currentCartella === nome) setCurrentCartella(null);
+      await Promise.all([refetchDocs(), refetchAlbums(), refetchLinks()]);
+      qc.invalidateQueries({ queryKey: ['admin-documents'] });
+      qc.invalidateQueries({ queryKey: ['admin-albums'] });
+      qc.invalidateQueries({ queryKey: ['admin-collegamenti'] });
+      toast.success(`Cartella "${nome}" eliminata`);
+    } catch {
+      toast.error('Errore eliminazione cartella');
+    } finally {
+      setDeletingCartella(null);
+    }
+  }
+
   const chipCls = (active: boolean) =>
     `px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5 ${active ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-border hover:border-gray-400'}`;
 
@@ -929,6 +1095,12 @@ export default function DocumentiPage() {
                     <X size={13} />
                   </button>
                 </div>
+              ) : deletingCartella === c ? (
+                <div className="flex items-center gap-2 px-3 py-1.5 border border-red-200 rounded-lg bg-red-50">
+                  <span className="text-xs text-red-700">Eliminare &quot;{c}&quot;?</span>
+                  <button onClick={() => handleDeleteCartella(c)} className="text-xs font-semibold text-red-600 hover:underline">Sì</button>
+                  <button onClick={() => setDeletingCartella(null)} className="text-xs text-gray-500 hover:underline">No</button>
+                </div>
               ) : (
                 <>
                   <button onClick={() => setCurrentCartella(c)} className={chipCls(currentCartella === c)}>
@@ -941,6 +1113,13 @@ export default function DocumentiPage() {
                     title="Rinomina cartella"
                   >
                     <Pencil size={11} />
+                  </button>
+                  <button
+                    onClick={() => setDeletingCartella(c)}
+                    className="p-1 text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity rounded"
+                    title="Elimina cartella"
+                  >
+                    <Trash2 size={11} />
                   </button>
                 </>
               )}
@@ -970,10 +1149,12 @@ export default function DocumentiPage() {
           cartella={currentCartella}
           docs={docs}
           albums={albums}
+          links={links}
           cartelle={allCartelle}
           cartellaCollezioneMap={cartellaCollezioneMap}
           onRefreshDocs={() => refetchDocs()}
           onRefreshAlbums={() => refetchAlbums()}
+          onRefreshLinks={() => refetchLinks()}
         />
       )}
 
