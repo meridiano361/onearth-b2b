@@ -367,8 +367,8 @@ export default function CatalogView({
 
     if (sortBy === 'az')        result = [...result].sort((a, b) => a.name.localeCompare(b.name, 'it'));
     else if (sortBy === 'za')   result = [...result].sort((a, b) => b.name.localeCompare(a.name, 'it'));
-    else if (sortBy === 'price-asc')  result = [...result].sort((a, b) => Number(a.costPrice) - Number(b.costPrice));
-    else if (sortBy === 'price-desc') result = [...result].sort((a, b) => Number(b.costPrice) - Number(a.costPrice));
+    else if (sortBy === 'price-asc')  result = [...result].sort((a, b) => { const ea = Number((a as any).costoIeConReso) > 0 ? Number((a as any).costoIeConReso) : Number((a as any).costoIeSenzaReso) > 0 ? Number((a as any).costoIeSenzaReso) : Number(a.costPrice); const eb = Number((b as any).costoIeConReso) > 0 ? Number((b as any).costoIeConReso) : Number((b as any).costoIeSenzaReso) > 0 ? Number((b as any).costoIeSenzaReso) : Number(b.costPrice); return ea - eb; });
+    else if (sortBy === 'price-desc') result = [...result].sort((a, b) => { const ea = Number((a as any).costoIeConReso) > 0 ? Number((a as any).costoIeConReso) : Number((a as any).costoIeSenzaReso) > 0 ? Number((a as any).costoIeSenzaReso) : Number(a.costPrice); const eb = Number((b as any).costoIeConReso) > 0 ? Number((b as any).costoIeConReso) : Number((b as any).costoIeSenzaReso) > 0 ? Number((b as any).costoIeSenzaReso) : Number(b.costPrice); return eb - ea; });
 
     return result;
   }, [branchProducts, debouncedSearch, filters, bloccoColoreFilter, onlyFavorites, favoriteIds, sortBy]);

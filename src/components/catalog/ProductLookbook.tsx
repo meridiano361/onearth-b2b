@@ -47,7 +47,7 @@ function LookbookCard({ product }: { product: Product }) {
           {(cs.prezzoCosto || cs.pvp) && (
             <p className="text-white/80 text-2xs mt-1 flex gap-2 flex-wrap">
               {cs.prezzoCosto && (
-                <span>Costo <span className="font-semibold">{formatCurrency(product.costPrice)}</span></span>
+                <span>Costo <span className="font-semibold">{formatCurrency((() => { const c = Number((product as any).costoIeConReso); const s = Number((product as any).costoIeSenzaReso); return c > 0 ? c : s > 0 ? s : product.costPrice; })())}</span></span>
               )}
               {cs.pvp && (
                 <span>PVP <span className="font-semibold">{formatCurrency(product.retailPrice)}</span></span>

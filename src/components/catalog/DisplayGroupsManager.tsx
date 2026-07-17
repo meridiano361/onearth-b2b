@@ -266,7 +266,7 @@ function ProductDetailModal({
               </div>
 
               <div className="border-t border-gray-100 pt-2 space-y-1.5 text-xs">
-                <Row label="Prezzo costo" value={fmt(Number(p.costPrice))} highlight />
+                <Row label="Prezzo costo" value={fmt((() => { const c = Number(p.costoIeConReso); const s = Number(p.costoIeSenzaReso); return c > 0 ? c : s > 0 ? s : Number(p.costPrice); })())} highlight />
                 <Row label="PVP" value={fmt(Number(p.retailPrice))} />
                 {p.fasciaSconto != null && <Row label="Fascia sconto" value={`${Number(p.fasciaSconto)}%`} />}
                 {p.fasciaRicarico && <Row label="Fascia ricarico" value={p.fasciaRicarico} />}
