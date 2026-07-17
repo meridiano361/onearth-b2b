@@ -21,6 +21,8 @@ const TIPO_CONFIG: Record<string, TipoConfig> = {
   'Catalogo PDF':           { bucket: 'documents', maxMB: 20, accept: '.pdf,application/pdf', fileLabel: 'FILE PDF (MAX 20MB)', kind: 'pdf' },
   'Video presentazione':    { bucket: 'media', maxMB: PLAN_MAX_MB, accept: '.mp4,.mov,.avi,.webm,video/*', fileLabel: `FILE VIDEO (MAX ${PLAN_MAX_MB}MB)`, kind: 'video' },
   'Video tutorial':         { bucket: 'media', maxMB: PLAN_MAX_MB, accept: '.mp4,.mov,.avi,.webm,video/*', fileLabel: `FILE VIDEO (MAX ${PLAN_MAX_MB}MB)`, kind: 'video' },
+  'Video sfilata':          { bucket: 'media', maxMB: PLAN_MAX_MB, accept: '.mp4,.mov,.avi,.webm,video/*', fileLabel: `FILE VIDEO (MAX ${PLAN_MAX_MB}MB)`, kind: 'video' },
+  'Video - Altro':          { bucket: 'media', maxMB: PLAN_MAX_MB, accept: '.mp4,.mov,.avi,.webm,video/*', fileLabel: `FILE VIDEO (MAX ${PLAN_MAX_MB}MB)`, kind: 'video' },
   'Audio / Podcast':        { bucket: 'media', maxMB: PLAN_MAX_MB, accept: '.mp3,.wav,.m4a,.ogg,audio/*', fileLabel: `FILE AUDIO (MAX ${PLAN_MAX_MB}MB)`, kind: 'audio' },
   'Altro':                  { bucket: 'documents', maxMB: PLAN_MAX_MB, accept: '', fileLabel: `TUTTI I FORMATI (MAX ${PLAN_MAX_MB}MB)`, kind: 'other' },
 };
