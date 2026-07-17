@@ -135,6 +135,14 @@ const COLUMN_MAP: Record<string, string> = {
   'materiale 2': 'materiale2', 'materiale2': 'materiale2', 'mat 2': 'materiale2', 'material 2': 'materiale2',
   'materiale 3': 'materiale3', 'materiale3': 'materiale3', 'mat 3': 'materiale3', 'material 3': 'materiale3',
 
+  // Percentuale materiali (combinati in buildRows: "60% Cotone")
+  '% materiale 1': 'materiale1Pct', '% mat 1': 'materiale1Pct', 'percentuale materiale 1': 'materiale1Pct', '% material 1': 'materiale1Pct',
+  '% materiale 2': 'materiale2Pct', '% mat 2': 'materiale2Pct', 'percentuale materiale 2': 'materiale2Pct', '% material 2': 'materiale2Pct',
+  '% materiale 3': 'materiale3Pct', '% mat 3': 'materiale3Pct', 'percentuale materiale 3': 'materiale3Pct', '% material 3': 'materiale3Pct',
+
+  // Conferente
+  'conferente': 'conferente', 'conferenti': 'conferente', 'fornitore conferente': 'conferente',
+
   // Composizione, fantasia, lavorazione
   'composizione': 'composizione', 'composition': 'composizione',
   'fantasia': 'fantasia', 'pattern': 'fantasia',
@@ -231,6 +239,7 @@ const FIELD_LABELS: Record<string, string> = {
   bloccoColore:       'Blocco colore',
   costoIeConReso:     'Costo i.e. con reso',
   costoIeSenzaReso:   'Costo i.e. senza reso',
+  conferente:         'Conferente',
 };
 
 const FIELD_GROUPS: { label: string; fields: string[] }[] = [
@@ -238,7 +247,7 @@ const FIELD_GROUPS: { label: string; fields: string[] }[] = [
   { label: 'Classificazione', fields: ['gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo', 'nomLinea', 'stagione', 'collezione', 'colore', 'colore2', 'colore3', 'altriColori', 'temaColore', 'tranche'] },
   { label: 'Prezzi',          fields: ['costPrice', 'retailPrice', 'fasciaRicarico', 'fasciaSconto'] },
   { label: 'Logistica',       fields: ['lotSize', 'iva'] },
-  { label: 'MODA',            fields: ['modello', 'dettaglio', 'forma', 'materiale1', 'materiale2', 'materiale3', 'composizione', 'fantasia', 'lavorazione', 'bloccoColore', 'costoIeConReso', 'costoIeSenzaReso'] },
+  { label: 'MODA',            fields: ['modello', 'dettaglio', 'forma', 'materiale1', 'materiale2', 'materiale3', 'composizione', 'fantasia', 'lavorazione', 'bloccoColore', 'costoIeConReso', 'costoIeSenzaReso', 'conferente'] },
   { label: 'Altro',           fields: ['notes', 'isActive', 'imageUrl'] },
 ];
 
@@ -372,13 +381,15 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
     maxFiles: 1,
   });
 
+  // Virtual fields used only internally in buildRows — not selectable in the UI
+  const VIRTUAL_FIELDS = new Set(['materiale1Pct', 'materiale2Pct', 'materiale3Pct']);
+
   function initFromHeaders(headers: string[]) {
     const { mapping, unrecognized } = detectColumns(headers);
     setAutoMapping(mapping);
     setUnrecognizedHeaders(unrecognized);
     setManualOverrides({});
-    // Auto-select every field found in the file (excluding 'code' which is always required)
-    const detected = new Set(Object.keys(mapping).filter((f) => f !== 'code'));
+    const detected = new Set(Object.keys(mapping).filter((f) => f !== 'code' && !VIRTUAL_FIELDS.has(f)));
     if (detected.size > 0) {
       setSelectedFields(detected);
       savePrefs(detected);
@@ -478,6 +489,15 @@ export default function ProductImport({ onSuccess }: { onSuccess: () => void }) 
     return rawRows.map((r) => {
       const row = applyMapping(r, effectiveMapping);
       if (forzaGruppo) row.gruppoMerceologico = forzaGruppo;
+      // Combine "% Materiale N" + "Materiale N" → "60% Cotone"
+      for (const n of [1, 2, 3] as const) {
+        const pct = row[`materiale${n}Pct`];
+        if (pct !== undefined && pct !== null && pct !== '') {
+          const mat = row[`materiale${n}`];
+          if (mat) row[`materiale${n}`] = `${String(pct).replace(/%/g, '').trim()}% ${mat}`;
+          delete row[`materiale${n}Pct`];
+        }
+      }
       return row;
     });
   }

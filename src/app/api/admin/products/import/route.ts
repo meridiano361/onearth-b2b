@@ -106,6 +106,7 @@ function buildFieldValue(campo: string, row: any): unknown {
       return row.costoIeConReso !== undefined ? (parseDecimal(row.costoIeConReso) ?? null) : undefined;
     case 'costoIeSenzaReso':
       return row.costoIeSenzaReso !== undefined ? (parseDecimal(row.costoIeSenzaReso) ?? null) : undefined;
+    case 'conferente': return str(row.conferente);
     default: return undefined;
   }
 }
@@ -138,7 +139,7 @@ const ALL_CREATE_OPTIONAL = [
   // MODA
   'modello', 'dettaglio', 'forma', 'materiale1', 'materiale2', 'materiale3',
   'composizione', 'fantasia', 'lavorazione', 'bloccoColore',
-  'costoIeConReso', 'costoIeSenzaReso',
+  'costoIeConReso', 'costoIeSenzaReso', 'conferente',
 ];
 
 function buildCreateData(
@@ -189,7 +190,7 @@ const PRODUCT_SELECT = {
   modello: true, dettaglio: true, forma: true,
   materiale1: true, materiale2: true, materiale3: true,
   composizione: true, fantasia: true, lavorazione: true, bloccoColore: true,
-  costoIeConReso: true, costoIeSenzaReso: true,
+  costoIeConReso: true, costoIeSenzaReso: true, conferente: true,
 } as const;
 
 const CLASSIFICATION_FIELDS = new Set([
