@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
-  AlertCircle, Check, ChevronDown, ChevronUp,
+  AlertCircle, Check, ChevronDown, ChevronUp, Copy,
   Loader2, MapPin, Pencil, Plus, Send, ShoppingCart, Trash2, X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -60,6 +60,11 @@ export default function CartsView({ collection }: CartsViewProps) {
   const [convertingId, setConvertingId] = useState<string | null>(null);
   const [editingBudgetConfId, setEditingBudgetConfId] = useState<string | null>(null);
   const [budgetConfInputs, setBudgetConfInputs] = useState<Record<string, string>>({});
+
+  // Copy-to-cart selection (active only while a cart is expanded)
+  const [copySelection, setCopySelection] = useState<Set<string>>(new Set()); // keys: `${productId}:${taglia}`
+  const [copyTargetId, setCopyTargetId] = useState('');
+  const [copying, setCopying] = useState(false);
 
   // Inline new destination form
   const [showNewDest, setShowNewDest] = useState(false);
@@ -251,6 +256,53 @@ export default function CartsView({ collection }: CartsViewProps) {
   function handleActivate(cart: Cart) {
     setCart(cart);
     toast.success(`Carrello "${cart.name}" attivo`);
+  }
+
+  function itemKey(productId: string, taglia?: string) {
+    return `${productId}:${taglia ?? ''}`;
+  }
+
+  function toggleCopyItem(key: string) {
+    setCopySelection((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(cart: Cart) {
+    const items = cart.items ?? [];
+    const allKeys = items.map((i) => itemKey(i.productId, i.taglia));
+    const allSelected = allKeys.every((k) => copySelection.has(k));
+    setCopySelection(allSelected ? new Set() : new Set(allKeys));
+  }
+
+  async function handleCopyItems(sourceCart: Cart) {
+    if (!copyTargetId || copySelection.size === 0) return;
+    setCopying(true);
+    try {
+      const items = (sourceCart.items ?? [])
+        .filter((i) => copySelection.has(itemKey(i.productId, i.taglia)))
+        .map((i) => ({ productId: i.productId, quantity: i.quantity, taglia: i.taglia ?? '' }));
+
+      const res = await fetch(`/api/catalog/carts/${sourceCart.id}/copy-items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toCartId: copyTargetId, items }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Errore');
+
+      const targetName = carts.find((c) => c.id === copyTargetId)?.name ?? '';
+      toast.success(`${data.copied} articoli copiati in "${targetName}"`);
+      queryClient.invalidateQueries({ queryKey: ['my-carts'] });
+      setCopySelection(new Set());
+      setCopyTargetId('');
+    } catch (e: any) {
+      toast.error(e.message ?? 'Errore durante la copia');
+    } finally {
+      setCopying(false);
+    }
   }
 
   async function handleUpdateQty(cart: Cart, productId: string, quantity: number) {
@@ -656,7 +708,11 @@ export default function CartsView({ collection }: CartsViewProps) {
 
                   {itemCount > 0 && (
                     <button
-                      onClick={() => setExpandedId(isExpanded ? null : cart.id)}
+                      onClick={() => {
+                        setExpandedId(isExpanded ? null : cart.id);
+                        setCopySelection(new Set());
+                        setCopyTargetId('');
+                      }}
                       className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-primary transition-colors"
                     >
                       {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -669,16 +725,47 @@ export default function CartsView({ collection }: CartsViewProps) {
               {/* Expanded product list */}
               {isExpanded && itemCount > 0 && (
                 <div className="border-t border-border/60">
+                  {/* Select-all header */}
+                  {carts.filter((c) => c.id !== cart.id && c.status === 'DRAFT').length > 0 && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-border/40">
+                      <input
+                        type="checkbox"
+                        checked={items.every((i) => copySelection.has(itemKey(i.productId, i.taglia)))}
+                        onChange={() => toggleSelectAll(cart)}
+                        className="w-3.5 h-3.5 accent-gray-900 flex-shrink-0"
+                      />
+                      <span className="text-2xs text-gray-500">
+                        {copySelection.size > 0
+                          ? `${copySelection.size} selezionati`
+                          : 'Seleziona per copiare in altro carrello'}
+                      </span>
+                    </div>
+                  )}
+
                   {items.map((item) => {
+                    const key = itemKey(item.productId, item.taglia);
+                    const isChecked = copySelection.has(key);
                     const hasLotWarning = !isValidLotQuantity(item.quantity, item.product.lotSize);
+                    const otherCarts = carts.filter((c) => c.id !== cart.id && c.status === 'DRAFT');
                     return (
                       <div
-                        key={item.productId}
+                        key={key}
                         className={cn(
                           'flex items-start gap-3 px-4 py-3 border-b border-border/40 last:border-b-0',
-                          hasLotWarning && 'bg-amber-50/50'
+                          hasLotWarning && 'bg-amber-50/50',
+                          isChecked && 'bg-blue-50/40'
                         )}
                       >
+                        {/* Checkbox (only when other carts exist) */}
+                        {otherCarts.length > 0 && (
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleCopyItem(key)}
+                            className="w-3.5 h-3.5 accent-gray-900 flex-shrink-0 mt-1.5"
+                          />
+                        )}
+
                         {/* Thumbnail */}
                         <div className="w-10 h-10 flex-shrink-0 rounded bg-cream border border-border overflow-hidden">
                           <ProductImage
@@ -723,6 +810,36 @@ export default function CartsView({ collection }: CartsViewProps) {
                       </div>
                     );
                   })}
+
+                  {/* Copy bar */}
+                  {copySelection.size > 0 && (
+                    <div className="flex items-center gap-2 px-4 py-3 bg-blue-50 border-t border-blue-200">
+                      <Copy size={13} className="text-blue-600 flex-shrink-0" />
+                      <span className="text-xs text-blue-700 font-medium whitespace-nowrap">
+                        {copySelection.size} {copySelection.size === 1 ? 'articolo' : 'articoli'} →
+                      </span>
+                      <select
+                        value={copyTargetId}
+                        onChange={(e) => setCopyTargetId(e.target.value)}
+                        className="flex-1 h-8 border border-blue-300 rounded px-2 text-xs text-primary focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white min-w-0"
+                      >
+                        <option value="">Scegli carrello…</option>
+                        {carts
+                          .filter((c) => c.id !== cart.id && c.status === 'DRAFT')
+                          .map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                      </select>
+                      <button
+                        onClick={() => handleCopyItems(cart)}
+                        disabled={!copyTargetId || copying}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 flex-shrink-0"
+                      >
+                        {copying ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                        Copia
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

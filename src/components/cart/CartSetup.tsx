@@ -29,16 +29,9 @@ export default function CartSetup() {
     addVariants,
     showCartPicker,
     setShowCartPicker,
-    items,
   } = useCartStore();
 
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-    queryClient.invalidateQueries({ queryKey: ['my-carts'] });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
