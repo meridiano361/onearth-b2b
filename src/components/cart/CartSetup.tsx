@@ -99,6 +99,7 @@ export default function CartSetup() {
   const [newDestTipo, setNewDestTipo] = useState<typeof CANAL_TIPI[number]>('BOTTEGA');
   const [newDestCitta, setNewDestCitta] = useState('');
   const [newDestNome, setNewDestNome] = useState('');
+  const [deletingDestId, setDeletingDestId] = useState<string | null>(null);
 
   const { data: carts = [] } = useQuery<Cart[]>({
     queryKey: ['my-carts', collectionId],
@@ -182,6 +183,19 @@ export default function CartSetup() {
     }
   }
 
+  async function handleDeleteDest(id: string) {
+    try {
+      const res = await fetch(`/api/catalog/destinazioni/${id}`, { method: 'DELETE' });
+      if (!res.ok) { const b = await res.json(); throw new Error(b.error ?? 'Errore eliminazione'); }
+      queryClient.invalidateQueries({ queryKey: ['destinazioni'] });
+      if (newCanaleId === id) { setNewCanaleId(''); setShowNewDest(false); }
+    } catch (e: any) {
+      toast.error(e.message ?? 'Errore eliminazione destinazione');
+    } finally {
+      setDeletingDestId(null);
+    }
+  }
+
   function resetCreateForm() {
     setShowCreate(false);
     setNewName('');
@@ -192,6 +206,7 @@ export default function CartSetup() {
     setNewDestTipo('BOTTEGA');
     setNewDestCitta('');
     setNewDestNome('');
+    setDeletingDestId(null);
   }
 
   const budgetFinal: number | null = isOperator
@@ -297,20 +312,48 @@ export default function CartSetup() {
                 <label className="block text-2xs text-gray-500 uppercase tracking-wide mb-1">
                   Destinazione{isOperator ? ' *' : ''}
                 </label>
-                <select
-                  value={newCanaleId}
-                  onChange={e => handleDestSelect(e.target.value)}
-                  className="w-full h-9 border border-border rounded px-3 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-accent bg-white"
-                  autoFocus
-                >
-                  <option value="">— {destinazioni.length === 0 ? 'Nessuna destinazione salvata' : 'Scegli destinazione'} —</option>
-                  {destinazioni.map(d => (
-                    <option key={d.id} value={d.id}>
-                      {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
-                    </option>
-                  ))}
-                  <option value="__new__">+ Crea nuova destinazione</option>
-                </select>
+                {destinazioni.length > 0 && (
+                  <div className="border border-border rounded overflow-hidden divide-y divide-border mb-2 max-h-36 overflow-y-auto">
+                    {destinazioni.map(d => (
+                      <div key={d.id} className={`flex items-center ${newCanaleId === d.id ? 'bg-accent/10' : 'hover:bg-cream/50'}`}>
+                        {deletingDestId === d.id ? (
+                          <div className="flex-1 flex items-center gap-2 px-3 py-2">
+                            <span className="text-xs text-red-600 flex-1">Eliminare questa destinazione?</span>
+                            <button type="button" onClick={() => handleDeleteDest(d.id)} className="text-xs font-semibold text-red-600 hover:underline px-1">Sì</button>
+                            <button type="button" onClick={() => setDeletingDestId(null)} className="text-xs text-gray-500 hover:underline px-1">No</button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => { setNewCanaleId(d.id); setShowNewDest(false); setBudgetChoice(null); setBudgetCustom(''); }}
+                              className="flex-1 text-left px-3 py-2 text-sm text-primary"
+                            >
+                              {d.nome || d.tipo}{d.citta ? ` — ${d.citta}` : ''}
+                              {newCanaleId === d.id && <span className="ml-1.5 text-accent text-xs">✓</span>}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeletingDestId(d.id)}
+                              className="px-2.5 py-2 text-gray-300 hover:text-red-400 transition-colors"
+                            >
+                              <X size={12} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!showNewDest && (
+                  <button
+                    type="button"
+                    onClick={() => handleDestSelect('__new__')}
+                    className="flex items-center gap-1.5 text-xs text-accent hover:underline"
+                  >
+                    <Plus size={11} /> Nuova destinazione
+                  </button>
+                )}
               </div>
 
               {/* Inline new destination form */}
