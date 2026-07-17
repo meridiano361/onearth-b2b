@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, FileText, Film, Music2, File as FileIcon,
-  Download, Play, X, ChevronLeft, ChevronRight, ImageIcon,
+  Download, Play, X, ChevronLeft, ChevronRight, ImageIcon, ExternalLink,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
@@ -38,8 +38,9 @@ function fmtDate(iso: string) {
 interface AlbumFoto { id: string; url: string; didascalia: string | null; ordine: number; }
 interface Album { id: string; nome: string; cartella?: string | null; descrizione: string | null; copertina: string | null; nFoto: number; createdAt: string; }
 interface AlbumDetail { id: string; nome: string; descrizione: string | null; foto: AlbumFoto[]; }
+interface Collegamento { id: string; nome: string; url: string; descrizione?: string | null; cartella?: string | null; createdAt: string; }
 
-type Tab = 'documenti' | 'foto' | 'video';
+type Tab = 'documenti' | 'foto' | 'video' | 'link';
 
 // ─── Lightbox ─────────────────────────────────────────────────────────────────
 
@@ -242,7 +243,7 @@ export default function ModaRisorse() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const rawTab = searchParams.get('tab') as Tab | null;
-  const activeTab: Tab = rawTab && ['documenti', 'foto', 'video'].includes(rawTab) ? rawTab : 'documenti';
+  const activeTab: Tab = rawTab && ['documenti', 'foto', 'video', 'link'].includes(rawTab) ? rawTab : 'documenti';
 
   const [audioDoc, setAudioDoc] = useState<Doc | null>(null);
   const [openAlbum, setOpenAlbum] = useState<AlbumDetail | null>(null);
@@ -260,15 +261,22 @@ export default function ModaRisorse() {
     staleTime: 60_000,
   });
 
-  const allDocs = docsData?.data ?? [];
-  const allAlbums = albumsData?.data ?? [];
+  const { data: linksData, isLoading: linksLoading } = useQuery<{ data: Collegamento[] }>({
+    queryKey: ['public-collegamenti', 'moda'],
+    queryFn: () => fetch('/api/collegamenti?collezione=moda').then((r) => r.json()),
+    staleTime: 60_000,
+  });
+
+  const allDocs   = docsData?.data   ?? [];
+  const allAlbums = albumsData?.data  ?? [];
+  const allLinks  = linksData?.data   ?? [];
 
   const docItems  = allDocs.filter((d) => !['video', 'audio'].includes(getKind(d.tipo)) || getKind(d.tipo) === 'pdf');
   const videoItems = allDocs.filter((d) => getKind(d.tipo) === 'video');
   const audioItems = allDocs.filter((d) => getKind(d.tipo) === 'audio');
   const docsTabItems = allDocs.filter((d) => getKind(d.tipo) !== 'video' && getKind(d.tipo) !== 'audio');
 
-  const isLoading = docsLoading || albumsLoading;
+  const isLoading = docsLoading || albumsLoading || linksLoading;
 
   function setTab(tab: Tab) {
     router.replace(`/moda/risorse?tab=${tab}`);
@@ -315,6 +323,7 @@ export default function ModaRisorse() {
     { id: 'documenti', label: 'Documenti' },
     { id: 'foto',      label: 'Foto' },
     { id: 'video',     label: 'Video' },
+    ...(allLinks.length > 0 ? [{ id: 'link' as Tab, label: 'Link' }] : []),
   ];
 
   return (
@@ -376,6 +385,26 @@ export default function ModaRisorse() {
                     loading={loadingAlbumId === album.id}
                     onClick={() => openAlbumDetail(album)}
                   />
+                ))}
+              </div>
+            ))
+          )
+        ) : activeTab === 'link' ? (
+          allLinks.length === 0 ? (
+            <EmptyState icon={ExternalLink} message="Nessun link disponibile" />
+          ) : (
+            renderCartelle(allLinks, (items) => (
+              <div className="space-y-2">
+                {items.map((l) => (
+                  <a key={l.id} href={l.url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3.5 bg-white border border-border rounded-xl hover:border-accent/50 hover:shadow-sm transition-all group">
+                    <ExternalLink size={16} className="text-gray-300 flex-shrink-0 group-hover:text-accent transition-colors" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-primary group-hover:text-accent transition-colors">{l.nome}</p>
+                      {l.descrizione && <p className="text-xs text-gray-400 mt-0.5">{l.descrizione}</p>}
+                      <p className="text-2xs text-gray-300 truncate mt-0.5">{l.url}</p>
+                    </div>
+                  </a>
                 ))}
               </div>
             ))

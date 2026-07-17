@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FileText, Film, Music2, File, Download, Play, X, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
+import { FileText, Film, Music2, File, Download, Play, X, ChevronLeft, ChevronRight, ImageIcon, ExternalLink } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Doc { id: string; nome: string; tipo: string; cartella?: string | null; descrizione?: string | null; url: string; size: number; mimeType?: string | null; createdAt: string; }
+interface Collegamento { id: string; nome: string; url: string; descrizione?: string | null; cartella?: string | null; createdAt: string; }
 type MediaKind = 'pdf' | 'video' | 'audio' | 'other';
 const VIDEO_TIPI = ['Video presentazione', 'Video tutorial'];
 const AUDIO_TIPI = ['Audio / Podcast'];
@@ -25,7 +26,7 @@ interface AlbumFoto { id: string; url: string; didascalia: string | null; ordine
 interface Album { id: string; nome: string; cartella?: string | null; descrizione: string | null; copertina: string | null; nFoto: number; createdAt: string; }
 interface AlbumDetail { id: string; nome: string; descrizione: string | null; foto: AlbumFoto[]; }
 
-type Tab = 'documenti' | 'foto' | 'video';
+type Tab = 'documenti' | 'foto' | 'video' | 'link';
 
 // ─── Lightbox ─────────────────────────────────────────────────────────────────
 
@@ -238,14 +239,21 @@ export default function RisorsePage() {
     staleTime: 60_000,
   });
 
-  const allDocs   = docsData?.data ?? [];
-  const allAlbums = albumsData?.data ?? [];
+  const { data: linksData, isLoading: linksLoading } = useQuery<{ data: Collegamento[] }>({
+    queryKey: ['public-collegamenti', 'casa'],
+    queryFn: () => fetch('/api/collegamenti?collezione=casa').then((r) => r.json()),
+    staleTime: 60_000,
+  });
+
+  const allDocs   = docsData?.data   ?? [];
+  const allAlbums = albumsData?.data  ?? [];
+  const allLinks  = linksData?.data   ?? [];
 
   const docsTabItems  = allDocs.filter((d) => getKind(d.tipo) !== 'video' && getKind(d.tipo) !== 'audio');
   const videoItems    = allDocs.filter((d) => getKind(d.tipo) === 'video');
   const audioItems    = allDocs.filter((d) => getKind(d.tipo) === 'audio');
 
-  const isLoading = docsLoading || albumsLoading;
+  const isLoading = docsLoading || albumsLoading || linksLoading;
 
   async function openAlbumDetail(album: Album) {
     setLoadingAlbumId(album.id);
@@ -285,6 +293,7 @@ export default function RisorsePage() {
     { id: 'documenti', label: 'Documenti' },
     { id: 'foto',      label: 'Foto' },
     { id: 'video',     label: 'Video' },
+    ...(allLinks.length > 0 ? [{ id: 'link' as Tab, label: 'Link' }] : []),
   ];
 
   return (
@@ -339,6 +348,26 @@ export default function RisorsePage() {
                   loading={loadingAlbumId === album.id}
                   onClick={() => openAlbumDetail(album)}
                 />
+              ))}
+            </div>
+          ))
+        )
+      ) : activeTab === 'link' ? (
+        allLinks.length === 0 ? (
+          <EmptyState icon={ExternalLink} message="Nessun link disponibile" />
+        ) : (
+          renderCartelle(allLinks, (items) => (
+            <div className="space-y-2">
+              {items.map((l) => (
+                <a key={l.id} href={l.url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3.5 bg-white border border-border rounded-xl hover:border-accent/50 hover:shadow-sm transition-all group">
+                  <ExternalLink size={16} className="text-gray-300 flex-shrink-0 group-hover:text-accent transition-colors" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-primary group-hover:text-accent transition-colors">{l.nome}</p>
+                    {l.descrizione && <p className="text-xs text-gray-400 mt-0.5">{l.descrizione}</p>}
+                    <p className="text-2xs text-gray-300 truncate mt-0.5">{l.url}</p>
+                  </div>
+                </a>
               ))}
             </div>
           ))
