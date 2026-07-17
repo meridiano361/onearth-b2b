@@ -726,27 +726,24 @@ export default function CartsView({ collection }: CartsViewProps) {
               {isExpanded && itemCount > 0 && (
                 <div className="border-t border-border/60">
                   {/* Select-all header */}
-                  {carts.filter((c) => c.id !== cart.id && c.status === 'DRAFT').length > 0 && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-border/40">
-                      <input
-                        type="checkbox"
-                        checked={items.every((i) => copySelection.has(itemKey(i.productId, i.taglia)))}
-                        onChange={() => toggleSelectAll(cart)}
-                        className="w-3.5 h-3.5 accent-gray-900 flex-shrink-0"
-                      />
-                      <span className="text-2xs text-gray-500">
-                        {copySelection.size > 0
-                          ? `${copySelection.size} selezionati`
-                          : 'Seleziona per copiare in altro carrello'}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-border/40">
+                    <input
+                      type="checkbox"
+                      checked={items.length > 0 && items.every((i) => copySelection.has(itemKey(i.productId, i.taglia)))}
+                      onChange={() => toggleSelectAll(cart)}
+                      className="w-3.5 h-3.5 accent-gray-900 flex-shrink-0"
+                    />
+                    <span className="text-2xs text-gray-500">
+                      {copySelection.size > 0
+                        ? `${copySelection.size} selezionati`
+                        : 'Seleziona per copiare in altro carrello'}
+                    </span>
+                  </div>
 
                   {items.map((item) => {
                     const key = itemKey(item.productId, item.taglia);
                     const isChecked = copySelection.has(key);
                     const hasLotWarning = !isValidLotQuantity(item.quantity, item.product.lotSize);
-                    const otherCarts = carts.filter((c) => c.id !== cart.id && c.status === 'DRAFT');
                     return (
                       <div
                         key={key}
@@ -756,15 +753,13 @@ export default function CartsView({ collection }: CartsViewProps) {
                           isChecked && 'bg-blue-50/40'
                         )}
                       >
-                        {/* Checkbox (only when other carts exist) */}
-                        {otherCarts.length > 0 && (
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => toggleCopyItem(key)}
-                            className="w-3.5 h-3.5 accent-gray-900 flex-shrink-0 mt-1.5"
-                          />
-                        )}
+                        {/* Checkbox */}
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleCopyItem(key)}
+                          className="w-3.5 h-3.5 accent-gray-900 flex-shrink-0 mt-1.5"
+                        />
 
                         {/* Thumbnail */}
                         <div className="w-10 h-10 flex-shrink-0 rounded bg-cream border border-border overflow-hidden">
