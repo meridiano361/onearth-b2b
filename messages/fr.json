@@ -246,6 +246,7 @@
         "collezione": "Collection",
         "produttore": "Fabricant",
         "tranche": "Tranche",
+        "conferente": "Fournisseur",
         "bloccoColore": "Bloc couleur"
     },
     "home": {
