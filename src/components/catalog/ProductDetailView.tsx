@@ -273,7 +273,7 @@ export default function ProductDetailView({ id }: Props) {
                 onClick={() => setShowDesc((v) => !v)}
                 className="flex items-center gap-1 text-2xs text-accent/70 hover:text-accent transition-colors flex-shrink-0 mt-2"
               >
-                <Sparkles size={10} /><span>Cos&apos;è?</span>
+                <Sparkles size={10} /><span>Scopri di più</span>
               </button>
             )}
           </div>
