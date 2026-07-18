@@ -9,6 +9,7 @@ interface ComboboxProps {
   onChange: (v: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  transform?: (v: string) => string;
 }
 
 export default function Combobox({
@@ -18,6 +19,7 @@ export default function Combobox({
   onChange,
   placeholder = '',
   disabled = false,
+  transform,
 }: ComboboxProps) {
   const [inputVal, setInputVal] = useState(value);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -53,7 +55,8 @@ export default function Combobox({
   }
 
   function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const v = e.target.value;
+    const raw = e.target.value;
+    const v = transform ? transform(raw) : raw;
     setInputVal(v);
     onChange(v);
     if (skipFetch.current) { skipFetch.current = false; return; }
@@ -65,9 +68,10 @@ export default function Combobox({
   }
 
   function handleSelect(s: string) {
+    const v = transform ? transform(s) : s;
     skipFetch.current = true;
-    setInputVal(s);
-    onChange(s);
+    setInputVal(v);
+    onChange(v);
     setOpen(false);
     setSuggestions([]);
     setActiveIdx(-1);

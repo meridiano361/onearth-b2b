@@ -14,6 +14,8 @@ import { translateProduct } from '@/lib/translate';
 import { autoLinkPhotosForProduct } from '@/lib/autoLinkPhotos';
 import { autoComposizione } from '@/lib/autoComposizione';
 
+const capFirst = (s?: string | null) => s?.trim() ? s.trim().charAt(0).toUpperCase() + s.trim().slice(1).toLowerCase() : null;
+
 const productSchema = z.object({
   colorBlockIds: z.array(z.coerce.number().int()).optional(),
   code: z.string().min(1),
@@ -307,9 +309,9 @@ export async function POST(req: NextRequest) {
         stock: data.stock || null,
         famiglia: data.famiglia || null,
         sottofamiglia: data.sottofamiglia || null,
-        colore: data.colore || null,
-        colore2: data.colore2 || null,
-        colore3: data.colore3 || null,
+        colore: capFirst(data.colore),
+        colore2: capFirst(data.colore2),
+        colore3: capFirst(data.colore3),
         altriColori: data.altriColori || null,
         nomLinea: data.nomLinea?.toUpperCase() || null,
         misura: data.misura || null,

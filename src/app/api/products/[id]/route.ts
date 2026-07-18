@@ -10,6 +10,8 @@ import { syncProductClassification } from '@/lib/syncClassification';
 import { translateProduct } from '@/lib/translate';
 import { autoComposizione } from '@/lib/autoComposizione';
 
+const capFirst = (s?: string | null) => s?.trim() ? s.trim().charAt(0).toUpperCase() + s.trim().slice(1).toLowerCase() : null;
+
 const updateSchema = z.object({
   colorBlockIds: z.array(z.coerce.number().int()).optional(),
   code: z.string().min(1).optional(),
@@ -210,6 +212,11 @@ export async function PATCH(
         if (comp) (data as any).composizione = comp;
       }
     }
+
+    // Normalize color casing: Iniziale Maiuscola + resto minuscolo
+    if ('colore' in data) (data as any).colore = capFirst((data as any).colore);
+    if ('colore2' in data) (data as any).colore2 = capFirst((data as any).colore2);
+    if ('colore3' in data) (data as any).colore3 = capFirst((data as any).colore3);
 
     const product = await prisma.product.update({
       where: { id: params.id },
