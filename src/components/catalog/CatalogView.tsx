@@ -45,6 +45,8 @@ const FILTER_SECONDARY: Partial<Record<keyof Filters, string>> = {
   gruppoOmogeneo: 'gruppoOmogeneo2',
 };
 
+const capFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+
 function filterMatchesProduct(p: Product, key: keyof Filters, value: string): boolean {
   if (key === 'temaColore') {
     return [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].some(v => v === value);
@@ -53,7 +55,7 @@ function filterMatchesProduct(p: Product, key: keyof Filters, value: string): bo
     return [p.materiale1, p.materiale2, p.materiale3].some(v => v === value);
   }
   if (key === 'colore') {
-    return [p.colore, p.colore2, p.colore3].some(v => v === value);
+    return [p.colore, p.colore2, p.colore3].some(v => v && capFirst(v) === value);
   }
   const primary = (p as unknown as Record<string, unknown>)[key] as string | undefined;
   if (primary === value) return true;
@@ -81,7 +83,7 @@ function getAvailableValues(products: Product[], filters: Filters, key: keyof Fi
       }
     } else if (key === 'colore') {
       for (const v of [p.colore, p.colore2, p.colore3]) {
-        if (v) result.add(v);
+        if (v) result.add(capFirst(v));
       }
     } else {
       const primary = (p as unknown as Record<string, unknown>)[key] as string | undefined;
