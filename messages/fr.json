@@ -247,6 +247,9 @@
         "produttore": "Fabricant",
         "tranche": "Tranche",
         "conferente": "Fournisseur",
+        "fantasia": "Motif",
+        "lavorazione": "Traitement",
+        "nomeStampa": "Nom de l'imprimé",
         "bloccoColore": "Bloc couleur"
     },
     "home": {

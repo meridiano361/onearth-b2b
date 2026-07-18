@@ -39,6 +39,12 @@ interface CatalogFiltersProps {
   onTrancheChange: (v: string | null) => void;
   selectedConferente: string | null;
   onConferenteChange: (v: string | null) => void;
+  selectedFantasia: string | null;
+  onFantasiaChange: (v: string | null) => void;
+  selectedLavorazione: string | null;
+  onLavorazioneChange: (v: string | null) => void;
+  selectedNomeStampa: string | null;
+  onNomeStampaChange: (v: string | null) => void;
   selectedBloccoColore: { id: number; name: string } | null;
   onBloccoColoreChange: (v: { id: number; name: string } | null) => void;
   hasActiveFilters: boolean;
@@ -189,6 +195,9 @@ export default function CatalogFilters({
   selectedProduttore,         onProduttoreChange,
   selectedTranche,            onTrancheChange,
   selectedConferente,         onConferenteChange,
+  selectedFantasia,           onFantasiaChange,
+  selectedLavorazione,        onLavorazioneChange,
+  selectedNomeStampa,         onNomeStampaChange,
   selectedBloccoColore,       onBloccoColoreChange,
   hasActiveFilters,           onResetAll,
   enabledFilters,
@@ -223,11 +232,15 @@ export default function CatalogFilters({
     produttore:         selectedProduttore,
     tranche:            selectedTranche,
     conferente:         selectedConferente,
+    fantasia:           selectedFantasia,
+    lavorazione:        selectedLavorazione,
+    nomeStampa:         selectedNomeStampa,
   }), [
     selectedGruppoMerceologico, selectedFamiglia, selectedClasse, selectedSottoclasse,
     selectedGruppoOmogeneo, selectedNomLinea, selectedMateriale,
     selectedColore, selectedTemaColore, selectedStagione, selectedCollezione,
     selectedProduttore, selectedTranche, selectedConferente,
+    selectedFantasia, selectedLavorazione, selectedNomeStampa,
   ]);
 
   // Compute available options for ALL filters in one memo — each uses "exclude self" logic
@@ -246,6 +259,9 @@ export default function CatalogFilters({
     produttore:         computeOptions(products, activeFilters, 'produttore'),
     tranche:            computeOptions(products, activeFilters, 'tranche'),
     conferente:         computeOptions(products, activeFilters, 'conferente'),
+    fantasia:           computeOptions(products, activeFilters, 'fantasia'),
+    lavorazione:        computeOptions(products, activeFilters, 'lavorazione'),
+    nomeStampa:         computeOptions(products, activeFilters, 'nomeStampa'),
   }), [products, activeFilters]);
 
   return (
@@ -280,6 +296,11 @@ export default function CatalogFilters({
         {show('produttore')         && <FilterSelect label={t('produttore')}         allLabel={t('all')} value={selectedProduttore}         options={opts.produttore}         onChange={onProduttoreChange} />}
         {show('tranche')            && <FilterSelect label={t('tranche')}            allLabel={t('all')} value={selectedTranche}           options={opts.tranche}            onChange={onTrancheChange} />}
         {show('conferente')         && <FilterSelect label={t('conferente')}         allLabel={t('all')} value={selectedConferente}         options={opts.conferente}         onChange={onConferenteChange} />}
+        {show('fantasia')           && <FilterSelect label={t('fantasia')}           allLabel={t('all')} value={selectedFantasia}           options={opts.fantasia}           onChange={(v) => { onFantasiaChange(v); if (!v || v.toLowerCase() !== 'stampa') onNomeStampaChange(null); }} formatLabel={capitalize} />}
+        {show('fantasia') && selectedFantasia?.toLowerCase() === 'stampa' && (
+          <FilterSelect label={t('nomeStampa')} allLabel={t('all')} value={selectedNomeStampa} options={opts.nomeStampa} onChange={onNomeStampaChange} formatLabel={capitalize} />
+        )}
+        {show('lavorazione')        && <FilterSelect label={t('lavorazione')}        allLabel={t('all')} value={selectedLavorazione}        options={opts.lavorazione}        onChange={onLavorazioneChange} formatLabel={capitalize} />}
         {show('bloccoColore') && colorBlocks && colorBlocks.length > 0 && (
           <FilterSelect
             label={t('bloccoColore')}

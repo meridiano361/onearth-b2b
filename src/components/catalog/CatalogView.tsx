@@ -32,6 +32,9 @@ type Filters = {
   produttore:         string | null;
   tranche:            string | null;
   conferente:         string | null;
+  fantasia:           string | null;
+  lavorazione:        string | null;
+  nomeStampa:         string | null;
 };
 
 // ── Bidirectional filter invalidation helpers ─────────────────────────────────
@@ -111,6 +114,7 @@ const EMPTY_FILTERS: Filters = {
   gruppoOmogeneo: null, nomLinea: null, materiale: null,
   colore: null, temaColore: null, stagione: null, collezione: null,
   produttore: null, tranche: null, conferente: null,
+  fantasia: null, lavorazione: null, nomeStampa: null,
 };
 
 // Short URL keys for cleaner URLs
@@ -119,6 +123,7 @@ const URL_KEYS: Record<keyof Filters, string> = {
   gruppoOmogeneo: 'go', nomLinea: 'lin', materiale: 'mat',
   colore: 'col', temaColore: 'tcol', stagione: 'stag', collezione: 'coll',
   produttore: 'prod', tranche: 'tran', conferente: 'conf',
+  fantasia: 'fan', lavorazione: 'lav', nomeStampa: 'nst',
 };
 
 const CHIP_LABELS: { key: keyof Filters; label: string }[] = [
@@ -136,6 +141,9 @@ const CHIP_LABELS: { key: keyof Filters; label: string }[] = [
   { key: 'produttore',         label: 'Produttore' },
   { key: 'tranche',            label: 'Tranche' },
   { key: 'conferente',         label: 'Conferente' },
+  { key: 'fantasia',           label: 'Fantasia' },
+  { key: 'lavorazione',        label: 'Lavorazione' },
+  { key: 'nomeStampa',         label: 'Nome stampa' },
 ];
 
 export default function CatalogView({
@@ -345,7 +353,7 @@ export default function CatalogView({
       );
     }
 
-    const { gruppoMerceologico, famiglia, classe, sottoclasse, gruppoOmogeneo, nomLinea, materiale, colore, temaColore, stagione, collezione, produttore, tranche, conferente } = filters;
+    const { gruppoMerceologico, famiglia, classe, sottoclasse, gruppoOmogeneo, nomLinea, materiale, colore, temaColore, stagione, collezione, produttore, tranche, conferente, fantasia, lavorazione, nomeStampa } = filters;
     if (gruppoMerceologico) result = result.filter((p) => p.gruppoMerceologico === gruppoMerceologico);
     if (famiglia)           result = result.filter((p) => p.famiglia           === famiglia);
     if (classe)             result = result.filter((p) => p.classe === classe || (p as any).classe2 === classe);
@@ -360,6 +368,9 @@ export default function CatalogView({
     if (produttore)         result = result.filter((p) => p.produttore         === produttore);
     if (tranche)            result = result.filter((p) => p.tranche            === tranche);
     if (conferente)         result = result.filter((p) => (p as any).conferente === conferente);
+    if (fantasia)           result = result.filter((p) => (p as any).fantasia   === fantasia);
+    if (lavorazione)        result = result.filter((p) => (p as any).lavorazione === lavorazione);
+    if (nomeStampa)         result = result.filter((p) => (p as any).nomeStampa  === nomeStampa);
     if (bloccoColoreFilter) result = result.filter((p) => (p.colorBlockIds ?? []).includes(bloccoColoreFilter.id));
     if (onlyFavorites)      result = result.filter((p) => favoriteIds.has(p.id));
     if (sortBy === 'novita')       result = result.filter((p) => isModa ? !p.isContinuativo : p.collezione === 'CA27');
@@ -401,6 +412,9 @@ export default function CatalogView({
       selectedProduttore:         currentFilters.produttore,         onProduttoreChange:         (v: string | null) => onFilterChange('produttore', v),
       selectedTranche:            currentFilters.tranche,            onTrancheChange:            (v: string | null) => onFilterChange('tranche', v),
       selectedConferente:         currentFilters.conferente,         onConferenteChange:         (v: string | null) => onFilterChange('conferente', v),
+      selectedFantasia:           currentFilters.fantasia,           onFantasiaChange:           (v: string | null) => onFilterChange('fantasia', v),
+      selectedLavorazione:        currentFilters.lavorazione,        onLavorazioneChange:        (v: string | null) => onFilterChange('lavorazione', v),
+      selectedNomeStampa:         currentFilters.nomeStampa,         onNomeStampaChange:         (v: string | null) => onFilterChange('nomeStampa', v),
       selectedBloccoColore:       currentBloccoColore,               onBloccoColoreChange,
       hasActiveFilters,
       onResetAll: handleResetAll,

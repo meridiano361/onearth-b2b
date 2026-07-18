@@ -247,6 +247,9 @@
         "produttore": "Produttore",
         "tranche": "Tranche",
         "conferente": "Conferente",
+        "fantasia": "Fantasia",
+        "lavorazione": "Lavorazione",
+        "nomeStampa": "Nome stampa",
         "bloccoColore": "Blocco colore"
     },
     "home": {

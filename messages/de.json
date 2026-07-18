@@ -247,6 +247,9 @@
         "produttore": "Hersteller",
         "tranche": "Tranche",
         "conferente": "Lieferant",
+        "fantasia": "Muster",
+        "lavorazione": "Verarbeitung",
+        "nomeStampa": "Druckname",
         "bloccoColore": "Farbblock"
     },
     "home": {

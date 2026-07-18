@@ -247,6 +247,9 @@
         "produttore": "Manufacturer",
         "tranche": "Tranche",
         "conferente": "Supplier",
+        "fantasia": "Pattern",
+        "lavorazione": "Processing",
+        "nomeStampa": "Print name",
         "bloccoColore": "Colour block"
     },
     "home": {

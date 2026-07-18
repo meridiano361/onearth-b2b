@@ -247,6 +247,9 @@
         "produttore": "Fabricante",
         "tranche": "Tramo",
         "conferente": "Proveedor",
+        "fantasia": "Fantasía",
+        "lavorazione": "Elaboración",
+        "nomeStampa": "Nombre del estampado",
         "bloccoColore": "Bloque de color"
     },
     "home": {
