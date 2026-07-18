@@ -21,8 +21,6 @@ interface CatalogFiltersProps {
   onGruppoOmogeneoChange: (v: string | null) => void;
   selectedNomLinea: string | null;
   onNomLineaChange: (v: string | null) => void;
-  selectedModello: string | null;
-  onModelloChange: (v: string | null) => void;
   selectedMateriale: string | null;
   onMaterialeChange: (v: string | null) => void;
   selectedColore: string | null;
@@ -181,7 +179,6 @@ export default function CatalogFilters({
   selectedSottoclasse,        onSottoclasseChange,
   selectedGruppoOmogeneo,     onGruppoOmogeneoChange,
   selectedNomLinea,           onNomLineaChange,
-  selectedModello,            onModelloChange,
   selectedMateriale,          onMaterialeChange,
   selectedColore,             onColoreChange,
   selectedTemaColore,         onTemaColoreChange,
@@ -216,7 +213,6 @@ export default function CatalogFilters({
     sottoclasse:        selectedSottoclasse,
     gruppoOmogeneo:     selectedGruppoOmogeneo,
     nomLinea:           selectedNomLinea,
-    modello:            selectedModello,
     materiale:          selectedMateriale,
     colore:             selectedColore,
     temaColore:         selectedTemaColore,
@@ -227,7 +223,7 @@ export default function CatalogFilters({
     conferente:         selectedConferente,
   }), [
     selectedGruppoMerceologico, selectedFamiglia, selectedClasse, selectedSottoclasse,
-    selectedGruppoOmogeneo, selectedNomLinea, selectedModello, selectedMateriale,
+    selectedGruppoOmogeneo, selectedNomLinea, selectedMateriale,
     selectedColore, selectedTemaColore, selectedStagione, selectedCollezione,
     selectedProduttore, selectedTranche, selectedConferente,
   ]);
@@ -240,7 +236,6 @@ export default function CatalogFilters({
     sottoclasse:        computeOptions(products, activeFilters, 'sottoclasse'),
     gruppoOmogeneo:     computeOptions(products, activeFilters, 'gruppoOmogeneo'),
     nomLinea:           computeOptions(products, activeFilters, 'nomLinea'),
-    modello:            computeOptions(products, activeFilters, 'modello'),
     materiale:          computeOptions(products, activeFilters, 'materiale'),
     colore:             computeOptions(products, activeFilters, 'colore'),
     temaColore:         computeOptions(products, activeFilters, 'temaColore'),
@@ -275,7 +270,6 @@ export default function CatalogFilters({
         {show('sottoclasse')        && <FilterSelect label={t('sottoclasse')}        allLabel={t('all')} value={selectedSottoclasse}        options={opts.sottoclasse}        onChange={onSottoclasseChange} />}
         {show('gruppoOmogeneo')     && <FilterSelect label={t('gruppoOmogeneo')}     allLabel={t('all')} value={selectedGruppoOmogeneo}     options={opts.gruppoOmogeneo}     onChange={onGruppoOmogeneoChange} />}
         {show('nomLinea')           && <FilterSelect label={t('linea')}              allLabel={t('all')} value={selectedNomLinea}           options={opts.nomLinea}           onChange={onNomLineaChange} />}
-        {show('modello')            && <FilterSelect label={t('modello')}            allLabel={t('all')} value={selectedModello}            options={opts.modello}            onChange={onModelloChange} />}
         {show('materiale')          && <FilterSelect label={t('materiale')}          allLabel={t('all')} value={selectedMateriale}          options={opts.materiale}          onChange={onMaterialeChange}  formatLabel={capitalize} />}
         {show('colore')             && <FilterSelect label={t('colore')}             allLabel={t('all')} value={selectedColore}             options={opts.colore}             onChange={onColoreChange}     formatLabel={capitalize} />}
         {show('temaColore')         && <FilterSelect label={t('temaColore')}         allLabel={t('all')} value={selectedTemaColore}         options={opts.temaColore}         onChange={onTemaColoreChange} formatLabel={capitalize} />}
