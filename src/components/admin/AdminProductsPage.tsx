@@ -520,9 +520,11 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
       if (filterStagione && p.stagione !== filterStagione) return false;
       if (filterActive === 'active' && !p.isActive) return false;
       if (filterActive === 'inactive' && p.isActive) return false;
-      if (filterFoto === 'con-foto' && !p.imageUrl) return false;
-      if (filterFoto === 'senza-foto' && p.imageUrl) return false;
-      if (filterFoto === 'foto-multiple' && !p.imageUrl2 && !p.imageUrl3 && !p.imageUrl4) return false;
+      const hasAnyFoto = !!(p.imageUrl || p.imageUrl2 || p.imageUrl3 || p.imageUrl4 || p.imageUrl5);
+      if (filterFoto === 'con-foto' && !hasAnyFoto) return false;
+      if (filterFoto === 'senza-foto' && hasAnyFoto) return false;
+      const fotoCount = [p.imageUrl, p.imageUrl2, p.imageUrl3, p.imageUrl4, p.imageUrl5].filter(Boolean).length;
+      if (filterFoto === 'foto-multiple' && fotoCount < 2) return false;
       if (filterFasciaSconto) {
         const sc = computeSconto(p);
         if (filterFasciaSconto === '0-30' && sc >= 30) return false;
@@ -1019,7 +1021,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
               `${products.length} prodotti${hasFilters ? ` (su ${allProducts.length})` : ''}`,
               `${products.filter(p => p.isActive).length} attivi`,
               `${products.filter(p => !p.isActive).length} non attivi`,
-              `${products.filter(p => !p.imageUrl).length} senza foto`,
+              `${products.filter(p => !p.imageUrl && !p.imageUrl2 && !p.imageUrl3 && !p.imageUrl4 && !p.imageUrl5).length} senza foto`,
             ].join(' · ')}
           </p>
         </div>
