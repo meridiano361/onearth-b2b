@@ -5,6 +5,8 @@ import { RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { capitalize } from '@/lib/utils';
+
+const capFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 import type { Product } from '@/types';
 
 interface CatalogFiltersProps {
@@ -63,7 +65,7 @@ function productMatchesFilter(p: Product, key: string, value: string): boolean {
     return [p.materiale1, p.materiale2, p.materiale3].some(v => v === value);
   }
   if (key === 'colore') {
-    return [p.colore, p.colore2, p.colore3].some(v => v === value);
+    return [p.colore, p.colore2, p.colore3].some(v => v && capFirst(v) === value);
   }
   const primary = (p as unknown as Record<string, unknown>)[key] as string | undefined;
   if (primary === value) return true;
@@ -115,7 +117,7 @@ function computeOptions(products: Product[], filters: FilterRecord, key: string)
     const counts = new Map<string, number>();
     for (const p of filtered) {
       for (const v of [p.colore, p.colore2, p.colore3]) {
-        if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
+        if (v) { const k = capFirst(v); counts.set(k, (counts.get(k) ?? 0) + 1); }
       }
     }
     return Array.from(counts.entries())

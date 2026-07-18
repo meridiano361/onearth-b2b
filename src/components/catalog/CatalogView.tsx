@@ -353,7 +353,7 @@ export default function CatalogView({
     if (gruppoOmogeneo)     result = result.filter((p) => p.gruppoOmogeneo === gruppoOmogeneo || (p as any).gruppoOmogeneo2 === gruppoOmogeneo);
     if (nomLinea)           result = result.filter((p) => p.nomLinea           === nomLinea);
     if (materiale)          result = result.filter((p) => [p.materiale1, p.materiale2, p.materiale3].includes(materiale));
-    if (colore)             result = result.filter((p) => [p.colore, p.colore2, p.colore3].includes(colore));
+    if (colore)             result = result.filter((p) => [p.colore, p.colore2, p.colore3].some(v => v && v.charAt(0).toUpperCase() + v.slice(1).toLowerCase() === colore));
     if (temaColore)         result = result.filter((p) => [p.temaColore, p.temaColore2, p.temaColore3, p.temaColore4, p.temaColore5].includes(temaColore));
     if (stagione)           result = result.filter((p) => p.stagione           === stagione);
     if (collezione)         result = result.filter((p) => p.collezione?.toLowerCase() === collezione.toLowerCase());
