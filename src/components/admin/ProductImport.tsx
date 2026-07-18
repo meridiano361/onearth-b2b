@@ -101,6 +101,12 @@ const COLUMN_MAP: Record<string, string> = {
   'fascia sconto': 'fasciaSconto', 'fasciasconto': 'fasciaSconto',
   'sconto': 'fasciaSconto', 'discount': 'fasciaSconto',
 
+  // Spiegazione nome (testo descrittivo lato cliente)
+  'spiegazione': 'description', 'spiegazione nome': 'description',
+  'spiegazione prodotto': 'description', 'testo': 'description',
+  'testo prodotto': 'description', 'long description': 'description',
+  'descrizione lunga': 'description', 'descrizione estesa': 'description',
+
   // Note
   'note': 'notes', 'notes': 'notes', 'note prodotto': 'notes',
   'comments': 'notes', 'info': 'notes',
@@ -223,6 +229,7 @@ const FIELD_LABELS: Record<string, string> = {
   retailPrice:        'Prezzo vendita i.i.',
   fasciaRicarico:     'Fascia ricarico',
   fasciaSconto:       'Fascia sconto',
+  description:        'Spiegazione nome',
   notes:              'Note',
   isActive:           'Attivo',
   imageUrl:           'URL Immagine',
@@ -248,7 +255,7 @@ const FIELD_GROUPS: { label: string; fields: string[] }[] = [
   { label: 'Prezzi',          fields: ['costPrice', 'retailPrice', 'fasciaRicarico', 'fasciaSconto'] },
   { label: 'Logistica',       fields: ['lotSize', 'iva'] },
   { label: 'MODA',            fields: ['modello', 'dettaglio', 'forma', 'materiale1', 'materiale2', 'materiale3', 'composizione', 'fantasia', 'lavorazione', 'bloccoColore', 'costoIeConReso', 'costoIeSenzaReso', 'conferente'] },
-  { label: 'Altro',           fields: ['notes', 'isActive', 'imageUrl'] },
+  { label: 'Altro',           fields: ['description', 'notes', 'isActive', 'imageUrl'] },
 ];
 
 const ALL_UPDATABLE = FIELD_GROUPS.flatMap((g) => g.fields);

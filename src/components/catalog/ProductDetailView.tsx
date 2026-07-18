@@ -97,6 +97,7 @@ export default function ProductDetailView({ id }: Props) {
   const { getItemQuantity, updateQuantity, setPendingProduct } = useCartStore();
   const [justAdded, setJustAdded] = useState(false);
   const [showSizePanel, setShowSizePanel] = useState(false);
+  const [showDesc, setShowDesc] = useState(false);
   const tp = useTranslations('product');
   const locale = useLocale();
   const { scheda: ss } = useSettings();
@@ -263,12 +264,24 @@ export default function ProductDetailView({ id }: Props) {
         <div className="flex flex-col">
           {ss.codice && <p className="label-luxury text-accent mb-1">{product.code}</p>}
 
-          <h1 className="font-display text-xl sm:text-2xl md:text-3xl text-primary font-light leading-snug mb-3">
-            {product.name}
-          </h1>
+          <div className="flex items-start gap-2 mb-3">
+            <h1 className="font-display text-xl sm:text-2xl md:text-3xl text-primary font-light leading-snug">
+              {product.name}
+            </h1>
+            {ss.descrizione && localizedDescription && (
+              <button
+                onClick={() => setShowDesc((v) => !v)}
+                className="flex items-center gap-1 text-2xs text-accent/70 hover:text-accent transition-colors flex-shrink-0 mt-2"
+              >
+                <Sparkles size={10} /><span>Cos&apos;è?</span>
+              </button>
+            )}
+          </div>
 
-          {ss.descrizione && localizedDescription && (
-            <p className="text-sm text-gray-500 leading-relaxed mb-4">{localizedDescription}</p>
+          {ss.descrizione && localizedDescription && showDesc && (
+            <p className="text-sm text-gray-500 leading-relaxed mb-4 bg-cream/50 rounded px-3 py-2.5 border-l-2 border-accent/40">
+              {localizedDescription}
+            </p>
           )}
 
           <div className="mb-6">

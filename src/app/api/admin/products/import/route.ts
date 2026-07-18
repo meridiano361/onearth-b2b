@@ -79,7 +79,8 @@ function buildFieldValue(campo: string, row: any): unknown {
     case 'fasciaRicarico': return str(row.fasciaRicarico);
     case 'fasciaSconto':
       return row.fasciaSconto !== undefined ? (parseDecimal(row.fasciaSconto) ?? null) : undefined;
-    case 'notes':  return str(row.notes);
+    case 'notes':       return str(row.notes);
+    case 'description': return str(row.description);
     case 'isActive': {
       if (row.isActive === undefined) return undefined;
       const b = parseBool(row.isActive);
@@ -135,7 +136,7 @@ const ALL_CREATE_OPTIONAL = [
   'produttore', 'paese', 'misura', 'gruppoMerceologico', 'famiglia', 'classe',
   'sottoclasse', 'gruppoOmogeneo', 'nomLinea', 'stagione', 'collezione', 'colore',
   'colore2', 'colore3', 'altriColori', 'temaColore', 'tranche', 'lotSize', 'iva',
-  'fasciaRicarico', 'fasciaSconto', 'notes', 'imageUrl',
+  'fasciaRicarico', 'fasciaSconto', 'notes', 'description', 'imageUrl',
   // MODA
   'modello', 'dettaglio', 'forma', 'materiale1', 'materiale2', 'materiale3',
   'composizione', 'fantasia', 'lavorazione', 'bloccoColore',
@@ -186,7 +187,7 @@ const PRODUCT_SELECT = {
   colore: true, colore2: true, colore3: true, altriColori: true,
   temaColore: true, tranche: true, lotSize: true, iva: true,
   costPrice: true, retailPrice: true, fasciaRicarico: true, fasciaSconto: true,
-  notes: true, isActive: true, imageUrl: true,
+  notes: true, description: true, isActive: true, imageUrl: true,
   // MODA
   modello: true, dettaglio: true, forma: true,
   materiale1: true, materiale2: true, materiale3: true,
