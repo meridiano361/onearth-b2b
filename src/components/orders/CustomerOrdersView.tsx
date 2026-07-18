@@ -226,7 +226,7 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
   if (isLoading) return <LoadingSpinner fullPage text={t('loading')} />;
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="bg-cream">
       {/* Merge modal */}
       {showMergeModal && (() => {
         const ids = Array.from(mergeSelection);

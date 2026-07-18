@@ -82,8 +82,8 @@ export default async function B2BLayout({
           )}
           <Header session={session} />
 
-          <div className="flex flex-1 overflow-hidden">
-            <main className={`flex-1 ${mainContained ? 'overflow-hidden' : 'overflow-y-auto pb-20 md:pb-0'}`}>
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            <main className={`flex-1 min-h-0 ${mainContained ? 'overflow-hidden' : 'overflow-y-auto pb-20 md:pb-0'}`}>
               {children}
             </main>
 
