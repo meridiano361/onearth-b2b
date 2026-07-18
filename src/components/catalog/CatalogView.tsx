@@ -32,6 +32,7 @@ type Filters = {
   collezione:         string | null;
   produttore:         string | null;
   tranche:            string | null;
+  conferente:         string | null;
 };
 
 // ── Bidirectional filter invalidation helpers ─────────────────────────────────
@@ -110,7 +111,7 @@ const EMPTY_FILTERS: Filters = {
   gruppoMerceologico: null, famiglia: null, classe: null, sottoclasse: null,
   gruppoOmogeneo: null, nomLinea: null, modello: null, materiale: null,
   colore: null, temaColore: null, stagione: null, collezione: null,
-  produttore: null, tranche: null,
+  produttore: null, tranche: null, conferente: null,
 };
 
 // Short URL keys for cleaner URLs
@@ -118,7 +119,7 @@ const URL_KEYS: Record<keyof Filters, string> = {
   gruppoMerceologico: 'gm', famiglia: 'fam', classe: 'cls', sottoclasse: 'sub',
   gruppoOmogeneo: 'go', nomLinea: 'lin', modello: 'mod', materiale: 'mat',
   colore: 'col', temaColore: 'tcol', stagione: 'stag', collezione: 'coll',
-  produttore: 'prod', tranche: 'tran',
+  produttore: 'prod', tranche: 'tran', conferente: 'conf',
 };
 
 const CHIP_LABELS: { key: keyof Filters; label: string }[] = [
@@ -136,6 +137,7 @@ const CHIP_LABELS: { key: keyof Filters; label: string }[] = [
   { key: 'collezione',         label: 'Collezione' },
   { key: 'produttore',         label: 'Produttore' },
   { key: 'tranche',            label: 'Tranche' },
+  { key: 'conferente',         label: 'Conferente' },
 ];
 
 export default function CatalogView({
@@ -401,6 +403,7 @@ export default function CatalogView({
       selectedCollezione:         currentFilters.collezione,         onCollezioneChange:         (v: string | null) => onFilterChange('collezione', v),
       selectedProduttore:         currentFilters.produttore,         onProduttoreChange:         (v: string | null) => onFilterChange('produttore', v),
       selectedTranche:            currentFilters.tranche,            onTrancheChange:            (v: string | null) => onFilterChange('tranche', v),
+      selectedConferente:         currentFilters.conferente,         onConferenteChange:         (v: string | null) => onFilterChange('conferente', v),
       selectedBloccoColore:       currentBloccoColore,               onBloccoColoreChange,
       hasActiveFilters,
       onResetAll: handleResetAll,

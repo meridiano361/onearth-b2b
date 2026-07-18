@@ -37,6 +37,8 @@ interface CatalogFiltersProps {
   onProduttoreChange: (v: string | null) => void;
   selectedTranche: string | null;
   onTrancheChange: (v: string | null) => void;
+  selectedConferente: string | null;
+  onConferenteChange: (v: string | null) => void;
   selectedBloccoColore: { id: number; name: string } | null;
   onBloccoColoreChange: (v: { id: number; name: string } | null) => void;
   hasActiveFilters: boolean;
@@ -187,6 +189,7 @@ export default function CatalogFilters({
   selectedCollezione,         onCollezioneChange,
   selectedProduttore,         onProduttoreChange,
   selectedTranche,            onTrancheChange,
+  selectedConferente,         onConferenteChange,
   selectedBloccoColore,       onBloccoColoreChange,
   hasActiveFilters,           onResetAll,
   enabledFilters,
@@ -221,11 +224,12 @@ export default function CatalogFilters({
     collezione:         selectedCollezione,
     produttore:         selectedProduttore,
     tranche:            selectedTranche,
+    conferente:         selectedConferente,
   }), [
     selectedGruppoMerceologico, selectedFamiglia, selectedClasse, selectedSottoclasse,
     selectedGruppoOmogeneo, selectedNomLinea, selectedModello, selectedMateriale,
     selectedColore, selectedTemaColore, selectedStagione, selectedCollezione,
-    selectedProduttore, selectedTranche,
+    selectedProduttore, selectedTranche, selectedConferente,
   ]);
 
   // Compute available options for ALL filters in one memo — each uses "exclude self" logic
@@ -244,6 +248,7 @@ export default function CatalogFilters({
     collezione:         computeOptions(products, activeFilters, 'collezione'),
     produttore:         computeOptions(products, activeFilters, 'produttore'),
     tranche:            computeOptions(products, activeFilters, 'tranche'),
+    conferente:         computeOptions(products, activeFilters, 'conferente'),
   }), [products, activeFilters]);
 
   return (
@@ -278,6 +283,7 @@ export default function CatalogFilters({
         {show('collezione') && !lockedCollezione && <FilterSelect label={t('collezione')} allLabel={t('all')} value={selectedCollezione} options={opts.collezione} onChange={onCollezioneChange} />}
         {show('produttore')         && <FilterSelect label={t('produttore')}         allLabel={t('all')} value={selectedProduttore}         options={opts.produttore}         onChange={onProduttoreChange} />}
         {show('tranche')            && <FilterSelect label={t('tranche')}            allLabel={t('all')} value={selectedTranche}           options={opts.tranche}            onChange={onTrancheChange} />}
+        {show('conferente')         && <FilterSelect label={t('conferente')}         allLabel={t('all')} value={selectedConferente}         options={opts.conferente}         onChange={onConferenteChange} />}
         {show('bloccoColore') && colorBlocks && colorBlocks.length > 0 && (
           <FilterSelect
             label={t('bloccoColore')}

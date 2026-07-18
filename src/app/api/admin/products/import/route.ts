@@ -51,7 +51,7 @@ function buildFieldValue(campo: string, row: any): unknown {
     case 'classe':      return str(row.classe);
     case 'sottoclasse': return str(row.sottoclasse);
     case 'gruppoOmogeneo': return str(row.gruppoOmogeneo);
-    case 'nomLinea':    return str(row.nomLinea);
+    case 'nomLinea':    { const v = str(row.nomLinea); return v ? v.toUpperCase() : null; }
     case 'stagione':    return str(row.stagione);
     case 'collezione':
       return row.collezione !== undefined

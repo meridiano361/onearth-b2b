@@ -177,6 +177,7 @@ export async function PATCH(
     }
 
     // When nomLinea changes (or name is present), regenerate name with correct linea casing
+    if (data.nomLinea) data.nomLinea = data.nomLinea.toUpperCase();
     const nomLineaChanging = data.nomLinea !== undefined;
     const namePresent = !!(data.name && !(body as any).skipNameNormalization);
 

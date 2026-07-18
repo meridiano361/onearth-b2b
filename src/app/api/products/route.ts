@@ -311,7 +311,7 @@ export async function POST(req: NextRequest) {
         colore2: data.colore2 || null,
         colore3: data.colore3 || null,
         altriColori: data.altriColori || null,
-        nomLinea: data.nomLinea || null,
+        nomLinea: data.nomLinea?.toUpperCase() || null,
         misura: data.misura || null,
         forma: data.forma || null,
         produttore: data.produttore || null,
