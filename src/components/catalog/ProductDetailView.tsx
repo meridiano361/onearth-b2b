@@ -14,6 +14,31 @@ import { useSettings } from '@/contexts/SettingsContext';
 import type { Product } from '@/types';
 import AccessoriSuggeriti from './AccessoriSuggeriti';
 
+const PRODUTTORE_URLS: Record<string, string> = {
+  'Allpa':                      'https://shop.meridiano361.it/pages/allpa',
+  'Asha':                       'https://shop.meridiano361.it/pages/asha',
+  'Assisi Garments':            'https://shop.meridiano361.it/pages/assisi-garments',
+  'Auromira':                   'https://shop.meridiano361.it/pages/auromira',
+  'Base':                       'https://shop.meridiano361.it/pages/base',
+  'Camari':                     'https://shop.meridiano361.it/pages/camari',
+  'Copavic':                    'https://shop.meridiano361.it/pages/copavic-guatemala',
+  'Corr':                       'https://shop.meridiano361.it/pages/corr',
+  'Craft Link':                 'https://shop.meridiano361.it/pages/craft-link',
+  'Crc':                        'https://shop.meridiano361.it/pages/crc-india',
+  'Creative Handicrafts':       'https://shop.meridiano361.it/pages/creative-handicrafts',
+  'Dhaka Handicrafts':          'https://shop.meridiano361.it/pages/dhaka-handicrafts',
+  'Ema':                        'https://shop.meridiano361.it/pages/ema',
+  'Manjeen':                    'https://shop.meridiano361.it/pages/manjeen',
+  'Mks':                        'https://shop.meridiano361.it/pages/mks',
+  'Nepali Craft Trading (Acp)': 'https://shop.meridiano361.it/pages/acp',
+  'Paru':                       'https://shop.meridiano361.it/pages/copy-of-crc-india',
+  'Prokritee':                  'https://shop.meridiano361.it/pages/prokritee-bangladesh',
+  'Sana Hastakala':             'https://shop.meridiano361.it/pages/sana-hastakala',
+  'Sang Arun':                  'https://shop.meridiano361.it/pages/sang-arun',
+  'Sasha':                      'https://shop.meridiano361.it/pages/sasha-india',
+  'Selyn':                      'https://shop.meridiano361.it/pages/selyn',
+};
+
 function ProductGallery({ product }: { product: Product }) {
   const photos = [product.imageUrl, product.imageUrl2, product.imageUrl3, product.imageUrl4].filter(Boolean) as string[];
   const [active, setActive] = useState(0);
@@ -454,13 +479,29 @@ export default function ProductDetailView({ id }: Props) {
               <div>
                 <h2 className="label-luxury text-gray-400 mb-3">{tp('detailsTitle')}</h2>
                 <div className="space-y-2">
-                  {activeDetailFields.map(({ key, label }) => (
-                    <FieldRow
-                      key={key}
-                      label={label}
-                      value={key === 'lotSize' ? `${p[key]} ${tp('lotUnit')}` : String(p[key])}
-                    />
-                  ))}
+                  {activeDetailFields.map(({ key, label }) => {
+                    if (key === 'produttore') {
+                      const val = String(p[key]);
+                      const url = PRODUTTORE_URLS[val];
+                      return url ? (
+                        <div key={key} className="flex items-baseline gap-2">
+                          <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:underline">
+                            {val}
+                          </a>
+                        </div>
+                      ) : (
+                        <FieldRow key={key} label={label} value={val} />
+                      );
+                    }
+                    return (
+                      <FieldRow
+                        key={key}
+                        label={label}
+                        value={key === 'lotSize' ? `${p[key]} ${tp('lotUnit')}` : String(p[key])}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}
