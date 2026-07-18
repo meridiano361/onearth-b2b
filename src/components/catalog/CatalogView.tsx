@@ -347,7 +347,7 @@ export default function CatalogView({
       );
     }
 
-    const { gruppoMerceologico, famiglia, classe, sottoclasse, gruppoOmogeneo, nomLinea, modello, materiale, colore, temaColore, stagione, collezione, produttore, tranche } = filters;
+    const { gruppoMerceologico, famiglia, classe, sottoclasse, gruppoOmogeneo, nomLinea, modello, materiale, colore, temaColore, stagione, collezione, produttore, tranche, conferente } = filters;
     if (gruppoMerceologico) result = result.filter((p) => p.gruppoMerceologico === gruppoMerceologico);
     if (famiglia)           result = result.filter((p) => p.famiglia           === famiglia);
     if (classe)             result = result.filter((p) => p.classe === classe || (p as any).classe2 === classe);
@@ -362,6 +362,7 @@ export default function CatalogView({
     if (collezione)         result = result.filter((p) => p.collezione?.toLowerCase() === collezione.toLowerCase());
     if (produttore)         result = result.filter((p) => p.produttore         === produttore);
     if (tranche)            result = result.filter((p) => p.tranche            === tranche);
+    if (conferente)         result = result.filter((p) => (p as any).conferente === conferente);
     if (bloccoColoreFilter) result = result.filter((p) => (p.colorBlockIds ?? []).includes(bloccoColoreFilter.id));
     if (onlyFavorites)      result = result.filter((p) => favoriteIds.has(p.id));
     if (sortBy === 'novita')       result = result.filter((p) => isModa ? !p.isContinuativo : p.collezione === 'CA27');
