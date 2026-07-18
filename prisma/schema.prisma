@@ -339,10 +339,11 @@ model Organization {
   nome      String   @unique
   createdAt DateTime @default(now())
 
-  operatori Operator[]
-  canali    Canale[]
-  ordini    Order[]
-  pareti    PareteAttrezzata[]
+  operatori      Operator[]
+  canali         Canale[]
+  ordini         Order[]
+  pareti         PareteAttrezzata[]
+  continuativi   ProdottoContinuativo[]
 
   @@map("organizations")
 }
@@ -932,6 +933,18 @@ model PareteAttrezzata {
   updatedAt      DateTime      @updatedAt
 
   @@map("pareti_attrezzate")
+}
+
+model ProdottoContinuativo {
+  id             String       @id @default(cuid())
+  nome           String
+  imageUrl       String?
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("prodotti_continuativi")
 }
 
 // ─── Jewelry Display Rendering ────────────────────────────────────────────────

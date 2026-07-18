@@ -7,7 +7,9 @@ import {
   ArrowLeft, Plus, X, Search, Loader2, ChevronLeft, ChevronRight,
   Trash2, Pencil, Check, Tag, PackagePlus, AlertTriangle, ZoomIn, ZoomOut,
   SlidersHorizontal, ChevronDown, ChevronUp, GripVertical, Undo2, Redo2, ArrowUpDown,
+  ImagePlus, Upload,
 } from 'lucide-react';
+import { compressImageToBase64 } from '@/lib/compressImage';
 import toast from 'react-hot-toast';
 import type {
   PareteAttrezzata, ElementoParete, ItemParete,
@@ -282,9 +284,17 @@ function ProductSheetModal({ item, onClose }: { item: ItemParete; onClose: () =>
   );
 }
 
+// ─── Prodotti continuativi type ───────────────────────────────────────────────
+
+interface ProdottoContinuativo {
+  id: string;
+  nome: string;
+  imageUrl: string | null;
+}
+
 // ─── Add product modal (multi-select, with source tabs + filters) ─────────────
 
-type SourceTab = 'tutti' | 'carrello' | 'ordine';
+type SourceTab = 'tutti' | 'carrello' | 'ordine' | 'continuativi';
 
 function AddProductModal({
   elementoTipo, onAdd, onClose,
@@ -300,6 +310,13 @@ function AddProductModal({
   const [filterClasse, setFilterClasse] = useState('');
   const [filterSottoclasse, setFilterSottoclasse] = useState('');
   const [filterColore, setFilterColore] = useState('');
+  // continuativi state
+  const [selectedConts, setSelectedConts] = useState<Set<string>>(new Set());
+  const [newContNome, setNewContNome] = useState('');
+  const [newContImage, setNewContImage] = useState<string | null>(null);
+  const [savingCont, setSavingCont] = useState(false);
+  const [deletingContId, setDeletingContId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: productsData, isLoading: productsLoading } = useQuery<{ data: Product[] }>({
     queryKey: ['moda-products-visual'],
@@ -320,6 +337,14 @@ function AddProductModal({
     staleTime: 30_000,
     enabled: sourceTab === 'ordine',
   });
+
+  const { data: continuativiData, isLoading: continuativiLoading } = useQuery<{ data: ProdottoContinuativo[] }>({
+    queryKey: ['continuativi'],
+    queryFn: () => fetch('/api/moda/continuativi').then((r) => r.json()),
+    staleTime: 30_000,
+    enabled: sourceTab === 'continuativi',
+  });
+  const continuativi = continuativiData?.data ?? [];
 
   const allProducts = productsData?.data ?? [];
   const orders = ordersData?.data ?? [];
@@ -372,7 +397,70 @@ function AddProductModal({
     setSelected((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }
 
+  function toggleCont(id: string) {
+    setSelectedConts((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  }
+
+  async function handlePickImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageToBase64(file, 20_000, 300);
+      setNewContImage(compressed);
+    } catch {
+      toast.error('Errore compressione immagine');
+    }
+    e.target.value = '';
+  }
+
+  async function handleSaveCont() {
+    if (!newContNome.trim()) return;
+    setSavingCont(true);
+    try {
+      const res = await fetch('/api/moda/continuativi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: newContNome.trim(), imageUrl: newContImage }),
+      });
+      if (!res.ok) throw new Error();
+      setNewContNome('');
+      setNewContImage(null);
+      queryClient.invalidateQueries({ queryKey: ['continuativi'] });
+    } catch {
+      toast.error('Errore salvataggio');
+    } finally {
+      setSavingCont(false);
+    }
+  }
+
+  async function handleDeleteCont(id: string) {
+    setDeletingContId(id);
+    try {
+      await fetch(`/api/moda/continuativi/${id}`, { method: 'DELETE' });
+      queryClient.invalidateQueries({ queryKey: ['continuativi'] });
+      setSelectedConts((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    } catch {
+      toast.error('Errore eliminazione');
+    } finally {
+      setDeletingContId(null);
+    }
+  }
+
   function handleConfirm() {
+    if (sourceTab === 'continuativi') {
+      const sel = continuativi.filter((c) => selectedConts.has(c.id));
+      const items: ItemParete[] = sel.map((c) => ({
+        id: nanoid(8),
+        tipo: 'altro' as TipoCapo,
+        continuativoId: c.id,
+        productName: c.nome,
+        imageUrl: c.imageUrl ?? undefined,
+        pezzi: [],
+      }));
+      onAdd(items);
+      onClose();
+      return;
+    }
     const sel = allProducts.filter((p) => selected.has(p.id));
     const items: ItemParete[] = sel.map((p) => ({
       id: nanoid(8),
@@ -389,9 +477,11 @@ function AddProductModal({
     onClose();
   }
 
+  const isContinuativiTab = sourceTab === 'continuativi';
+  const selectedCount = isContinuativiTab ? selectedConts.size : selected.size;
   const isLoading = productsLoading || (sourceTab === 'carrello' && cartsLoading) || (sourceTab === 'ordine' && ordersLoading);
 
-  const tabLabel = (t: SourceTab) => ({ tutti: 'Tutti', carrello: 'Carrello', ordine: 'Ordine' }[t]);
+  const tabLabel = (t: SourceTab) => ({ tutti: 'Tutti', carrello: 'Carrello', ordine: 'Ordine', continuativi: 'Continuativi' }[t]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -404,8 +494,8 @@ function AddProductModal({
         </div>
 
         {/* Source tabs */}
-        <div className="flex px-4 pt-3 gap-1 flex-shrink-0">
-          {(['tutti', 'carrello', 'ordine'] as SourceTab[]).map((t) => (
+        <div className="flex px-4 pt-3 gap-1 flex-shrink-0 flex-wrap">
+          {(['tutti', 'carrello', 'ordine', 'continuativi'] as SourceTab[]).map((t) => (
             <button key={t} type="button" onClick={() => setSourceTab(t)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${sourceTab === t ? 'bg-primary text-white' : 'text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
               {tabLabel(t)}
@@ -435,8 +525,8 @@ function AddProductModal({
           </div>
         )}
 
-        {/* Search + filter toggle */}
-        <div className="px-4 pt-3 pb-2 flex-shrink-0 space-y-2">
+        {/* Search + filter toggle (hidden for continuativi tab) */}
+        {!isContinuativiTab && <div className="px-4 pt-3 pb-2 flex-shrink-0 space-y-2">
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -469,48 +559,122 @@ function AddProductModal({
               ))}
             </div>
           )}
-        </div>
+        </div>}
 
-        {/* Product list */}
-        <div className="overflow-y-auto flex-1 border-t border-gray-100">
-          {isLoading ? (
-            <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
-          ) : sourceTab === 'ordine' && !selectedOrderId ? (
-            <p className="text-center py-8 text-xs text-gray-400">Seleziona un ordine per visualizzare i prodotti</p>
-          ) : filtered.length === 0 ? (
-            <p className="text-center py-8 text-xs text-gray-400">Nessun risultato</p>
-          ) : filtered.map((p) => {
-            const isChecked = selected.has(p.id);
-            const img = productImageUrl(p);
-            return (
-              <button key={p.id} onClick={() => toggle(p.id)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left ${isChecked ? 'bg-accent/10' : 'hover:bg-gray-50'}`}>
-                <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${isChecked ? 'bg-primary border-primary' : 'border-gray-300'}`}>
-                  {isChecked && <Check size={10} className="text-white" />}
+        {/* Product list — catalog tabs */}
+        {!isContinuativiTab && (
+          <div className="overflow-y-auto flex-1 border-t border-gray-100">
+            {isLoading ? (
+              <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+            ) : sourceTab === 'ordine' && !selectedOrderId ? (
+              <p className="text-center py-8 text-xs text-gray-400">Seleziona un ordine per visualizzare i prodotti</p>
+            ) : filtered.length === 0 ? (
+              <p className="text-center py-8 text-xs text-gray-400">Nessun risultato</p>
+            ) : filtered.map((p) => {
+              const isChecked = selected.has(p.id);
+              const img = productImageUrl(p);
+              return (
+                <button key={p.id} onClick={() => toggle(p.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left ${isChecked ? 'bg-accent/10' : 'hover:bg-gray-50'}`}>
+                  <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${isChecked ? 'bg-primary border-primary' : 'border-gray-300'}`}>
+                    {isChecked && <Check size={10} className="text-white" />}
+                  </div>
+                  {img
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={img} alt={p.name} className="w-9 h-9 object-cover rounded flex-shrink-0" />
+                    : <div className="w-9 h-9 bg-gray-100 rounded flex-shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-gray-900 truncate">{formatProductName(p)}</p>
+                    <p className="text-2xs text-gray-400">{[p.famiglia, p.colore].filter(Boolean).join(' · ')}</p>
+                  </div>
+                  <span className="text-2xs text-gray-400 flex-shrink-0 font-medium">{TIPO_LABELS[tipoFromProduct(p, elementoTipo)]}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Continuativi tab */}
+        {isContinuativiTab && (
+          <div className="flex-1 overflow-y-auto border-t border-gray-100 flex flex-col">
+            {/* Add new form */}
+            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex-shrink-0">
+              <p className="text-2xs text-gray-400 mb-2 font-medium uppercase tracking-wide">Aggiungi prodotto continuativo</p>
+              <div className="flex gap-2 items-start">
+                {/* Photo picker */}
+                <label className="flex-shrink-0 w-12 h-12 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors overflow-hidden">
+                  {newContImage
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={newContImage} alt="" className="w-full h-full object-cover" />
+                    : <ImagePlus size={16} className="text-gray-400" />}
+                  <input type="file" accept="image/*" className="hidden" onChange={handlePickImage} />
+                </label>
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <input
+                    value={newContNome}
+                    onChange={(e) => setNewContNome(e.target.value)}
+                    placeholder="Nome prodotto…"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-400"
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveCont(); }}
+                  />
+                  <button
+                    onClick={handleSaveCont}
+                    disabled={!newContNome.trim() || savingCont}
+                    className="self-end flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-primary/90 transition-colors"
+                  >
+                    {savingCont ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
+                    Salva
+                  </button>
                 </div>
-                {img
-                  // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={img} alt={p.name} className="w-9 h-9 object-cover rounded flex-shrink-0" />
-                  : <div className="w-9 h-9 bg-gray-100 rounded flex-shrink-0" />}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-900 truncate">{formatProductName(p)}</p>
-                  <p className="text-2xs text-gray-400">{[p.famiglia, p.colore].filter(Boolean).join(' · ')}</p>
+              </div>
+              {newContImage && (
+                <p className="text-2xs text-gray-400 mt-1 flex items-center gap-1">
+                  <Upload size={10} /> Foto caricata e compressa
+                </p>
+              )}
+            </div>
+
+            {/* List */}
+            {continuativiLoading ? (
+              <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+            ) : continuativi.length === 0 ? (
+              <p className="text-center py-8 text-xs text-gray-400">Nessun prodotto continuativo salvato</p>
+            ) : continuativi.map((c) => {
+              const isChecked = selectedConts.has(c.id);
+              return (
+                <div key={c.id} className={`flex items-center gap-3 px-4 py-2.5 ${isChecked ? 'bg-accent/10' : 'hover:bg-gray-50'}`}>
+                  <button onClick={() => toggleCont(c.id)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                    <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${isChecked ? 'bg-primary border-primary' : 'border-gray-300'}`}>
+                      {isChecked && <Check size={10} className="text-white" />}
+                    </div>
+                    {c.imageUrl
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={c.imageUrl} alt={c.nome} className="w-9 h-9 object-cover rounded flex-shrink-0" />
+                      : <div className="w-9 h-9 bg-gray-100 rounded flex-shrink-0 flex items-center justify-center"><ImagePlus size={12} className="text-gray-300" /></div>}
+                    <p className="text-xs font-medium text-gray-900 truncate">{c.nome}</p>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCont(c.id)}
+                    disabled={deletingContId === c.id}
+                    className="p-1 text-gray-300 hover:text-red-400 transition-colors flex-shrink-0"
+                  >
+                    {deletingContId === c.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                  </button>
                 </div>
-                <span className="text-2xs text-gray-400 flex-shrink-0 font-medium">{TIPO_LABELS[tipoFromProduct(p, elementoTipo)]}</span>
-              </button>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Footer */}
         <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-3">
           <p className="flex-1 text-xs text-gray-400">
-            {selected.size === 0 ? 'Nessun prodotto selezionato' : `${selected.size} prodott${selected.size === 1 ? 'o' : 'i'} selezionat${selected.size === 1 ? 'o' : 'i'}`}
+            {selectedCount === 0 ? 'Nessun prodotto selezionato' : `${selectedCount} prodott${selectedCount === 1 ? 'o' : 'i'} selezionat${selectedCount === 1 ? 'o' : 'i'}`}
           </p>
           <button onClick={onClose} className="px-3 py-2 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Annulla</button>
-          <button onClick={handleConfirm} disabled={selected.size === 0}
+          <button onClick={handleConfirm} disabled={selectedCount === 0}
             className="px-4 py-2 bg-primary text-white text-xs font-medium rounded-lg disabled:opacity-40 hover:bg-primary/90 transition-colors">
-            Aggiungi {selected.size > 0 ? `(${selected.size})` : ''}
+            Aggiungi {selectedCount > 0 ? `(${selectedCount})` : ''}
           </button>
         </div>
       </div>

@@ -138,6 +138,7 @@ export interface ItemParete {
   productCode?: string;
   productName?: string;
   imageUrl?: string;
+  continuativoId?: string; // prodotto continuativo del cliente (non catalogo)
   coloreHex?: string;
   pezzi: PezzoParete[];
   availableTaglie?: string[]; // from product sizeVariants; undefined = all sizes selectable
