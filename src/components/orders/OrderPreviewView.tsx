@@ -909,7 +909,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
 
   // ── Main render ────────────────────────────────────────────
   return (
-    <div className="flex flex-col min-h-full">
+    <div>
 
       {showDemetraInstructions && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
