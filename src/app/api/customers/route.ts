@@ -35,10 +35,16 @@ export async function GET(req: NextRequest) {
 
     const where: any = {};
     if (search) {
+      const operatorMatch = { OR: [
+        { nome:    { contains: search, mode: 'insensitive' } },
+        { cognome: { contains: search, mode: 'insensitive' } },
+        { email:   { contains: search, mode: 'insensitive' } },
+      ]};
       where.OR = [
-        { companyName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
+        { companyName:  { contains: search, mode: 'insensitive' } },
+        { email:        { contains: search, mode: 'insensitive' } },
         { customerCode: { contains: search, mode: 'insensitive' } },
+        { orders: { some: { operator: operatorMatch } } },
       ];
     }
 

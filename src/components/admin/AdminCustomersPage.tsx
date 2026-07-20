@@ -187,7 +187,7 @@ export default function AdminCustomersPage() {
 
       <div className="mb-4 max-w-sm">
         <Input
-          placeholder="Cerca per nome, email o codice..."
+          placeholder="Cerca per nome, email, codice o operatore..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           icon={<Search size={14} />}
