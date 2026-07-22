@@ -1053,7 +1053,9 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
         const err = await addRes.json();
         throw new Error(err.error ?? 'Errore');
       }
-      queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
+      // Await the refetch so that the spinner stays until the updated data arrives —
+      // this prevents a window where the size briefly shows as "not ordered" with a stale total.
+      await queryClient.refetchQueries({ queryKey: ['order-preview', id] });
       queryClient.invalidateQueries({ queryKey: ['my-orders'] });
       toast.success('Taglia aggiunta ✓');
     } catch (e: any) {
@@ -1091,18 +1093,28 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   }
 
   async function handleRemove(itemId: string) {
+    // Optimistic removal: remove from cache and overrides immediately so the count
+    // updates at once, without a window where the item flickers back at its server qty.
+    const previousData = queryClient.getQueryData<Order>(['order-preview', id]);
+    queryClient.setQueryData<Order>(['order-preview', id], (old: any) => {
+      if (!old) return old;
+      return { ...old, items: (old.items ?? []).filter((it: any) => it.id !== itemId) };
+    });
+    setQtyOverrides((prev) => {
+      const n = { ...prev };
+      delete n[itemId];
+      return n;
+    });
+
     try {
       const res = await fetch(`/api/orders/${id}/items/${itemId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
       queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
       queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-      setQtyOverrides((prev) => {
-        const n = { ...prev };
-        delete n[itemId];
-        return n;
-      });
       toast.success(t('removeSuccess'));
     } catch {
+      // Restore previous state on failure
+      queryClient.setQueryData(['order-preview', id], previousData);
       toast.error(t('removeError'));
     }
   }
