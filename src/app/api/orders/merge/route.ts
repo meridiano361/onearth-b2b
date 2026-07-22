@@ -70,7 +70,9 @@ export async function POST(req: NextRequest) {
       async (tx) => {
         for (const srcItem of source.items) {
           const unitPrice = Number(srcItem.product?.costPrice ?? srcItem.unitPrice);
-          const existing = target.items.find(ti => ti.productId === srcItem.productId);
+          const existing = target.items.find(
+            ti => ti.productId === srcItem.productId && ti.taglia === srcItem.taglia,
+          );
 
           if (existing) {
             const newQty = existing.quantity + srcItem.quantity;
@@ -83,6 +85,7 @@ export async function POST(req: NextRequest) {
               data: {
                 orderId: targetOrderId,
                 productId: srcItem.productId,
+                taglia: srcItem.taglia,
                 quantity: srcItem.quantity,
                 unitPrice,
                 subtotal: unitPrice * srcItem.quantity,
