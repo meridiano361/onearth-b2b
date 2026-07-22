@@ -116,7 +116,6 @@ function ProductCard({
       {/* Image */}
       <div className="relative aspect-square bg-[#C8C0B5] overflow-hidden">
         <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-        {/* Remove button */}
         <button
           onClick={() => onRemove(item.id)}
           className="absolute top-1.5 left-1.5 bg-white/80 rounded p-0.5 text-gray-500 hover:text-red-500 transition-colors"
@@ -124,10 +123,14 @@ function ProductCard({
         >
           <X size={10} />
         </button>
-        {/* Qty badge */}
         <div className="absolute top-1.5 right-1.5 bg-primary/90 text-white text-[9px] font-bold px-1 py-px leading-tight">
           ×{effectiveQty}
         </div>
+        {item.taglia && (
+          <div className="absolute bottom-1.5 left-1.5 bg-white/90 text-primary text-[9px] font-bold px-1.5 py-px leading-tight rounded-sm">
+            {item.taglia}
+          </div>
+        )}
       </div>
 
       {/* Body */}
@@ -180,6 +183,101 @@ function ProductCard({
             </button>
           </div>
           <span className="text-xs font-semibold text-primary">{formatCurrency(effectiveSubtotal)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Multi-taglia card (col-span-full) ──────────────────────────
+type EnrichedItem = OrderItem & { effectiveQty: number; effectiveUnitCost: number; effectiveSubtotal: number };
+
+function MultiTagliaCard({
+  items,
+  onQtyChange,
+  onRemove,
+  removeLabel,
+  decreaseLabel,
+  increaseLabel,
+}: {
+  items: EnrichedItem[];
+  onQtyChange: (id: string, qty: number) => void;
+  onRemove: (id: string) => void;
+  removeLabel: string;
+  decreaseLabel: string;
+  increaseLabel: string;
+}) {
+  const product = items[0].product!;
+  const lotSize = product.lotSize || 1;
+  const totalQty = items.reduce((s, i) => s + i.effectiveQty, 0);
+  const totalSubtotal = items.reduce((s, i) => s + i.effectiveSubtotal, 0);
+
+  return (
+    <div className="col-span-full bg-white border border-border">
+      <div className="flex gap-3 p-3">
+        {/* Thumbnail */}
+        <div className="w-16 h-16 flex-shrink-0 bg-[#C8C0B5] overflow-hidden rounded">
+          <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+        </div>
+
+        {/* Info + taglie */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div>
+              <p className="text-[9px] font-mono text-gray-400 tracking-wider">{product.code}</p>
+              <p className="text-xs font-medium text-primary leading-snug">{product.name}</p>
+              <p className="text-[9px] text-gray-400 mt-0.5">
+                IE: <span className="font-medium text-gray-600">{formatCurrency(effectiveCost(product, Number(items[0].unitPrice)))}</span>
+                <span className="mx-1 text-gray-200">·</span>
+                PVP: <span className="font-medium text-gray-600">{formatCurrency(product.retailPrice)}</span>
+              </p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="text-2xs text-gray-400">{totalQty} pz totali</p>
+              <p className="text-sm font-semibold text-primary">{formatCurrency(totalSubtotal)}</p>
+            </div>
+          </div>
+
+          {/* Taglia rows */}
+          <div className="border-t border-border/50 pt-2 space-y-1.5">
+            {items.map((item) => (
+              <div key={item.id} className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-primary w-16 flex-shrink-0">{item.taglia || '—'}</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      const newQty = item.effectiveQty - lotSize;
+                      if (newQty <= 0) {
+                        if (window.confirm(`Rimuovere taglia ${item.taglia} dall'ordine?`)) onRemove(item.id);
+                      } else {
+                        onQtyChange(item.id, newQty);
+                      }
+                    }}
+                    className="w-6 h-6 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
+                    aria-label={decreaseLabel}
+                  >
+                    <Minus size={10} />
+                  </button>
+                  <span className="text-sm font-semibold text-primary text-center w-7">{item.effectiveQty}</span>
+                  <button
+                    onClick={() => onQtyChange(item.id, item.effectiveQty + lotSize)}
+                    className="w-6 h-6 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
+                    aria-label={increaseLabel}
+                  >
+                    <Plus size={10} />
+                  </button>
+                </div>
+                <span className="text-xs text-gray-500 flex-1">{formatCurrency(item.effectiveSubtotal)}</span>
+                <button
+                  onClick={() => { if (window.confirm(`Rimuovere taglia ${item.taglia} dall'ordine?`)) onRemove(item.id); }}
+                  className="text-gray-300 hover:text-red-500 transition-colors"
+                  title={removeLabel}
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -1267,19 +1365,37 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
 
             {/* Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
-              {group.items.map((item) => (
-                <ProductCard
-                  key={item.id}
-                  item={item}
-                  effectiveQty={item.effectiveQty}
-                  effectiveSubtotal={item.effectiveSubtotal}
-                  onQtyChange={handleQtyChange}
-                  onRemove={handleRemove}
-                  removeLabel={t('remove')}
-                  decreaseLabel={t('decrease')}
-                  increaseLabel={t('increase')}
-                />
-              ))}
+              {Array.from(
+                group.items.reduce((map, item) => {
+                  if (!map.has(item.productId)) map.set(item.productId, []);
+                  map.get(item.productId)!.push(item as EnrichedItem);
+                  return map;
+                }, new Map<string, EnrichedItem[]>()).values()
+              ).map((productItems) =>
+                productItems.length > 1 ? (
+                  <MultiTagliaCard
+                    key={productItems[0].productId}
+                    items={productItems}
+                    onQtyChange={handleQtyChange}
+                    onRemove={handleRemove}
+                    removeLabel={t('remove')}
+                    decreaseLabel={t('decrease')}
+                    increaseLabel={t('increase')}
+                  />
+                ) : (
+                  <ProductCard
+                    key={productItems[0].id}
+                    item={productItems[0]}
+                    effectiveQty={productItems[0].effectiveQty}
+                    effectiveSubtotal={productItems[0].effectiveSubtotal}
+                    onQtyChange={handleQtyChange}
+                    onRemove={handleRemove}
+                    removeLabel={t('remove')}
+                    decreaseLabel={t('decrease')}
+                    increaseLabel={t('increase')}
+                  />
+                )
+              )}
             </div>
 
             {/* Group subtotal line */}
