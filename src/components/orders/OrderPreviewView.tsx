@@ -907,6 +907,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   const [addProductsOpen, setAddProductsOpen] = useState(false);
   const [addingVariantCode, setAddingVariantCode] = useState<string | null>(null);
   const [anagraficaProduct, setAnagraficaProduct] = useState<Product | null>(null);
+  const [fantasySubFilter, setFantasySubFilter] = useState<Record<string, string | null>>({});
   const tabsRef = useRef<HTMLDivElement>(null);
 
   // ── Change destination ─────────────────────────────────────
@@ -1002,13 +1003,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
       const p = item.product as any;
       let key: string;
       if (groupBy === 'fantasia') {
-        const f = norm(p?.fantasia);
-        if (f === 'Stampa') {
-          const s = norm(p?.nomeStampa);
-          key = s ? `Stampa — ${s}` : 'Stampa';
-        } else {
-          key = f || unclassifiedLabel;
-        }
+        key = norm(p?.fantasia) || unclassifiedLabel;
       } else {
         key = norm(p?.[groupBy]) || unclassifiedLabel;
       }
@@ -1595,7 +1590,26 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
           </p>
         )}
 
-        {groups.map((group) => (
+        {groups.map((group) => {
+          // Sub-filter chips: colore for "Tinta unita", nomeStampa for "Stampa"
+          const isFantasia = groupBy === 'fantasia';
+          const subField: 'colore' | 'nomeStampa' | null =
+            isFantasia && group.name === 'Tinta unita' ? 'colore' :
+            isFantasia && group.name === 'Stampa'      ? 'nomeStampa' :
+            null;
+          const subOptions = subField
+            ? [...new Set(
+                group.items
+                  .map((i) => { const v = (i.product as any)?.[subField]; return v?.trim() ? capitalize(v.trim()) : null; })
+                  .filter(Boolean) as string[]
+              )].sort((a, b) => a.localeCompare(b, 'it'))
+            : [];
+          const activeSub = fantasySubFilter[group.name] ?? null;
+          const visibleItems = (subField && activeSub)
+            ? group.items.filter((i) => { const v = (i.product as any)?.[subField]; return v?.trim() ? capitalize(v.trim()) === activeSub : false; })
+            : group.items;
+
+          return (
           <section key={group.name} className="mb-10">
             {/* Group header */}
             <div className="bg-primary text-white px-4 py-3 flex items-center justify-between mb-4">
@@ -1611,10 +1625,27 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
               </div>
             </div>
 
+            {/* Sub-filter chips */}
+            {subOptions.length > 1 && (
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                <button
+                  onClick={() => setFantasySubFilter(prev => ({ ...prev, [group.name]: null }))}
+                  className={`px-2.5 py-1 text-[10px] font-medium rounded-full border transition-colors ${!activeSub ? 'bg-primary text-white border-primary' : 'border-border text-gray-500 hover:border-primary hover:text-primary'}`}
+                >Tutti</button>
+                {subOptions.map(opt => (
+                  <button
+                    key={opt}
+                    onClick={() => setFantasySubFilter(prev => ({ ...prev, [group.name]: prev[group.name] === opt ? null : opt }))}
+                    className={`px-2.5 py-1 text-[10px] font-medium rounded-full border transition-colors ${activeSub === opt ? 'bg-primary text-white border-primary' : 'border-border text-gray-500 hover:border-primary hover:text-primary'}`}
+                  >{opt}</button>
+                ))}
+              </div>
+            )}
+
             {/* Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
               {Array.from(
-                group.items.reduce((map, item) => {
+                visibleItems.reduce((map, item) => {
                   const productTaglia = (item.product as any)?.taglia;
                   const key = item.taglia
                     ? item.productId
@@ -1670,7 +1701,8 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
               </span>
             </div>
           </section>
-        ))}
+          );
+        })}
 
         {/* ── Riepilogo ─────────────────────────────────────── */}
         {groups.length > 1 && (
