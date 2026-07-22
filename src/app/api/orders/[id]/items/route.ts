@@ -7,6 +7,7 @@ import { z } from 'zod';
 const schema = z.object({
   productId: z.string(),
   quantity: z.number().int().min(1),
+  taglia: z.string().default(''),
 });
 
 export async function POST(
@@ -39,22 +40,22 @@ export async function POST(
       }
     }
 
-    const { productId, quantity } = schema.parse(await req.json());
+    const { productId, quantity, taglia } = schema.parse(await req.json());
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
       select: { id: true, costPrice: true, isActive: true },
     });
-    if (!product || !product.isActive) {
-      return NextResponse.json({ error: 'Prodotto non trovato o non attivo' }, { status: 404 });
+    if (!product) {
+      return NextResponse.json({ error: 'Prodotto non trovato' }, { status: 404 });
     }
 
     const unitPrice = Number(product.costPrice);
     const subtotal = unitPrice * quantity;
 
-    // Check if item already exists in this order
+    // Check if item already exists in this order (same product + taglia combo)
     const existing = await prisma.orderItem.findFirst({
-      where: { orderId: params.id, productId },
+      where: { orderId: params.id, productId, taglia },
     });
 
     let item;
@@ -71,6 +72,7 @@ export async function POST(
         data: {
           orderId: params.id,
           productId,
+          taglia,
           quantity,
           unitPrice,
           subtotal,

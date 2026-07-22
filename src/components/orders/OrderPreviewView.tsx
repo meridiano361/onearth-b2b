@@ -107,7 +107,7 @@ function ProductCard({
   effectiveSubtotal: number;
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
-  onAddVariant?: (code: string) => void;
+  onAddVariant?: (codice: string, taglia: string, productId: string) => void;
   orderProductCodes?: Set<string>;
   addingVariantCode?: string | null;
   removeLabel: string;
@@ -202,7 +202,7 @@ function ProductCard({
               return (
                 <button
                   key={v.taglia}
-                  onClick={() => { if (!inOrder && !isAdding) onAddVariant(v.codice); }}
+                  onClick={() => { if (!inOrder && !isAdding) onAddVariant(v.codice, v.taglia, product.id); }}
                   disabled={inOrder || isAdding}
                   title={isCurrent ? 'Taglia corrente' : inOrder ? "Già nell'ordine" : 'Aggiungi taglia'}
                   className={cn(
@@ -244,7 +244,7 @@ function MultiTagliaCard({
   items: EnrichedItem[];
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
-  onAddVariant?: (code: string) => void;
+  onAddVariant?: (codice: string, taglia: string, productId: string) => void;
   orderProductCodes?: Set<string>;
   addingVariantCode?: string | null;
   removeLabel: string;
@@ -302,7 +302,7 @@ function MultiTagliaCard({
                     return (
                       <button
                         key={v.taglia}
-                        onClick={() => { if (!isAdding) onAddVariant(v.codice); }}
+                        onClick={() => { if (!isAdding) onAddVariant(v.codice, v.taglia, firstProduct.id); }}
                         disabled={isAdding}
                         className={cn(
                           'text-[9px] font-bold px-1.5 py-0.5 rounded-sm leading-none border transition-colors',
@@ -972,20 +972,27 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     [order?.items]
   );
 
-  async function handleAddVariant(code: string) {
-    const upperCode = code.toUpperCase();
+  async function handleAddVariant(codice: string, taglia: string, currentProductId: string) {
+    const upperCode = codice.trim().toUpperCase();
     setAddingVariantCode(upperCode);
     try {
-      const res = await fetch(`/api/products?search=${encodeURIComponent(code)}&limit=10`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      const product = (data.data as Product[])?.find((p: Product) => p.code.toUpperCase() === upperCode);
-      if (!product) { toast.error('Prodotto non trovato nel catalogo'); return; }
+      // Try to find a separate product record for this size code
+      const res = await fetch(`/api/products?search=${encodeURIComponent(codice.trim())}&limit=10`);
+      const data = res.ok ? await res.json() : { data: [] };
+      const foundProduct = (data.data as Product[])?.find(
+        (p: Product) => p.code.trim().toUpperCase() === upperCode
+      );
+
+      // Case 1: separate product per size → use its productId, no taglia on OrderItem
+      // Case 2: shared product (sizes as sizeVariants) → use currentProductId with taglia
+      const productId = foundProduct ? foundProduct.id : currentProductId;
+      const tagliaDaUsare = foundProduct ? '' : taglia;
+      const quantity = foundProduct ? (foundProduct.lotSize || 1) : 1;
 
       const addRes = await fetch(`/api/orders/${id}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: product.id, quantity: product.lotSize || 1 }),
+        body: JSON.stringify({ productId, quantity, taglia: tagliaDaUsare }),
       });
       if (!addRes.ok) {
         const err = await addRes.json();
