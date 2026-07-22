@@ -805,13 +805,22 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
   const handleFile4 = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) uploadFile(f, 'imageUrl4', setIsUploading4, fileInputRef4); };
   const handleFile5 = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) uploadFile(f, 'imageUrl5', setIsUploading5, fileInputRef5); };
 
-  // ── Foto swap ────────────────────────────────────────────────────────────
+  // ── Foto swap / compact ──────────────────────────────────────────────────
   const PHOTO_FIELDS = ['imageUrl', 'imageUrl2', 'imageUrl3', 'imageUrl4', 'imageUrl5'] as const;
   function swapPhotos(i: number, j: number) {
     const urlA = watch(PHOTO_FIELDS[i]) || '';
     const urlB = watch(PHOTO_FIELDS[j]) || '';
     setValue(PHOTO_FIELDS[i], urlB, { shouldDirty: true });
     setValue(PHOTO_FIELDS[j], urlA, { shouldDirty: true });
+  }
+  function compactPhotos() {
+    const filled = PHOTO_FIELDS.map((f) => watch(f)).filter(Boolean) as string[];
+    PHOTO_FIELDS.forEach((f, i) => setValue(f, filled[i] ?? '', { shouldDirty: true }));
+  }
+  function removePhoto(field: typeof PHOTO_FIELDS[number]) {
+    setValue(field, '', { shouldDirty: true });
+    // Defer so the cleared value is committed before compacting
+    setTimeout(compactPhotos, 0);
   }
 
   // ── Foto picker ──────────────────────────────────────────────────────────
@@ -836,6 +845,18 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
   // ── Submit ────────────────────────────────────────────────────────────────
   async function onSubmit(values: FormValues) {
     const v = values as unknown as z.output<typeof schema>;
+
+    // Compact photos: eliminate gaps (e.g. slot1 empty + slot3 filled → move to slot1)
+    const compactedPhotos = (
+      [v.imageUrl, v.imageUrl2, v.imageUrl3, v.imageUrl4, v.imageUrl5].filter(Boolean) as string[]
+    );
+    v.imageUrl  = compactedPhotos[0] ?? '';
+    v.imageUrl2 = compactedPhotos[1] ?? '';
+    v.imageUrl3 = compactedPhotos[2] ?? '';
+    v.imageUrl4 = compactedPhotos[3] ?? '';
+    v.imageUrl5 = compactedPhotos[4] ?? '';
+    // Reflect compaction back to form so the UI shows the correct order
+    PHOTO_FIELDS.forEach((f, i) => setValue(f, compactedPhotos[i] ?? '', { shouldDirty: false }));
 
     const isModaProduct = (v.gruppoMerceologico ?? '').toLowerCase() === 'moda';
     const forced = forcedPantoneRef.current;
@@ -1618,7 +1639,7 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
                 Cerca foto
               </button>
               {preview && (
-                <button type="button" onClick={() => setValue(field, '', { shouldDirty: true })} className="text-xs text-red-500 hover:text-red-700">
+                <button type="button" onClick={() => removePhoto(field)} className="text-xs text-red-500 hover:text-red-700">
                   Rimuovi
                 </button>
               )}
