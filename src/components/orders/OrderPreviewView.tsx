@@ -1044,19 +1044,32 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     const upperCode = codice.trim().toUpperCase();
     setAddingVariantCode(upperCode + '-' + taglia);
     try {
-      // Try to find a separate product record for this size code
-      const res = await fetch(`/api/products?search=${encodeURIComponent(codice.trim())}&limit=10`);
-      const data = res.ok ? await res.json() : { data: [] };
-      const foundProduct = (data.data as Product[])?.find(
-        (p: Product) => p.code.trim().toUpperCase() === upperCode
-      );
+      // Detect arch-2 locally: if the sizeVariant codice matches the current product's own code,
+      // they share a single Product record (no separate DB record per size → no search needed).
+      const cachedOrder = queryClient.getQueryData<any>(['order-preview', id]);
+      const currentProduct = cachedOrder?.items?.find((it: any) => it.productId === currentProductId)?.product;
+      const isArch2 = currentProduct?.code?.trim().toUpperCase() === upperCode;
 
-      // Arch 1: found a DIFFERENT product record (one per size) → use its ID, no taglia on item
-      // Arch 2: found the SAME product (shared with sizeVariants) OR no match → keep currentProductId + taglia
-      const isArch1 = foundProduct != null && foundProduct.id !== currentProductId;
-      const productId = isArch1 ? foundProduct.id : currentProductId;
-      const tagliaDaUsare = isArch1 ? '' : taglia;
-      const quantity = isArch1 ? (foundProduct.lotSize || 1) : 1;
+      let productId: string;
+      let tagliaDaUsare: string;
+      let quantity: number;
+
+      if (isArch2) {
+        productId = currentProductId;
+        tagliaDaUsare = taglia;
+        quantity = 1;
+      } else {
+        // Arch 1: each size is a separate Product record → search by code to get its ID
+        const res = await fetch(`/api/products?search=${encodeURIComponent(codice.trim())}&limit=10`);
+        const data = res.ok ? await res.json() : { data: [] };
+        const foundProduct = (data.data as Product[])?.find(
+          (p: Product) => p.code.trim().toUpperCase() === upperCode
+        );
+        if (!foundProduct) throw new Error('Prodotto non trovato');
+        productId = foundProduct.id;
+        tagliaDaUsare = '';
+        quantity = foundProduct.lotSize || 1;
+      }
 
       const addRes = await fetch(`/api/orders/${id}/items`, {
         method: 'POST',
@@ -1067,9 +1080,20 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
         const err = await addRes.json();
         throw new Error(err.error ?? 'Errore');
       }
-      // Await the refetch so that the spinner stays until the updated data arrives —
-      // this prevents a window where the size briefly shows as "not ordered" with a stale total.
-      await queryClient.refetchQueries({ queryKey: ['order-preview', id] });
+      const { data: { item: newItem } } = await addRes.json();
+
+      // Optimistic update: replace or append the returned item in the cache immediately.
+      // Background invalidate keeps the cache eventually consistent.
+      queryClient.setQueryData<any>(['order-preview', id], (old: any) => {
+        if (!old) return old;
+        const existing = (old.items ?? []) as any[];
+        const idx = existing.findIndex((it: any) => it.id === newItem.id);
+        const newItems = idx >= 0
+          ? existing.map((it: any) => (it.id === newItem.id ? newItem : it))
+          : [...existing, newItem];
+        return { ...old, items: newItems };
+      });
+      queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
       queryClient.invalidateQueries({ queryKey: ['my-orders'] });
       toast.success('Taglia aggiunta ✓');
     } catch (e: any) {
