@@ -976,7 +976,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     const upperCode = code.toUpperCase();
     setAddingVariantCode(upperCode);
     try {
-      const res = await fetch(`/api/products?search=${encodeURIComponent(code)}&active=true&limit=10`);
+      const res = await fetch(`/api/products?search=${encodeURIComponent(code)}&limit=10`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       const product = (data.data as Product[])?.find((p: Product) => p.code.toUpperCase() === upperCode);
