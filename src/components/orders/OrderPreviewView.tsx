@@ -95,6 +95,7 @@ function ProductCard({
   effectiveSubtotal,
   onQtyChange,
   onRemove,
+  onAddSize,
   removeLabel,
   decreaseLabel,
   increaseLabel,
@@ -104,6 +105,7 @@ function ProductCard({
   effectiveSubtotal: number;
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
+  onAddSize?: (name: string) => void;
   removeLabel: string;
   decreaseLabel: string;
   increaseLabel: string;
@@ -184,6 +186,16 @@ function ProductCard({
           </div>
           <span className="text-xs font-semibold text-primary">{formatCurrency(effectiveSubtotal)}</span>
         </div>
+
+        {/* Taglie quick-add */}
+        {onAddSize && (
+          <button
+            onClick={() => onAddSize(product.name)}
+            className="w-full mt-1 py-1 text-[9px] font-medium text-primary/50 hover:text-primary hover:bg-cream rounded transition-colors border border-dashed border-border/50 hover:border-primary/30 leading-none"
+          >
+            + taglie
+          </button>
+        )}
       </div>
     </div>
   );
@@ -196,6 +208,7 @@ function MultiTagliaCard({
   items,
   onQtyChange,
   onRemove,
+  onAddSize,
   removeLabel,
   decreaseLabel,
   increaseLabel,
@@ -203,6 +216,7 @@ function MultiTagliaCard({
   items: EnrichedItem[];
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
+  onAddSize?: (name: string) => void;
   removeLabel: string;
   decreaseLabel: string;
   increaseLabel: string;
@@ -245,6 +259,14 @@ function MultiTagliaCard({
 
           {/* Taglia rows */}
           <div className="border-t border-border/50 pt-2 space-y-1.5">
+            {onAddSize && (
+              <button
+                onClick={() => onAddSize(firstProduct.name)}
+                className="w-full py-1 text-[9px] font-medium text-primary/50 hover:text-primary hover:bg-cream rounded transition-colors border border-dashed border-border/50 hover:border-primary/30 leading-none"
+              >
+                + altra taglia
+              </button>
+            )}
             {items.map((item) => {
               const prod = item.product!;
               const lotSize = prod.lotSize || 1;
@@ -315,6 +337,7 @@ function AddProductsModal({
   orderProductIds,
   orderItems,
   baseFilters,
+  initialSearch,
 }: {
   orderId: string;
   onClose: () => void;
@@ -327,10 +350,11 @@ function AddProductsModal({
   orderProductIds: Set<string>;
   orderItems: OrderItem[];
   baseFilters: Record<string, string>;
+  initialSearch?: string;
 }) {
   const [tab, setTab] = useState<'ricerca' | 'catalogo'>('ricerca');
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch ?? '');
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch ?? '');
   const [addingId, setAddingId] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [presenzaFilter, setPresenzaFilter] = useState<'tutti' | 'non-ancora' | 'gia'>('tutti');
@@ -771,6 +795,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
 
   const [showDemetraInstructions, setShowDemetraInstructions] = useState(false);
   const [addProductsOpen, setAddProductsOpen] = useState(false);
+  const [addSizeSearch, setAddSizeSearch] = useState('');
   const tabsRef = useRef<HTMLDivElement>(null);
 
   // ── Change destination ─────────────────────────────────────
@@ -890,6 +915,11 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     const extraPct = total > 7000 ? 5 : total > 3000 ? 3 : 0;
     return { total, extraPct, effective: total * (1 - extraPct / 100) };
   }, [items]);
+
+  function handleAddSize(productName: string) {
+    setAddSizeSearch(productName);
+    setAddProductsOpen(true);
+  }
 
   function handleQtyChange(itemId: string, qty: number) {
     if (qty < 1) return;
@@ -1068,7 +1098,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
       {addProductsOpen && (
         <AddProductsModal
           orderId={id}
-          onClose={() => setAddProductsOpen(false)}
+          onClose={() => { setAddProductsOpen(false); setAddSizeSearch(''); }}
           addProductsLabel={t('addProducts')}
           searchPlaceholder={t('searchPlaceholder')}
           loadingLabel={t('loading')}
@@ -1077,6 +1107,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
           orderProductIds={new Set((order?.items ?? []).map(i => i.productId))}
           orderItems={order?.items ?? []}
           baseFilters={addProductsBaseFilters}
+          initialSearch={addSizeSearch || undefined}
           onAdded={() => {
             queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
             queryClient.invalidateQueries({ queryKey: ['my-orders'] });
@@ -1402,6 +1433,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
                     items={productItems}
                     onQtyChange={handleQtyChange}
                     onRemove={handleRemove}
+                    onAddSize={order?.status !== 'ESPORTATO' ? handleAddSize : undefined}
                     removeLabel={t('remove')}
                     decreaseLabel={t('decrease')}
                     increaseLabel={t('increase')}
@@ -1414,6 +1446,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
                     effectiveSubtotal={productItems[0].effectiveSubtotal}
                     onQtyChange={handleQtyChange}
                     onRemove={handleRemove}
+                    onAddSize={order?.status !== 'ESPORTATO' ? handleAddSize : undefined}
                     removeLabel={t('remove')}
                     decreaseLabel={t('decrease')}
                     increaseLabel={t('increase')}

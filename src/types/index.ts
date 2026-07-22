@@ -304,6 +304,7 @@ export interface OrderItem {
   id: string;
   orderId: string;
   productId: string;
+  taglia: string;
   quantity: number;
   mercePronta: number;
   unitPrice: number;
