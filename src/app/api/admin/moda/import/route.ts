@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
         colore:         str(get(row, 'colore 1')) || null,
         colore2:        str(get(row, 'colore 2')) || null,
         colore3:        str(get(row, 'colore 3')) || null,
-        fantasia:       str(get(row, 'fantasia')) || null,
+        fantasia:       (() => { const v = str(get(row, 'fantasia')); return v ? v.charAt(0).toUpperCase() + v.slice(1).toLowerCase() : null; })(),
         lavorazione:    str(get(row, 'lavorazione')) || null,
         produttore:     str(get(row, 'produttore')) || null,
         paese:          str(get(row, 'paese')) || null,

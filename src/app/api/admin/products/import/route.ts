@@ -100,7 +100,7 @@ function buildFieldValue(campo: string, row: any): unknown {
     case 'colore3':      return str(row.colore3);
     case 'altriColori':  return str(row.altriColori);
     case 'composizione': return str(row.composizione);
-    case 'fantasia':     return str(row.fantasia);
+    case 'fantasia':     { const v = str(row.fantasia); return v ? v.charAt(0).toUpperCase() + v.slice(1).toLowerCase() : null; }
     case 'lavorazione':  return str(row.lavorazione);
     case 'bloccoColore': return str(row.bloccoColore);
     case 'costoIeConReso':
