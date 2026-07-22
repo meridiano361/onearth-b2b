@@ -65,7 +65,7 @@ export default function Header({ session }: HeaderProps) {
     : null;
 
   return (
-    <header className="bg-white border-b border-border flex-shrink-0 z-10 pt-safe">
+    <header className="bg-white border-b border-border flex-shrink-0 z-20 pt-safe">
       <div className="h-14 flex items-center px-3 sm:px-6 gap-2 sm:gap-4 md:gap-6">
       {/* Logo */}
       <Link href="/home" className="flex items-center flex-shrink-0">
