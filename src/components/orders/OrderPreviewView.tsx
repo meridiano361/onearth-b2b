@@ -94,6 +94,7 @@ function ProductCard({
   effectiveSubtotal,
   onQtyChange,
   onRemove,
+  onViewAnagrafica,
   removeLabel,
   decreaseLabel,
   increaseLabel,
@@ -103,6 +104,7 @@ function ProductCard({
   effectiveSubtotal: number;
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
+  onViewAnagrafica?: (product: Product) => void;
   removeLabel: string;
   decreaseLabel: string;
   increaseLabel: string;
@@ -112,11 +114,14 @@ function ProductCard({
 
   return (
     <div className="bg-white border border-border flex flex-col">
-      {/* Image */}
-      <div className="relative aspect-square bg-[#C8C0B5] overflow-hidden">
+      {/* Image — clickable to open anagrafica */}
+      <div
+        className="relative aspect-square bg-[#C8C0B5] overflow-hidden cursor-pointer"
+        onClick={() => onViewAnagrafica?.(product)}
+      >
         <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
         <button
-          onClick={() => onRemove(item.id)}
+          onClick={(e) => { e.stopPropagation(); onRemove(item.id); }}
           className="absolute top-1.5 left-1.5 bg-white/80 rounded p-0.5 text-gray-500 hover:text-red-500 transition-colors"
           title={removeLabel}
         >
@@ -198,6 +203,7 @@ function SizedProductCard({
   onQtyChange,
   onRemove,
   onAddVariant,
+  onViewAnagrafica,
   addingVariantCode,
   removeLabel,
   decreaseLabel,
@@ -208,6 +214,7 @@ function SizedProductCard({
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
   onAddVariant?: (codice: string, taglia: string, productId: string) => void;
+  onViewAnagrafica?: (product: Product) => void;
   addingVariantCode?: string | null;
   removeLabel: string;
   decreaseLabel: string;
@@ -230,8 +237,11 @@ function SizedProductCard({
 
   return (
     <div className="bg-white border border-border flex flex-col">
-      {/* Image */}
-      <div className="relative aspect-square bg-[#C8C0B5] overflow-hidden">
+      {/* Image — clickable to open anagrafica */}
+      <div
+        className="relative aspect-square bg-[#C8C0B5] overflow-hidden cursor-pointer"
+        onClick={() => onViewAnagrafica?.(product)}
+      >
         <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
         {totalQty > 0 && (
           <div className="absolute top-1.5 right-1.5 bg-primary/90 text-white text-[9px] font-bold px-1 py-px leading-tight">
@@ -240,6 +250,16 @@ function SizedProductCard({
         )}
         {product.collezione === 'CA27' && !product.isContinuativo && (
           <div className="absolute top-1.5 left-1.5 bg-black text-white text-[7px] font-bold px-1 py-px leading-tight">NUOVO</div>
+        )}
+        {/* Per-taglia qty chips */}
+        {productItems.length > 0 && (
+          <div className="absolute bottom-1.5 left-0 right-0 flex flex-wrap gap-0.5 px-1.5 justify-start">
+            {productItems.filter(i => i.effectiveQty > 0).map((i) => (
+              <span key={i.id} className="bg-primary/80 text-white text-[8px] font-bold px-1 py-px leading-tight rounded-sm">
+                {i.taglia || i.product?.taglia || '?'}×{i.effectiveQty}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 
@@ -332,6 +352,80 @@ function SizedProductCard({
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// ── Product Anagrafica Modal ───────────────────────────────────
+function ProductAnagraficaModal({ product, onClose }: { product: Product; onClose: () => void }) {
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const photos = [product.imageUrl, product.imageUrl2, product.imageUrl3, product.imageUrl4].filter(Boolean) as string[];
+  const safeIdx = Math.min(galleryIndex, Math.max(0, photos.length - 1));
+  const rows: [string, string | null][] = [
+    ['Linea', product.nomLinea],
+    ['Famiglia', product.famiglia],
+    ['Classe', product.classe],
+    ['Sottoclasse', product.sottoclasse],
+    ['Gruppo omogeneo', product.gruppoOmogeneo],
+    ['Colore', capitalize(product.colore)],
+    ['Tema colore', capitalize(product.temaColore)],
+    ['Misura', product.misura],
+    ['Produttore', product.produttore],
+    ['Collezione', product.collezione],
+    ['Stagione', product.stagione],
+    ['Tranche', product.tranche],
+  ];
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white w-full sm:max-w-sm rounded-t-xl sm:rounded-xl shadow-2xl z-10 max-h-[90dvh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+          <span className="text-xs font-mono text-gray-400">{product.code}</span>
+          <button onClick={onClose} className="text-gray-400 hover:text-primary p-1 transition-colors"><X size={16} /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+          {photos.length > 0 && (
+            <div className="relative aspect-square bg-cream rounded border border-border overflow-hidden">
+              <ProductImage src={photos[safeIdx]} alt={product.name} className="w-full h-full object-cover" />
+              {photos.length > 1 && (
+                <>
+                  <button onClick={() => setGalleryIndex(i => (i === 0 ? photos.length - 1 : i - 1))} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center shadow"><ChevronLeft size={16} /></button>
+                  <button onClick={() => setGalleryIndex(i => (i === photos.length - 1 ? 0 : i + 1))} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center shadow"><ChevronRight size={16} /></button>
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                    {photos.map((_, i) => (
+                      <button key={i} onClick={() => setGalleryIndex(i)} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === safeIdx ? 'bg-primary' : 'bg-white/60'}`} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          <div>
+            {product.collezione === 'CA27' && !product.isContinuativo && (
+              <span className="inline-flex mb-1 bg-black text-white text-[8px] font-bold px-1.5 py-0.5 rounded-sm leading-none">NUOVO</span>
+            )}
+            <p className="text-base font-semibold text-primary leading-snug">{product.name}</p>
+            <div className="mt-2 space-y-0.5">
+              <p className="text-xs text-gray-500">Costo: <span className="font-medium text-primary">{formatCurrency(product.costPrice)}</span></p>
+              <p className="text-xs text-gray-500">Vendita (s.i.): <span className="font-medium text-primary">{formatCurrency(product.retailPrice)}</span></p>
+              {product.lotSize > 1 && (
+                <p className="text-xs text-gray-500">Lotto: <span className="font-medium text-primary">{product.lotSize} pz</span></p>
+              )}
+            </div>
+          </div>
+          {product.description && (
+            <p className="text-sm text-gray-600 leading-relaxed">{product.description}</p>
+          )}
+          <div className="border border-border rounded divide-y divide-border/50">
+            {rows.filter(([, v]) => v).map(([label, value]) => (
+              <div key={label} className="flex px-3 py-2">
+                <span className="text-xs text-gray-400 w-32 flex-shrink-0">{label}</span>
+                <span className="text-xs text-primary font-medium">{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -457,14 +551,14 @@ function AddProductsModal({
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ['products-for-order', debouncedSearch, baseFilters],
     queryFn: async () => {
-      const params = new URLSearchParams({ active: 'true', limit: '9999', ...baseFilters });
+      const params = new URLSearchParams({ active: 'true', limit: '200', ...baseFilters });
       if (debouncedSearch) params.set('search', debouncedSearch);
       const res = await fetch(`/api/products?${params}`);
       if (!res.ok) throw new Error();
       return (await res.json()).data as Product[];
     },
     staleTime: 30_000,
-    enabled: tab === 'ricerca',
+    enabled: tab === 'ricerca' && (debouncedSearch.trim().length >= 2 || presenzaFilter === 'non-ancora'),
   });
 
   async function handleAdd(product: Product) {
@@ -744,12 +838,15 @@ function AddProductsModal({
               </>
             ) : tab === 'ricerca' ? (
               <>
+                {debouncedSearch.trim().length < 2 && presenzaFilter !== 'non-ancora' && (
+                  <p className="text-center text-sm text-gray-400 py-12 px-4">Digita almeno 2 caratteri per cercare un prodotto</p>
+                )}
                 {isLoading && (
                   <div className="flex items-center justify-center py-12">
                     <LoadingSpinner text={loadingLabel} />
                   </div>
                 )}
-                {!isLoading && applyPresenzaFilter(products ?? []).length === 0 && (
+                {!isLoading && (debouncedSearch.trim().length >= 2 || presenzaFilter === 'non-ancora') && applyPresenzaFilter(products ?? []).length === 0 && (
                   <p className="text-center text-sm text-gray-400 py-12">{noProductsLabel}</p>
                 )}
                 {applyPresenzaFilter(products ?? []).map(renderProductRow)}
@@ -809,6 +906,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   const [showDemetraInstructions, setShowDemetraInstructions] = useState(false);
   const [addProductsOpen, setAddProductsOpen] = useState(false);
   const [addingVariantCode, setAddingVariantCode] = useState<string | null>(null);
+  const [anagraficaProduct, setAnagraficaProduct] = useState<Product | null>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
 
   // ── Change destination ─────────────────────────────────────
@@ -1100,6 +1198,10 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   // ── Main render ────────────────────────────────────────────
   return (
     <div>
+
+      {anagraficaProduct && (
+        <ProductAnagraficaModal product={anagraficaProduct} onClose={() => setAnagraficaProduct(null)} />
+      )}
 
       {showDemetraInstructions && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1479,6 +1581,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
                       onQtyChange={handleQtyChange}
                       onRemove={handleRemove}
                       onAddVariant={order?.status !== 'ESPORTATO' ? handleAddVariant : undefined}
+                      onViewAnagrafica={setAnagraficaProduct}
                       addingVariantCode={addingVariantCode}
                       removeLabel={t('remove')}
                       decreaseLabel={t('decrease')}
@@ -1494,6 +1597,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
                     effectiveSubtotal={productItems[0].effectiveSubtotal}
                     onQtyChange={handleQtyChange}
                     onRemove={handleRemove}
+                    onViewAnagrafica={setAnagraficaProduct}
                     removeLabel={t('remove')}
                     decreaseLabel={t('decrease')}
                     increaseLabel={t('increase')}
