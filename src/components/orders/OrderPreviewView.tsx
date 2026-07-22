@@ -60,7 +60,7 @@ function sortGroupItems<T extends { product?: any }>(grpItems: T[], sortBy: stri
 
 // ── Grouping options ───────────────────────────────────────────
 // Ordine: gruppo merceologico → famiglia → classe → sottoclasse → gruppo omogeneo
-//         → linea → tema colore → stagione → collezione → produttore → tranche
+//         → linea → stagione → collezione → produttore → tranche
 const GROUPING_KEYS = [
   'gruppoMerceologico',
   'famiglia',
@@ -68,7 +68,6 @@ const GROUPING_KEYS = [
   'sottoclasse',
   'gruppoOmogeneo',
   'nomLinea',
-  'temaColore',
   'stagione',
   'collezione',
   'produttore',
