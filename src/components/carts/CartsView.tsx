@@ -72,6 +72,15 @@ export default function CartsView({ collection }: CartsViewProps) {
   const [newDestTipo, setNewDestTipo] = useState<typeof CANAL_TIPI[number]>('BOTTEGA');
   const [newDestCitta, setNewDestCitta] = useState('');
 
+  // Auto-expand the active cart once carts have loaded
+  useEffect(() => {
+    if (carts.length > 0 && expandedId === null) {
+      const active = cartId && carts.some((c) => c.id === cartId) ? cartId : carts[0].id;
+      setExpandedId(active);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carts.length > 0]);
+
   // Auto-fill cart name from selected destination
   useEffect(() => {
     if (newCanaleId && newCanaleId !== '__new__') {
