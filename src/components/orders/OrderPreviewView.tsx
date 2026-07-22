@@ -992,14 +992,22 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   // Groups computed client-side from current groupBy
   const unclassifiedLabel = t('unclassified');
   const groups = useMemo(() => {
+    // Normalize field values so case/whitespace variants collapse into one group
+    // e.g. "bianco" / "Bianco" / "BIANCO" → "Bianco"
+    const norm = (s: string | null | undefined): string | null =>
+      s?.trim() ? capitalize(s.trim()) : null;
+
     const map = new Map<string, typeof filteredItems>();
     for (const item of filteredItems) {
-      // For fantasia: stampe show as "Fantasia — Nome Stampa" for per-print sub-grouping
-      const key = groupBy === 'fantasia'
-        ? ((item.product as any)?.nomeStampa
-          ? `${(item.product as any)?.fantasia || 'Fantasia'} — ${(item.product as any)?.nomeStampa}`
-          : ((item.product as any)?.fantasia || unclassifiedLabel))
-        : ((item.product as any)?.[groupBy] || unclassifiedLabel);
+      const p = item.product as any;
+      let key: string;
+      if (groupBy === 'fantasia') {
+        const f = norm(p?.fantasia);
+        const s = norm(p?.nomeStampa);
+        key = s ? `${f || 'Fantasia'} — ${s}` : (f || unclassifiedLabel);
+      } else {
+        key = norm(p?.[groupBy]) || unclassifiedLabel;
+      }
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(item);
     }
