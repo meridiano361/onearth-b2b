@@ -10,7 +10,7 @@ import OrderDemetraExport from '@/components/orders/OrderDemetraExport';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
-import { formatCurrency, capitalize } from '@/lib/utils';
+import { cn, formatCurrency, capitalize } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import DisplayGroupsManager from '@/components/catalog/DisplayGroupsManager';
 import CalendarioEsposizione from '@/components/catalog/CalendarioEsposizione';
@@ -95,7 +95,9 @@ function ProductCard({
   effectiveSubtotal,
   onQtyChange,
   onRemove,
-  onAddSize,
+  onAddVariant,
+  orderProductCodes,
+  addingVariantCode,
   removeLabel,
   decreaseLabel,
   increaseLabel,
@@ -105,7 +107,9 @@ function ProductCard({
   effectiveSubtotal: number;
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
-  onAddSize?: (name: string) => void;
+  onAddVariant?: (code: string) => void;
+  orderProductCodes?: Set<string>;
+  addingVariantCode?: string | null;
   removeLabel: string;
   decreaseLabel: string;
   increaseLabel: string;
@@ -187,14 +191,36 @@ function ProductCard({
           <span className="text-xs font-semibold text-primary">{formatCurrency(effectiveSubtotal)}</span>
         </div>
 
-        {/* Taglie quick-add */}
-        {onAddSize && (
-          <button
-            onClick={() => onAddSize(product.name)}
-            className="w-full mt-1 py-1 text-[9px] font-medium text-primary/50 hover:text-primary hover:bg-cream rounded transition-colors border border-dashed border-border/50 hover:border-primary/30 leading-none"
-          >
-            + taglie
-          </button>
+        {/* Taglie inline chips */}
+        {onAddVariant && (product.sizeVariants?.length ?? 0) > 0 && (
+          <div className="mt-1 pt-1 border-t border-border/50 flex flex-wrap gap-0.5">
+            {(product.sizeVariants ?? []).map((v) => {
+              const code = v.codice.toUpperCase();
+              const isCurrent = code === product.code.toUpperCase();
+              const inOrder = orderProductCodes?.has(code) ?? false;
+              const isAdding = addingVariantCode === code;
+              return (
+                <button
+                  key={v.taglia}
+                  onClick={() => { if (!inOrder && !isAdding) onAddVariant(v.codice); }}
+                  disabled={inOrder || isAdding}
+                  title={isCurrent ? 'Taglia corrente' : inOrder ? "Già nell'ordine" : 'Aggiungi taglia'}
+                  className={cn(
+                    'text-[8px] font-bold px-1.5 py-0.5 rounded-sm leading-none transition-colors',
+                    isCurrent
+                      ? 'bg-primary text-white cursor-default'
+                      : inOrder
+                      ? 'bg-primary/20 text-primary/70 cursor-default'
+                      : isAdding
+                      ? 'border border-border text-gray-300 cursor-wait'
+                      : 'border border-border text-gray-400 hover:border-primary hover:text-primary hover:bg-cream cursor-pointer'
+                  )}
+                >
+                  {isAdding ? '…' : v.taglia}
+                </button>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
@@ -208,7 +234,9 @@ function MultiTagliaCard({
   items,
   onQtyChange,
   onRemove,
-  onAddSize,
+  onAddVariant,
+  orderProductCodes,
+  addingVariantCode,
   removeLabel,
   decreaseLabel,
   increaseLabel,
@@ -216,7 +244,9 @@ function MultiTagliaCard({
   items: EnrichedItem[];
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
-  onAddSize?: (name: string) => void;
+  onAddVariant?: (code: string) => void;
+  orderProductCodes?: Set<string>;
+  addingVariantCode?: string | null;
   removeLabel: string;
   decreaseLabel: string;
   increaseLabel: string;
@@ -259,14 +289,35 @@ function MultiTagliaCard({
 
           {/* Taglia rows */}
           <div className="border-t border-border/50 pt-2 space-y-1.5">
-            {onAddSize && (
-              <button
-                onClick={() => onAddSize(firstProduct.name)}
-                className="w-full py-1 text-[9px] font-medium text-primary/50 hover:text-primary hover:bg-cream rounded transition-colors border border-dashed border-border/50 hover:border-primary/30 leading-none"
-              >
-                + altra taglia
-              </button>
-            )}
+            {/* Missing size chips */}
+            {onAddVariant && (() => {
+              const allVariants = firstProduct.sizeVariants ?? [];
+              const missing = allVariants.filter(v => !(orderProductCodes?.has(v.codice.toUpperCase()) ?? false));
+              if (missing.length === 0) return null;
+              return (
+                <div className="flex flex-wrap items-center gap-0.5 pb-1">
+                  <span className="text-[9px] text-gray-400 leading-none mr-0.5">+ taglia:</span>
+                  {missing.map((v) => {
+                    const isAdding = addingVariantCode === v.codice.toUpperCase();
+                    return (
+                      <button
+                        key={v.taglia}
+                        onClick={() => { if (!isAdding) onAddVariant(v.codice); }}
+                        disabled={isAdding}
+                        className={cn(
+                          'text-[9px] font-bold px-1.5 py-0.5 rounded-sm leading-none border transition-colors',
+                          isAdding
+                            ? 'border-border text-gray-300 cursor-wait'
+                            : 'border-border text-gray-400 hover:border-primary hover:text-primary hover:bg-cream cursor-pointer'
+                        )}
+                      >
+                        {isAdding ? '…' : v.taglia}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
             {items.map((item) => {
               const prod = item.product!;
               const lotSize = prod.lotSize || 1;
@@ -795,7 +846,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
 
   const [showDemetraInstructions, setShowDemetraInstructions] = useState(false);
   const [addProductsOpen, setAddProductsOpen] = useState(false);
-  const [addSizeSearch, setAddSizeSearch] = useState('');
+  const [addingVariantCode, setAddingVariantCode] = useState<string | null>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
 
   // ── Change destination ─────────────────────────────────────
@@ -916,9 +967,38 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     return { total, extraPct, effective: total * (1 - extraPct / 100) };
   }, [items]);
 
-  function handleAddSize(productName: string) {
-    setAddSizeSearch(productName);
-    setAddProductsOpen(true);
+  const orderProductCodes = useMemo(
+    () => new Set((order?.items ?? []).map(i => i.product?.code?.toUpperCase()).filter(Boolean) as string[]),
+    [order?.items]
+  );
+
+  async function handleAddVariant(code: string) {
+    const upperCode = code.toUpperCase();
+    setAddingVariantCode(upperCode);
+    try {
+      const res = await fetch(`/api/products?search=${encodeURIComponent(code)}&active=true&limit=10`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const product = (data.data as Product[])?.find((p: Product) => p.code.toUpperCase() === upperCode);
+      if (!product) { toast.error('Prodotto non trovato nel catalogo'); return; }
+
+      const addRes = await fetch(`/api/orders/${id}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: product.id, quantity: product.lotSize || 1 }),
+      });
+      if (!addRes.ok) {
+        const err = await addRes.json();
+        throw new Error(err.error ?? 'Errore');
+      }
+      queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      toast.success('Taglia aggiunta ✓');
+    } catch (e: any) {
+      toast.error(e.message ?? 'Errore aggiunta taglia');
+    } finally {
+      setAddingVariantCode(null);
+    }
   }
 
   function handleQtyChange(itemId: string, qty: number) {
@@ -1098,7 +1178,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
       {addProductsOpen && (
         <AddProductsModal
           orderId={id}
-          onClose={() => { setAddProductsOpen(false); setAddSizeSearch(''); }}
+          onClose={() => setAddProductsOpen(false)}
           addProductsLabel={t('addProducts')}
           searchPlaceholder={t('searchPlaceholder')}
           loadingLabel={t('loading')}
@@ -1107,7 +1187,6 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
           orderProductIds={new Set((order?.items ?? []).map(i => i.productId))}
           orderItems={order?.items ?? []}
           baseFilters={addProductsBaseFilters}
-          initialSearch={addSizeSearch || undefined}
           onAdded={() => {
             queryClient.invalidateQueries({ queryKey: ['order-preview', id] });
             queryClient.invalidateQueries({ queryKey: ['my-orders'] });
@@ -1433,7 +1512,9 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
                     items={productItems}
                     onQtyChange={handleQtyChange}
                     onRemove={handleRemove}
-                    onAddSize={order?.status !== 'ESPORTATO' ? handleAddSize : undefined}
+                    onAddVariant={order?.status !== 'ESPORTATO' ? handleAddVariant : undefined}
+                    orderProductCodes={orderProductCodes}
+                    addingVariantCode={addingVariantCode}
                     removeLabel={t('remove')}
                     decreaseLabel={t('decrease')}
                     increaseLabel={t('increase')}
@@ -1446,7 +1527,9 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
                     effectiveSubtotal={productItems[0].effectiveSubtotal}
                     onQtyChange={handleQtyChange}
                     onRemove={handleRemove}
-                    onAddSize={order?.status !== 'ESPORTATO' ? handleAddSize : undefined}
+                    onAddVariant={order?.status !== 'ESPORTATO' ? handleAddVariant : undefined}
+                    orderProductCodes={orderProductCodes}
+                    addingVariantCode={addingVariantCode}
                     removeLabel={t('remove')}
                     decreaseLabel={t('decrease')}
                     increaseLabel={t('increase')}
