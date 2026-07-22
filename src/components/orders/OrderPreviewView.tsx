@@ -1003,8 +1003,12 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
       let key: string;
       if (groupBy === 'fantasia') {
         const f = norm(p?.fantasia);
-        const s = norm(p?.nomeStampa);
-        key = s ? `${f || 'Fantasia'} — ${s}` : (f || unclassifiedLabel);
+        if (f === 'Stampa') {
+          const s = norm(p?.nomeStampa);
+          key = s ? `Stampa — ${s}` : 'Stampa';
+        } else {
+          key = f || unclassifiedLabel;
+        }
       } else {
         key = norm(p?.[groupBy]) || unclassifiedLabel;
       }
