@@ -1197,7 +1197,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   const currentGroupLabel = GROUPINGS.find((g) => g.value === groupBy)?.label ?? '';
 
   const addProductsBaseFilters: Record<string, string> = routes.collectionId === 'moda'
-    ? { collectionId: 'moda' }
+    ? { gruppoMerceologico: 'Moda' }
     : { excludeModa: 'true' };
 
   // ── Loading / error states ─────────────────────────────────
