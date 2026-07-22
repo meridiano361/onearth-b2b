@@ -83,8 +83,12 @@ export default async function B2BLayout({
           <Header session={session} />
 
           <div className="flex flex-1 min-h-0 overflow-hidden">
-            <main className={`flex-1 min-h-0 ${mainContained ? 'overflow-hidden' : 'overflow-y-auto pb-nav-safe md:pb-0'}`}>
-              {children}
+            <main className={`flex-1 min-h-0 ${mainContained ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+              {mainContained ? children : (
+                <div className="min-h-dvh pb-nav-safe md:min-h-0 md:pb-0">
+                  {children}
+                </div>
+              )}
             </main>
 
             <CartSidebarConditional />
