@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-16 (budget per conferente nel carrello; raggruppamento Conferente; CSV Demetra per conferente)
+// AGGIORNATO: 2026-07-22 (raggruppamento Colore e Fantasia/Stampa in modifica anteprima; anagrafica da foto; ricerca prodotti per collezione)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -289,10 +289,11 @@ export default function AssistenzaPage() {
           <SectionHeader n={12} icon={Eye} label="Anteprima e Raggruppamento" />
           <ul className="space-y-2">
             <Bullet>Clicca <span className="font-medium">Modifica Anteprima</span> su un ordine per vedere i prodotti raggruppati visivamente e modificarli.</Bullet>
-            <Bullet>Scegli il criterio di raggruppamento: Gruppo merceologico, Famiglia, Classe, Sottoclasse, Gruppo omogeneo, Linea, Tema colore, Stagione, Collezione, Produttore, Tranche.</Bullet>
+            <Bullet>Scegli il criterio di raggruppamento: Gruppo merceologico, Famiglia, Classe, Sottoclasse, Gruppo omogeneo, Linea, <span className="font-medium">Colore</span>, <span className="font-medium">Fantasia / Stampa</span> (le stampe si suddividono per nome), Stagione, Collezione, Produttore, Tranche.</Bullet>
             <Bullet>Usa la <span className="font-medium">barra di ricerca</span> in alto per filtrare i prodotti dell&apos;ordine per nome o codice.</Bullet>
+            <Bullet>Clicca su una <span className="font-medium">foto prodotto</span> per aprire l&apos;anagrafica completa (galleria, prezzi, attributi).</Bullet>
             <Bullet>Modifica quantità direttamente dall&apos;anteprima con i pulsanti <span className="font-medium">+</span> e <span className="font-medium">−</span>.</Bullet>
-            <Bullet>Clicca <span className="font-medium">+ Aggiungi prodotti</span> per aggiungere nuovi prodotti all&apos;ordine: cerca per nome/codice oppure sfoglia il catalogo con i filtri. Nel pannello filtri trovi in cima il selettore <span className="font-medium">Tutti / Non ancora nell&apos;ordine / Già nell&apos;ordine</span> per vedere subito i prodotti mancanti o già presenti.</Bullet>
+            <Bullet>Clicca <span className="font-medium">+ Aggiungi prodotti</span> per aggiungere nuovi prodotti. Digita almeno 2 caratteri per cercare nella collezione corrente (MODA o casa), oppure sfoglia il catalogo con i filtri. In cima al pannello il selettore <span className="font-medium">Tutti / Non ancora / Già presenti</span> filtra la visibilità dei prodotti.</Bullet>
             <Bullet>In fondo alla pagina vedi il riepilogo con subtotali per gruppo e totale generale.</Bullet>
             <Bullet>Esporta il <span className="font-medium">PDF</span> con le foto dei prodotti raggruppati.</Bullet>
             <Bullet>Esporta in <span className="font-medium">Excel multi-foglio</span>: un foglio per ogni criterio di classificazione (linea, collezione, colore, ecc.).</Bullet>

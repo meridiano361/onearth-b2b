@@ -59,8 +59,6 @@ function sortGroupItems<T extends { product?: any }>(grpItems: T[], sortBy: stri
 }
 
 // ── Grouping options ───────────────────────────────────────────
-// Ordine: gruppo merceologico → famiglia → classe → sottoclasse → gruppo omogeneo
-//         → linea → stagione → collezione → produttore → tranche
 const GROUPING_KEYS = [
   'gruppoMerceologico',
   'famiglia',
@@ -68,6 +66,8 @@ const GROUPING_KEYS = [
   'sottoclasse',
   'gruppoOmogeneo',
   'nomLinea',
+  'colore',
+  'fantasia',
   'stagione',
   'collezione',
   'produttore',
@@ -994,7 +994,12 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   const groups = useMemo(() => {
     const map = new Map<string, typeof filteredItems>();
     for (const item of filteredItems) {
-      const key = (item.product as any)?.[groupBy] || unclassifiedLabel;
+      // For fantasia: stampe show as "Fantasia — Nome Stampa" for per-print sub-grouping
+      const key = groupBy === 'fantasia'
+        ? ((item.product as any)?.nomeStampa
+          ? `${(item.product as any)?.fantasia || 'Fantasia'} — ${(item.product as any)?.nomeStampa}`
+          : ((item.product as any)?.fantasia || unclassifiedLabel))
+        : ((item.product as any)?.[groupBy] || unclassifiedLabel);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(item);
     }
@@ -1038,11 +1043,12 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
         (p: Product) => p.code.trim().toUpperCase() === upperCode
       );
 
-      // Case 1: separate product per size → use its productId, no taglia on OrderItem
-      // Case 2: shared product (sizes as sizeVariants) → use currentProductId with taglia
-      const productId = foundProduct ? foundProduct.id : currentProductId;
-      const tagliaDaUsare = foundProduct ? '' : taglia;
-      const quantity = foundProduct ? (foundProduct.lotSize || 1) : 1;
+      // Arch 1: found a DIFFERENT product record (one per size) → use its ID, no taglia on item
+      // Arch 2: found the SAME product (shared with sizeVariants) OR no match → keep currentProductId + taglia
+      const isArch1 = foundProduct != null && foundProduct.id !== currentProductId;
+      const productId = isArch1 ? foundProduct.id : currentProductId;
+      const tagliaDaUsare = isArch1 ? '' : taglia;
+      const quantity = isArch1 ? (foundProduct.lotSize || 1) : 1;
 
       const addRes = await fetch(`/api/orders/${id}/items`, {
         method: 'POST',
@@ -1191,7 +1197,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   const currentGroupLabel = GROUPINGS.find((g) => g.value === groupBy)?.label ?? '';
 
   const addProductsBaseFilters: Record<string, string> = routes.collectionId === 'moda'
-    ? { famiglia: 'Bigiotteria e gioielleria' }
+    ? { collectionId: 'moda' }
     : { excludeModa: 'true' };
 
   // ── Loading / error states ─────────────────────────────────
