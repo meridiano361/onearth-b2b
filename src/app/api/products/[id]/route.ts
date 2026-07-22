@@ -5,7 +5,7 @@ import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { normalizeProductClassificationFields, ensureHubeqCode } from '@/lib/normalizeClassification';
-import { normalizeProductName } from '@/lib/normalizeProductName';
+import { normalizeProductName, stripStampaFromName, applyStampaToName } from '@/lib/normalizeProductName';
 import { syncProductClassification } from '@/lib/syncClassification';
 import { translateProduct } from '@/lib/translate';
 import { autoComposizione } from '@/lib/autoComposizione';
@@ -178,22 +178,33 @@ export async function PATCH(
       data.code = ensureHubeqCode(data.code, conferente);
     }
 
-    // When nomLinea changes (or name is present), regenerate name with correct linea casing
+    // When nomLinea / nomeStampa / fantasia changes (or name is present), regenerate name
     if (data.nomLinea) data.nomLinea = data.nomLinea.toUpperCase();
-    const nomLineaChanging = data.nomLinea !== undefined;
+    const nomLineaChanging   = data.nomLinea    !== undefined;
+    const nomeStampaChanging = 'nomeStampa' in rest;
+    const fantasiaChanging   = 'fantasia'   in rest;
     const namePresent = !!(data.name && !(body as any).skipNameNormalization);
 
-    if (namePresent || nomLineaChanging) {
+    if (namePresent || nomLineaChanging || nomeStampaChanging || fantasiaChanging) {
       const cur = await prisma.product.findUnique({
         where: { id: params.id },
-        select: { nomLinea: true, name: true, dettaglio: true },
+        select: { nomLinea: true, name: true, dettaglio: true, nomeStampa: true, fantasia: true },
       });
-      const oldLinea = cur?.nomLinea ?? null;
-      const newLinea = nomLineaChanging ? data.nomLinea : oldLinea;
-      const dettaglio = data.dettaglio !== undefined ? data.dettaglio : cur?.dettaglio;
-      const baseName = data.name ?? cur?.name ?? '';
+      const oldLinea      = cur?.nomLinea    ?? null;
+      const newLinea      = nomLineaChanging   ? data.nomLinea                  : oldLinea;
+      const dettaglio     = data.dettaglio !== undefined ? data.dettaglio       : cur?.dettaglio;
+      const oldNomeStampa = cur?.nomeStampa   ?? null;
+      const newNomeStampa = nomeStampaChanging ? (data as any).nomeStampa       : oldNomeStampa;
+      const newFantasia   = fantasiaChanging   ? (data as any).fantasia         : (cur?.fantasia ?? null);
+
+      // Strip old stampa suffix before re-normalizing, then re-apply with new values
+      let baseName = stripStampaFromName(data.name ?? cur?.name ?? '', oldNomeStampa);
       if (baseName) {
-        data.name = normalizeProductName(baseName, newLinea, oldLinea, dettaglio);
+        data.name = applyStampaToName(
+          normalizeProductName(baseName, newLinea, oldLinea, dettaglio),
+          newNomeStampa,
+          newFantasia,
+        );
       }
     }
 

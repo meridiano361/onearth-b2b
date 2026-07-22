@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
 import { normalizeProductClassificationFields, ensureHubeqCode } from '@/lib/normalizeClassification';
-import { normalizeProductName } from '@/lib/normalizeProductName';
+import { normalizeProductName, applyStampaToName } from '@/lib/normalizeProductName';
 import { syncProductClassification } from '@/lib/syncClassification';
 import { translateProduct } from '@/lib/translate';
 import { autoLinkPhotosForProduct } from '@/lib/autoLinkPhotos';
@@ -290,7 +290,11 @@ export async function POST(req: NextRequest) {
     const product = await prisma.product.create({
       data: {
         code: ensureHubeqCode(data.code.toUpperCase().trim(), data.conferente),
-        name: normalizeProductName(data.name, data.nomLinea),
+        name: applyStampaToName(
+          normalizeProductName(data.name, data.nomLinea),
+          data.nomeStampa,
+          data.fantasia || (data.gruppoMerceologico?.toLowerCase() === 'moda' ? 'TINTA UNITA' : null),
+        ),
         description: data.description || null,
         costPrice: effectiveCostPrice,
         retailPrice: data.retailPrice,

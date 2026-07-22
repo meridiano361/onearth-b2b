@@ -77,3 +77,24 @@ export function normalizeProductName(
 
   return result;
 }
+
+/** Rimuove il nome stampa dal fondo del nome prodotto (case-insensitive). */
+export function stripStampaFromName(name: string, nomeStampa: string | null | undefined): string {
+  if (!nomeStampa?.trim()) return name;
+  const suffix = ' ' + nomeStampa.trim();
+  if (name.toLowerCase().endsWith(suffix.toLowerCase())) {
+    return name.slice(0, -suffix.length).trim();
+  }
+  return name;
+}
+
+/** Aggiunge il nome stampa in fondo al nome prodotto se fantasia === 'stampa'. */
+export function applyStampaToName(name: string, nomeStampa: string | null | undefined, fantasia: string | null | undefined): string {
+  if (fantasia?.trim().toLowerCase() === 'stampa' && nomeStampa?.trim()) {
+    const suffix = ' ' + nomeStampa.trim();
+    if (!name.toLowerCase().endsWith(suffix.toLowerCase())) {
+      return name + suffix;
+    }
+  }
+  return name;
+}
