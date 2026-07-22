@@ -114,12 +114,13 @@ export async function POST(req: NextRequest) {
       { timeout: 15_000 }, // generous timeout for orders with many items
     );
   } catch (e: any) {
+    const detail = e?.message ?? String(e);
     console.error(
       '[merge] Transaction failed — role:%s userId:%s source:%s target:%s error:%s',
-      session.user.role, userId, sourceOrderId, targetOrderId, e?.message ?? e,
+      session.user.role, userId, sourceOrderId, targetOrderId, detail,
     );
     return NextResponse.json(
-      { error: 'Errore durante l\'unione degli ordini. Riprova o contatta l\'assistenza.' },
+      { error: `Errore unione: ${detail}` },
       { status: 500 },
     );
   }
