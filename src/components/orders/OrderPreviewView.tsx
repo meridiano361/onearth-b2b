@@ -88,16 +88,13 @@ function effectiveCost(product: any, unitPrice: number): number {
   return unitPrice;
 }
 
-// ── Product card ───────────────────────────────────────────────
+// ── Product card (no size variants) ───────────────────────────
 function ProductCard({
   item,
   effectiveQty,
   effectiveSubtotal,
   onQtyChange,
   onRemove,
-  onAddVariant,
-  orderProductCodes,
-  addingVariantCode,
   removeLabel,
   decreaseLabel,
   increaseLabel,
@@ -107,9 +104,6 @@ function ProductCard({
   effectiveSubtotal: number;
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
-  onAddVariant?: (codice: string, taglia: string, productId: string) => void;
-  orderProductCodes?: Set<string>;
-  addingVariantCode?: string | null;
   removeLabel: string;
   decreaseLabel: string;
   increaseLabel: string;
@@ -191,185 +185,154 @@ function ProductCard({
           <span className="text-xs font-semibold text-primary">{formatCurrency(effectiveSubtotal)}</span>
         </div>
 
-        {/* Taglie inline chips */}
-        {onAddVariant && (product.sizeVariants?.length ?? 0) > 0 && (
-          <div className="mt-1 pt-1 border-t border-border/50 flex flex-wrap gap-0.5">
-            {(product.sizeVariants ?? []).map((v) => {
-              const code = v.codice.toUpperCase();
-              const isCurrent = code === product.code.toUpperCase();
-              const inOrder = orderProductCodes?.has(code) ?? false;
-              const isAdding = addingVariantCode === code;
-              return (
-                <button
-                  key={v.taglia}
-                  onClick={() => { if (!inOrder && !isAdding) onAddVariant(v.codice, v.taglia, product.id); }}
-                  disabled={inOrder || isAdding}
-                  title={isCurrent ? 'Taglia corrente' : inOrder ? "Già nell'ordine" : 'Aggiungi taglia'}
-                  className={cn(
-                    'text-[8px] font-bold px-1.5 py-0.5 rounded-sm leading-none transition-colors',
-                    isCurrent
-                      ? 'bg-primary text-white cursor-default'
-                      : inOrder
-                      ? 'bg-primary/20 text-primary/70 cursor-default'
-                      : isAdding
-                      ? 'border border-border text-gray-300 cursor-wait'
-                      : 'border border-border text-gray-400 hover:border-primary hover:text-primary hover:bg-cream cursor-pointer'
-                  )}
-                >
-                  {isAdding ? '…' : v.taglia}
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-// ── Multi-taglia card (col-span-full) ──────────────────────────
 type EnrichedItem = OrderItem & { effectiveQty: number; effectiveUnitCost: number; effectiveSubtotal: number };
 
-function MultiTagliaCard({
-  items,
+// ── Sized product card (inline size rows under the image) ──────
+function SizedProductCard({
+  productItems,
+  product,
   onQtyChange,
   onRemove,
   onAddVariant,
-  orderProductCodes,
   addingVariantCode,
   removeLabel,
   decreaseLabel,
   increaseLabel,
 }: {
-  items: EnrichedItem[];
+  productItems: EnrichedItem[];
+  product: Product;
   onQtyChange: (id: string, qty: number) => void;
   onRemove: (id: string) => void;
   onAddVariant?: (codice: string, taglia: string, productId: string) => void;
-  orderProductCodes?: Set<string>;
   addingVariantCode?: string | null;
   removeLabel: string;
   decreaseLabel: string;
   increaseLabel: string;
 }) {
-  const firstProduct = items[0].product!;
-  // Items may represent different products (one per size) or rows of the same product
-  const allSameProduct = items.every((i) => i.productId === items[0].productId);
-  const totalQty = items.reduce((s, i) => s + i.effectiveQty, 0);
-  const totalSubtotal = items.reduce((s, i) => s + i.effectiveSubtotal, 0);
+  const sizeVariants = product.sizeVariants ?? [];
+  const allSameProduct = productItems.every((i) => i.productId === productItems[0].productId);
+  const totalSubtotal = productItems.reduce((s, i) => s + i.effectiveSubtotal, 0);
+  const totalQty = productItems.reduce((s, i) => s + i.effectiveQty, 0);
+
+  function findItem(v: { taglia: string; codice: string }): EnrichedItem | null {
+    // Arch 2 (shared product, taglia on OrderItem): match by taglia
+    const byTaglia = productItems.find((i) => i.taglia === v.taglia);
+    if (byTaglia) return byTaglia;
+    // Arch 1 (separate product per size): match by product code
+    return productItems.find(
+      (i) => i.product?.code?.toUpperCase() === v.codice.toUpperCase()
+    ) ?? null;
+  }
 
   return (
-    <div className="col-span-full bg-white border border-border">
-      <div className="flex gap-3 p-3">
-        {/* Thumbnail */}
-        <div className="w-16 h-16 flex-shrink-0 bg-[#C8C0B5] overflow-hidden rounded">
-          <ProductImage src={firstProduct.imageUrl} alt={firstProduct.name} className="w-full h-full object-cover" />
-        </div>
-
-        {/* Info + taglie */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <div>
-              {allSameProduct && (
-                <p className="text-[9px] font-mono text-gray-400 tracking-wider">{firstProduct.code}</p>
-              )}
-              <p className="text-xs font-medium text-primary leading-snug">{firstProduct.name}</p>
-              {allSameProduct && (
-                <p className="text-[9px] text-gray-400 mt-0.5">
-                  IE: <span className="font-medium text-gray-600">{formatCurrency(effectiveCost(firstProduct, Number(items[0].unitPrice)))}</span>
-                  <span className="mx-1 text-gray-200">·</span>
-                  PVP: <span className="font-medium text-gray-600">{formatCurrency(firstProduct.retailPrice)}</span>
-                </p>
-              )}
-            </div>
-            <div className="text-right flex-shrink-0">
-              <p className="text-2xs text-gray-400">{totalQty} pz totali</p>
-              <p className="text-sm font-semibold text-primary">{formatCurrency(totalSubtotal)}</p>
-            </div>
+    <div className="bg-white border border-border flex flex-col">
+      {/* Image */}
+      <div className="relative aspect-square bg-[#C8C0B5] overflow-hidden">
+        <ProductImage src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+        {totalQty > 0 && (
+          <div className="absolute top-1.5 right-1.5 bg-primary/90 text-white text-[9px] font-bold px-1 py-px leading-tight">
+            ×{totalQty}
           </div>
+        )}
+        {product.collezione === 'CA27' && !product.isContinuativo && (
+          <div className="absolute top-1.5 left-1.5 bg-black text-white text-[7px] font-bold px-1 py-px leading-tight">NUOVO</div>
+        )}
+      </div>
 
-          {/* Taglia rows */}
-          <div className="border-t border-border/50 pt-2 space-y-1.5">
-            {/* Missing size chips */}
-            {onAddVariant && (() => {
-              const allVariants = firstProduct.sizeVariants ?? [];
-              const missing = allVariants.filter(v => !(orderProductCodes?.has(v.codice.toUpperCase()) ?? false));
-              if (missing.length === 0) return null;
-              return (
-                <div className="flex flex-wrap items-center gap-0.5 pb-1">
-                  <span className="text-[9px] text-gray-400 leading-none mr-0.5">+ taglia:</span>
-                  {missing.map((v) => {
-                    const isAdding = addingVariantCode === v.codice.toUpperCase();
-                    return (
-                      <button
-                        key={v.taglia}
-                        onClick={() => { if (!isAdding) onAddVariant(v.codice, v.taglia, firstProduct.id); }}
-                        disabled={isAdding}
-                        className={cn(
-                          'text-[9px] font-bold px-1.5 py-0.5 rounded-sm leading-none border transition-colors',
-                          isAdding
-                            ? 'border-border text-gray-300 cursor-wait'
-                            : 'border-border text-gray-400 hover:border-primary hover:text-primary hover:bg-cream cursor-pointer'
-                        )}
-                      >
-                        {isAdding ? '…' : v.taglia}
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-            {items.map((item) => {
-              const prod = item.product!;
-              const lotSize = prod.lotSize || 1;
-              const tagliaLabel = item.taglia || prod.taglia || '—';
-              return (
-                <div key={item.id} className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-primary w-16 flex-shrink-0">{tagliaLabel}</span>
-                  {!allSameProduct && (
-                    <span className="text-[9px] font-mono text-gray-400 flex-shrink-0 hidden sm:inline">{prod.code}</span>
-                  )}
-                  {!allSameProduct && (
-                    <span className="text-[9px] text-gray-400 flex-shrink-0">
-                      {formatCurrency(effectiveCost(prod, Number(item.unitPrice)))}
-                    </span>
-                  )}
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => {
-                        const newQty = item.effectiveQty - lotSize;
-                        if (newQty <= 0) {
-                          if (window.confirm(`Rimuovere taglia ${tagliaLabel} dall'ordine?`)) onRemove(item.id);
-                        } else {
-                          onQtyChange(item.id, newQty);
-                        }
-                      }}
-                      className="w-6 h-6 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
-                      aria-label={decreaseLabel}
-                    >
-                      <Minus size={10} />
-                    </button>
-                    <span className="text-sm font-semibold text-primary text-center w-7">{item.effectiveQty}</span>
-                    <button
-                      onClick={() => onQtyChange(item.id, item.effectiveQty + lotSize)}
-                      className="w-6 h-6 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
-                      aria-label={increaseLabel}
-                    >
-                      <Plus size={10} />
-                    </button>
-                  </div>
-                  <span className="text-xs text-gray-500 flex-1">{formatCurrency(item.effectiveSubtotal)}</span>
-                  <button
-                    onClick={() => { if (window.confirm(`Rimuovere taglia ${tagliaLabel} dall'ordine?`)) onRemove(item.id); }}
-                    className="text-gray-300 hover:text-red-500 transition-colors"
-                    title={removeLabel}
-                  >
-                    <X size={11} />
-                  </button>
-                </div>
-              );
-            })}
+      {/* Header */}
+      <div className="p-2 border-b border-border/50">
+        {allSameProduct && (
+          <p className="text-[9px] font-mono text-gray-400 tracking-wider">{product.code}</p>
+        )}
+        <p className="text-[10px] font-medium text-primary leading-snug mt-0.5 line-clamp-2">{product.name}</p>
+        <div className="flex items-center justify-between mt-1">
+          <div>
+            <p className="text-[9px] text-gray-400">
+              IE: <span className="text-gray-600 font-medium">{formatCurrency(effectiveCost(product, Number(productItems[0].unitPrice)))}</span>
+            </p>
+            <p className="text-[9px] text-gray-400">
+              PVP: <span className="text-gray-600 font-medium">{formatCurrency(product.retailPrice)}</span>
+            </p>
           </div>
+          {totalSubtotal > 0 && (
+            <p className="text-xs font-semibold text-primary">{formatCurrency(totalSubtotal)}</p>
+          )}
         </div>
+      </div>
+
+      {/* Size rows */}
+      <div className="px-2 py-1.5 space-y-1.5">
+        {sizeVariants.map((v) => {
+          const item = findItem(v);
+          const isAdding = addingVariantCode === v.codice.toUpperCase() + '-' + v.taglia;
+
+          if (item) {
+            const lotSize = item.product?.lotSize || product.lotSize || 1;
+            return (
+              <div key={v.taglia} className="flex items-center gap-1">
+                <span className="text-[10px] font-bold text-primary w-6 flex-shrink-0">{v.taglia}</span>
+                <button
+                  onClick={() => {
+                    const newQty = item.effectiveQty - lotSize;
+                    if (newQty <= 0) {
+                      if (window.confirm(`Rimuovere ${v.taglia} dall'ordine?`)) onRemove(item.id);
+                    } else {
+                      onQtyChange(item.id, newQty);
+                    }
+                  }}
+                  className="w-5 h-5 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 flex-shrink-0"
+                  aria-label={decreaseLabel}
+                >
+                  <Minus size={9} />
+                </button>
+                <span className="text-xs font-semibold text-primary text-center w-5 flex-shrink-0">{item.effectiveQty}</span>
+                <button
+                  onClick={() => onQtyChange(item.id, item.effectiveQty + lotSize)}
+                  className="w-5 h-5 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 flex-shrink-0"
+                  aria-label={increaseLabel}
+                >
+                  <Plus size={9} />
+                </button>
+                <span className="text-[9px] text-gray-400 flex-1 text-right">{formatCurrency(item.effectiveSubtotal)}</span>
+                <button
+                  onClick={() => { if (window.confirm(`Rimuovere ${v.taglia} dall'ordine?`)) onRemove(item.id); }}
+                  className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 ml-0.5"
+                  title={removeLabel}
+                >
+                  <X size={9} />
+                </button>
+              </div>
+            );
+          }
+
+          // Not in order
+          if (!onAddVariant) {
+            return (
+              <div key={v.taglia} className="flex items-center gap-1">
+                <span className="text-[10px] font-bold text-gray-300 w-6 flex-shrink-0">{v.taglia}</span>
+                <span className="text-[9px] text-gray-200">—</span>
+              </div>
+            );
+          }
+
+          return (
+            <div key={v.taglia} className="flex items-center gap-1">
+              <span className="text-[10px] font-bold text-gray-300 w-6 flex-shrink-0">{v.taglia}</span>
+              <button
+                onClick={() => { if (!isAdding) onAddVariant(v.codice, v.taglia, productItems[0].productId); }}
+                disabled={isAdding}
+                className="flex-1 h-5 flex items-center justify-center gap-0.5 border border-dashed border-border/60 rounded text-[9px] text-gray-300 hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+              >
+                {isAdding ? <Loader2 size={8} className="animate-spin" /> : <Plus size={8} />}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -967,14 +930,9 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     return { total, extraPct, effective: total * (1 - extraPct / 100) };
   }, [items]);
 
-  const orderProductCodes = useMemo(
-    () => new Set((order?.items ?? []).map(i => i.product?.code?.toUpperCase()).filter(Boolean) as string[]),
-    [order?.items]
-  );
-
   async function handleAddVariant(codice: string, taglia: string, currentProductId: string) {
     const upperCode = codice.trim().toUpperCase();
-    setAddingVariantCode(upperCode);
+    setAddingVariantCode(upperCode + '-' + taglia);
     try {
       // Try to find a separate product record for this size code
       const res = await fetch(`/api/products?search=${encodeURIComponent(codice.trim())}&limit=10`);
@@ -1502,8 +1460,6 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
               {Array.from(
                 group.items.reduce((map, item) => {
-                  // Group by productId if item has explicit taglia (same product, multiple sizes as rows).
-                  // Group by product name if each size is a separate product (product.taglia set, item.taglia empty).
                   const productTaglia = (item.product as any)?.taglia;
                   const key = item.taglia
                     ? item.productId
@@ -1512,21 +1468,26 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
                   map.get(key)!.push(item as EnrichedItem);
                   return map;
                 }, new Map<string, EnrichedItem[]>()).values()
-              ).map((productItems) =>
-                productItems.length > 1 ? (
-                  <MultiTagliaCard
-                    key={productItems.map((i) => i.id).join('-')}
-                    items={productItems}
-                    onQtyChange={handleQtyChange}
-                    onRemove={handleRemove}
-                    onAddVariant={order?.status !== 'ESPORTATO' ? handleAddVariant : undefined}
-                    orderProductCodes={orderProductCodes}
-                    addingVariantCode={addingVariantCode}
-                    removeLabel={t('remove')}
-                    decreaseLabel={t('decrease')}
-                    increaseLabel={t('increase')}
-                  />
-                ) : (
+              ).map((productItems) => {
+                const firstProduct = productItems[0].product!;
+                const hasSizes = (firstProduct.sizeVariants?.length ?? 0) > 0;
+                if (hasSizes) {
+                  return (
+                    <SizedProductCard
+                      key={productItems.map((i) => i.id).join('-')}
+                      productItems={productItems}
+                      product={firstProduct}
+                      onQtyChange={handleQtyChange}
+                      onRemove={handleRemove}
+                      onAddVariant={order?.status !== 'ESPORTATO' ? handleAddVariant : undefined}
+                      addingVariantCode={addingVariantCode}
+                      removeLabel={t('remove')}
+                      decreaseLabel={t('decrease')}
+                      increaseLabel={t('increase')}
+                    />
+                  );
+                }
+                return (
                   <ProductCard
                     key={productItems[0].id}
                     item={productItems[0]}
@@ -1534,15 +1495,12 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
                     effectiveSubtotal={productItems[0].effectiveSubtotal}
                     onQtyChange={handleQtyChange}
                     onRemove={handleRemove}
-                    onAddVariant={order?.status !== 'ESPORTATO' ? handleAddVariant : undefined}
-                    orderProductCodes={orderProductCodes}
-                    addingVariantCode={addingVariantCode}
                     removeLabel={t('remove')}
                     decreaseLabel={t('decrease')}
                     increaseLabel={t('increase')}
                   />
-                )
-              )}
+                );
+              })}
             </div>
 
             {/* Group subtotal line */}
