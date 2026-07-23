@@ -59,8 +59,8 @@ export interface FamilyInput {
 export interface SubclassRow {
   famiglia: string;
   sottoclasse: string;
-  pezziPE25: number | null;
   pezziPE26: number | null;
+  valorePE26: number | null;
   continuativi: number;
 }
 
@@ -87,9 +87,7 @@ export interface FamilyComputed {
 }
 
 export interface SubclassComputed {
-  incidenzaPE25: number | null;
   incidenzaPE26: number | null;
-  incidenzaMedia: number | null;
   fabbisognoRaw: number | null;
   fabbisognoNetto: number | null;
   ordinato: number;
@@ -163,51 +161,33 @@ export function computeFamily(
   };
 }
 
-/** Incidenza formula — isolated so it can be swapped independently. */
-function blendIncidenza(
-  incPE25: number | null,
-  incPE26: number | null,
-): number | null {
-  const vals = [incPE25, incPE26].filter((v): v is number => v != null);
-  if (!vals.length) return null;
-  return vals.reduce((a, b) => a + b, 0) / vals.length;
-}
-
 export function computeSubclass(
   row: SubclassRow,
-  totaliPE25: number | null,
   totaliPE26: number | null,
   obiettivoPezziFamily: number | null,
   ordinato: number,
 ): SubclassComputed {
-  const incidenzaPE25 =
-    row.pezziPE25 != null && totaliPE25 != null && totaliPE25 > 0
-      ? row.pezziPE25 / totaliPE25
-      : null;
-
   const incidenzaPE26 =
     row.pezziPE26 != null && totaliPE26 != null && totaliPE26 > 0
       ? row.pezziPE26 / totaliPE26
       : null;
 
-  const incidenzaMedia = blendIncidenza(incidenzaPE25, incidenzaPE26);
-
-  if (incidenzaMedia == null) {
+  if (incidenzaPE26 == null) {
     return {
-      incidenzaPE25, incidenzaPE26, incidenzaMedia,
+      incidenzaPE26,
       fabbisognoRaw: null, fabbisognoNetto: null,
       ordinato, extra: null, copertura: null, status: 'no_data',
     };
   }
   if (obiettivoPezziFamily == null) {
     return {
-      incidenzaPE25, incidenzaPE26, incidenzaMedia,
+      incidenzaPE26,
       fabbisognoRaw: null, fabbisognoNetto: null,
       ordinato, extra: null, copertura: null, status: 'no_obiettivo',
     };
   }
 
-  const fabbisognoRaw = obiettivoPezziFamily * incidenzaMedia - row.continuativi;
+  const fabbisognoRaw = obiettivoPezziFamily * incidenzaPE26 - row.continuativi;
   const fabbisognoNetto = Math.max(0, fabbisognoRaw);
   const extra = ordinato - fabbisognoNetto;
   const copertura = fabbisognoNetto > 0 ? ordinato / fabbisognoNetto : null;
@@ -217,7 +197,7 @@ export function computeSubclass(
   else if (copertura != null && copertura >= 1) status = 'coperto';
 
   return {
-    incidenzaPE25, incidenzaPE26, incidenzaMedia,
+    incidenzaPE26,
     fabbisognoRaw, fabbisognoNetto,
     ordinato, extra, copertura, status,
   };

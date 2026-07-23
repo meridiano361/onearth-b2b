@@ -1126,8 +1126,8 @@ model BudgetSubclassData {
   seasonCode     String   @default("PE27")
   famiglia       String
   sottoclasse    String
-  pezziPE25      Int?
   pezziPE26      Int?
+  valorePE26     Decimal? @db.Decimal(12, 2)
   continuativi   Int      @default(0)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

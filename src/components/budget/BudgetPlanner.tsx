@@ -168,8 +168,8 @@ export default function BudgetPlanner() {
     return {
       famiglia,
       sottoclasse,
-      pezziPE25:    local.pezziPE25    !== undefined ? local.pezziPE25    : (db?.pezziPE25    ?? null),
       pezziPE26:    local.pezziPE26    !== undefined ? local.pezziPE26    : (db?.pezziPE26    ?? null),
+      valorePE26:   local.valorePE26   !== undefined ? local.valorePE26   : (db?.valorePE26   ?? null),
       continuativi: local.continuativi !== undefined ? local.continuativi : (db?.continuativi  ?? 0),
     };
   }
@@ -229,16 +229,15 @@ export default function BudgetPlanner() {
   }, [scenario, localFamily]);
 
   const subclassTotaliPerFamiglia = useMemo(() => {
-    const result: Record<string, { pe25: number; pe26: number }> = {};
+    const result: Record<string, { pe26: number }> = {};
     for (const f of MODA_FAMIGLIE) {
       const subclasses = MODA_SUBCLASSES[f as keyof typeof MODA_SUBCLASSES] ?? [];
-      let pe25 = 0, pe26 = 0;
+      let pe26 = 0;
       for (const s of subclasses) {
         const row = getSubclassRow(f, s);
-        pe25 += row.pezziPE25 ?? 0;
         pe26 += row.pezziPE26 ?? 0;
       }
-      result[f] = { pe25: pe25 || 0, pe26: pe26 || 0 };
+      result[f] = { pe26: pe26 || 0 };
     }
     return result;
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -257,7 +256,6 @@ export default function BudgetPlanner() {
           .reduce((sum, o) => sum + o.pezzi, 0);
         result[`${f}|${s}`] = computeSubclass(
           row,
-          totali.pe25 > 0 ? totali.pe25 : null,
           totali.pe26 > 0 ? totali.pe26 : null,
           fam.obiettivoPezzi,
           ordinato,
@@ -487,11 +485,9 @@ export default function BudgetPlanner() {
                       <thead>
                         <tr className="border-b border-border text-2xs text-gray-400 uppercase tracking-wide">
                           <th className="text-left px-4 py-2 font-medium">Sottoclasse</th>
-                          <th className="text-right px-2 py-2 font-medium">Pz PE25</th>
                           <th className="text-right px-2 py-2 font-medium">Pz PE26</th>
-                          <th className="text-right px-2 py-2 font-medium">Inc. PE25</th>
+                          <th className="text-right px-2 py-2 font-medium">Val. IE PE26 €</th>
                           <th className="text-right px-2 py-2 font-medium">Inc. PE26</th>
-                          <th className="text-right px-2 py-2 font-medium">Inc. Media</th>
                           <th className="text-right px-2 py-2 font-medium">Continu.</th>
                           <th className="text-right px-2 py-2 font-medium">Fabb. Raw</th>
                           <th className="text-right px-2 py-2 font-medium">Fabb. Netto</th>
@@ -510,21 +506,19 @@ export default function BudgetPlanner() {
                             <tr key={sottoclasse} className="hover:bg-gray-50/50 transition-colors">
                               <td className="px-4 py-2 font-medium text-gray-800 whitespace-nowrap">{sottoclasse}</td>
 
-                              {/* Pezzi PE25 */}
-                              <td className="px-2 py-1 text-right">
-                                <NumInput value={row.pezziPE25} decimals={0}
-                                  onChange={(v) => updateSubclass(famiglia, sottoclasse, 'pezziPE25', v)} />
-                              </td>
                               {/* Pezzi PE26 */}
                               <td className="px-2 py-1 text-right">
                                 <NumInput value={row.pezziPE26} decimals={0}
                                   onChange={(v) => updateSubclass(famiglia, sottoclasse, 'pezziPE26', v)} />
                               </td>
+                              {/* Valore IE PE26 */}
+                              <td className="px-2 py-1 text-right">
+                                <NumInput value={row.valorePE26} decimals={0}
+                                  onChange={(v) => updateSubclass(famiglia, sottoclasse, 'valorePE26', v)} />
+                              </td>
 
                               {/* Computed read-only */}
-                              <td className="px-2 py-2 text-right text-gray-500">{fmtPct(comp.incidenzaPE25 != null ? comp.incidenzaPE25 * 100 : null)}</td>
-                              <td className="px-2 py-2 text-right text-gray-500">{fmtPct(comp.incidenzaPE26 != null ? comp.incidenzaPE26 * 100 : null)}</td>
-                              <td className="px-2 py-2 text-right font-medium">{fmtPct(comp.incidenzaMedia != null ? comp.incidenzaMedia * 100 : null)}</td>
+                              <td className="px-2 py-2 text-right font-medium">{fmtPct(comp.incidenzaPE26 != null ? comp.incidenzaPE26 * 100 : null)}</td>
 
                               {/* Continuativi */}
                               <td className="px-2 py-1 text-right">

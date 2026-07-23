@@ -1,6 +1,6 @@
 /**
  * PATCH /api/budget/subclass-data
- * Body: { famiglia, sottoclasse, pezziPE25?, pezziPE26?, continuativi? }
+ * Body: { famiglia, sottoclasse, pezziPE26?, valorePE26?, continuativi? }
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
@@ -33,8 +33,8 @@ export async function PATCH(req: NextRequest) {
   }
 
   const data: Record<string, unknown> = { updatedAt: new Date() };
-  if ('pezziPE25'    in body) data.pezziPE25    = intOrNull(body.pezziPE25);
   if ('pezziPE26'    in body) data.pezziPE26    = intOrNull(body.pezziPE26);
+  if ('valorePE26'   in body) data.valorePE26   = body.valorePE26 == null ? null : Number(body.valorePE26) || null;
   if ('continuativi' in body) data.continuativi = intOrNull(body.continuativi) ?? 0;
 
   const row = await prisma.budgetSubclassData.upsert({
@@ -50,8 +50,8 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json({
     famiglia: row.famiglia,
     sottoclasse: row.sottoclasse,
-    pezziPE25: row.pezziPE25,
     pezziPE26: row.pezziPE26,
+    valorePE26: row.valorePE26 != null ? Number(row.valorePE26) : null,
     continuativi: row.continuativi,
   });
 }

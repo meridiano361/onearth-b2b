@@ -63,8 +63,8 @@ export async function GET(_req: NextRequest) {
     subclassData: subclassData.map((sd) => ({
       famiglia: sd.famiglia,
       sottoclasse: sd.sottoclasse,
-      pezziPE25: sd.pezziPE25,
       pezziPE26: sd.pezziPE26,
+      valorePE26: sd.valorePE26 != null ? Number(sd.valorePE26) : null,
       continuativi: sd.continuativi,
     })),
   });
