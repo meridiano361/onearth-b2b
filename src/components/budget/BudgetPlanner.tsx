@@ -295,7 +295,7 @@ export default function BudgetPlanner() {
       <div className="sticky top-0 z-10 bg-[#faf8f5]/95 backdrop-blur-sm border-b border-border px-4 py-3">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-0">
-            <p className="text-2xs text-gray-400 uppercase tracking-widest">Moda PE27</p>
+            <p className="text-2xs text-gray-400 uppercase tracking-widest">Budget</p>
             {editingNome ? (
               <div className="flex items-center gap-2 mt-0.5">
                 <input
@@ -324,7 +324,7 @@ export default function BudgetPlanner() {
             {([
               { key: 'famiglie',      icon: BarChart2,  label: 'Famiglie'       },
               { key: 'sottoclassi',   icon: Layers,     label: 'Sottoclassi'    },
-              { key: 'sintesi-ordine',icon: Package2,   label: 'Sintesi ordine' },
+              { key: 'sintesi-ordine',icon: Package2,   label: 'Ordine'         },
               { key: 'sintesi',       icon: TrendingUp, label: 'Sintesi'        },
             ] as const).map(({ key, icon: Icon, label }) => (
               <button

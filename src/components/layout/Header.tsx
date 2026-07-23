@@ -49,10 +49,10 @@ export default function Header({ session }: HeaderProps) {
   const { menu, collections } = useSettings();
 
   const isHome = pathname === '/home';
-  const isInModa = pathname.startsWith('/moda');
+  const isInModa = pathname.startsWith('/moda') || pathname.startsWith('/budget');
   const isInCasa = pathname.startsWith('/casa') || pathname.startsWith('/catalog/');
   const isAdmin = isAdminRole(session.user.role);
-  const { mondiEspositivi } = useFeatureFlags();
+  const { mondiEspositivi, isMeridiano361 } = useFeatureFlags();
   const preferitiHref = isInModa ? '/moda/preferiti' : '/catalog/preferiti';
   const isInPreferiti = pathname.startsWith('/moda/preferiti') || pathname.startsWith('/catalog/preferiti');
 
@@ -138,6 +138,18 @@ export default function Header({ session }: HeaderProps) {
                     ))}
                   </div>
                 </div>
+                {/* Budget — solo Meridiano361 e admin */}
+                {(isAdmin || isMeridiano361) && (
+                  <Link
+                    href="/budget"
+                    className={cn(
+                      'text-xs px-3 py-1.5 rounded transition-colors',
+                      pathname.startsWith('/budget') ? 'text-primary font-semibold bg-cream' : 'text-gray-400 hover:text-primary hover:bg-cream'
+                    )}
+                  >
+                    Budget
+                  </Link>
+                )}
                 {/* Visual dropdown — solo Meridiano361, Bottega Solidale e admin */}
                 {(isAdmin || mondiEspositivi) && (
                   <div className="relative group">

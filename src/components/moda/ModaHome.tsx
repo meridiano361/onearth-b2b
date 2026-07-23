@@ -101,7 +101,7 @@ export default function ModaHome() {
       {/* Budget solo per Meridiano361 */}
       {showBudget && (
         <div className="mt-3">
-          <NavCard href="/budget" icon={BarChart2} label="Budget PE27" />
+          <NavCard href="/budget" icon={BarChart2} label="Budget" />
         </div>
       )}
     </div>

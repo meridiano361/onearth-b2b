@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import {
-  Home, LayoutGrid, ShoppingCart, Package, Heart, HelpCircle, Settings, Gem,
+  Home, LayoutGrid, ShoppingCart, Package, Heart, HelpCircle, Settings, Gem, BarChart2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
@@ -62,8 +62,15 @@ const MODA_BASE: NavItem[] = [
   { icon: Gem,          label: 'Esposiz.',  href: '/moda/pareti',    isActive: (p) => p.startsWith('/moda/pareti') || p.startsWith('/moda/visual') },
 ];
 
+const BUDGET_ITEM: NavItem = {
+  icon: BarChart2,
+  label: 'Budget',
+  href: '/budget',
+  isActive: (p) => p.startsWith('/budget'),
+};
+
 // Path definitivamente MODA (mai casa)
-function isModaPath(p: string) { return p.startsWith('/moda'); }
+function isModaPath(p: string) { return p.startsWith('/moda') || p.startsWith('/budget'); }
 
 // Path definitivamente CASA (mai moda)
 function isCasaPath(p: string) {
@@ -76,24 +83,25 @@ function isCasaPath(p: string) {
   );
 }
 
-function getModaItems(isAdmin: boolean, canVisual: boolean): NavItem[] {
-  return isAdmin || canVisual
+function getModaItems(isAdmin: boolean, canVisual: boolean, isMeridiano361: boolean): NavItem[] {
+  const base = isAdmin || canVisual
     ? MODA_BASE
     : MODA_BASE.filter((i) => i.href !== '/moda/pareti' && !i.href.startsWith('/moda/visual'));
+  return isAdmin || isMeridiano361 ? [...base, BUDGET_ITEM] : base;
 }
 
-function getNavItems(pathname: string, isAdmin: boolean, canVisual: boolean, branch: 'casa' | 'moda'): NavItem[] {
+function getNavItems(pathname: string, isAdmin: boolean, canVisual: boolean, isMeridiano361: boolean, branch: 'casa' | 'moda'): NavItem[] {
   const tail = isAdmin ? ADMIN_ITEM : AIUTO_ITEM;
 
   if (pathname === '/home') return [tail];
 
   // Path definitivi: il branch non conta
-  if (isModaPath(pathname)) return [...getModaItems(isAdmin, canVisual), tail];
+  if (isModaPath(pathname)) return [...getModaItems(isAdmin, canVisual, isMeridiano361), tail];
   if (isCasaPath(pathname)) return [...CASA_BASE, tail];
 
   // Path ambigui (scheda prodotto /catalog/[id], assistenza, impostazioni, ecc.)
   // Si usa il branch selezionato dall'utente in home, persisto in localStorage
-  if (branch === 'moda') return [...getModaItems(isAdmin, canVisual), tail];
+  if (branch === 'moda') return [...getModaItems(isAdmin, canVisual, isMeridiano361), tail];
   return [...CASA_BASE, tail];
 }
 
@@ -122,8 +130,8 @@ export default function MobileNav() {
   const unreadCount = notifications.filter((n) => !n.letta).length;
 
   const adminUser = isAdminRole(session?.user?.role);
-  const { mondiEspositivi } = useFeatureFlags();
-  const navItems = getNavItems(pathname, adminUser, mondiEspositivi, branch);
+  const { mondiEspositivi, isMeridiano361 } = useFeatureFlags();
+  const navItems = getNavItems(pathname, adminUser, mondiEspositivi, isMeridiano361, branch);
 
   return (
     <nav

@@ -27,7 +27,7 @@ const SECTIONS = [
   { id: 'multilingua',        label: 'Multilingua',                       icon: Globe },
   { id: 'impostazioni',       label: 'Impostazioni',                      icon: Settings },
   { id: 'moda-pe27',          label: 'Moda PE27',                         icon: Sparkles },
-  { id: 'budget-pe27',        label: 'Budget PE27',                       icon: BarChart2 },
+  { id: 'budget-pe27',        label: 'Budget',                            icon: BarChart2 },
   { id: 'ruota-cromatica',    label: 'Ruota Cromatica',                   icon: Palette },
   { id: 'survey',             label: 'Questionario',                      icon: MessageSquare },
   { id: 'assistenza-tecnica', label: 'Assistenza tecnica',                icon: HelpCircle },
@@ -393,10 +393,10 @@ export default function AssistenzaPage() {
 
         {/* 20. Budget PE27 */}
         <section id="budget-pe27" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={20} icon={BarChart2} label="Budget PE27" />
+          <SectionHeader n={20} icon={BarChart2} label="Budget" />
           <p className="text-sm text-gray-600 mb-3">
-            La pagina <strong>Budget PE27</strong> è disponibile solo per gli operatori Meridiano361 e permette di pianificare il budget acquisti stagionale.
-            Aprila dalla home MODA PE27 → <em>Budget PE27</em>.
+            La pagina <strong>Budget</strong> è disponibile solo per gli operatori Meridiano361 e permette di pianificare il budget acquisti stagionale.
+            Aprila dalla home MODA PE27 → <em>Budget</em>, oppure dal menu in alto.
           </p>
           <ul className="space-y-2">
             <Bullet><span className="font-medium">Vista Famiglie:</span> inserisci i dati storici (venduto PE25 e PE26 in valore e pezzi, mesi consuntivi), l&apos;obiettivo stagionale in €, il margine pieno e gli sconti dei mesi 5 e 6. L&apos;app calcola automaticamente venduto proiettato, valore medio pezzo e obiettivo in pezzi.</Bullet>
