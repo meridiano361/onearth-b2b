@@ -95,6 +95,7 @@ function ProductCard({
   onQtyChange,
   onRemove,
   onViewAnagrafica,
+  savingItems,
   removeLabel,
   decreaseLabel,
   increaseLabel,
@@ -107,12 +108,14 @@ function ProductCard({
   onQtyChange: (id: string, serverQty: number, delta: number) => void;
   onRemove: (id: string) => void;
   onViewAnagrafica?: (product: Product) => void;
+  savingItems: Set<string>;
   removeLabel: string;
   decreaseLabel: string;
   increaseLabel: string;
 }) {
   const product = item.product!;
   const lotSize = product.lotSize || 1;
+  const isSaving = savingItems.has(item.id);
 
   return (
     <div className="bg-white border border-border flex flex-col">
@@ -165,15 +168,17 @@ function ProductCard({
           <div className="flex items-center gap-1">
             <button
               onClick={() => onQtyChange(item.id, Number(item.quantity), -lotSize)}
-              className="w-7 h-7 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
+              disabled={isSaving}
+              className="w-7 h-7 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label={decreaseLabel}
             >
               <Minus size={11} />
             </button>
-            <span className="text-sm font-semibold text-primary text-center min-w-[1.75rem]">{effectiveQty}</span>
+            <span className={`text-sm font-semibold text-primary text-center min-w-[1.75rem] ${isSaving ? 'opacity-50' : ''}`}>{effectiveQty}</span>
             <button
               onClick={() => onQtyChange(item.id, Number(item.quantity), +lotSize)}
-              className="w-7 h-7 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
+              disabled={isSaving}
+              className="w-7 h-7 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label={increaseLabel}
             >
               <Plus size={11} />
@@ -198,6 +203,7 @@ function SizedProductCard({
   onAddVariant,
   onViewAnagrafica,
   addingVariantCode,
+  savingItems,
   removeLabel,
   decreaseLabel,
   increaseLabel,
@@ -211,6 +217,7 @@ function SizedProductCard({
   onAddVariant?: (codice: string, taglia: string, productId: string) => void;
   onViewAnagrafica?: (product: Product) => void;
   addingVariantCode?: string | null;
+  savingItems: Set<string>;
   removeLabel: string;
   decreaseLabel: string;
   increaseLabel: string;
@@ -299,20 +306,23 @@ function SizedProductCard({
 
           if (item) {
             const lotSize = item.product?.lotSize || product.lotSize || 1;
+            const isSaving = savingItems.has(item.id);
             return (
               <div key={v.taglia} className="flex items-center gap-1">
                 <span className="text-[10px] font-bold text-primary w-6 flex-shrink-0">{v.taglia}</span>
                 <button
                   onClick={() => onQtyChange(item.id, Number(item.quantity), -lotSize)}
-                  className="w-5 h-5 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 flex-shrink-0"
+                  disabled={isSaving}
+                  className="w-5 h-5 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label={decreaseLabel}
                 >
                   <Minus size={9} />
                 </button>
-                <span className="text-xs font-semibold text-primary text-center w-5 flex-shrink-0">{item.effectiveQty}</span>
+                <span className={`text-xs font-semibold text-primary text-center w-5 flex-shrink-0 ${isSaving ? 'opacity-50' : ''}`}>{item.effectiveQty}</span>
                 <button
                   onClick={() => onQtyChange(item.id, Number(item.quantity), +lotSize)}
-                  className="w-5 h-5 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 flex-shrink-0"
+                  disabled={isSaving}
+                  className="w-5 h-5 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label={increaseLabel}
                 >
                   <Plus size={9} />
@@ -320,7 +330,8 @@ function SizedProductCard({
                 <span className="text-[9px] text-gray-400 flex-1 text-right">{formatCurrency(item.effectiveSubtotal)}</span>
                 <button
                   onClick={() => onRemove(item.id)}
-                  className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 ml-0.5"
+                  disabled={isSaving}
+                  className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 ml-0.5 disabled:opacity-40 disabled:cursor-not-allowed"
                   title={removeLabel}
                 >
                   <X size={9} />
@@ -903,6 +914,8 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   // Ref kept in sync with state — updated synchronously so rapid clicks never read stale values.
   const qtyOverridesRef = useRef<QtyMap>({});
   const qtyDebounceRef = useRef<Record<string, NodeJS.Timeout>>({});
+  // Items currently being saved — disables buttons and prevents double-saves.
+  const [savingItems, setSavingItems] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
 
   const [showDemetraInstructions, setShowDemetraInstructions] = useState(false);
@@ -937,6 +950,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
       if (!res.ok) throw new Error('Ordine non trovato');
       return (await res.json()).data as Order;
     },
+    staleTime: 60_000,
   });
 
   const { data: displayGroupsData } = useQuery<{ groups: { id: string }[] }>({
@@ -1127,6 +1141,9 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   // serverQty = item.quantity from DB (fallback only when no override exists yet).
   // delta = ±lotSize.
   function handleQtyChange(itemId: string, serverQty: number, delta: number) {
+    // Block double-saves: if a PATCH is already in-flight for this item, ignore the click.
+    if (savingItems.has(itemId)) return;
+
     const current = qtyOverridesRef.current[itemId] ?? serverQty;
     const newQty  = current + delta;
 
@@ -1142,14 +1159,21 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     qtyDebounceRef.current[itemId] = setTimeout(async () => {
       const finalQty = qtyOverridesRef.current[itemId];
       if (finalQty == null || finalQty <= 0) return; // removed while debounce was pending
+
+      // Cancel any background refetch in-flight so it doesn't overwrite our PATCH result.
+      await queryClient.cancelQueries({ queryKey: ['order-preview', id] });
+      setSavingItems((prev) => new Set(prev).add(itemId));
       try {
         const res = await fetch(`/api/orders/${id}/items/${itemId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ quantity: finalQty }),
         });
-        if (!res.ok) throw new Error();
-        // Confirm the new qty in the cache so the stale server value can't resurface
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody?.error ?? t('updateQtyError'));
+        }
+        // Write the confirmed qty into the cache so any subsequent refetch won't revert it.
         queryClient.setQueryData<any>(['order-preview', id], (old: any) => {
           if (!old) return old;
           return {
@@ -1159,14 +1183,21 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
             ),
           };
         });
-        // Clear the override — server state is now authoritative for this item
+        // Override no longer needed — cache is authoritative.
         delete qtyOverridesRef.current[itemId];
         setQtyOverrides({ ...qtyOverridesRef.current });
         queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-      } catch {
-        delete qtyOverridesRef.current[itemId];
+      } catch (err: any) {
+        // Rollback: restore the server quantity so the UI shows the last known good value.
+        qtyOverridesRef.current = { ...qtyOverridesRef.current, [itemId]: serverQty };
         setQtyOverrides({ ...qtyOverridesRef.current });
-        toast.error(t('updateQtyError'));
+        toast.error(err?.message ?? t('updateQtyError'));
+      } finally {
+        setSavingItems((prev) => {
+          const next = new Set(prev);
+          next.delete(itemId);
+          return next;
+        });
       }
     }, 500);
   }
@@ -1713,6 +1744,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
                       onAddVariant={order?.status !== 'ESPORTATO' ? handleAddVariant : undefined}
                       onViewAnagrafica={setAnagraficaProduct}
                       addingVariantCode={addingVariantCode}
+                      savingItems={savingItems}
                       removeLabel={t('remove')}
                       decreaseLabel={t('decrease')}
                       increaseLabel={t('increase')}
@@ -1728,6 +1760,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
                     onQtyChange={handleQtyChange}
                     onRemove={handleRemove}
                     onViewAnagrafica={setAnagraficaProduct}
+                    savingItems={savingItems}
                     removeLabel={t('remove')}
                     decreaseLabel={t('decrease')}
                     increaseLabel={t('increase')}
