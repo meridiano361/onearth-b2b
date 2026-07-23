@@ -527,8 +527,14 @@ export default function BudgetPlanner() {
                           <th className="text-right px-2 py-2 font-medium">Val. IE PE26 €</th>
                           <th className="text-right px-2 py-2 font-medium">Inc. PE26</th>
                           <th className="text-right px-2 py-2 font-medium">Continu.</th>
-                          <th className="text-right px-2 py-2 font-medium">Fabb. Raw</th>
-                          <th className="text-right px-2 py-2 font-medium">Fabb. Netto</th>
+                          <th className="text-right px-2 py-2 font-medium">
+                            Fabb. Raw
+                            <span title="Obiettivo pezzi × incidenza PE26 − continuativi. Può essere negativo se i continuativi coprono già l'obiettivo." className="ml-0.5 cursor-help text-gray-300 hover:text-gray-500">*</span>
+                          </th>
+                          <th className="text-right px-2 py-2 font-medium">
+                            Fabb. Netto
+                            <span title="Fabbisogno effettivo da ordinare: max(0, Fabb. Raw). Azzerato quando i continuativi eccedono l'obiettivo (status: eccedente)." className="ml-0.5 cursor-help text-gray-300 hover:text-gray-500">*</span>
+                          </th>
                           <th className="text-right px-2 py-2 font-medium">Ordinato</th>
                           <th className="text-right px-2 py-2 font-medium">Extra</th>
                           <th className="text-right px-3 py-2 font-medium">Stato</th>
