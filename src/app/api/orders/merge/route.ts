@@ -7,7 +7,6 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Parse body safely — never let req.json() crash the handler
   let body: any;
   try {
     body = await req.json();
@@ -24,7 +23,6 @@ export async function POST(req: NextRequest) {
   const isOperator = session.user.role === 'OPERATOR';
   const orgId = (session.user as any).organizationId ?? null;
 
-  // Load both orders with their items
   const [source, target] = await Promise.all([
     prisma.order.findUnique({
       where: { id: sourceOrderId },
@@ -46,16 +44,7 @@ export async function POST(req: NextRequest) {
     return order.customerId === userId;
   }
 
-  const sourceOk = canAccess(source);
-  const targetOk = canAccess(target);
-
-  if (!sourceOk || !targetOk) {
-    console.warn(
-      '[merge] Forbidden — role:%s userId:%s | source(id:%s customerId:%s orgId:%s) access:%s | target(id:%s customerId:%s orgId:%s) access:%s',
-      session.user.role, userId,
-      source.id, source.customerId, source.organizationId, sourceOk,
-      target.id, target.customerId, target.organizationId, targetOk,
-    );
+  if (!canAccess(source) || !canAccess(target)) {
     return NextResponse.json({ error: 'Non sei autorizzato su uno o entrambi gli ordini' }, { status: 403 });
   }
 
@@ -63,64 +52,83 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Non puoi unire ordini già esportati' }, { status: 400 });
   }
 
-  // Run merge inside a transaction — wrapped in try/catch so errors always
-  // return JSON instead of an empty 500 body that breaks response.json()
+  // Pre-compute all operations before the transaction so we can use the
+  // non-interactive $transaction([...ops]) form, which is PgBouncer-compatible.
+  // The interactive async-callback form is NOT compatible with PgBouncer.
+  type MergedItem = {
+    id?: string;          // present → update existing target item
+    productId: string;
+    taglia: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+  };
+
+  const merged: MergedItem[] = [];
+
+  // Target items: keep as-is or add source quantity if there's a match
+  for (const ti of target.items) {
+    const srcMatch = source.items.find(
+      si => si.productId === ti.productId && si.taglia === ti.taglia,
+    );
+    const unitPrice = Number(ti.unitPrice);
+    const qty = ti.quantity + (srcMatch?.quantity ?? 0);
+    merged.push({ id: ti.id, productId: ti.productId, taglia: ti.taglia, quantity: qty, unitPrice, subtotal: unitPrice * qty });
+  }
+
+  // Source items not already in target → create new
+  for (const si of source.items) {
+    const alreadyMerged = target.items.some(
+      ti => ti.productId === si.productId && ti.taglia === si.taglia,
+    );
+    if (!alreadyMerged) {
+      const unitPrice = Number(si.product?.costPrice ?? si.unitPrice);
+      merged.push({ productId: si.productId, taglia: si.taglia, quantity: si.quantity, unitPrice, subtotal: unitPrice * si.quantity });
+    }
+  }
+
+  const totalValue = merged.reduce((s, i) => s + i.subtotal, 0);
+  const totalItems = merged.reduce((s, i) => s + i.quantity, 0);
+
+  const ops = [
+    // Update target items whose qty changed
+    ...merged.filter(i => i.id).map(i =>
+      prisma.orderItem.update({
+        where: { id: i.id! },
+        data: { quantity: i.quantity, subtotal: i.subtotal },
+      }),
+    ),
+    // Create new items (source items not present in target)
+    ...merged.filter(i => !i.id).map(i =>
+      prisma.orderItem.create({
+        data: {
+          orderId: targetOrderId,
+          productId: i.productId,
+          taglia: i.taglia,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          subtotal: i.subtotal,
+          mercePronta: 0,
+        },
+      }),
+    ),
+    // Update target order totals
+    prisma.order.update({
+      where: { id: targetOrderId },
+      data: { totalValue, totalItems },
+    }),
+    // Remove source items (DisplayGroupItems cascade automatically)
+    prisma.orderItem.deleteMany({ where: { orderId: sourceOrderId } }),
+    // Remove source order (DisplayGroups cascade automatically)
+    prisma.order.delete({ where: { id: sourceOrderId } }),
+  ];
+
   try {
-    await prisma.$transaction(
-      async (tx) => {
-        for (const srcItem of source.items) {
-          const unitPrice = Number(srcItem.product?.costPrice ?? srcItem.unitPrice);
-          const existing = target.items.find(
-            ti => ti.productId === srcItem.productId && ti.taglia === srcItem.taglia,
-          );
-
-          if (existing) {
-            const newQty = existing.quantity + srcItem.quantity;
-            await tx.orderItem.update({
-              where: { id: existing.id },
-              data: { quantity: newQty, subtotal: unitPrice * newQty },
-            });
-          } else {
-            await tx.orderItem.create({
-              data: {
-                orderId: targetOrderId,
-                productId: srcItem.productId,
-                taglia: srcItem.taglia,
-                quantity: srcItem.quantity,
-                unitPrice,
-                subtotal: unitPrice * srcItem.quantity,
-                mercePronta: 0,
-              },
-            });
-          }
-        }
-
-        // Recalculate target totals
-        const allItems = await tx.orderItem.findMany({
-          where: { orderId: targetOrderId },
-          select: { quantity: true, subtotal: true },
-        });
-        const totalValue = allItems.reduce((s, it) => s + Number(it.subtotal), 0);
-        const totalItems = allItems.reduce((s, it) => s + it.quantity, 0);
-        await tx.order.update({
-          where: { id: targetOrderId },
-          data: { totalValue, totalItems },
-        });
-
-        // Delete source items then source order (cascade handles DisplayGroups)
-        await tx.orderItem.deleteMany({ where: { orderId: sourceOrderId } });
-        await tx.order.delete({ where: { id: sourceOrderId } });
-      },
-      { timeout: 15_000 }, // generous timeout for orders with many items
-    );
+    await prisma.$transaction(ops as any);
   } catch (e: any) {
-    const detail = e?.message ?? String(e);
-    console.error(
-      '[merge] Transaction failed — role:%s userId:%s source:%s target:%s error:%s',
-      session.user.role, userId, sourceOrderId, targetOrderId, detail,
-    );
+    console.error('[merge] failed source:%s target:%s error:%s', sourceOrderId, targetOrderId, e?.message ?? e);
     return NextResponse.json(
-      { error: `Errore unione: ${detail}` },
+      { error: 'Errore durante l\'unione degli ordini. Riprova o contatta l\'assistenza.' },
       { status: 500 },
     );
   }
