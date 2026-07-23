@@ -216,15 +216,23 @@ function SizedProductCard({
   increaseLabel: string;
 }) {
   const sizeVariants = product.sizeVariants ?? [];
+  // Arch 2: every sizeVariant shares the same codice (= the shared product code).
+  // Arch 1: each size has its own unique product code.
+  // Must check length > 1 to avoid false-positive on single-variant products.
+  const isArch2 = sizeVariants.length > 1 &&
+    sizeVariants.every(sv => sv.codice.toUpperCase() === sizeVariants[0].codice.toUpperCase());
   const allSameProduct = productItems.every((i) => i.productId === productItems[0].productId);
   const totalSubtotal = productItems.reduce((s, i) => s + i.effectiveSubtotal, 0);
   const totalQty = productItems.reduce((s, i) => s + i.effectiveQty, 0);
 
   function findItem(v: { taglia: string; codice: string }): EnrichedItem | null {
-    // Arch 2 (shared product, taglia on OrderItem): match by taglia
+    // Primary match: taglia on the OrderItem (works for both Arch 1 and Arch 2)
     const byTaglia = productItems.find((i) => i.taglia === v.taglia);
     if (byTaglia) return byTaglia;
-    // Arch 1 (separate product per size): match by product code
+    // Arch 2: all variants share one codice — no taglia match means the size is not yet in the
+    // order. Do NOT fall through to code-based matching or we'd return a different size's item.
+    if (isArch2) return null;
+    // Arch 1: each size is a separate Product record with a unique code — match by that code.
     return productItems.find(
       (i) => i.product?.code?.toUpperCase() === v.codice.toUpperCase()
     ) ?? null;
@@ -291,7 +299,7 @@ function SizedProductCard({
               <div key={v.taglia} className="flex items-center gap-1">
                 <span className="text-[10px] font-bold text-primary w-6 flex-shrink-0">{v.taglia}</span>
                 <button
-                  onClick={() => onQtyChange(item.id, item.quantity, -lotSize)}
+                  onClick={() => onQtyChange(item.id, Number(item.quantity), -lotSize)}
                   className="w-5 h-5 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 flex-shrink-0"
                   aria-label={decreaseLabel}
                 >
@@ -299,7 +307,7 @@ function SizedProductCard({
                 </button>
                 <span className="text-xs font-semibold text-primary text-center w-5 flex-shrink-0">{item.effectiveQty}</span>
                 <button
-                  onClick={() => onQtyChange(item.id, item.quantity, +lotSize)}
+                  onClick={() => onQtyChange(item.id, Number(item.quantity), +lotSize)}
                   className="w-5 h-5 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 flex-shrink-0"
                   aria-label={increaseLabel}
                 >
