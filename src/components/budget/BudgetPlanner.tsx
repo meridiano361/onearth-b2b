@@ -101,20 +101,13 @@ export default function BudgetPlanner() {
     staleTime: 60_000,
   });
 
-  // All-orders aggregate (for fabbisogno ordinato counts + sintesi view)
-  const { data: orderDataRaw } = useQuery<{ data: OrderAggRow[] }>({
-    queryKey: ['budget-order-data'],
-    queryFn: () => fetch('/api/budget/order-data').then((r) => r.json()),
-    staleTime: 30_000,
-  });
-  const orderData: OrderAggRow[] = orderDataRaw?.data ?? [];
-
-  // Single-order aggregate (for sintesi-ordine view)
+  // Single-order aggregate (for sintesi-ordine view + Fabbisogno ordinato column)
   const { data: singleOrderDataRaw, isFetching: singleOrderFetching } = useQuery<{ data: OrderAggRow[] }>({
     queryKey: ['budget-order-data', selectedOrderId],
     queryFn: () => fetch(`/api/budget/order-data?orderId=${selectedOrderId}`).then((r) => r.json()),
     enabled: !!selectedOrderId,
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
   const singleOrderData: OrderAggRow[] = singleOrderDataRaw?.data ?? [];
 
@@ -251,7 +244,7 @@ export default function BudgetPlanner() {
       const fam = familyComputed[f];
       for (const s of subclasses) {
         const row = getSubclassRow(f, s);
-        const ordinato = orderData
+        const ordinato = singleOrderData
           .filter((o) => o.famiglia === f && o.sottoclasse === s)
           .reduce((sum, o) => sum + o.pezzi, 0);
         result[`${f}|${s}`] = computeSubclass(
@@ -264,7 +257,7 @@ export default function BudgetPlanner() {
     }
     return result;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenario, localSubclass, localFamily, orderData]);
+  }, [scenario, localSubclass, localFamily, singleOrderData]);
 
   const summary = useMemo(() => {
     const families = MODA_FAMIGLIE.map((f) => ({ input: getFamilyInput(f), computed: familyComputed[f] }));
@@ -768,7 +761,7 @@ export default function BudgetPlanner() {
                   {MODA_FAMIGLIE.map((famiglia) => {
                     const input = getFamilyInput(famiglia);
                     const comp = familyComputed[famiglia];
-                    const ordinato = orderData.filter((o) => o.famiglia === famiglia).reduce((s, o) => s + o.pezzi, 0);
+                    const ordinato = singleOrderData.filter((o) => o.famiglia === famiglia).reduce((s, o) => s + o.pezzi, 0);
                     const subclasses = MODA_SUBCLASSES[famiglia as keyof typeof MODA_SUBCLASSES] ?? [];
                     const fabbisogno = subclasses.reduce((sum, s) => {
                       const c = subclassComputed[`${famiglia}|${s}`];
