@@ -40,15 +40,17 @@ async function computeCanAccessVisual(token: any) {
   if (token.role !== 'OPERATOR') return;
   // Check specific emails first — must run even if canAccessVisual is already set
   if (token.email && FULL_MODA_EMAILS.has(token.email as string)) { token.canAccessVisual = true; return; }
-  if (token.canAccessVisual !== undefined) return;
+  const needVisual = token.canAccessVisual === undefined;
+  const needMeridiano = token.isMeridiano361 === undefined;
+  if (!needVisual && !needMeridiano) return;
   if (!token.organizationId) return;
   const org = await prisma.organization.findUnique({
     where: { id: token.organizationId as string },
     select: { nome: true },
   });
   if (org?.nome) {
-    token.canAccessVisual = orgCanAccessVisual(org.nome);
-    token.isMeridiano361 = orgIsMeridiano361(org.nome);
+    if (needVisual) token.canAccessVisual = orgCanAccessVisual(org.nome);
+    if (needMeridiano) token.isMeridiano361 = orgIsMeridiano361(org.nome);
   }
 }
 
