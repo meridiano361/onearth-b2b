@@ -172,6 +172,7 @@ export async function GET(req: NextRequest) {
     const classe = searchParams.get('classe');
     const sottoclasse = searchParams.get('sottoclasse');
     const produttore = searchParams.get('produttore');
+    const conferente = searchParams.get('conferente');
     const isContinuativoParam = searchParams.get('isContinuativo');
 
     if (famiglia) where.famiglia = famiglia;
@@ -180,6 +181,7 @@ export async function GET(req: NextRequest) {
     if (classe) where.classe = classe;
     if (sottoclasse) where.sottoclasse = sottoclasse;
     if (produttore) where.produttore = produttore;
+    if (conferente) where.conferente = conferente;
     if (isContinuativoParam === 'true') where.isContinuativo = true;
     if (isContinuativoParam === 'false') where.isContinuativo = false;
 

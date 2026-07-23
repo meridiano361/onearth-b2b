@@ -539,7 +539,7 @@ function AddProductsModal({
     const keys = [
       'stagione','colore','temaColore','collezione','tranche',
       'nomLinea','famiglia','sottofamiglia','gruppoOmogeneo',
-      'classe','sottoclasse','gruppoMerceologico','produttore',
+      'classe','sottoclasse','gruppoMerceologico','produttore','conferente',
     ];
     // User-selectable filters only apply if they don't conflict with a baseFilter key
     keys.forEach(k => { if (filters[k] && !baseFilters[k]) p.set(k, filters[k]); });
@@ -578,17 +578,18 @@ function AddProductsModal({
     enabled: tab === 'ricerca' && (debouncedSearch.trim().length >= 2 || presenzaFilter === 'non-ancora'),
   });
 
-  async function handleAdd(product: Product) {
+  async function handleAdd(product: Product, taglia?: string) {
     const qty = quantities[product.id] ?? product.lotSize ?? 1;
-    setAddingId(product.id);
+    const addingKey = taglia ? `${product.id}__${taglia}` : product.id;
+    setAddingId(addingKey);
     try {
       const res = await fetch(`/api/orders/${orderId}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: product.id, quantity: qty }),
+        body: JSON.stringify({ productId: product.id, quantity: qty, taglia: taglia ?? '' }),
       });
       if (!res.ok) throw new Error();
-      toast.success(`${product.code} ✓`);
+      toast.success(`${product.code}${taglia ? ' ' + taglia : ''} ✓`);
       onAdded();
     } catch {
       toast.error(addLabel + ' — errore');
@@ -600,10 +601,13 @@ function AddProductsModal({
   function renderProductRow(product: Product) {
     const qty = quantities[product.id] ?? product.lotSize ?? 1;
     const isAdding = addingId === product.id;
+    const sizeVariants = (product as any).sizeVariants as { taglia: string; codice: string }[] | undefined;
+    const isArch2 = Array.isArray(sizeVariants) && sizeVariants.length > 0 && !(product as any).taglia;
+
     return (
       <div
         key={product.id}
-        className="flex items-center gap-3 px-4 py-3 border-b border-border/50 hover:bg-cream/50 transition-colors"
+        className="flex items-start gap-3 px-4 py-3 border-b border-border/50 hover:bg-cream/50 transition-colors"
       >
         {/* Thumbnail — clickable to open anagrafica */}
         <button
@@ -628,31 +632,53 @@ function AddProductsModal({
             {product.name}
           </button>
           <p className="text-xs text-gray-400 mt-0.5">{formatCurrency(product.costPrice)}</p>
+
+          {/* Arch 2: per-taglia buttons */}
+          {isArch2 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {sizeVariants!.map((sv) => {
+                const key = `${product.id}__${sv.taglia}`;
+                const adding = addingId === key;
+                return (
+                  <button
+                    key={sv.taglia}
+                    onClick={() => handleAdd(product, sv.taglia)}
+                    disabled={adding}
+                    className="text-xs border border-primary text-primary px-2 py-1 rounded hover:bg-primary hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    {adding ? '…' : `+ ${sv.taglia}`}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Qty + Add */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <input
-            type="number"
-            min={product.lotSize ?? 1}
-            step={product.lotSize ?? 1}
-            value={qty}
-            onChange={(e) =>
-              setQuantities((prev) => ({
-                ...prev,
-                [product.id]: Math.max(1, parseInt(e.target.value) || 1),
-              }))
-            }
-            className="w-16 text-sm text-center border border-border rounded px-2 py-1.5 text-primary"
-          />
-          <button
-            onClick={() => handleAdd(product)}
-            disabled={isAdding}
-            className="text-sm bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors disabled:opacity-50 min-w-[80px]"
-          >
-            {isAdding ? '…' : 'Aggiungi'}
-          </button>
-        </div>
+        {/* Qty + Add (Arch 1 only) */}
+        {!isArch2 && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <input
+              type="number"
+              min={product.lotSize ?? 1}
+              step={product.lotSize ?? 1}
+              value={qty}
+              onChange={(e) =>
+                setQuantities((prev) => ({
+                  ...prev,
+                  [product.id]: Math.max(1, parseInt(e.target.value) || 1),
+                }))
+              }
+              className="w-16 text-sm text-center border border-border rounded px-2 py-1.5 text-primary"
+            />
+            <button
+              onClick={() => handleAdd(product)}
+              disabled={isAdding}
+              className="text-sm bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors disabled:opacity-50 min-w-[80px]"
+            >
+              {isAdding ? '…' : 'Aggiungi'}
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -685,6 +711,7 @@ function AddProductsModal({
         ['collezione',         'Collezione'],
         ['produttore',         'Produttore'],
         ['tranche',            'Tranche'],
+        ['conferente',         'Conferente'],
       ] as [string, string][]).map(([key, label]) =>
         (fo[key]?.length ?? 0) > 0 ? (
           <select

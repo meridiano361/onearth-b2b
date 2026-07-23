@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 async function distinct(
   field: 'stagione' | 'colore' | 'temaColore' | 'collezione' | 'tranche' |
          'nomLinea' | 'famiglia' | 'sottofamiglia' | 'gruppoOmogeneo' |
-         'classe' | 'sottoclasse' | 'gruppoMerceologico' | 'produttore'
+         'classe' | 'sottoclasse' | 'gruppoMerceologico' | 'produttore' | 'conferente'
 ): Promise<string[]> {
   const rows = await prisma.product.findMany({
     where: { isActive: true, [field]: { not: null } },
@@ -36,6 +36,7 @@ export async function GET() {
       sottoclasse,
       gruppoMerceologico,
       produttore,
+      conferente,
     ] = await Promise.all([
       distinct('stagione'),
       distinct('colore'),
@@ -50,6 +51,7 @@ export async function GET() {
       distinct('sottoclasse'),
       distinct('gruppoMerceologico'),
       distinct('produttore'),
+      distinct('conferente'),
     ]);
 
     return NextResponse.json({
@@ -67,6 +69,7 @@ export async function GET() {
         sottoclasse,
         gruppoMerceologico,
         produttore,
+        conferente,
       },
     });
   } catch (err) {
