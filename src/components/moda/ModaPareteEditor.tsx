@@ -10,6 +10,7 @@ import {
   ImagePlus, Upload,
 } from 'lucide-react';
 import { compressImageToBase64 } from '@/lib/compressImage';
+import { capitalize } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import type {
   PareteAttrezzata, ElementoParete, ItemParete,
@@ -371,12 +372,19 @@ function AddProductModal({
     return base;
   }, [allProducts, elementoTipo, sourceTab, cartProductIds, orderProductIds]);
 
-  const filterOptions = useMemo(() => ({
-    famiglie: [...new Set(allProducts.map((p) => p.famiglia).filter(Boolean) as string[])].sort(),
-    classi: [...new Set(allProducts.map((p) => p.classe).filter(Boolean) as string[])].sort(),
-    sottoclassi: [...new Set(allProducts.map((p) => p.sottoclasse).filter(Boolean) as string[])].sort(),
-    colori: [...new Set(allProducts.map((p) => p.colore).filter(Boolean) as string[])].sort(),
-  }), [allProducts]);
+  const norm = (v: string | null | undefined) => v?.trim() ? capitalize(v.trim()) : null;
+
+  const filterOptions = useMemo(() => {
+    const uniq = (vals: (string | null)[]) =>
+      [...new Map(vals.filter(Boolean).map((v) => [norm(v as string)!.toLowerCase(), norm(v as string)!])).values()]
+        .sort((a, b) => a.localeCompare(b, 'it'));
+    return {
+      famiglie:    uniq(allProducts.map((p) => p.famiglia)),
+      classi:      uniq(allProducts.map((p) => p.classe)),
+      sottoclassi: uniq(allProducts.map((p) => p.sottoclasse)),
+      colori:      uniq(allProducts.map((p) => p.colore)),
+    };
+  }, [allProducts]);
 
   const filtered = useMemo(() => {
     let list = sourceProducts;
@@ -384,10 +392,10 @@ function AddProductModal({
       const q = search.toLowerCase();
       list = list.filter((p) => formatProductName(p).toLowerCase().includes(q));
     }
-    if (filterFamiglia) list = list.filter((p) => p.famiglia === filterFamiglia);
-    if (filterClasse) list = list.filter((p) => p.classe === filterClasse);
-    if (filterSottoclasse) list = list.filter((p) => p.sottoclasse === filterSottoclasse);
-    if (filterColore) list = list.filter((p) => p.colore === filterColore);
+    if (filterFamiglia) list = list.filter((p) => norm(p.famiglia) === filterFamiglia);
+    if (filterClasse) list = list.filter((p) => norm(p.classe) === filterClasse);
+    if (filterSottoclasse) list = list.filter((p) => norm(p.sottoclasse) === filterSottoclasse);
+    if (filterColore) list = list.filter((p) => norm(p.colore) === filterColore);
     return list.slice(0, 200);
   }, [sourceProducts, search, filterFamiglia, filterClasse, filterSottoclasse, filterColore]);
 
@@ -585,7 +593,7 @@ function AddProductModal({
                     : <div className="w-9 h-9 bg-gray-100 rounded flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-gray-900 truncate">{formatProductName(p)}</p>
-                    <p className="text-2xs text-gray-400">{[p.famiglia, p.colore].filter(Boolean).join(' · ')}</p>
+                    <p className="text-2xs text-gray-400">{[p.famiglia, norm(p.colore)].filter(Boolean).join(' · ')}</p>
                   </div>
                   <span className="text-2xs text-gray-400 flex-shrink-0 font-medium">{TIPO_LABELS[tipoFromProduct(p, elementoTipo)]}</span>
                 </button>
