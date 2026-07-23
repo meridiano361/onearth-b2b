@@ -233,7 +233,13 @@ function SizedProductCard({
     const byTaglia = productItems.find((i) => i.taglia === v.taglia);
     if (byTaglia) return byTaglia;
 
-    // No item has item.taglia === v.taglia → this size is not yet in the order.
+    // If this variant's codice is the same as the shared product code, taglia
+    // matching is the ONLY valid strategy. Code-based matching would find an
+    // item that belongs to a different size (e.g. S codice = base product code,
+    // while M and L items also share that same product code). Returning null here
+    // signals that the size is not yet in the order → show the "Add" button.
+    if (v.codice.trim().toUpperCase() === product.code.trim().toUpperCase()) return null;
+
     // Code-based matching (Arch 1) is only safe when v.codice is unique across all
     // sizeVariants: if another variant shares the same codice we cannot tell which
     // item is which and must return null to avoid cross-contamination.
