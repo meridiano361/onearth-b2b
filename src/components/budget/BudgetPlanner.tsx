@@ -101,6 +101,12 @@ export default function BudgetPlanner() {
     staleTime: 60_000,
   });
 
+  const { data: marginiSuggeriti } = useQuery<Record<string, number | null>>({
+    queryKey: ['budget-margini-suggeriti'],
+    queryFn: () => fetch('/api/budget/margini-suggeriti').then((r) => r.json()),
+    staleTime: 5 * 60_000,
+  });
+
   // Single-order aggregate (for sintesi-ordine view + Fabbisogno ordinato column)
   const { data: singleOrderDataRaw, isFetching: singleOrderFetching } = useQuery<{ data: OrderAggRow[] }>({
     queryKey: ['budget-order-data', selectedOrderId],
@@ -142,10 +148,21 @@ export default function BudgetPlanner() {
   function getFamilyInput(famiglia: string): FamilyInput {
     const db = scenario?.familyInputs.find((fi) => fi.famiglia === famiglia);
     const local = localFamily[famiglia] ?? {};
+
+    // Auto-derive PE26 totals from fabbisogno subclass data when not manually set
+    const subclassSums = scenario?.subclassData
+      .filter((sd) => sd.famiglia === famiglia)
+      .reduce((acc, sd) => ({
+        valore: acc.valore + (sd.valorePE26 ?? 0),
+        pezzi:  acc.pezzi  + (sd.pezziPE26  ?? 0),
+      }), { valore: 0, pezzi: 0 });
+    const autoValore = subclassSums && subclassSums.valore > 0 ? subclassSums.valore : null;
+    const autoPezzi  = subclassSums && subclassSums.pezzi  > 0 ? subclassSums.pezzi  : null;
+
     return {
       famiglia,
-      vendutoPrevValore: local.vendutoPrevValore !== undefined ? local.vendutoPrevValore : (db?.vendutoPrevValore ?? null),
-      vendutoPrevPezzi:  local.vendutoPrevPezzi  !== undefined ? local.vendutoPrevPezzi  : (db?.vendutoPrevPezzi  ?? null),
+      vendutoPrevValore: local.vendutoPrevValore !== undefined ? local.vendutoPrevValore : (db?.vendutoPrevValore ?? autoValore),
+      vendutoPrevPezzi:  local.vendutoPrevPezzi  !== undefined ? local.vendutoPrevPezzi  : (db?.vendutoPrevPezzi  ?? autoPezzi),
       mesiConsuntivi:    local.mesiConsuntivi     !== undefined ? local.mesiConsuntivi    : (db?.mesiConsuntivi    ?? 4),
       obiettivo:         local.obiettivo          !== undefined ? local.obiettivo         : (db?.obiettivo         ?? null),
       marginePieno:      local.marginePieno       !== undefined ? local.marginePieno      : (db?.marginePieno      ?? null),
@@ -476,7 +493,20 @@ export default function BudgetPlanner() {
                           <RowComputed label="Pezzi obiettivo" value={comp.obiettivoPezzi != null ? Math.round(comp.obiettivoPezzi) + ' pz' : '—'} highlight />
 
                           <p className="text-2xs text-gray-400 uppercase tracking-wide font-medium pt-2">Margini</p>
-                          <Row label="Margine pieno (%)">
+                          <Row label={
+                            <span className="flex items-center gap-1.5">
+                              Margine pieno (%)
+                              {marginiSuggeriti?.[famiglia] != null && (
+                                <button
+                                  onClick={() => updateFamily(famiglia, 'marginePieno', marginiSuggeriti[famiglia])}
+                                  title="Valore calcolato dalle condizioni commerciali dei conferenti (media ponderata per n. prodotti)"
+                                  className="text-[9px] font-medium px-1 py-px rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors leading-none"
+                                >
+                                  {marginiSuggeriti[famiglia]!.toFixed(1)}% da CC
+                                </button>
+                              )}
+                            </span>
+                          }>
                             <NumInput value={input.marginePieno} decimals={1} suffix="%"
                               onChange={(v) => updateFamily(famiglia, 'marginePieno', v)} />
                           </Row>
@@ -881,7 +911,7 @@ export default function BudgetPlanner() {
 
 // ─── Small layout helpers ─────────────────────────────────────────────────────
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-2 py-0.5">
       <span className="text-xs text-gray-500 flex-shrink-0">{label}</span>
