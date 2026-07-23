@@ -102,7 +102,9 @@ function ProductCard({
   item: OrderItem;
   effectiveQty: number;
   effectiveSubtotal: number;
-  onQtyChange: (id: string, qty: number) => void;
+  // serverQty = original DB quantity (used as fallback in parent's ref computation)
+  // delta = ±lotSize
+  onQtyChange: (id: string, serverQty: number, delta: number) => void;
   onRemove: (id: string) => void;
   onViewAnagrafica?: (product: Product) => void;
   removeLabel: string;
@@ -162,11 +164,7 @@ function ProductCard({
         <div className="flex items-center justify-between pt-1.5 border-t border-border/60">
           <div className="flex items-center gap-1">
             <button
-              onClick={() => {
-                const newQty = effectiveQty - lotSize;
-                if (newQty <= 0) onRemove(item.id);
-                else onQtyChange(item.id, newQty);
-              }}
+              onClick={() => onQtyChange(item.id, Number(item.quantity), -lotSize)}
               className="w-7 h-7 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
               aria-label={decreaseLabel}
             >
@@ -174,7 +172,7 @@ function ProductCard({
             </button>
             <span className="text-sm font-semibold text-primary text-center min-w-[1.75rem]">{effectiveQty}</span>
             <button
-              onClick={() => onQtyChange(item.id, effectiveQty + lotSize)}
+              onClick={() => onQtyChange(item.id, Number(item.quantity), +lotSize)}
               className="w-7 h-7 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
               aria-label={increaseLabel}
             >
@@ -206,7 +204,9 @@ function SizedProductCard({
 }: {
   productItems: EnrichedItem[];
   product: Product;
-  onQtyChange: (id: string, qty: number) => void;
+  // serverQty = original DB quantity per item (fallback in parent ref computation)
+  // delta = ±lotSize
+  onQtyChange: (id: string, serverQty: number, delta: number) => void;
   onRemove: (id: string) => void;
   onAddVariant?: (codice: string, taglia: string, productId: string) => void;
   onViewAnagrafica?: (product: Product) => void;
@@ -291,11 +291,7 @@ function SizedProductCard({
               <div key={v.taglia} className="flex items-center gap-1">
                 <span className="text-[10px] font-bold text-primary w-6 flex-shrink-0">{v.taglia}</span>
                 <button
-                  onClick={() => {
-                    const newQty = item.effectiveQty - lotSize;
-                    if (newQty <= 0) onRemove(item.id);
-                    else onQtyChange(item.id, newQty);
-                  }}
+                  onClick={() => onQtyChange(item.id, item.quantity, -lotSize)}
                   className="w-5 h-5 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 flex-shrink-0"
                   aria-label={decreaseLabel}
                 >
@@ -303,7 +299,7 @@ function SizedProductCard({
                 </button>
                 <span className="text-xs font-semibold text-primary text-center w-5 flex-shrink-0">{item.effectiveQty}</span>
                 <button
-                  onClick={() => onQtyChange(item.id, item.effectiveQty + lotSize)}
+                  onClick={() => onQtyChange(item.id, item.quantity, +lotSize)}
                   className="w-5 h-5 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 flex-shrink-0"
                   aria-label={increaseLabel}
                 >
@@ -892,6 +888,8 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   );
   function handleSortChange(v: string) { setSortBy(v); localStorage.setItem(PREVIEW_SORT_KEY, v); }
   const [qtyOverrides, setQtyOverrides] = useState<QtyMap>({});
+  // Ref kept in sync with state — updated synchronously so rapid clicks never read stale values.
+  const qtyOverridesRef = useRef<QtyMap>({});
   const qtyDebounceRef = useRef<Record<string, NodeJS.Timeout>>({});
   const [exporting, setExporting] = useState(false);
 
@@ -960,23 +958,25 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   // Items with effective qty / subtotal (local optimistic overrides).
   // Il costo unitario usa costoIeConReso → costoIeSenzaReso → unitPrice
   // così i totali riflettono sempre il costo reale del prodotto.
-  // Phantom items: Arch 2 products (with sizeVariants) that have no taglia on the OrderItem
-  // are invalid ghost records — filter them out so they never pollute counts or totals.
+  // Phantom filter: Arch 2 products have sizeVariants but NO product.taglia; items with no
+  // item.taglia for those products are ghost records that must never appear in counts or totals.
+  // Arch 1 products (product.taglia set) are left untouched.
   const items = useMemo(
     () =>
       (order?.items ?? [])
         .filter((it) => {
           if (!it.product) return false;
           const sv = (it.product as any).sizeVariants;
-          if (Array.isArray(sv) && sv.length > 0 && !it.taglia) return false;
+          const productTaglia = (it.product as any).taglia;
+          if (Array.isArray(sv) && sv.length > 0 && !productTaglia && !it.taglia) return false;
           return true;
         })
         .map((it) => {
-          const qty      = qtyOverrides[it.id] ?? it.quantity;
+          const qty      = qtyOverridesRef.current[it.id] ?? it.quantity;
           const unitCost = effectiveCost(it.product, Number(it.unitPrice));
           return { ...it, effectiveQty: qty, effectiveUnitCost: unitCost, effectiveSubtotal: qty * unitCost };
         }),
-    [order?.items, qtyOverrides]
+    [order?.items, qtyOverrides]  // qtyOverrides state triggers re-render; ref provides the actual values
   );
 
   // Search filter (works on top of groupBy grouping)
@@ -1110,46 +1110,71 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     }
   }
 
-  function handleQtyChange(itemId: string, qty: number) {
-    if (qty <= 0) { handleRemove(itemId); return; }
-    // Immediate optimistic update
-    setQtyOverrides((prev) => ({ ...prev, [itemId]: qty }));
-    // Debounce the API call: cancel previous timer, fire 500ms after last click
+  // Delta-based qty change: uses qtyOverridesRef (updated synchronously) as the source of
+  // truth so rapid clicks always accumulate correctly even before React re-renders.
+  // serverQty = item.quantity from DB (fallback only when no override exists yet).
+  // delta = ±lotSize.
+  function handleQtyChange(itemId: string, serverQty: number, delta: number) {
+    const current = qtyOverridesRef.current[itemId] ?? serverQty;
+    const newQty  = current + delta;
+
+    if (newQty <= 0) { void handleRemove(itemId); return; }
+
+    // Update ref immediately (synchronous — next click within same frame reads correct value)
+    qtyOverridesRef.current = { ...qtyOverridesRef.current, [itemId]: newQty };
+    setQtyOverrides({ ...qtyOverridesRef.current });
+
+    // Debounce PATCH — cancel previous timer, then read from ref at FIRE TIME so the
+    // server always receives the latest qty, not the one captured when the timer was set.
     if (qtyDebounceRef.current[itemId]) clearTimeout(qtyDebounceRef.current[itemId]);
     qtyDebounceRef.current[itemId] = setTimeout(async () => {
+      const finalQty = qtyOverridesRef.current[itemId];
+      if (finalQty == null || finalQty <= 0) return; // removed while debounce was pending
       try {
         const res = await fetch(`/api/orders/${id}/items/${itemId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ quantity: qty }),
+          body: JSON.stringify({ quantity: finalQty }),
         });
         if (!res.ok) throw new Error();
+        // Confirm the new qty in the cache so the stale server value can't resurface
+        queryClient.setQueryData<any>(['order-preview', id], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: (old.items ?? []).map((it: any) =>
+              it.id === itemId ? { ...it, quantity: finalQty } : it
+            ),
+          };
+        });
+        // Clear the override — server state is now authoritative for this item
+        delete qtyOverridesRef.current[itemId];
+        setQtyOverrides({ ...qtyOverridesRef.current });
         queryClient.invalidateQueries({ queryKey: ['my-orders'] });
       } catch {
-        // Revert to server value on failure
-        setQtyOverrides((prev) => {
-          const next = { ...prev };
-          delete next[itemId];
-          return next;
-        });
+        delete qtyOverridesRef.current[itemId];
+        setQtyOverrides({ ...qtyOverridesRef.current });
         toast.error(t('updateQtyError'));
       }
     }, 500);
   }
 
   async function handleRemove(itemId: string) {
-    // Optimistic removal: remove from cache and overrides immediately so the count
-    // updates at once, without a window where the item flickers back at its server qty.
+    // Cancel any pending qty PATCH for this item to prevent it from racing DELETE
+    if (qtyDebounceRef.current[itemId]) {
+      clearTimeout(qtyDebounceRef.current[itemId]);
+      delete qtyDebounceRef.current[itemId];
+    }
+    // Remove from ref before any async work
+    delete qtyOverridesRef.current[itemId];
+
     const previousData = queryClient.getQueryData<Order>(['order-preview', id]);
+    // Optimistic: remove item from cache immediately
     queryClient.setQueryData<Order>(['order-preview', id], (old: any) => {
       if (!old) return old;
       return { ...old, items: (old.items ?? []).filter((it: any) => it.id !== itemId) };
     });
-    setQtyOverrides((prev) => {
-      const n = { ...prev };
-      delete n[itemId];
-      return n;
-    });
+    setQtyOverrides({ ...qtyOverridesRef.current });
 
     try {
       const res = await fetch(`/api/orders/${id}/items/${itemId}`, { method: 'DELETE' });
