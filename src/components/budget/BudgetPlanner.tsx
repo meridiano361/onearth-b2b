@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BarChart2, Layers, Package2, TrendingUp, Pencil, Check, X, AlertTriangle, ChevronDown, ChevronRight, Loader2, Store, Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -99,11 +99,41 @@ function NumInput({
 }
 
 function ColTh({ label, tip, right = true }: { label: string; tip: string; right?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onOutside(e: MouseEvent | TouchEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onOutside);
+    document.addEventListener('touchstart', onOutside);
+    return () => {
+      document.removeEventListener('mousedown', onOutside);
+      document.removeEventListener('touchstart', onOutside);
+    };
+  }, [open]);
+
   return (
     <th className={`${right ? 'text-right' : 'text-left'} px-2 py-2 font-medium`}>
       <span className="inline-flex items-center gap-0.5">
         {label}
-        <span title={tip} className="cursor-help text-gray-300 hover:text-gray-500 leading-none">*</span>
+        <span ref={ref} className="relative inline-flex">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+            className="cursor-help text-gray-300 hover:text-gray-500 leading-none focus:outline-none"
+          >
+            *
+          </button>
+          {open && (
+            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 z-50 w-60 bg-gray-900 text-white text-[10px] leading-relaxed rounded-lg px-3 py-2 shadow-xl">
+              {tip}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900" />
+            </div>
+          )}
+        </span>
       </span>
     </th>
   );
