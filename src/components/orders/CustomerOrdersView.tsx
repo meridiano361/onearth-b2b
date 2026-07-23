@@ -68,6 +68,44 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
   const [budgetEditInput, setBudgetEditInput] = useState('');
   const [savingBudget, setSavingBudget] = useState(false);
 
+  const [editingBudgetConfId, setEditingBudgetConfId] = useState<string | null>(null);
+  const [budgetConfInputs, setBudgetConfInputs] = useState<Record<string, string>>({});
+  const [editingBudgetFamId, setEditingBudgetFamId] = useState<string | null>(null);
+  const [budgetFamInputs, setBudgetFamInputs] = useState<Record<string, string>>({});
+  const [savingBreakdown, setSavingBreakdown] = useState(false);
+
+  async function handleSaveBudgetConferenti(orderId: string) {
+    setSavingBreakdown(true);
+    try {
+      const parsed: Record<string, number> = {};
+      for (const [k, v] of Object.entries(budgetConfInputs)) {
+        const n = parseFloat(v); if (n > 0) parsed[k] = n;
+      }
+      await fetch(`/api/catalog/orders/${orderId}/budget`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ budgetConferenti: Object.keys(parsed).length ? parsed : null }),
+      });
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      setEditingBudgetConfId(null);
+    } catch { toast.error('Errore salvataggio budget'); } finally { setSavingBreakdown(false); }
+  }
+
+  async function handleSaveBudgetFamiglie(orderId: string) {
+    setSavingBreakdown(true);
+    try {
+      const parsed: Record<string, number> = {};
+      for (const [k, v] of Object.entries(budgetFamInputs)) {
+        const n = parseFloat(v); if (n > 0) parsed[k] = n;
+      }
+      await fetch(`/api/catalog/orders/${orderId}/budget`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ budgetFamiglie: Object.keys(parsed).length ? parsed : null }),
+      });
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      setEditingBudgetFamId(null);
+    } catch { toast.error('Errore salvataggio budget'); } finally { setSavingBreakdown(false); }
+  }
+
   async function handleSaveBudget(orderId: string) {
     const val = parseFloat(budgetEditInput);
     if (isNaN(val) || val <= 0) { toast.error('Inserisci un budget valido'); return; }
@@ -529,6 +567,148 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                             />
                           </div>
                         </>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Costo per conferente */}
+                {(() => {
+                  const confMap = new Map<string, { count: number; pz: number; cost: number }>();
+                  for (const item of order.items ?? []) {
+                    const conf = (item.product as any)?.conferente || '—';
+                    const cost = effectiveUnitCost(item.product, Number(item.unitPrice)) * item.quantity;
+                    const e = confMap.get(conf) ?? { count: 0, pz: 0, cost: 0 };
+                    confMap.set(conf, { count: e.count + 1, pz: e.pz + item.quantity, cost: e.cost + cost });
+                  }
+                  if (confMap.size <= 1) return null;
+                  const isEditingConf = editingBudgetConfId === order.id;
+                  const budgetConf = (order.budgetConferenti as Record<string, number> | null) ?? {};
+                  const isEditingFam = editingBudgetFamId === order.id;
+                  const famMap = new Map<string, { count: number; pz: number; cost: number }>();
+                  for (const item of order.items ?? []) {
+                    const fam = (item.product as any)?.famiglia || '—';
+                    const cost = effectiveUnitCost(item.product, Number(item.unitPrice)) * item.quantity;
+                    const e = famMap.get(fam) ?? { count: 0, pz: 0, cost: 0 };
+                    famMap.set(fam, { count: e.count + 1, pz: e.pz + item.quantity, cost: e.cost + cost });
+                  }
+                  const budgetFam = (order.budgetFamiglie as Record<string, number> | null) ?? {};
+                  return (
+                    <div className="space-y-2">
+                      {/* Per conferente */}
+                      <div className="bg-cream/60 rounded p-2.5">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider">Per conferente</p>
+                          {!isEditingConf && (
+                            <button onClick={() => {
+                              const init: Record<string, string> = {};
+                              confMap.forEach((_, k) => { init[k] = budgetConf[k] != null ? String(budgetConf[k]) : ''; });
+                              setBudgetConfInputs(init);
+                              setEditingBudgetConfId(order.id);
+                            }} className="text-2xs text-gray-400 hover:text-primary transition-colors flex items-center gap-0.5">
+                              <Pencil size={9} /> Budget
+                            </button>
+                          )}
+                        </div>
+                        {isEditingConf ? (
+                          <div className="space-y-1.5">
+                            {[...confMap.entries()].map(([conf]) => (
+                              <div key={conf} className="flex items-center gap-2">
+                                <span className="text-xs text-primary font-medium flex-1 truncate">{conf}</span>
+                                <div className="relative flex-shrink-0">
+                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-2xs">€</span>
+                                  <input type="number" min="0" step="50" value={budgetConfInputs[conf] ?? ''} onChange={e => setBudgetConfInputs(p => ({ ...p, [conf]: e.target.value }))} placeholder="—"
+                                    className="w-24 pl-5 pr-2 h-7 border border-border rounded text-xs text-primary focus:outline-none focus:border-accent bg-white" />
+                                </div>
+                              </div>
+                            ))}
+                            <div className="flex gap-2 pt-1">
+                              <button onClick={() => setEditingBudgetConfId(null)} className="flex-1 py-1 text-2xs border border-border rounded text-gray-500 hover:bg-cream transition-colors">Annulla</button>
+                              <button onClick={() => handleSaveBudgetConferenti(order.id)} disabled={savingBreakdown} className="flex-1 py-1 text-2xs bg-primary text-background rounded hover:bg-warm-darker transition-colors flex items-center justify-center gap-1">
+                                {savingBreakdown ? <Loader2 size={8} className="animate-spin" /> : <Check size={9} />} Salva
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-0.5">
+                            {[...confMap.entries()].map(([conf, data]) => {
+                              const bud = budgetConf[conf];
+                              const over = bud != null && data.cost > bud;
+                              return (
+                                <div key={conf} className="flex items-center justify-between">
+                                  <span className="text-xs text-primary font-medium truncate max-w-[55%]">{conf}</span>
+                                  <span className="text-2xs text-gray-500 tabular-nums">
+                                    {data.count} art · {data.pz} pz ·{' '}
+                                    {bud != null ? (
+                                      <span className={`font-semibold ${over ? 'text-red-500' : 'text-primary'}`}>{formatCurrency(data.cost)} / {formatCurrency(bud)}</span>
+                                    ) : (
+                                      <span className="font-semibold text-primary">{formatCurrency(data.cost)}</span>
+                                    )}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Per famiglia */}
+                      {famMap.size > 1 && (
+                        <div className="bg-cream/60 rounded p-2.5">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wider">Per famiglia</p>
+                            {!isEditingFam && (
+                              <button onClick={() => {
+                                const init: Record<string, string> = {};
+                                famMap.forEach((_, k) => { init[k] = budgetFam[k] != null ? String(budgetFam[k]) : ''; });
+                                setBudgetFamInputs(init);
+                                setEditingBudgetFamId(order.id);
+                              }} className="text-2xs text-gray-400 hover:text-primary transition-colors flex items-center gap-0.5">
+                                <Pencil size={9} /> Budget
+                              </button>
+                            )}
+                          </div>
+                          {isEditingFam ? (
+                            <div className="space-y-1.5">
+                              {[...famMap.entries()].map(([fam]) => (
+                                <div key={fam} className="flex items-center gap-2">
+                                  <span className="text-xs text-primary font-medium flex-1 truncate">{fam}</span>
+                                  <div className="relative flex-shrink-0">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-2xs">€</span>
+                                    <input type="number" min="0" step="50" value={budgetFamInputs[fam] ?? ''} onChange={e => setBudgetFamInputs(p => ({ ...p, [fam]: e.target.value }))} placeholder="—"
+                                      className="w-24 pl-5 pr-2 h-7 border border-border rounded text-xs text-primary focus:outline-none focus:border-accent bg-white" />
+                                  </div>
+                                </div>
+                              ))}
+                              <div className="flex gap-2 pt-1">
+                                <button onClick={() => setEditingBudgetFamId(null)} className="flex-1 py-1 text-2xs border border-border rounded text-gray-500 hover:bg-cream transition-colors">Annulla</button>
+                                <button onClick={() => handleSaveBudgetFamiglie(order.id)} disabled={savingBreakdown} className="flex-1 py-1 text-2xs bg-primary text-background rounded hover:bg-warm-darker transition-colors flex items-center justify-center gap-1">
+                                  {savingBreakdown ? <Loader2 size={8} className="animate-spin" /> : <Check size={9} />} Salva
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-0.5">
+                              {[...famMap.entries()].map(([fam, data]) => {
+                                const bud = budgetFam[fam];
+                                const over = bud != null && data.cost > bud;
+                                return (
+                                  <div key={fam} className="flex items-center justify-between">
+                                    <span className="text-xs text-primary font-medium truncate max-w-[55%]">{fam}</span>
+                                    <span className="text-2xs text-gray-500 tabular-nums">
+                                      {data.count} art · {data.pz} pz ·{' '}
+                                      {bud != null ? (
+                                        <span className={`font-semibold ${over ? 'text-red-500' : 'text-primary'}`}>{formatCurrency(data.cost)} / {formatCurrency(bud)}</span>
+                                      ) : (
+                                        <span className="font-semibold text-primary">{formatCurrency(data.cost)}</span>
+                                      )}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   );

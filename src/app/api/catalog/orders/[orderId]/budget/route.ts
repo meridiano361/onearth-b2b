@@ -31,18 +31,22 @@ export async function PATCH(
     data: {
       budgetPersonalizzato:
         body.budgetPersonalizzato !== undefined
-          ? body.budgetPersonalizzato === null
-            ? null
-            : Number(body.budgetPersonalizzato)
+          ? body.budgetPersonalizzato === null ? null : Number(body.budgetPersonalizzato)
           : undefined,
       budgetNota:
         body.budgetNota !== undefined
-          ? body.budgetNota === null
-            ? null
-            : String(body.budgetNota)
+          ? body.budgetNota === null ? null : String(body.budgetNota)
+          : undefined,
+      budgetConferenti:
+        body.budgetConferenti !== undefined
+          ? body.budgetConferenti  // null clears it, object saves it
+          : undefined,
+      budgetFamiglie:
+        body.budgetFamiglie !== undefined
+          ? body.budgetFamiglie
           : undefined,
     },
-    select: { id: true, budgetPersonalizzato: true, budgetNota: true },
+    select: { id: true, budgetPersonalizzato: true, budgetNota: true, budgetConferenti: true, budgetFamiglie: true },
   });
 
   return NextResponse.json({ order: updated });

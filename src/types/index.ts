@@ -326,6 +326,8 @@ export interface Order {
   notes: string | null;
   budgetPersonalizzato: number | null;
   budgetNota: string | null;
+  budgetConferenti: Record<string, number> | null;
+  budgetFamiglie: Record<string, number> | null;
   createdAt: string;
   confirmedAt: string | null;
   customer?: Customer;

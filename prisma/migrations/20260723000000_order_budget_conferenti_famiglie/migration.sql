@@ -1,0 +1,2 @@
+ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "budgetConferenti" JSONB;
+ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "budgetFamiglie" JSONB;

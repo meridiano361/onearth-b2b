@@ -465,6 +465,8 @@ model Order {
   notes                 String?
   budgetPersonalizzato  Decimal?    @db.Decimal(10, 2)
   budgetNota            String?
+  budgetConferenti      Json?
+  budgetFamiglie        Json?
   catalogBranch         String?     @default("casa27") // 'casa27' | 'modaPE27'
   createdAt             DateTime    @default(now())
   confirmedAt           DateTime?
