@@ -1,6 +1,6 @@
 /**
  * GET  /api/budget  — returns (or creates) the budget scenario for the org + season.
- * PATCH /api/budget — updates meta fields (nome, obiettivoTotale).
+ * PATCH /api/budget — updates meta fields (nome, obiettivoTotale, costiNegozio, obiettivoRicavoSviluppo).
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
@@ -19,6 +19,8 @@ async function guardBudget() {
   return ok ? session : null;
 }
 
+function toNum(v: unknown) { return v != null ? Number(v) : null; }
+
 export async function GET(_req: NextRequest) {
   const session = await guardBudget();
   if (!session) return FORBIDDEN;
@@ -26,7 +28,6 @@ export async function GET(_req: NextRequest) {
   const orgId = session.user.organizationId!;
   const season = BUDGET_SEASON;
 
-  // Upsert scenario meta
   let meta = await prisma.budgetScenarioMeta.findUnique({
     where: { organizationId_seasonCode: { organizationId: orgId, seasonCode: season } },
   });
@@ -36,41 +37,58 @@ export async function GET(_req: NextRequest) {
     });
   }
 
-  // Fetch existing family inputs
-  const familyInputs = await prisma.budgetFamilyInput.findMany({
+  const [familyInputs, subclassData] = await Promise.all([
+    prisma.budgetFamilyInput.findMany({ where: { organizationId: orgId, seasonCode: season } }),
+    prisma.budgetSubclassData.findMany({ where: { organizationId: orgId, seasonCode: season } }),
+  ]);
+
+  let settori = await prisma.budgetSettore.findMany({
     where: { organizationId: orgId, seasonCode: season },
+    orderBy: { posizione: 'asc' },
   });
 
-  // Fetch existing subclass data
-  const subclassData = await prisma.budgetSubclassData.findMany({
-    where: { organizationId: orgId, seasonCode: season },
-  });
+  if (settori.length === 0) {
+    const created = await prisma.budgetSettore.create({
+      data: { organizationId: orgId, seasonCode: season, nome: 'Moda PE27', incidenza: 0, margine: 0, posizione: 0 },
+    });
+    settori = [created];
+  }
 
+  const m = meta as any;
   return NextResponse.json({
     meta: {
       id: meta.id,
       nome: meta.nome,
       seasonCode: meta.seasonCode,
-      obiettivoTotale: (meta as any).obiettivoTotale != null ? Number((meta as any).obiettivoTotale) : null,
+      obiettivoTotale:         toNum(m.obiettivoTotale),
+      costiNegozio:            toNum(m.costiNegozio),
+      obiettivoRicavoSviluppo: toNum(m.obiettivoRicavoSviluppo),
     },
     famiglie: MODA_FAMIGLIE,
     subclassesByFamiglia: MODA_SUBCLASSES,
     familyInputs: familyInputs.map((fi) => ({
-      famiglia: fi.famiglia,
-      vendutoPrevValore: fi.vendutoPrevValore != null ? Number(fi.vendutoPrevValore) : null,
-      vendutoPrevPezzi: fi.vendutoPrevPezzi,
-      mesiConsuntivi: fi.mesiConsuntivi,
-      obiettivo: fi.obiettivo != null ? Number(fi.obiettivo) : null,
-      marginePieno: fi.marginePieno != null ? Number(fi.marginePieno) : null,
-      scontoMese5: fi.scontoMese5 != null ? Number(fi.scontoMese5) : null,
-      scontoMese6: fi.scontoMese6 != null ? Number(fi.scontoMese6) : null,
+      famiglia:         fi.famiglia,
+      vendutoPrevValore: toNum(fi.vendutoPrevValore),
+      vendutoPrevPezzi:  fi.vendutoPrevPezzi,
+      mesiConsuntivi:    fi.mesiConsuntivi,
+      obiettivo:         toNum(fi.obiettivo),
+      marginePieno:      toNum(fi.marginePieno),
+      scontoMese5:       toNum(fi.scontoMese5),
+      scontoMese6:       toNum(fi.scontoMese6),
     })),
     subclassData: subclassData.map((sd) => ({
-      famiglia: sd.famiglia,
+      famiglia:    sd.famiglia,
       sottoclasse: sd.sottoclasse,
-      pezziPE26: sd.pezziPE26,
-      valorePE26: sd.valorePE26 != null ? Number(sd.valorePE26) : null,
+      pezziPE26:   sd.pezziPE26,
+      valorePE26:  toNum(sd.valorePE26),
       continuativi: sd.continuativi,
+    })),
+    settori: settori.map((s) => ({
+      id:        s.id,
+      nome:      s.nome,
+      incidenza: Number(s.incidenza),
+      margine:   Number(s.margine),
+      posizione: s.posizione,
     })),
   });
 }
@@ -84,13 +102,11 @@ export async function PATCH(req: NextRequest) {
 
   const update: Record<string, unknown> = {};
   if (typeof body.nome === 'string' && body.nome.trim()) update.nome = body.nome.trim();
-  if ('obiettivoTotale' in body) {
-    update.obiettivoTotale = body.obiettivoTotale == null ? null : Number(body.obiettivoTotale) || null;
-  }
+  if ('obiettivoTotale'         in body) update.obiettivoTotale         = body.obiettivoTotale == null ? null : Number(body.obiettivoTotale) || null;
+  if ('costiNegozio'            in body) update.costiNegozio            = body.costiNegozio    == null ? null : Number(body.costiNegozio)    || null;
+  if ('obiettivoRicavoSviluppo' in body) update.obiettivoRicavoSviluppo = body.obiettivoRicavoSviluppo == null ? null : Number(body.obiettivoRicavoSviluppo) || null;
 
-  if (Object.keys(update).length === 0) {
-    return NextResponse.json({ error: 'nessun campo da aggiornare' }, { status: 400 });
-  }
+  if (Object.keys(update).length === 0) return NextResponse.json({ error: 'nessun campo' }, { status: 400 });
 
   await prisma.budgetScenarioMeta.upsert({
     where: { organizationId_seasonCode: { organizationId: orgId, seasonCode: BUDGET_SEASON } },

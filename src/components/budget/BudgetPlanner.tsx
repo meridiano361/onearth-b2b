@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BarChart2, Layers, Package2, TrendingUp, Pencil, Check, X, AlertTriangle, ChevronDown, ChevronRight, Loader2, Store, Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -178,16 +178,6 @@ export default function BudgetPlanner() {
 
   // Initialize settoriLocal from server data the first time scenario loads
   const settori: Settore[] = settoriLocal ?? (scenario?.settori ?? []);
-
-  // Seed default "Moda PE27" sector when the list is empty on first load
-  useEffect(() => {
-    if (scenario && scenario.settori.length === 0 && settoriLocal === null) {
-      const defaults: Settore[] = [{ nome: 'Moda PE27', incidenza: 0, margine: 0, posizione: 0 }];
-      setSettoriLocal(defaults);
-      saveSettori(defaults);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenario]);
 
   const costiNegozio: number | null =
     localCostiNegozio !== undefined ? localCostiNegozio : (scenario?.meta.costiNegozio ?? null);
