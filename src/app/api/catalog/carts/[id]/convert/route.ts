@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const unitPrice = con > 0 ? con : sen > 0 ? sen : Number(p.costPrice);
     return {
       productId: item.productId,
-      taglia: p.taglia ?? '',
+      taglia: item.taglia ?? '',
       quantity: item.quantity,
       unitPrice,
       subtotal: unitPrice * item.quantity,
