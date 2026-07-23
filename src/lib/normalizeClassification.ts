@@ -25,11 +25,15 @@ export function normalizeLookupValue(entita: string, nome: string): string {
 // Product model fields normalized to UPPERCASE (catalog codes)
 const PRODUCT_UPPER_FIELDS = ['nomLinea', 'collezione'] as const;
 
-// All other classification fields: save exactly as typed by the admin (only trim).
-// capFirst was removed because it silently converts "AI"→"Ai", "PE"→"Pe",
-// "CA27"→"Ca27", making case-only edits impossible to save.
+// Taxonomy fields: first letter uppercase, rest lowercase
+const PRODUCT_CAPFIRST_FIELDS = [
+  'famiglia', 'classe', 'sottoclasse', 'sottoclasse2',
+  'gruppoOmogeneo', 'gruppoOmogeneo2',
+] as const;
+
+// Other classification fields: trim only
 const PRODUCT_TRIM_FIELDS = [
-  'gruppoMerceologico', 'famiglia', 'classe', 'sottoclasse', 'gruppoOmogeneo',
+  'gruppoMerceologico',
   'colore', 'temaColore', 'stagione', 'tranche',
   'produttore', 'misura', 'paese', 'fasciaRicarico', 'notes',
 ] as const;
@@ -38,6 +42,12 @@ export function normalizeProductClassificationFields<T extends Record<string, an
   const result = { ...data } as any;
   for (const field of PRODUCT_UPPER_FIELDS) {
     if (result[field]) result[field] = (result[field] as string).trim().toUpperCase() || null;
+  }
+  for (const field of PRODUCT_CAPFIRST_FIELDS) {
+    if (result[field]) {
+      const t = (result[field] as string).trim();
+      result[field] = t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : null;
+    }
   }
   for (const field of PRODUCT_TRIM_FIELDS) {
     if (result[field] !== undefined && result[field] !== null) {

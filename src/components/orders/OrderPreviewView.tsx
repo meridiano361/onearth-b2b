@@ -518,7 +518,7 @@ function AddProductsModal({
   const fo = filterOptions ?? {};
 
   const catalogParams = useMemo(() => {
-    const p = new URLSearchParams({ active: 'true', limit: '9999', ...baseFilters });
+    const p = new URLSearchParams({ limit: '9999', ...baseFilters });
     const keys = [
       'stagione','colore','temaColore','collezione','tranche',
       'nomLinea','famiglia','sottofamiglia','gruppoOmogeneo',
@@ -551,7 +551,7 @@ function AddProductsModal({
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ['products-for-order', debouncedSearch, baseFilters],
     queryFn: async () => {
-      const params = new URLSearchParams({ active: 'true', limit: '200', ...baseFilters });
+      const params = new URLSearchParams({ limit: '200', ...baseFilters });
       if (debouncedSearch) params.set('search', debouncedSearch);
       const res = await fetch(`/api/products?${params}`);
       if (!res.ok) throw new Error();
@@ -1059,7 +1059,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
         quantity = 1;
       } else {
         // Arch 1: each size is a separate Product record → search by code to get its ID
-        const res = await fetch(`/api/products?search=${encodeURIComponent(codice.trim())}&limit=10`);
+        const res = await fetch(`/api/products?search=${encodeURIComponent(codice.trim())}&limit=100`);
         const data = res.ok ? await res.json() : { data: [] };
         const foundProduct = (data.data as Product[])?.find(
           (p: Product) => p.code.trim().toUpperCase() === upperCode

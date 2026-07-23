@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-07-23 (Budget PE27: pianificazione budget per famiglia e sottoclasse moda)
+// AGGIORNATO: 2026-07-23 (fix aggiunta prodotti in Modifica Anteprima; normalizzazione tassonomie)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
@@ -294,7 +294,7 @@ export default function AssistenzaPage() {
             <Bullet>Usa la <span className="font-medium">barra di ricerca</span> in alto per filtrare i prodotti dell&apos;ordine per nome o codice.</Bullet>
             <Bullet>Clicca su una <span className="font-medium">foto prodotto</span> per aprire l&apos;anagrafica completa (galleria, prezzi, attributi).</Bullet>
             <Bullet>Modifica quantità direttamente dall&apos;anteprima con i pulsanti <span className="font-medium">+</span> e <span className="font-medium">−</span>.</Bullet>
-            <Bullet>Clicca <span className="font-medium">+ Aggiungi prodotti</span> per aggiungere nuovi prodotti. Digita almeno 2 caratteri per cercare nella collezione corrente (MODA o casa), oppure sfoglia il catalogo con i filtri. In cima al pannello il selettore <span className="font-medium">Tutti / Non ancora / Già presenti</span> filtra la visibilità dei prodotti.</Bullet>
+            <Bullet>Clicca <span className="font-medium">+ Aggiungi prodotti</span> per aggiungere nuovi prodotti. Digita almeno 2 caratteri per cercare nella collezione corrente (MODA o casa), oppure sfoglia il catalogo con i filtri — vengono mostrati tutti i prodotti, incluse le varianti taglia non ancora aggiunte. In cima al pannello il selettore <span className="font-medium">Tutti / Non ancora / Già presenti</span> filtra la visibilità dei prodotti.</Bullet>
             <Bullet>In fondo alla pagina vedi il riepilogo con subtotali per gruppo e totale generale.</Bullet>
             <Bullet>Esporta il <span className="font-medium">PDF</span> con le foto dei prodotti raggruppati.</Bullet>
             <Bullet>Esporta in <span className="font-medium">Excel multi-foglio</span>: un foglio per ogni criterio di classificazione (linea, collezione, colore, ecc.).</Bullet>
