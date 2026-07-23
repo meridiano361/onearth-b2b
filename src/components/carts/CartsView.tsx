@@ -314,14 +314,14 @@ export default function CartsView({ collection }: CartsViewProps) {
     }
   }
 
-  async function handleUpdateQty(cart: Cart, productId: string, quantity: number) {
+  async function handleUpdateQty(cart: Cart, productId: string, quantity: number, taglia = '') {
     if (cart.id === cartId) {
-      storeUpdateQty(productId, quantity);
+      storeUpdateQty(productId, quantity, taglia);
     } else {
       fetch(`/api/catalog/carts/${cart.id}/items`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, quantity }),
+        body: JSON.stringify({ productId, quantity, taglia }),
       }).catch(() => {});
     }
     queryClient.setQueryData<Cart[]>(['my-carts'], (prev = []) =>
@@ -329,9 +329,9 @@ export default function CartsView({ collection }: CartsViewProps) {
         c.id !== cart.id ? c : {
           ...c,
           items: quantity <= 0
-            ? (c.items ?? []).filter((i) => i.productId !== productId)
+            ? (c.items ?? []).filter((i) => !(i.productId === productId && (i.taglia ?? '') === taglia))
             : (c.items ?? []).map((i) =>
-                i.productId === productId ? { ...i, quantity } : i
+                i.productId === productId && (i.taglia ?? '') === taglia ? { ...i, quantity } : i
               ),
         }
       )
@@ -786,11 +786,14 @@ export default function CartsView({ collection }: CartsViewProps) {
                           <div className="flex items-center gap-2">
                             <QuantitySelector
                               value={item.quantity}
-                              onChange={(qty) => handleUpdateQty(cart, item.productId, qty)}
+                              onChange={(qty) => handleUpdateQty(cart, item.productId, qty, item.taglia ?? '')}
                               lotSize={item.product.lotSize}
                               min={0}
                               compact
                             />
+                            {item.taglia && (
+                              <span className="text-2xs font-mono text-gray-400 border border-border/60 rounded px-1">{item.taglia}</span>
+                            )}
                             <span className="text-xs font-medium text-primary ml-auto">
                               {formatCurrency(effectivePrice(item.product) * item.quantity)}
                             </span>
@@ -805,7 +808,7 @@ export default function CartsView({ collection }: CartsViewProps) {
 
                         {/* Remove */}
                         <button
-                          onClick={() => handleUpdateQty(cart, item.productId, 0)}
+                          onClick={() => handleUpdateQty(cart, item.productId, 0, item.taglia ?? '')}
                           className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0 mt-0.5 p-0.5"
                           title="Rimuovi"
                         >
