@@ -21,7 +21,7 @@ interface ScenarioData {
   subclassData: SubclassRow[];
 }
 
-type View = 'famiglie' | 'sottoclassi' | 'sintesi-ordine' | 'sintesi';
+type View = 'famiglie' | 'fabbisogno' | 'sintesi-ordine' | 'sintesi';
 
 interface OrderSummary {
   id: string;
@@ -101,7 +101,7 @@ export default function BudgetPlanner() {
     staleTime: 60_000,
   });
 
-  // All-orders aggregate (for sottoclassi ordinato counts + sintesi view)
+  // All-orders aggregate (for fabbisogno ordinato counts + sintesi view)
   const { data: orderDataRaw } = useQuery<{ data: OrderAggRow[] }>({
     queryKey: ['budget-order-data'],
     queryFn: () => fetch('/api/budget/order-data').then((r) => r.json()),
@@ -340,7 +340,7 @@ export default function BudgetPlanner() {
           <div className="flex gap-1">
             {([
               { key: 'famiglie',      icon: BarChart2,  label: 'Famiglie'       },
-              { key: 'sottoclassi',   icon: Layers,     label: 'Sottoclassi'    },
+              { key: 'fabbisogno',    icon: Layers,     label: 'Fabbisogno'     },
               { key: 'sintesi-ordine',icon: Package2,   label: 'Ordine'         },
               { key: 'sintesi',       icon: TrendingUp, label: 'Sintesi'        },
             ] as const).map(({ key, icon: Icon, label }) => (
@@ -467,8 +467,8 @@ export default function BudgetPlanner() {
           </div>
         )}
 
-        {/* ── SOTTOCLASSI view ─────────────────────────────────────────────── */}
-        {view === 'sottoclassi' && (
+        {/* ── FABBISOGNO view ─────────────────────────────────────────────── */}
+        {view === 'fabbisogno' && (
           <div className="space-y-4">
             {MODA_FAMIGLIE.map((famiglia) => {
               const subclasses = MODA_SUBCLASSES[famiglia as keyof typeof MODA_SUBCLASSES] ?? [];

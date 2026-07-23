@@ -22,12 +22,12 @@ export type ModaFamiglia = (typeof MODA_FAMIGLIE)[number];
 export const MODA_SUBCLASSES: Record<ModaFamiglia, string[]> = {
   'Abbigliamento': [
     'Abiti',
-    'Camicie / top',
-    'Capispalla / gilet',
+    'Camicie',
+    'Capispalla',
     'Gonne',
-    'Maglie / maglioni',
     'Pantaloni',
-    'Tees / top e canotte',
+    'Tees',
+    'Top e canotte',
   ],
   'Accessori persona': [
     'Borse',
@@ -36,9 +36,9 @@ export const MODA_SUBCLASSES: Record<ModaFamiglia, string[]> = {
     'Altri accessori',
   ],
   'Bigiotteria e gioielleria': [
-    'Collane',
+    'Collane e pendenti',
     'Orecchini',
-    'Bracciali / cavigliere',
+    'Bracciali',
     'Anelli',
   ],
 };
