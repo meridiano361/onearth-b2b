@@ -297,15 +297,21 @@ interface ProdottoContinuativo {
 
 type SourceTab = 'tutti' | 'carrello' | 'ordine' | 'continuativi';
 
+export interface SourceState { tab: SourceTab; orderId: string; cartId: string; }
+
 function AddProductModal({
   elementoTipo, onAdd, onClose,
+  initialSource, onSourceChange,
 }: {
   elementoTipo: TipoElementoParete; onAdd: (items: ItemParete[]) => void; onClose: () => void;
+  initialSource?: SourceState;
+  onSourceChange?: (s: SourceState) => void;
 }) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [sourceTab, setSourceTab] = useState<SourceTab>('tutti');
-  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
+  const [sourceTab, setSourceTab] = useState<SourceTab>(initialSource?.tab ?? 'tutti');
+  const [selectedOrderId, setSelectedOrderId] = useState<string>(initialSource?.orderId ?? '');
+  const [selectedCartId, setSelectedCartId] = useState<string>(initialSource?.cartId ?? '');
   const [showFilters, setShowFilters] = useState(false);
   const [filterFamiglia, setFilterFamiglia] = useState('');
   const [filterClasse, setFilterClasse] = useState('');
@@ -350,11 +356,23 @@ function AddProductModal({
   const allProducts = productsData?.data ?? [];
   const orders = ordersData?.data ?? [];
 
+  // Auto-select cart when data loads and we have a saved cartId (or fall back to first)
+  const carts = cartsData?.data ?? [];
+  useEffect(() => {
+    if (!carts.length) return;
+    if (!selectedCartId || !carts.find((c) => c.id === selectedCartId)) {
+      const first = carts[0].id;
+      setSelectedCartId(first);
+      if (sourceTab === 'carrello') onSourceChange?.({ tab: 'carrello', orderId: '', cartId: first });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carts.length]);
+
   const cartProductIds = useMemo<Set<string> | null>(() => {
-    const cart = cartsData?.data?.[0];
+    const cart = carts.find((c) => c.id === selectedCartId) ?? carts[0];
     if (!cart) return null;
     return new Set(cart.items.map((i) => i.productId));
-  }, [cartsData]);
+  }, [carts, selectedCartId]);
 
   const orderProductIds = useMemo<Set<string> | null>(() => {
     if (!selectedOrderId) return null;
@@ -400,6 +418,19 @@ function AddProductModal({
   }, [sourceProducts, search, filterFamiglia, filterClasse, filterSottoclasse, filterColore]);
 
   const activeFilters = [filterFamiglia, filterClasse, filterSottoclasse, filterColore].filter(Boolean).length;
+
+  function changeTab(t: SourceTab) {
+    setSourceTab(t);
+    onSourceChange?.({ tab: t, orderId: t === 'ordine' ? selectedOrderId : '', cartId: t === 'carrello' ? selectedCartId : '' });
+  }
+  function changeOrder(id: string) {
+    setSelectedOrderId(id);
+    onSourceChange?.({ tab: 'ordine', orderId: id, cartId: '' });
+  }
+  function changeCart(id: string) {
+    setSelectedCartId(id);
+    onSourceChange?.({ tab: 'carrello', orderId: '', cartId: id });
+  }
 
   function toggle(id: string) {
     setSelected((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
@@ -504,12 +535,35 @@ function AddProductModal({
         {/* Source tabs */}
         <div className="flex px-4 pt-3 gap-1 flex-shrink-0 flex-wrap">
           {(['tutti', 'carrello', 'ordine', 'continuativi'] as SourceTab[]).map((t) => (
-            <button key={t} type="button" onClick={() => setSourceTab(t)}
+            <button key={t} type="button" onClick={() => changeTab(t)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${sourceTab === t ? 'bg-primary text-white' : 'text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
               {tabLabel(t)}
             </button>
           ))}
         </div>
+
+        {/* Cart selector */}
+        {sourceTab === 'carrello' && (
+          <div className="px-4 pt-2 flex-shrink-0">
+            {cartsLoading ? (
+              <div className="flex items-center gap-2 py-1"><Loader2 size={14} className="animate-spin text-gray-300" /><span className="text-xs text-gray-400">Carico carrelli…</span></div>
+            ) : carts.length === 0 ? (
+              <p className="text-xs text-gray-400 py-1">Nessun carrello trovato</p>
+            ) : carts.length === 1 ? (
+              <p className="text-xs text-gray-600 py-1 font-medium">{carts[0].name}</p>
+            ) : (
+              <select value={selectedCartId} onChange={(e) => changeCart(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:outline-none focus:border-gray-400">
+                <option value="">— Seleziona un carrello —</option>
+                {carts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} · {c.items?.length ?? 0} prodotti
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
 
         {/* Order selector */}
         {sourceTab === 'ordine' && (
@@ -519,7 +573,7 @@ function AddProductModal({
             ) : orders.length === 0 ? (
               <p className="text-xs text-gray-400 py-1">Nessun ordine trovato</p>
             ) : (
-              <select value={selectedOrderId} onChange={(e) => setSelectedOrderId(e.target.value)}
+              <select value={selectedOrderId} onChange={(e) => changeOrder(e.target.value)}
                 className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:outline-none focus:border-gray-400">
                 <option value="">— Seleziona un ordine —</option>
                 {orders.map((o) => (
@@ -1091,10 +1145,11 @@ function FrontaleInlineEditor({
 // ─── Mensola inline editor ───────────────────────────────────────────────────
 
 function MensolaInlineEditor({
-  config, onChange, onRemove, elementId, pareteId,
+  config, onChange, onRemove, elementId, pareteId, source, onSourceChange,
 }: {
   config?: MensolaInlineConfig; onChange: (c: MensolaInlineConfig) => void; onRemove: () => void;
   elementId?: string; pareteId?: string;
+  source?: SourceState; onSourceChange?: (s: SourceState) => void;
 }) {
   const [showCatalog, setShowCatalog] = useState(false);
   const mItemDragIdxRef = useRef<number | null>(null);
@@ -1172,7 +1227,7 @@ function MensolaInlineEditor({
         className="w-full py-1.5 bg-white border border-gray-200 rounded-lg text-2xs text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1 font-medium">
         <PackagePlus size={11} /> Aggiungi prodotto
       </button>
-      {showCatalog && <AddProductModal elementoTipo="mensola" onAdd={addFromCatalog} onClose={() => setShowCatalog(false)} />}
+      {showCatalog && <AddProductModal elementoTipo="mensola" onAdd={addFromCatalog} onClose={() => setShowCatalog(false)} initialSource={source} onSourceChange={onSourceChange} />}
     </div>
   );
 }
@@ -1180,12 +1235,13 @@ function MensolaInlineEditor({
 // ─── Elemento card ────────────────────────────────────────────────────────────
 
 function ElementoCard({
-  el, index, total, isActive, onChange, onDelete, onMoveUp, onMoveDown, pareteId,
+  el, index, total, isActive, onChange, onDelete, onMoveUp, onMoveDown, pareteId, source, onSourceChange,
 }: {
   el: ElementoParete; index: number; total: number; isActive?: boolean;
   onChange: (u: ElementoParete) => void; onDelete: () => void;
   onMoveUp: () => void; onMoveDown: () => void;
   pareteId?: string;
+  source?: SourceState; onSourceChange?: (s: SourceState) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showCatalogPicker, setShowCatalogPicker] = useState(false);
@@ -1339,7 +1395,8 @@ function ElementoCard({
                 <MensolaInlineEditor key={idx} config={m}
                   onChange={(c) => updateMensola(idx, c)}
                   onRemove={() => removeMensola(idx)}
-                  elementId={el.id} pareteId={pareteId} />
+                  elementId={el.id} pareteId={pareteId}
+                  source={source} onSourceChange={onSourceChange} />
               ))}
             </div>
           )}
@@ -1455,7 +1512,7 @@ function ElementoCard({
         </div>
       )}
       {showCatalogPicker && (
-        <AddProductModal elementoTipo={el.tipo} onAdd={addFromCatalog} onClose={() => setShowCatalogPicker(false)} />
+        <AddProductModal elementoTipo={el.tipo} onAdd={addFromCatalog} onClose={() => setShowCatalogPicker(false)} initialSource={source} onSourceChange={onSourceChange} />
       )}
     </div>
   );
@@ -2088,6 +2145,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   const [nome, setNome] = useState('');
   const [editingNome, setEditingNome] = useState(false);
   const [config, setConfig] = useState<ElementoParete[]>([]);
+  const [savedSource, setSavedSource] = useState<SourceState>({ tab: 'tutti', orderId: '', cartId: '' });
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [activeElementId, setActiveElementId] = useState<string | null>(null);
   const [previewZoom, setPreviewZoom] = useState(1.0);
@@ -2108,6 +2166,11 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
     if (!parete || initializedRef.current) return;
     initializedRef.current = true;
     setNome(parete.nome);
+    if (parete.sourceOrderId) {
+      setSavedSource({ tab: 'ordine', orderId: parete.sourceOrderId, cartId: '' });
+    } else if (parete.sourceCartId) {
+      setSavedSource({ tab: 'carrello', orderId: '', cartId: parete.sourceCartId });
+    }
     const rawConfig = Array.isArray(parete.configurazione) ? parete.configurazione as ElementoParete[] : [];
 
     // Collect productIds whose imageUrl was lost (stale-closure bug from old sessions)
@@ -2162,6 +2225,17 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
       setSaveStatus('idle');
     }
   }, [pareteId, qc]);
+
+  function handleSourceChange(s: SourceState) {
+    setSavedSource(s);
+    const sourceOrderId = s.tab === 'ordine' && s.orderId ? s.orderId : null;
+    const sourceCartId  = s.tab === 'carrello' && s.cartId ? s.cartId : null;
+    fetch(`/api/moda/pareti/${pareteId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceOrderId, sourceCartId }),
+    }).catch(() => {});
+  }
 
   function handleConfigChange(newConfig: ElementoParete[], skipHistory = false) {
     if (!skipHistory && !isDebouncing.current) {
@@ -2313,6 +2387,8 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
                 onMoveUp={() => moveElemento(idx, idx - 1)}
                 onMoveDown={() => moveElemento(idx, idx + 1)}
                 pareteId={pareteId}
+                source={savedSource}
+                onSourceChange={handleSourceChange}
               />
             ))}
             {config.length === 0 && (

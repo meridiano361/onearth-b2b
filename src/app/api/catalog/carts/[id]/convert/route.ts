@@ -70,5 +70,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     prisma.cart.update({ where: { id: params.id }, data: { status: 'CONVERTED' } }),
   ]);
 
+  // Migrate any visual layouts that were linked to this cart → new order
+  await prisma.pareteAttrezzata.updateMany({
+    where: { sourceCartId: params.id },
+    data: { sourceCartId: null, sourceOrderId: order.id },
+  });
+
   return NextResponse.json({ data: { id: order.id } }, { status: 201 });
 }

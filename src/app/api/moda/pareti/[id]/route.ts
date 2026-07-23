@@ -48,6 +48,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (body.nome !== undefined) data.nome = body.nome;
   if (body.ordine !== undefined) data.ordine = body.ordine;
   if (body.configurazione !== undefined) data.configurazione = body.configurazione;
+  if ('sourceOrderId' in body) data.sourceOrderId = body.sourceOrderId ?? null;
+  if ('sourceCartId'  in body) data.sourceCartId  = body.sourceCartId  ?? null;
 
   const parete = await prisma.pareteAttrezzata.update({ where: { id: params.id }, data });
   return NextResponse.json({ data: parete });

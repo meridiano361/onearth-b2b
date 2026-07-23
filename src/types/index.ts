@@ -175,6 +175,8 @@ export interface PareteAttrezzata {
   collezione: string;
   ordine: number;
   configurazione: ElementoParete[];
+  sourceOrderId: string | null;
+  sourceCartId: string | null;
   createdAt: string;
   updatedAt: string;
 }

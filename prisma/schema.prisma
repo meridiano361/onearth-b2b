@@ -397,6 +397,7 @@ model Cart {
   operator Operator? @relation(fields: [operatorId], references: [id], onDelete: Cascade)
   canale   Canale?   @relation(fields: [canaleId], references: [id], onDelete: SetNull)
   items    CartItem[]
+  pareti   PareteAttrezzata[] @relation("CartPareti")
 
   @@map("carts")
 }
@@ -479,6 +480,7 @@ model Order {
   collection     Collection?    @relation(fields: [collectionId], references: [id])
   items          OrderItem[]
   displayGroups  DisplayGroup[]
+  pareti         PareteAttrezzata[] @relation("OrderPareti")
 
   @@map("orders")
 }
@@ -930,9 +932,14 @@ model PareteAttrezzata {
   ordine         Int           @default(0)
   configurazione Json          @default("[]")
   organizationId String?       @map("organization_id")
-  organization   Organization? @relation(fields: [organizationId], references: [id])
+  sourceOrderId  String?       @map("source_order_id")
+  sourceCartId   String?       @map("source_cart_id")
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  sourceOrder  Order?         @relation("OrderPareti", fields: [sourceOrderId], references: [id], onDelete: SetNull)
+  sourceCart   Cart?          @relation("CartPareti",  fields: [sourceCartId],  references: [id], onDelete: SetNull)
 
   @@map("pareti_attrezzate")
 }
