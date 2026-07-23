@@ -333,7 +333,7 @@ function SizedProductCard({
           if (!onAddVariant) {
             return (
               <div key={v.taglia} className="flex items-center gap-1">
-                <span className="text-[10px] font-bold text-gray-300 w-6 flex-shrink-0">{v.taglia}</span>
+                <span className="text-[10px] font-bold text-gray-500 w-6 flex-shrink-0">{v.taglia}</span>
                 <span className="text-[9px] text-gray-200">—</span>
               </div>
             );
@@ -341,7 +341,7 @@ function SizedProductCard({
 
           return (
             <div key={v.taglia} className="flex items-center gap-1">
-              <span className="text-[10px] font-bold text-gray-300 w-6 flex-shrink-0">{v.taglia}</span>
+              <span className="text-[10px] font-bold text-gray-500 w-6 flex-shrink-0">{v.taglia}</span>
               <button
                 onClick={() => { if (!isAdding) onAddVariant(v.codice, v.taglia, productItems[0].productId); }}
                 disabled={isAdding}
@@ -1058,16 +1058,25 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
         tagliaDaUsare = taglia;
         quantity = 1;
       } else {
-        // Arch 1: each size is a separate Product record → search by code to get its ID
+        // Arch 1: each size is a separate Product record → search by code to get its ID.
+        // If no separate record exists (or it belongs to a different product), fall back to
+        // Arch 2 so the taglia is recorded on the current product instead.
         const res = await fetch(`/api/products?search=${encodeURIComponent(codice.trim())}&limit=100`);
         const data = res.ok ? await res.json() : { data: [] };
         const foundProduct = (data.data as Product[])?.find(
           (p: Product) => p.code.trim().toUpperCase() === upperCode
         );
-        if (!foundProduct) throw new Error('Prodotto non trovato');
-        productId = foundProduct.id;
-        tagliaDaUsare = '';
-        quantity = foundProduct.lotSize || 1;
+        const isTrueArch1 = foundProduct && foundProduct.name === currentProduct?.name;
+        if (isTrueArch1) {
+          productId = foundProduct!.id;
+          tagliaDaUsare = '';
+          quantity = foundProduct!.lotSize || 1;
+        } else {
+          // Variant code missing or points to a different product — use Arch 2
+          productId = currentProductId;
+          tagliaDaUsare = taglia;
+          quantity = 1;
+        }
       }
 
       const addRes = await fetch(`/api/orders/${id}/items`, {
