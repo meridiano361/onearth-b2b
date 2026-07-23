@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BarChart2, Layers, Package2, TrendingUp, Pencil, Check, X, AlertTriangle, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import { BarChart2, Layers, Package2, TrendingUp, Pencil, Check, X, AlertTriangle, ChevronDown, ChevronRight, Loader2, Store, Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   MODA_FAMIGLIE, MODA_SUBCLASSES,
@@ -13,15 +13,29 @@ import {
 
 // ─── Types for API response ────────────────────────────────────────────────────
 
+interface Settore {
+  id?: string;
+  nome: string;
+  incidenza: number;  // 0-100
+  margine: number;    // 0-100
+  posizione: number;
+}
+
 interface ScenarioData {
-  meta: { id: string; nome: string; seasonCode: string; obiettivoTotale: number | null };
+  meta: {
+    id: string; nome: string; seasonCode: string;
+    obiettivoTotale: number | null;
+    costiNegozio: number | null;
+    obiettivoRicavoSviluppo: number | null;
+  };
   famiglie: string[];
   subclassesByFamiglia: Record<string, string[]>;
   familyInputs: FamilyInput[];
   subclassData: SubclassRow[];
+  settori: Settore[];
 }
 
-type View = 'obiettivi' | 'fabbisogno' | 'sintesi-ordine' | 'sintesi';
+type View = 'negozio' | 'obiettivi' | 'fabbisogno' | 'sintesi-ordine' | 'sintesi';
 
 interface OrderSummary {
   id: string;
@@ -157,6 +171,18 @@ export default function BudgetPlanner() {
   const [localFamily, setLocalFamily] = useState<Record<string, Partial<FamilyInput>>>({});
   const [localSubclass, setLocalSubclass] = useState<Record<string, Partial<SubclassRow>>>({});
   const [localObiettivoTotale, setLocalObiettivoTotale] = useState<number | null | undefined>(undefined);
+  const [localCostiNegozio, setLocalCostiNegozio] = useState<number | null | undefined>(undefined);
+  const [localObiettivoSviluppo, setLocalObiettivoSviluppo] = useState<number | null | undefined>(undefined);
+  // settori: driven entirely by local state initialized from server on first load
+  const [settoriLocal, setSettoriLocal] = useState<Settore[] | null>(null);
+
+  // Initialize settoriLocal from server data the first time scenario loads
+  const settori: Settore[] = settoriLocal ?? (scenario?.settori ?? []);
+
+  const costiNegozio: number | null =
+    localCostiNegozio !== undefined ? localCostiNegozio : (scenario?.meta.costiNegozio ?? null);
+  const obiettivoSviluppo: number | null =
+    localObiettivoSviluppo !== undefined ? localObiettivoSviluppo : (scenario?.meta.obiettivoRicavoSviluppo ?? null);
 
   // Obiettivo totale: local override > DB value
   const obiettivoTotale: number | null =
@@ -252,6 +278,40 @@ export default function BudgetPlanner() {
         setLocalObiettivoTotale(undefined);
       }
     }, 800);
+  }
+
+  function saveMetaField(field: string, value: number | null) {
+    clearTimeout(saveTimer.current[`meta-${field}`]);
+    saveTimer.current[`meta-${field}`] = setTimeout(async () => {
+      try {
+        await fetch('/api/budget', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [field]: value }),
+        });
+        qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
+          old ? { ...old, meta: { ...old.meta, [field]: value } } : old
+        );
+        if (field === 'costiNegozio') setLocalCostiNegozio(undefined);
+        if (field === 'obiettivoRicavoSviluppo') setLocalObiettivoSviluppo(undefined);
+      } catch { toast.error('Errore nel salvataggio'); }
+    }, 800);
+  }
+
+  function saveSettori(rows: Settore[]) {
+    clearTimeout(saveTimer.current['settori']);
+    saveTimer.current['settori'] = setTimeout(async () => {
+      try {
+        await fetch('/api/budget/settori', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: rows.map((r, i) => ({ ...r, posizione: i })) }),
+        });
+        qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
+          old ? { ...old, settori: rows } : old
+        );
+      } catch { toast.error('Errore nel salvataggio settori'); }
+    }, 600);
   }
 
   function saveFamilyField(famiglia: string, field: string, value: unknown) {
@@ -459,7 +519,8 @@ export default function BudgetPlanner() {
           {/* View tabs */}
           <div className="flex gap-1">
             {([
-              { key: 'obiettivi',      icon: BarChart2,  label: 'Obiettivi'       },
+              { key: 'negozio',        icon: Store,      label: 'Negozio'        },
+              { key: 'obiettivi',      icon: BarChart2,  label: 'Obiettivi'      },
               { key: 'fabbisogno',    icon: Layers,     label: 'Fabbisogno'     },
               { key: 'sintesi-ordine',icon: Package2,   label: 'Ordine'         },
               { key: 'sintesi',       icon: TrendingUp, label: 'Sintesi'        },
@@ -496,6 +557,207 @@ export default function BudgetPlanner() {
           ))}
         </div>
 
+        {/* ── NEGOZIO view ─────────────────────────────────────────────────── */}
+        {view === 'negozio' && (
+          <div className="space-y-4">
+
+            {/* Costo punto vendita */}
+            <div className="bg-white border border-border rounded-2xl px-4 py-3">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-xs font-semibold text-gray-700">Costo annuo del punto vendita</p>
+                  <p className="text-2xs text-gray-400 mt-0.5">Totale costi fissi e variabili (affitto, stipendi, utenze…)</p>
+                </div>
+                <div className="w-44">
+                  <NumInput
+                    value={costiNegozio}
+                    decimals={0}
+                    prefix="€"
+                    placeholder="es. 96000"
+                    onChange={(v) => { setLocalCostiNegozio(v); saveMetaField('costiNegozio', v); }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Settori */}
+            <div className="bg-white border border-border rounded-2xl overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-border bg-gray-50/50 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-gray-700">Settori del negozio</span>
+                  {(() => {
+                    const totInc = settori.reduce((s, r) => s + r.incidenza, 0);
+                    return settori.length > 0 ? (
+                      <span className={`ml-2 text-2xs font-medium ${Math.abs(totInc - 100) < 0.1 ? 'text-green-600' : 'text-amber-500'}`}>
+                        {totInc.toFixed(1)}% tot.
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+                <button
+                  onClick={() => {
+                    const updated = [...settori, { nome: '', incidenza: 0, margine: 0, posizione: settori.length }];
+                    setSettoriLocal(updated);
+                    saveSettori(updated);
+                  }}
+                  className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors"
+                >
+                  <Plus size={12} /> Aggiungi
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-2xs text-gray-400 uppercase tracking-wide">
+                      <th className="text-left px-4 py-2 font-medium">Settore</th>
+                      <ColTh label="Incidenza %" tip="✏️ Da inserire. Quota % che questo settore rappresenta sui ricavi totali del negozio. La somma deve essere 100%." />
+                      <ColTh label="Margine %" tip="✏️ Da inserire. Margine medio atteso per questo settore: (ricavo − costo d'acquisto) ÷ ricavo × 100." />
+                      <ColTh label="Ob. Margine Sost." tip="🔢 Calcolato. Quota di costi del negozio attribuibile a questo settore: Costo negozio × Incidenza. È il margine minimo da realizzare per la sostenibilità." />
+                      <ColTh label="Ob. Ricavo Sost." tip="🔢 Calcolato. Ricavo minimo per coprire i costi attribuiti: Ob. Margine Sost. ÷ Margine. Sotto questa soglia il settore va in perdita." />
+                      <ColTh label="Ob. Ricavo Svil." tip="🔢 Calcolato. Ricavo per l'obiettivo di sviluppo: Ob. Ricavo Sviluppo totale × Incidenza. Il ricavo a cui puntare per generare guadagno oltre la sostenibilità." />
+                      <ColTh label="Ob. Margine Svil." tip="🔢 Calcolato. Margine prodotto dall'obiettivo sviluppo: Ob. Ricavo Svil. × Margine. Il guadagno netto atteso se si raggiunge l'obiettivo di sviluppo." />
+                      <th className="w-8 px-2 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {settori.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-8 text-center text-xs text-gray-400">
+                          Nessun settore. Clicca Aggiungi per iniziare.
+                        </td>
+                      </tr>
+                    )}
+                    {settori.map((s, i) => {
+                      const margineSOST = costiNegozio != null ? costiNegozio * s.incidenza / 100 : null;
+                      const ricavoSOST  = margineSOST != null && s.margine > 0 ? margineSOST / (s.margine / 100) : null;
+                      const ricavoSVIL  = obiettivoSviluppo != null ? obiettivoSviluppo * s.incidenza / 100 : null;
+                      const margineSVIL = ricavoSVIL != null ? ricavoSVIL * s.margine / 100 : null;
+
+                      return (
+                        <tr key={i} className="hover:bg-gray-50/50">
+                          <td className="px-4 py-1.5 min-w-[130px]">
+                            <input
+                              type="text"
+                              value={s.nome}
+                              placeholder="Nome settore"
+                              onChange={(e) => {
+                                const updated = settori.map((r, j) => j === i ? { ...r, nome: e.target.value } : r);
+                                setSettoriLocal(updated);
+                                saveSettori(updated);
+                              }}
+                              className="w-full bg-transparent text-xs text-gray-900 border-b border-transparent focus:border-accent focus:outline-none py-0.5"
+                            />
+                          </td>
+                          <td className="px-2 py-1.5 w-20">
+                            <NumInput
+                              value={s.incidenza}
+                              decimals={1}
+                              suffix="%"
+                              onChange={(v) => {
+                                const updated = settori.map((r, j) => j === i ? { ...r, incidenza: v ?? 0 } : r);
+                                setSettoriLocal(updated);
+                                saveSettori(updated);
+                              }}
+                            />
+                          </td>
+                          <td className="px-2 py-1.5 w-20">
+                            <NumInput
+                              value={s.margine}
+                              decimals={1}
+                              suffix="%"
+                              onChange={(v) => {
+                                const updated = settori.map((r, j) => j === i ? { ...r, margine: v ?? 0 } : r);
+                                setSettoriLocal(updated);
+                                saveSettori(updated);
+                              }}
+                            />
+                          </td>
+                          <td className="px-2 py-2 text-right text-gray-600">{margineSOST != null ? '€ ' + fmt(margineSOST, 0) : '—'}</td>
+                          <td className="px-2 py-2 text-right text-gray-600">{ricavoSOST  != null ? '€ ' + fmt(ricavoSOST,  0) : costiNegozio == null || s.margine === 0 ? '—' : '—'}</td>
+                          <td className="px-2 py-2 text-right text-gray-600">{ricavoSVIL  != null ? '€ ' + fmt(ricavoSVIL,  0) : '—'}</td>
+                          <td className="px-2 py-2 text-right font-medium text-gray-800">{margineSVIL != null ? '€ ' + fmt(margineSVIL, 0) : '—'}</td>
+                          <td className="px-2 py-2 text-center">
+                            <button
+                              onClick={() => {
+                                const updated = settori.filter((_, j) => j !== i);
+                                setSettoriLocal(updated);
+                                saveSettori(updated);
+                              }}
+                              className="text-gray-300 hover:text-red-400 transition-colors"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  {settori.length > 0 && (
+                    <tfoot>
+                      {(() => {
+                        const totInc      = settori.reduce((s, r) => s + r.incidenza, 0);
+                        const totMargSOST = costiNegozio != null ? costiNegozio * totInc / 100 : null;
+                        const totRicSOST  = costiNegozio != null
+                          ? settori.reduce((s, r) => {
+                              const m = costiNegozio * r.incidenza / 100;
+                              return s + (r.margine > 0 ? m / (r.margine / 100) : 0);
+                            }, 0)
+                          : null;
+                        const totRicSVIL  = obiettivoSviluppo != null ? obiettivoSviluppo * totInc / 100 : null;
+                        const totMargSVIL = obiettivoSviluppo != null
+                          ? settori.reduce((s, r) => {
+                              const ric = obiettivoSviluppo * r.incidenza / 100;
+                              return s + ric * r.margine / 100;
+                            }, 0)
+                          : null;
+                        return (
+                          <tr className="border-t-2 border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700">
+                            <td className="px-4 py-2">Totale</td>
+                            <td className="px-2 py-2 text-right">
+                              <span className={Math.abs(totInc - 100) < 0.1 ? 'text-green-700' : 'text-amber-600'}>
+                                {totInc.toFixed(1)}%
+                              </span>
+                            </td>
+                            <td className="px-2 py-2" />
+                            <td className="px-2 py-2 text-right">{totMargSOST != null ? '€ ' + fmt(totMargSOST, 0) : '—'}</td>
+                            <td className="px-2 py-2 text-right">{totRicSOST  != null ? '€ ' + fmt(totRicSOST,  0) : '—'}</td>
+                            <td className="px-2 py-2 text-right">{totRicSVIL  != null ? '€ ' + fmt(totRicSVIL,  0) : '—'}</td>
+                            <td className="px-2 py-2 text-right">{totMargSVIL != null ? '€ ' + fmt(totMargSVIL, 0) : '—'}</td>
+                            <td className="px-2 py-2" />
+                          </tr>
+                        );
+                      })()}
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            </div>
+
+            {/* Obiettivo ricavo sviluppo */}
+            <div className="bg-white border border-border rounded-2xl px-4 py-3">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-xs font-semibold text-gray-700">Obiettivo ricavo di sviluppo — totale negozio</p>
+                  <p className="text-2xs text-gray-400 mt-0.5">
+                    Ricavo complessivo a cui puntare per generare un margine al di sopra della semplice sostenibilità.
+                    {' '}La quota attribuita a &ldquo;Moda PE&rdquo; alimenta l&apos;obiettivo nel tab Obiettivi.
+                  </p>
+                </div>
+                <div className="w-44">
+                  <NumInput
+                    value={obiettivoSviluppo}
+                    decimals={0}
+                    prefix="€"
+                    placeholder="es. 300000"
+                    onChange={(v) => { setLocalObiettivoSviluppo(v); saveMetaField('obiettivoRicavoSviluppo', v); }}
+                  />
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
         {/* ── FAMIGLIE view ────────────────────────────────────────────────── */}
         {view === 'obiettivi' && (
           <div className="space-y-3">
@@ -508,6 +770,21 @@ export default function BudgetPlanner() {
                   <p className="text-2xs text-gray-400 mt-0.5">Marzo – Agosto 2027 · distribuito per famiglia in base ai pesi PE26</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {(() => {
+                    const modaPe = settori.find((s) => s.nome.toLowerCase().replace(/\s/g, '').includes('modape'));
+                    const suggerito = modaPe && obiettivoSviluppo
+                      ? Math.round(obiettivoSviluppo * modaPe.incidenza / 100)
+                      : null;
+                    return suggerito != null ? (
+                      <button
+                        onClick={() => { setLocalObiettivoTotale(suggerito); saveObiettivoTotale(suggerito); }}
+                        title="Valore calcolato in Negozio → Obiettivo ricavo sviluppo per Moda PE"
+                        className="text-[9px] font-medium px-1.5 py-1 rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors leading-none whitespace-nowrap"
+                      >
+                        {fmt(suggerito, 0)} € da Negozio
+                      </button>
+                    ) : null;
+                  })()}
                   <div className="w-40">
                     <NumInput
                       value={obiettivoTotale}
