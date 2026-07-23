@@ -17,19 +17,19 @@ export default function PreferitiPage() {
   const { favoriteIds, isLoading: favLoading } = useFavorites();
   const { mode: viewMode, changeMode: setViewMode } = useViewMode();
 
-  const { data: productsData, isLoading: productsLoading } = useQuery({
-    queryKey: ['products'],
+  const ids = [...favoriteIds];
+
+  const { data: favoritedProducts = [], isLoading: productsLoading } = useQuery({
+    queryKey: ['products-by-ids', ids.slice().sort().join(',')],
     queryFn: async () => {
-      const res = await fetch('/api/products?active=true&limit=500');
+      if (ids.length === 0) return [];
+      const res = await fetch(`/api/products?ids=${ids.join(',')}`);
       if (!res.ok) throw new Error('Failed to fetch products');
       return (await res.json()).data as Product[];
     },
+    enabled: !favLoading,
+    staleTime: 30_000,
   });
-
-  const favoritedProducts = useMemo(() => {
-    if (!productsData) return [];
-    return productsData.filter((p) => favoriteIds.has(p.id));
-  }, [productsData, favoriteIds]);
 
   const isLoading = favLoading || productsLoading;
 
