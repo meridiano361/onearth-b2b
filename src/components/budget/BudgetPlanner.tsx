@@ -845,15 +845,18 @@ export default function BudgetPlanner() {
 
                         {/* Column 1: storico + proiezione */}
                         <div className="space-y-2">
-                          <p className="text-2xs text-gray-400 uppercase tracking-wide font-medium pt-1">Storico PE26</p>
-                          <Row label="Venduto (€)">
-                            <NumInput value={input.vendutoPrevValore} decimals={0}
-                              onChange={(v) => updateFamily(famiglia, 'vendutoPrevValore', v)} />
-                          </Row>
-                          <Row label="Pezzi venduti">
-                            <NumInput value={input.vendutoPrevPezzi} decimals={0}
-                              onChange={(v) => updateFamily(famiglia, 'vendutoPrevPezzi', v)} />
-                          </Row>
+                          <p className="text-2xs text-gray-400 uppercase tracking-wide font-medium pt-1">
+                            Storico PE26
+                            <span className="ml-1 normal-case font-normal text-gray-300">(da Fabbisogno)</span>
+                          </p>
+                          <RowComputed
+                            label="Venduto (€)"
+                            value={input.vendutoPrevValore != null ? '€ ' + fmt(input.vendutoPrevValore, 0) : '— inserisci dati in Fabbisogno'}
+                          />
+                          <RowComputed
+                            label="Pezzi venduti"
+                            value={input.vendutoPrevPezzi != null ? input.vendutoPrevPezzi + ' pz' : '—'}
+                          />
                           <Row label="Mesi consuntivi">
                             <NumInput value={input.mesiConsuntivi} decimals={0} placeholder="4"
                               onChange={(v) => updateFamily(famiglia, 'mesiConsuntivi', v ?? 4)} />
