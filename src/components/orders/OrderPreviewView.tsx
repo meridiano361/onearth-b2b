@@ -164,13 +164,8 @@ function ProductCard({
             <button
               onClick={() => {
                 const newQty = effectiveQty - lotSize;
-                if (newQty <= 0) {
-                  if (window.confirm('Vuoi rimuovere il prodotto dall\'ordine?')) {
-                    onRemove(item.id);
-                  }
-                } else {
-                  onQtyChange(item.id, newQty);
-                }
+                if (newQty <= 0) onRemove(item.id);
+                else onQtyChange(item.id, newQty);
               }}
               className="w-7 h-7 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95"
               aria-label={decreaseLabel}
@@ -298,11 +293,8 @@ function SizedProductCard({
                 <button
                   onClick={() => {
                     const newQty = item.effectiveQty - lotSize;
-                    if (newQty <= 0) {
-                      if (window.confirm(`Rimuovere ${v.taglia} dall'ordine?`)) onRemove(item.id);
-                    } else {
-                      onQtyChange(item.id, newQty);
-                    }
+                    if (newQty <= 0) onRemove(item.id);
+                    else onQtyChange(item.id, newQty);
                   }}
                   className="w-5 h-5 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 flex-shrink-0"
                   aria-label={decreaseLabel}
@@ -319,7 +311,7 @@ function SizedProductCard({
                 </button>
                 <span className="text-[9px] text-gray-400 flex-1 text-right">{formatCurrency(item.effectiveSubtotal)}</span>
                 <button
-                  onClick={() => { if (window.confirm(`Rimuovere ${v.taglia} dall'ordine?`)) onRemove(item.id); }}
+                  onClick={() => onRemove(item.id)}
                   className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 ml-0.5"
                   title={removeLabel}
                 >
@@ -1112,7 +1104,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   }
 
   function handleQtyChange(itemId: string, qty: number) {
-    if (qty < 1) return;
+    if (qty <= 0) { handleRemove(itemId); return; }
     // Immediate optimistic update
     setQtyOverrides((prev) => ({ ...prev, [itemId]: qty }));
     // Debounce the API call: cancel previous timer, fire 500ms after last click
