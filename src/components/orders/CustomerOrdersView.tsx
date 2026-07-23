@@ -776,22 +776,6 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                     <span className="hidden sm:inline">{t('preview')}</span>
                   </button>
 
-                  {/* Modifica */}
-                  {!isExported && (
-                    <button
-                      onClick={() => {
-                        if (requiresAuthCheck(order)) {
-                          setAuthCheckPending({ orderId: order.id, action: 'edit' });
-                        } else {
-                          router.push(routes.orderPreview(order.id));
-                        }
-                      }}
-                      className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
-                    >
-                      <Pencil size={11} />
-                      <span className="hidden sm:inline">{t('edit')}</span>
-                    </button>
-                  )}
 
                   {/* Esporta in Demetra */}
                   <OrderDemetraExport
