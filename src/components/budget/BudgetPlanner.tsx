@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BarChart2, Layers, Users, TrendingUp, Pencil, Check, X, AlertTriangle, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import { BarChart2, Layers, Package2, TrendingUp, Pencil, Check, X, AlertTriangle, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   MODA_FAMIGLIE, MODA_SUBCLASSES,
@@ -21,7 +21,16 @@ interface ScenarioData {
   subclassData: SubclassRow[];
 }
 
-type View = 'famiglie' | 'sottoclassi' | 'conferenti' | 'sintesi';
+type View = 'famiglie' | 'sottoclassi' | 'sintesi-ordine' | 'sintesi';
+
+interface OrderSummary {
+  id: string;
+  orderNumber: string | null;
+  status: string;
+  totalItems: number;
+  createdAt: string;
+  canaleNome: string | null;
+}
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
@@ -79,6 +88,7 @@ function NumInput({
 export default function BudgetPlanner() {
   const qc = useQueryClient();
   const [view, setView] = useState<View>('famiglie');
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [editingNome, setEditingNome] = useState(false);
   const [nomeInput, setNomeInput] = useState('');
   const [expandedFamily, setExpandedFamily] = useState<string | null>(MODA_FAMIGLIE[0]);
@@ -90,12 +100,30 @@ export default function BudgetPlanner() {
     staleTime: 60_000,
   });
 
+  // All-orders aggregate (for sottoclassi ordinato counts + sintesi view)
   const { data: orderDataRaw } = useQuery<{ data: OrderAggRow[] }>({
     queryKey: ['budget-order-data'],
     queryFn: () => fetch('/api/budget/order-data').then((r) => r.json()),
     staleTime: 30_000,
   });
   const orderData: OrderAggRow[] = orderDataRaw?.data ?? [];
+
+  // Single-order aggregate (for sintesi-ordine view)
+  const { data: singleOrderDataRaw, isFetching: singleOrderFetching } = useQuery<{ data: OrderAggRow[] }>({
+    queryKey: ['budget-order-data', selectedOrderId],
+    queryFn: () => fetch(`/api/budget/order-data?orderId=${selectedOrderId}`).then((r) => r.json()),
+    enabled: !!selectedOrderId,
+    staleTime: 30_000,
+  });
+  const singleOrderData: OrderAggRow[] = singleOrderDataRaw?.data ?? [];
+
+  // Orders list for the selector
+  const { data: ordersListRaw } = useQuery<{ orders: OrderSummary[] }>({
+    queryKey: ['budget-orders'],
+    queryFn: () => fetch('/api/budget/orders').then((r) => r.json()),
+    staleTime: 60_000,
+  });
+  const ordersList: OrderSummary[] = ordersListRaw?.orders ?? [];
 
   // ── Local editable state (starts from server data) ─────────────────────────
   const [localFamily, setLocalFamily] = useState<Record<string, Partial<FamilyInput>>>({});
@@ -294,10 +322,10 @@ export default function BudgetPlanner() {
           {/* View tabs */}
           <div className="flex gap-1">
             {([
-              { key: 'famiglie',    icon: BarChart2,  label: 'Famiglie'    },
-              { key: 'sottoclassi', icon: Layers,     label: 'Sottoclassi' },
-              { key: 'conferenti',  icon: Users,      label: 'Conferenti'  },
-              { key: 'sintesi',     icon: TrendingUp, label: 'Sintesi'     },
+              { key: 'famiglie',      icon: BarChart2,  label: 'Famiglie'       },
+              { key: 'sottoclassi',   icon: Layers,     label: 'Sottoclassi'    },
+              { key: 'sintesi-ordine',icon: Package2,   label: 'Sintesi ordine' },
+              { key: 'sintesi',       icon: TrendingUp, label: 'Sintesi'        },
             ] as const).map(({ key, icon: Icon, label }) => (
               <button
                 key={key}
@@ -514,27 +542,65 @@ export default function BudgetPlanner() {
           </div>
         )}
 
-        {/* ── CONFERENTI view ──────────────────────────────────────────────── */}
-        {view === 'conferenti' && (
-          <div>
-            {orderData.length === 0 ? (
+        {/* ── SINTESI ORDINE view ──────────────────────────────────────────── */}
+        {view === 'sintesi-ordine' && (
+          <div className="space-y-3">
+
+            {/* Order selector */}
+            <div className="bg-white border border-border rounded-2xl px-4 py-3">
+              <label className="text-2xs text-gray-400 uppercase tracking-wide font-medium block mb-1.5">Seleziona ordine</label>
+              {ordersList.length === 0 ? (
+                <p className="text-xs text-gray-400">Nessun ordine MODA PE27 disponibile.</p>
+              ) : (
+                <select
+                  value={selectedOrderId ?? ''}
+                  onChange={(e) => setSelectedOrderId(e.target.value || null)}
+                  className="w-full text-xs border border-border rounded-lg px-3 py-2 bg-white text-primary focus:outline-none focus:border-accent"
+                >
+                  <option value="">— scegli un ordine —</option>
+                  {ordersList.map((o) => {
+                    const label = o.orderNumber ? `#${o.orderNumber}` : `…${o.id.slice(-6)}`;
+                    const dest  = o.canaleNome ? ` — ${o.canaleNome}` : '';
+                    const date  = new Date(o.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                    return (
+                      <option key={o.id} value={o.id}>
+                        {label}{dest} ({o.totalItems} pz) — {date}
+                      </option>
+                    );
+                  })}
+                </select>
+              )}
+            </div>
+
+            {/* Table */}
+            {!selectedOrderId ? (
               <div className="bg-white border border-border rounded-2xl p-8 text-center">
-                <p className="text-sm text-gray-400">Nessun prodotto in ordine o carrello per MODA PE27.</p>
-                <p className="text-2xs text-gray-300 mt-1">I dati si aggiornano automaticamente quando aggiungi prodotti agli ordini.</p>
+                <p className="text-sm text-gray-400">Seleziona un ordine per vedere la sintesi per conferente.</p>
+              </div>
+            ) : singleOrderFetching ? (
+              <div className="flex justify-center py-10">
+                <Loader2 size={20} className="animate-spin text-gray-400" />
+              </div>
+            ) : singleOrderData.length === 0 ? (
+              <div className="bg-white border border-border rounded-2xl p-8 text-center">
+                <p className="text-sm text-gray-400">Nessun prodotto in questo ordine.</p>
               </div>
             ) : (
               (() => {
-                // Group by conferente
                 const byConf = new Map<string, { rows: OrderAggRow[]; totPezzi: number; totImponibile: number; totRetail: number }>();
-                for (const row of orderData) {
+                for (const row of singleOrderData) {
                   const conf = row.conferente;
                   if (!byConf.has(conf)) byConf.set(conf, { rows: [], totPezzi: 0, totImponibile: 0, totRetail: 0 });
                   const entry = byConf.get(conf)!;
                   entry.rows.push(row);
-                  entry.totPezzi += row.pezzi;
+                  entry.totPezzi      += row.pezzi;
                   entry.totImponibile += row.imponibile;
-                  entry.totRetail += row.retailStimato;
+                  entry.totRetail     += row.retailStimato;
                 }
+
+                const grandPezzi      = [...byConf.values()].reduce((s, e) => s + e.totPezzi, 0);
+                const grandImponibile = [...byConf.values()].reduce((s, e) => s + e.totImponibile, 0);
+                const grandRetail     = [...byConf.values()].reduce((s, e) => s + e.totRetail, 0);
 
                 return (
                   <div className="bg-white border border-border rounded-2xl overflow-hidden">
@@ -576,6 +642,14 @@ export default function BudgetPlanner() {
                             </>
                           ))}
                         </tbody>
+                        <tfoot>
+                          <tr className="border-t-2 border-gray-300 bg-gray-100 font-semibold text-gray-800 text-xs">
+                            <td className="px-4 py-2" colSpan={3}>Totale ordine</td>
+                            <td className="px-2 py-2 text-right">{grandPezzi}</td>
+                            <td className="px-2 py-2 text-right">{fmt(grandImponibile, 0)} €</td>
+                            <td className="px-3 py-2 text-right">{fmt(grandRetail, 0)} €</td>
+                          </tr>
+                        </tfoot>
                       </table>
                     </div>
                   </div>
