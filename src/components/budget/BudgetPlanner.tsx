@@ -21,7 +21,7 @@ interface ScenarioData {
   subclassData: SubclassRow[];
 }
 
-type View = 'famiglie' | 'fabbisogno' | 'sintesi-ordine' | 'sintesi';
+type View = 'obiettivi' | 'fabbisogno' | 'sintesi-ordine' | 'sintesi';
 
 interface OrderSummary {
   id: string;
@@ -87,7 +87,7 @@ function NumInput({
 
 export default function BudgetPlanner() {
   const qc = useQueryClient();
-  const [view, setView] = useState<View>('famiglie');
+  const [view, setView] = useState<View>('obiettivi');
   const [selectedCanale, setSelectedCanale] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [editingNome, setEditingNome] = useState(false);
@@ -330,7 +330,7 @@ export default function BudgetPlanner() {
           {/* View tabs */}
           <div className="flex gap-1">
             {([
-              { key: 'famiglie',      icon: BarChart2,  label: 'Famiglie'       },
+              { key: 'obiettivi',      icon: BarChart2,  label: 'Obiettivi'       },
               { key: 'fabbisogno',    icon: Layers,     label: 'Fabbisogno'     },
               { key: 'sintesi-ordine',icon: Package2,   label: 'Ordine'         },
               { key: 'sintesi',       icon: TrendingUp, label: 'Sintesi'        },
@@ -368,7 +368,7 @@ export default function BudgetPlanner() {
         </div>
 
         {/* ── FAMIGLIE view ────────────────────────────────────────────────── */}
-        {view === 'famiglie' && (
+        {view === 'obiettivi' && (
           <div className="space-y-3">
             {MODA_FAMIGLIE.map((famiglia) => {
               const input = getFamilyInput(famiglia);
