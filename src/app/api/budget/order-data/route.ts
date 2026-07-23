@@ -17,6 +17,15 @@ const FORBIDDEN = NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
 type AggRow = { conferente: string; famiglia: string; sottoclasse: string; pezzi: number; imponibile: number; retailStimato: number };
 
+// Mirror of CustomerOrdersView.effectiveUnitCost: prefers costoIe fields over unitPrice
+function effectiveCost(p: { costoIeConReso: any; costoIeSenzaReso: any }, unitPrice: number): number {
+  const con = Number(p.costoIeConReso);
+  const sen = Number(p.costoIeSenzaReso);
+  if (con > 0) return con;
+  if (sen > 0) return sen;
+  return unitPrice;
+}
+
 function makeAgg() {
   const agg = new Map<string, AggRow>();
 
@@ -87,7 +96,7 @@ export async function GET(req: NextRequest) {
 
     for (const it of orderItems) {
       const p = it.product;
-      add(p.conferente, p.famiglia, p.sottoclasse, it.quantity, Number(it.unitPrice), p.retailPrice != null ? Number(p.retailPrice) : 0);
+      add(p.conferente, p.famiglia, p.sottoclasse, it.quantity, effectiveCost(p, Number(it.unitPrice)), p.retailPrice != null ? Number(p.retailPrice) : 0);
     }
   } else {
     // All-orders mode: all non-cancelled org orders + operator DRAFT carts
@@ -98,7 +107,7 @@ export async function GET(req: NextRequest) {
 
     for (const it of orderItems) {
       const p = it.product;
-      add(p.conferente, p.famiglia, p.sottoclasse, it.quantity, Number(it.unitPrice), p.retailPrice != null ? Number(p.retailPrice) : 0);
+      add(p.conferente, p.famiglia, p.sottoclasse, it.quantity, effectiveCost(p, Number(it.unitPrice)), p.retailPrice != null ? Number(p.retailPrice) : 0);
     }
 
     const cartItems = await prisma.cartItem.findMany({

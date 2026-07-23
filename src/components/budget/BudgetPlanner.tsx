@@ -601,7 +601,7 @@ export default function BudgetPlanner() {
                 ) : (
                   <div className="space-y-1.5">
                     {filteredOrders.map((o) => {
-                      const num  = o.orderNumber ?? o.id.slice(-8);
+                      const num  = o.orderNumber ?? `#${o.id.slice(0, 8).toUpperCase()}`;
                       const date = new Date(o.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' });
                       const isSelected = selectedOrderId === o.id;
                       return (
