@@ -54,16 +54,17 @@ function statusBadge(status: string) {
 // ─── Inline numeric input ─────────────────────────────────────────────────────
 
 function NumInput({
-  value, onChange, placeholder = '—', decimals = 0, suffix = '',
+  value, onChange, placeholder = '—', decimals = 0, suffix = '', prefix = '',
 }: {
   value: number | null; onChange: (v: number | null) => void;
-  placeholder?: string; decimals?: number; suffix?: string;
+  placeholder?: string; decimals?: number; suffix?: string; prefix?: string;
 }) {
   const [raw, setRaw] = useState<string | null>(null);
   const local = raw !== null ? raw : (value != null ? value.toFixed(decimals) : '');
 
   return (
     <div className="relative flex items-center">
+      {prefix && <span className="absolute left-0 text-xs text-gray-400 pointer-events-none">{prefix}</span>}
       <input
         type="number"
         value={local}
@@ -75,11 +76,22 @@ function NumInput({
           onChange(isNaN(parsed as number) ? null : parsed);
           setRaw(null);
         }}
-        className="w-full bg-transparent text-right text-xs text-gray-900 border-b border-transparent focus:border-accent focus:outline-none py-0.5 pr-5"
+        className={`w-full bg-transparent text-right text-xs text-gray-900 border-b border-transparent focus:border-accent focus:outline-none py-0.5 ${suffix ? 'pr-5' : ''} ${prefix ? 'pl-3' : ''}`}
         step={decimals > 0 ? 0.1 : 1}
       />
       {suffix && <span className="absolute right-0 text-xs text-gray-400 pointer-events-none">{suffix}</span>}
     </div>
+  );
+}
+
+function ColTh({ label, tip, right = true }: { label: string; tip: string; right?: boolean }) {
+  return (
+    <th className={`${right ? 'text-right' : 'text-left'} px-2 py-2 font-medium`}>
+      <span className="inline-flex items-center gap-0.5">
+        {label}
+        <span title={tip} className="cursor-help text-gray-300 hover:text-gray-500 leading-none">*</span>
+      </span>
+    </th>
   );
 }
 
@@ -651,20 +663,14 @@ export default function BudgetPlanner() {
                       <thead>
                         <tr className="border-b border-border text-2xs text-gray-400 uppercase tracking-wide">
                           <th className="text-left px-4 py-2 font-medium">Sottoclasse</th>
-                          <th className="text-right px-2 py-2 font-medium">Pz PE26</th>
-                          <th className="text-right px-2 py-2 font-medium">Val. IE PE26 €</th>
-                          <th className="text-right px-2 py-2 font-medium">Inc. PE26</th>
-                          <th className="text-right px-2 py-2 font-medium">Continu.</th>
-                          <th className="text-right px-2 py-2 font-medium">
-                            Fabb. Raw
-                            <span title="Obiettivo pezzi × incidenza PE26 − continuativi. Può essere negativo se i continuativi coprono già l'obiettivo." className="ml-0.5 cursor-help text-gray-300 hover:text-gray-500">*</span>
-                          </th>
-                          <th className="text-right px-2 py-2 font-medium">
-                            Fabb. Netto
-                            <span title="Fabbisogno effettivo da ordinare: max(0, Fabb. Raw). Azzerato quando i continuativi eccedono l'obiettivo (status: eccedente)." className="ml-0.5 cursor-help text-gray-300 hover:text-gray-500">*</span>
-                          </th>
-                          <th className="text-right px-2 py-2 font-medium">Ordinato</th>
-                          <th className="text-right px-2 py-2 font-medium">Extra</th>
+                          <ColTh label="Pz PE26"      tip="✏️ Da inserire. Pezzi totali venduti in questa sottoclasse nella stagione PE26 (Mar–Ago 2026). Serve a calcolare il peso % (incidenza) con cui distribuire l'obiettivo pezzi PE27." />
+                          <ColTh label="Val. IE PE26" tip="✏️ Da inserire. Valore totale d'acquisto (ingresso/IE) per questa sottoclasse nel PE26, in €. Viene sommato per famiglia e usato come storico nel tab Obiettivi." />
+                          <ColTh label="Inc. PE26"    tip="🔢 Calcolato automaticamente. Quota % di questa sottoclasse sui pezzi totali della famiglia in PE26 (Pz sottoclasse ÷ Pz totali famiglia). Determina come l'obiettivo pezzi viene ripartito tra le sottoclassi." />
+                          <ColTh label="Continuativi" tip="✏️ Da inserire. Pezzi di questa sottoclasse disponibili da riordino continuativo (articoli non stagionali). Vengono sottratti dal fabbisogno lordo: meno pezzi continuativi = meno nuovi ordini necessari." />
+                          <ColTh label="Fabb. Lordo"  tip="🔢 Calcolato. Obiettivo pezzi famiglia × Incidenza PE26 − Continuativi. Può essere negativo se i continuativi coprono già l'intero obiettivo (→ stato Eccedente)." />
+                          <ColTh label="Fabb. Netto"  tip="🔢 Calcolato. Pezzi effettivi ancora da ordinare: max(0, Fabb. Lordo). Se il lordo è negativo, il netto è 0 — non si deve ordinare nulla per questa sottoclasse." />
+                          <ColTh label="Ordinato"     tip="🔢 Calcolato. Pezzi già presenti negli ordini attivi PE27 per questa sottoclasse. Si aggiorna automaticamente quando ordini vengono creati o modificati." />
+                          <ColTh label="Extra/Scoperto" tip="🔢 Calcolato. Ordinato − Fabb. Netto. Verde = pezzi in eccesso rispetto al fabbisogno. Rosso = pezzi ancora da ordinare per coprire il fabbisogno." />
                           <th className="text-right px-3 py-2 font-medium">Stato</th>
                         </tr>
                       </thead>
@@ -685,7 +691,7 @@ export default function BudgetPlanner() {
                               </td>
                               {/* Valore IE PE26 */}
                               <td className="px-2 py-1 text-right">
-                                <NumInput value={row.valorePE26} decimals={0}
+                                <NumInput value={row.valorePE26} decimals={0} prefix="€"
                                   onChange={(v) => updateSubclass(famiglia, sottoclasse, 'valorePE26', v)} />
                               </td>
 
@@ -736,7 +742,7 @@ export default function BudgetPlanner() {
                             <tr className="border-t-2 border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700">
                               <td className="px-4 py-2">Totale</td>
                               <td className="px-2 py-2 text-right">{totPz > 0 ? totPz : '—'}</td>
-                              <td className="px-2 py-2 text-right">{totVal > 0 ? fmt(totVal, 0) : '—'}</td>
+                              <td className="px-2 py-2 text-right">{totVal > 0 ? '€ ' + fmt(totVal, 0) : '—'}</td>
                               <td className="px-2 py-2 text-right text-gray-400">100%</td>
                               <td className="px-2 py-2 text-right">{totCont > 0 ? totCont : '—'}</td>
                               <td className="px-2 py-2 text-right text-gray-500">{hasFabbRaw ? Math.round(totFabbRaw) : '—'}</td>
