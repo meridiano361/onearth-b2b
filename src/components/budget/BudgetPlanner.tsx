@@ -174,12 +174,30 @@ export default function BudgetPlanner() {
     const key = `fam-${famiglia}-${field}`;
     clearTimeout(saveTimer.current[key]);
     saveTimer.current[key] = setTimeout(async () => {
-      await fetch('/api/budget/family-inputs', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ famiglia, [field]: value }),
-      });
-      qc.invalidateQueries({ queryKey: ['budget-scenario'] });
+      const clearField = () =>
+        setLocalFamily((prev) => {
+          const fam = { ...(prev[famiglia] ?? {}) };
+          delete (fam as Record<string, unknown>)[field];
+          return { ...prev, [famiglia]: fam };
+        });
+      try {
+        const res = await fetch('/api/budget/family-inputs', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ famiglia, [field]: value }),
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        const updated: FamilyInput = await res.json();
+        qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
+          old
+            ? { ...old, familyInputs: [...old.familyInputs.filter((fi) => fi.famiglia !== famiglia), updated] }
+            : old
+        );
+        clearField();
+      } catch {
+        toast.error('Errore nel salvataggio');
+        clearField();
+      }
     }, 800);
   }
 
@@ -195,12 +213,39 @@ export default function BudgetPlanner() {
     const key = `sub-${famiglia}-${sottoclasse}-${field}`;
     clearTimeout(saveTimer.current[key]);
     saveTimer.current[key] = setTimeout(async () => {
-      await fetch('/api/budget/subclass-data', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ famiglia, sottoclasse, [field]: value }),
-      });
-      qc.invalidateQueries({ queryKey: ['budget-scenario'] });
+      const localKey = `${famiglia}|${sottoclasse}`;
+      const clearField = () =>
+        setLocalSubclass((prev) => {
+          const sub = { ...(prev[localKey] ?? {}) };
+          delete (sub as Record<string, unknown>)[field];
+          return { ...prev, [localKey]: sub };
+        });
+      try {
+        const res = await fetch('/api/budget/subclass-data', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ famiglia, sottoclasse, [field]: value }),
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        const updated: SubclassRow = await res.json();
+        qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
+          old
+            ? {
+                ...old,
+                subclassData: [
+                  ...old.subclassData.filter(
+                    (sd) => !(sd.famiglia === famiglia && sd.sottoclasse === sottoclasse),
+                  ),
+                  updated,
+                ],
+              }
+            : old
+        );
+        clearField();
+      } catch {
+        toast.error('Errore nel salvataggio');
+        clearField();
+      }
     }, 800);
   }
 
