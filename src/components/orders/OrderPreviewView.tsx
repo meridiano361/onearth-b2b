@@ -960,10 +960,17 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
   // Items with effective qty / subtotal (local optimistic overrides).
   // Il costo unitario usa costoIeConReso → costoIeSenzaReso → unitPrice
   // così i totali riflettono sempre il costo reale del prodotto.
+  // Phantom items: Arch 2 products (with sizeVariants) that have no taglia on the OrderItem
+  // are invalid ghost records — filter them out so they never pollute counts or totals.
   const items = useMemo(
     () =>
       (order?.items ?? [])
-        .filter((it) => it.product != null)
+        .filter((it) => {
+          if (!it.product) return false;
+          const sv = (it.product as any).sizeVariants;
+          if (Array.isArray(sv) && sv.length > 0 && !it.taglia) return false;
+          return true;
+        })
         .map((it) => {
           const qty      = qtyOverrides[it.id] ?? it.quantity;
           const unitCost = effectiveCost(it.product, Number(it.unitPrice));
@@ -1617,7 +1624,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
               <div>
                 <p className="text-xs font-bold tracking-[0.12em] uppercase">{group.name}</p>
                 <p className="text-2xs text-gray-400 mt-0.5">
-                  {group.items.length} {group.items.length === 1 ? t('articleSingular') : t('articlePlural')}
+                  {group.totalQty} pz.
                 </p>
               </div>
               <div className="text-right">
