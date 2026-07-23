@@ -538,6 +538,41 @@ export default function BudgetPlanner() {
                           );
                         })}
                       </tbody>
+                      <tfoot>
+                        {(() => {
+                          let totPz = 0, totVal = 0, totCont = 0, totFabbRaw = 0, totFabbNetto = 0, totOrdinato = 0, totExtra = 0;
+                          let hasFabbRaw = false, hasExtra = false;
+                          for (const s of subclasses) {
+                            const row = getSubclassRow(famiglia, s);
+                            const comp = subclassComputed[`${famiglia}|${s}`];
+                            totPz       += row.pezziPE26 ?? 0;
+                            totVal      += row.valorePE26 ?? 0;
+                            totCont     += row.continuativi;
+                            totOrdinato += comp?.ordinato ?? 0;
+                            if (comp?.fabbisognoRaw != null) { totFabbRaw += comp.fabbisognoRaw; hasFabbRaw = true; }
+                            if (comp?.fabbisognoNetto != null) totFabbNetto += comp.fabbisognoNetto;
+                            if (comp?.extra != null) { totExtra += comp.extra; hasExtra = true; }
+                          }
+                          return (
+                            <tr className="border-t-2 border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700">
+                              <td className="px-4 py-2">Totale</td>
+                              <td className="px-2 py-2 text-right">{totPz > 0 ? totPz : '—'}</td>
+                              <td className="px-2 py-2 text-right">{totVal > 0 ? fmt(totVal, 0) : '—'}</td>
+                              <td className="px-2 py-2 text-right text-gray-400">100%</td>
+                              <td className="px-2 py-2 text-right">{totCont > 0 ? totCont : '—'}</td>
+                              <td className="px-2 py-2 text-right text-gray-500">{hasFabbRaw ? Math.round(totFabbRaw) : '—'}</td>
+                              <td className="px-2 py-2 text-right">{hasFabbRaw ? Math.round(totFabbNetto) : '—'}</td>
+                              <td className="px-2 py-2 text-right text-blue-700">{totOrdinato > 0 ? totOrdinato : '—'}</td>
+                              <td className="px-2 py-2 text-right">
+                                {hasExtra
+                                  ? <span className={totExtra >= 0 ? 'text-green-700' : 'text-red-600'}>{totExtra >= 0 ? '+' : ''}{Math.round(totExtra)}</span>
+                                  : '—'}
+                              </td>
+                              <td className="px-3 py-2" />
+                            </tr>
+                          );
+                        })()}
+                      </tfoot>
                     </table>
                   </div>
                 </div>
