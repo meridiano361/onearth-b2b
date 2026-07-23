@@ -216,25 +216,29 @@ function SizedProductCard({
   increaseLabel: string;
 }) {
   const sizeVariants = product.sizeVariants ?? [];
-  // Arch 2: every sizeVariant shares the same codice (= the shared product code).
-  // Arch 1: each size has its own unique product code.
-  // Must check length > 1 to avoid false-positive on single-variant products.
-  const isArch2 = sizeVariants.length > 1 &&
-    sizeVariants.every(sv => sv.codice.toUpperCase() === sizeVariants[0].codice.toUpperCase());
   const allSameProduct = productItems.every((i) => i.productId === productItems[0].productId);
   const totalSubtotal = productItems.reduce((s, i) => s + i.effectiveSubtotal, 0);
   const totalQty = productItems.reduce((s, i) => s + i.effectiveQty, 0);
 
   function findItem(v: { taglia: string; codice: string }): EnrichedItem | null {
-    // Primary match: taglia on the OrderItem (works for both Arch 1 and Arch 2)
+    // Primary: exact taglia match on the OrderItem (Arch 2 stores taglia here; also
+    // catches Arch 1 items that were added via the Arch 2 fallback path).
     const byTaglia = productItems.find((i) => i.taglia === v.taglia);
     if (byTaglia) return byTaglia;
-    // Arch 2: all variants share one codice — no taglia match means the size is not yet in the
-    // order. Do NOT fall through to code-based matching or we'd return a different size's item.
-    if (isArch2) return null;
-    // Arch 1: each size is a separate Product record with a unique code — match by that code.
+
+    // No item has item.taglia === v.taglia → this size is not yet in the order.
+    // Code-based matching (Arch 1) is only safe when v.codice is unique across all
+    // sizeVariants: if another variant shares the same codice we cannot tell which
+    // item is which and must return null to avoid cross-contamination.
+    const codeIsShared = sizeVariants.some(
+      (sv) => sv.taglia !== v.taglia &&
+               sv.codice.trim().toUpperCase() === v.codice.trim().toUpperCase()
+    );
+    if (codeIsShared) return null;
+
+    // Unique codice → safe to match by product code (Arch 1: separate product per size).
     return productItems.find(
-      (i) => i.product?.code?.toUpperCase() === v.codice.toUpperCase()
+      (i) => i.product?.code?.trim().toUpperCase() === v.codice.trim().toUpperCase()
     ) ?? null;
   }
 
