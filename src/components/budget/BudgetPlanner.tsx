@@ -88,6 +88,7 @@ function NumInput({
 export default function BudgetPlanner() {
   const qc = useQueryClient();
   const [view, setView] = useState<View>('famiglie');
+  const [selectedCanale, setSelectedCanale] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [editingNome, setEditingNome] = useState(false);
   const [nomeInput, setNomeInput] = useState('');
@@ -124,6 +125,22 @@ export default function BudgetPlanner() {
     staleTime: 60_000,
   });
   const ordersList: OrderSummary[] = ordersListRaw?.orders ?? [];
+
+  // Unique destinations (sorted) and orders filtered by selected destination
+  const uniqueCanali = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const o of ordersList) {
+      const name = o.canaleNome ?? 'Senza destinazione';
+      if (!seen.has(name)) { seen.add(name); out.push(name); }
+    }
+    return out.sort((a, b) => a.localeCompare(b, 'it'));
+  }, [ordersList]);
+
+  const filteredOrders = useMemo(
+    () => ordersList.filter((o) => (o.canaleNome ?? 'Senza destinazione') === selectedCanale),
+    [ordersList, selectedCanale],
+  );
 
   // ── Local editable state (starts from server data) ─────────────────────────
   const [localFamily, setLocalFamily] = useState<Record<string, Partial<FamilyInput>>>({});
@@ -546,34 +563,76 @@ export default function BudgetPlanner() {
         {view === 'sintesi-ordine' && (
           <div className="space-y-3">
 
-            {/* Order selector */}
+            {/* Step 1 — destination picker */}
             <div className="bg-white border border-border rounded-2xl px-4 py-3">
-              <label className="text-2xs text-gray-400 uppercase tracking-wide font-medium block mb-1.5">Seleziona ordine</label>
-              {ordersList.length === 0 ? (
+              <p className="text-2xs text-gray-400 uppercase tracking-wide font-medium mb-2">1. Scegli destinazione</p>
+              {uniqueCanali.length === 0 ? (
                 <p className="text-xs text-gray-400">Nessun ordine MODA PE27 disponibile.</p>
               ) : (
-                <select
-                  value={selectedOrderId ?? ''}
-                  onChange={(e) => setSelectedOrderId(e.target.value || null)}
-                  className="w-full text-xs border border-border rounded-lg px-3 py-2 bg-white text-primary focus:outline-none focus:border-accent"
-                >
-                  <option value="">— scegli un ordine —</option>
-                  {ordersList.map((o) => {
-                    const label = o.orderNumber ? `#${o.orderNumber}` : `…${o.id.slice(-6)}`;
-                    const dest  = o.canaleNome ? ` — ${o.canaleNome}` : '';
-                    const date  = new Date(o.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' });
-                    return (
-                      <option key={o.id} value={o.id}>
-                        {label}{dest} ({o.totalItems} pz) — {date}
-                      </option>
-                    );
-                  })}
-                </select>
+                <div className="flex flex-wrap gap-2">
+                  {uniqueCanali.map((nome) => (
+                    <button
+                      key={nome}
+                      onClick={() => {
+                        setSelectedCanale(nome);
+                        setSelectedOrderId(null);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                        selectedCanale === nome
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-white text-gray-600 border-border hover:border-gray-400 hover:text-primary'
+                      }`}
+                    >
+                      {nome}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
+            {/* Step 2 — order picker for selected destination */}
+            {selectedCanale && (
+              <div className="bg-white border border-border rounded-2xl px-4 py-3">
+                <p className="text-2xs text-gray-400 uppercase tracking-wide font-medium mb-2">
+                  2. Scegli ordine — <span className="text-primary normal-case">{selectedCanale}</span>
+                </p>
+                {filteredOrders.length === 0 ? (
+                  <p className="text-xs text-gray-400">Nessun ordine per questa destinazione.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {filteredOrders.map((o) => {
+                      const num  = o.orderNumber ?? o.id.slice(-8);
+                      const date = new Date(o.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                      const isSelected = selectedOrderId === o.id;
+                      return (
+                        <button
+                          key={o.id}
+                          onClick={() => setSelectedOrderId(o.id)}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-colors ${
+                            isSelected
+                              ? 'bg-primary/5 border-primary/30 text-primary'
+                              : 'border-border hover:bg-gray-50 hover:border-gray-300 text-gray-700'
+                          }`}
+                        >
+                          <div className="flex flex-col gap-0.5 min-w-0">
+                            <span className={`text-xs font-semibold truncate ${isSelected ? 'text-primary' : 'text-gray-900'}`}>
+                              {num}
+                            </span>
+                            <span className="text-2xs text-gray-400">{date}</span>
+                          </div>
+                          <span className={`ml-3 text-2xs font-medium flex-shrink-0 ${isSelected ? 'text-primary' : 'text-gray-500'}`}>
+                            {o.totalItems} pz
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Table */}
-            {!selectedOrderId ? (
+            {!selectedCanale ? null : !selectedOrderId ? (
               <div className="bg-white border border-border rounded-2xl p-8 text-center">
                 <p className="text-sm text-gray-400">Seleziona un ordine per vedere la sintesi per conferente.</p>
               </div>
