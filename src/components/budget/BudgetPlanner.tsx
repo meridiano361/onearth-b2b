@@ -1,0 +1,694 @@
+'use client';
+
+import { useState, useMemo, useCallback, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { BarChart2, Layers, Users, TrendingUp, Pencil, Check, X, AlertTriangle, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import {
+  MODA_FAMIGLIE, MODA_SUBCLASSES,
+  computeFamily, computeSubclass, computeSummary,
+  fmt, fmtPct, fmtCov,
+  type FamilyInput, type SubclassRow, type OrderAggRow,
+} from '@/lib/budget';
+
+// ─── Types for API response ────────────────────────────────────────────────────
+
+interface ScenarioData {
+  meta: { id: string; nome: string; seasonCode: string };
+  famiglie: string[];
+  subclassesByFamiglia: Record<string, string[]>;
+  familyInputs: FamilyInput[];
+  subclassData: SubclassRow[];
+}
+
+type View = 'famiglie' | 'sottoclassi' | 'conferenti' | 'sintesi';
+
+// ─── Utility ──────────────────────────────────────────────────────────────────
+
+function pct(n: number | null | undefined) {
+  if (n == null) return '—';
+  return n.toFixed(1) + '%';
+}
+
+function statusBadge(status: string) {
+  const map: Record<string, { label: string; cls: string }> = {
+    ok:          { label: 'Da ordinare', cls: 'bg-blue-50 text-blue-700' },
+    coperto:     { label: 'Coperto',     cls: 'bg-green-50 text-green-700' },
+    eccedente:   { label: 'Eccedente',   cls: 'bg-amber-50 text-amber-700' },
+    no_data:     { label: 'No storico',  cls: 'bg-gray-100 text-gray-500' },
+    no_obiettivo:{ label: 'No obiettivo',cls: 'bg-gray-100 text-gray-500' },
+  };
+  const { label, cls } = map[status] ?? map.no_data;
+  return <span className={`inline-flex px-1.5 py-0.5 rounded text-2xs font-medium ${cls}`}>{label}</span>;
+}
+
+// ─── Inline numeric input ─────────────────────────────────────────────────────
+
+function NumInput({
+  value, onChange, placeholder = '—', decimals = 0, suffix = '',
+}: {
+  value: number | null; onChange: (v: number | null) => void;
+  placeholder?: string; decimals?: number; suffix?: string;
+}) {
+  const [raw, setRaw] = useState<string | null>(null);
+  const local = raw !== null ? raw : (value != null ? value.toFixed(decimals) : '');
+
+  return (
+    <div className="relative flex items-center">
+      <input
+        type="number"
+        value={local}
+        placeholder={placeholder}
+        onChange={(e) => setRaw(e.target.value)}
+        onFocus={() => setRaw(value != null ? value.toFixed(decimals) : '')}
+        onBlur={() => {
+          const parsed = raw === '' || raw === null ? null : parseFloat(raw);
+          onChange(isNaN(parsed as number) ? null : parsed);
+          setRaw(null);
+        }}
+        className="w-full bg-transparent text-right text-xs text-gray-900 border-b border-transparent focus:border-accent focus:outline-none py-0.5 pr-5"
+        step={decimals > 0 ? 0.1 : 1}
+      />
+      {suffix && <span className="absolute right-0 text-xs text-gray-400 pointer-events-none">{suffix}</span>}
+    </div>
+  );
+}
+
+// ─── Main component ────────────────────────────────────────────────────────────
+
+export default function BudgetPlanner() {
+  const qc = useQueryClient();
+  const [view, setView] = useState<View>('famiglie');
+  const [editingNome, setEditingNome] = useState(false);
+  const [nomeInput, setNomeInput] = useState('');
+  const [expandedFamily, setExpandedFamily] = useState<string | null>(MODA_FAMIGLIE[0]);
+
+  // ── Queries ────────────────────────────────────────────────────────────────
+  const { data: scenario, isLoading } = useQuery<ScenarioData>({
+    queryKey: ['budget-scenario'],
+    queryFn: () => fetch('/api/budget').then((r) => r.json()),
+    staleTime: 60_000,
+  });
+
+  const { data: orderDataRaw } = useQuery<{ data: OrderAggRow[] }>({
+    queryKey: ['budget-order-data'],
+    queryFn: () => fetch('/api/budget/order-data').then((r) => r.json()),
+    staleTime: 30_000,
+  });
+  const orderData: OrderAggRow[] = orderDataRaw?.data ?? [];
+
+  // ── Local editable state (starts from server data) ─────────────────────────
+  const [localFamily, setLocalFamily] = useState<Record<string, Partial<FamilyInput>>>({});
+  const [localSubclass, setLocalSubclass] = useState<Record<string, Partial<SubclassRow>>>({});
+
+  function getFamilyInput(famiglia: string): FamilyInput {
+    const db = scenario?.familyInputs.find((fi) => fi.famiglia === famiglia);
+    const local = localFamily[famiglia] ?? {};
+    return {
+      famiglia,
+      vendutoPrevValore: local.vendutoPrevValore !== undefined ? local.vendutoPrevValore : (db?.vendutoPrevValore ?? null),
+      vendutoPrevPezzi:  local.vendutoPrevPezzi  !== undefined ? local.vendutoPrevPezzi  : (db?.vendutoPrevPezzi  ?? null),
+      mesiConsuntivi:    local.mesiConsuntivi     !== undefined ? local.mesiConsuntivi    : (db?.mesiConsuntivi    ?? 4),
+      obiettivo:         local.obiettivo          !== undefined ? local.obiettivo         : (db?.obiettivo         ?? null),
+      marginePieno:      local.marginePieno       !== undefined ? local.marginePieno      : (db?.marginePieno      ?? null),
+      scontoMese5:       local.scontoMese5        !== undefined ? local.scontoMese5       : (db?.scontoMese5       ?? null),
+      scontoMese6:       local.scontoMese6        !== undefined ? local.scontoMese6       : (db?.scontoMese6       ?? null),
+    };
+  }
+
+  function getSubclassRow(famiglia: string, sottoclasse: string): SubclassRow {
+    const db = scenario?.subclassData.find((sd) => sd.famiglia === famiglia && sd.sottoclasse === sottoclasse);
+    const key = `${famiglia}|${sottoclasse}`;
+    const local = localSubclass[key] ?? {};
+    return {
+      famiglia,
+      sottoclasse,
+      pezziPE25:    local.pezziPE25    !== undefined ? local.pezziPE25    : (db?.pezziPE25    ?? null),
+      pezziPE26:    local.pezziPE26    !== undefined ? local.pezziPE26    : (db?.pezziPE26    ?? null),
+      continuativi: local.continuativi !== undefined ? local.continuativi : (db?.continuativi  ?? 0),
+    };
+  }
+
+  // ── Mutations (debounced per field) ────────────────────────────────────────
+  const saveTimer = useRef<Record<string, NodeJS.Timeout>>({});
+
+  function saveFamilyField(famiglia: string, field: string, value: unknown) {
+    const key = `fam-${famiglia}-${field}`;
+    clearTimeout(saveTimer.current[key]);
+    saveTimer.current[key] = setTimeout(async () => {
+      await fetch('/api/budget/family-inputs', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ famiglia, [field]: value }),
+      });
+      qc.invalidateQueries({ queryKey: ['budget-scenario'] });
+    }, 800);
+  }
+
+  function updateFamily(famiglia: string, field: keyof FamilyInput, value: unknown) {
+    setLocalFamily((prev) => ({
+      ...prev,
+      [famiglia]: { ...(prev[famiglia] ?? {}), [field]: value as never },
+    }));
+    saveFamilyField(famiglia, field, value);
+  }
+
+  function saveSubclassField(famiglia: string, sottoclasse: string, field: string, value: unknown) {
+    const key = `sub-${famiglia}-${sottoclasse}-${field}`;
+    clearTimeout(saveTimer.current[key]);
+    saveTimer.current[key] = setTimeout(async () => {
+      await fetch('/api/budget/subclass-data', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ famiglia, sottoclasse, [field]: value }),
+      });
+      qc.invalidateQueries({ queryKey: ['budget-scenario'] });
+    }, 800);
+  }
+
+  function updateSubclass(famiglia: string, sottoclasse: string, field: keyof SubclassRow, value: unknown) {
+    const key = `${famiglia}|${sottoclasse}`;
+    setLocalSubclass((prev) => ({
+      ...prev,
+      [key]: { ...(prev[key] ?? {}), [field]: value as never },
+    }));
+    saveSubclassField(famiglia, sottoclasse, field, value);
+  }
+
+  // ── Computed values ────────────────────────────────────────────────────────
+  const familyComputed = useMemo(() => {
+    return Object.fromEntries(
+      MODA_FAMIGLIE.map((f) => [f, computeFamily(getFamilyInput(f))])
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenario, localFamily]);
+
+  const subclassTotaliPerFamiglia = useMemo(() => {
+    const result: Record<string, { pe25: number; pe26: number }> = {};
+    for (const f of MODA_FAMIGLIE) {
+      const subclasses = MODA_SUBCLASSES[f as keyof typeof MODA_SUBCLASSES] ?? [];
+      let pe25 = 0, pe26 = 0;
+      for (const s of subclasses) {
+        const row = getSubclassRow(f, s);
+        pe25 += row.pezziPE25 ?? 0;
+        pe26 += row.pezziPE26 ?? 0;
+      }
+      result[f] = { pe25: pe25 || 0, pe26: pe26 || 0 };
+    }
+    return result;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenario, localSubclass]);
+
+  const subclassComputed = useMemo(() => {
+    const result: Record<string, ReturnType<typeof computeSubclass>> = {};
+    for (const f of MODA_FAMIGLIE) {
+      const subclasses = MODA_SUBCLASSES[f as keyof typeof MODA_SUBCLASSES] ?? [];
+      const totali = subclassTotaliPerFamiglia[f];
+      const fam = familyComputed[f];
+      for (const s of subclasses) {
+        const row = getSubclassRow(f, s);
+        const ordinato = orderData
+          .filter((o) => o.famiglia === f && o.sottoclasse === s)
+          .reduce((sum, o) => sum + o.pezzi, 0);
+        result[`${f}|${s}`] = computeSubclass(
+          row,
+          totali.pe25 > 0 ? totali.pe25 : null,
+          totali.pe26 > 0 ? totali.pe26 : null,
+          fam.obiettivoPezzi,
+          ordinato,
+        );
+      }
+    }
+    return result;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenario, localSubclass, localFamily, orderData]);
+
+  const summary = useMemo(() => {
+    const families = MODA_FAMIGLIE.map((f) => ({ input: getFamilyInput(f), computed: familyComputed[f] }));
+    const subclassRows = Object.entries(subclassComputed).map(([key, comp]) => {
+      const [f, s] = key.split('|');
+      return { row: getSubclassRow(f, s), computed: comp };
+    });
+    return computeSummary(families, subclassRows);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subclassComputed, familyComputed]);
+
+  // ── Scenario name save ─────────────────────────────────────────────────────
+  async function saveNome() {
+    const res = await fetch('/api/budget', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome: nomeInput }),
+    });
+    if (res.ok) {
+      toast.success('Scenario aggiornato');
+      qc.invalidateQueries({ queryKey: ['budget-scenario'] });
+    } else {
+      toast.error('Errore salvataggio');
+    }
+    setEditingNome(false);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#faf8f5] flex items-center justify-center">
+        <Loader2 size={24} className="animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  const nome = scenario?.meta.nome ?? 'Budget principale';
+
+  return (
+    <div className="min-h-screen bg-[#faf8f5] text-primary pb-28">
+
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <div className="sticky top-0 z-10 bg-[#faf8f5]/95 backdrop-blur-sm border-b border-border px-4 py-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <p className="text-2xs text-gray-400 uppercase tracking-widest">Moda PE27</p>
+            {editingNome ? (
+              <div className="flex items-center gap-2 mt-0.5">
+                <input
+                  autoFocus
+                  value={nomeInput}
+                  onChange={(e) => setNomeInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') saveNome(); if (e.key === 'Escape') setEditingNome(false); }}
+                  className="text-sm font-semibold bg-transparent border-b border-accent focus:outline-none text-primary min-w-0 flex-1"
+                />
+                <button onClick={saveNome} className="text-accent"><Check size={14} /></button>
+                <button onClick={() => setEditingNome(false)} className="text-gray-400"><X size={14} /></button>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setNomeInput(nome); setEditingNome(true); }}
+                className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-accent transition-colors group"
+              >
+                {nome}
+                <Pencil size={11} className="text-gray-400 group-hover:text-accent" />
+              </button>
+            )}
+          </div>
+
+          {/* View tabs */}
+          <div className="flex gap-1">
+            {([
+              { key: 'famiglie',    icon: BarChart2,  label: 'Famiglie'    },
+              { key: 'sottoclassi', icon: Layers,     label: 'Sottoclassi' },
+              { key: 'conferenti',  icon: Users,      label: 'Conferenti'  },
+              { key: 'sintesi',     icon: TrendingUp, label: 'Sintesi'     },
+            ] as const).map(({ key, icon: Icon, label }) => (
+              <button
+                key={key}
+                onClick={() => setView(key)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  view === key ? 'bg-primary text-white' : 'text-gray-500 border border-border hover:bg-white'
+                }`}
+              >
+                <Icon size={12} />
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 pt-4 space-y-4">
+
+        {/* ── SINTESI KPI strip (always visible) ──────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {[
+            { label: 'Obiettivo PE27', value: fmt(summary.obiettivoTotale, 0) + ' €' },
+            { label: 'Margine obiettivo', value: fmt(summary.margineObiettivoTotale, 0) + ' €' },
+            { label: 'Fabbisogno pezzi', value: fmt(Math.round(summary.fabbisognoTotalePezzi)) },
+            { label: 'Copertura', value: fmtCov(summary.copertura) },
+          ].map(({ label, value }) => (
+            <div key={label} className="bg-white border border-border rounded-xl px-3 py-2.5">
+              <p className="text-2xs text-gray-400 mb-0.5">{label}</p>
+              <p className="text-sm font-semibold text-primary">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* ── FAMIGLIE view ────────────────────────────────────────────────── */}
+        {view === 'famiglie' && (
+          <div className="space-y-3">
+            {MODA_FAMIGLIE.map((famiglia) => {
+              const input = getFamilyInput(famiglia);
+              const comp  = familyComputed[famiglia];
+              const isOpen = expandedFamily === famiglia;
+
+              return (
+                <div key={famiglia} className="bg-white border border-border rounded-2xl overflow-hidden">
+                  <button
+                    onClick={() => setExpandedFamily(isOpen ? null : famiglia)}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-cream transition-colors"
+                  >
+                    {isOpen ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
+                    <span className="font-medium text-sm flex-1">{famiglia}</span>
+                    <div className="flex gap-4 text-xs text-gray-500">
+                      {input.obiettivo != null && <span>Ob. {fmt(input.obiettivo, 0)} €</span>}
+                      {comp.margineMedioEffettivo != null && <span>Mg. eff. {pct(comp.margineMedioEffettivo)}</span>}
+                      {comp.obiettivoPezzi != null && <span className="text-primary font-medium">{Math.round(comp.obiettivoPezzi)} pz</span>}
+                    </div>
+                  </button>
+
+                  {isOpen && (
+                    <div className="border-t border-border px-4 pb-4 pt-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
+
+                        {/* Column 1: storico + proiezione */}
+                        <div className="space-y-2">
+                          <p className="text-2xs text-gray-400 uppercase tracking-wide font-medium pt-1">Storico PE26</p>
+                          <Row label="Venduto (€)">
+                            <NumInput value={input.vendutoPrevValore} decimals={0}
+                              onChange={(v) => updateFamily(famiglia, 'vendutoPrevValore', v)} />
+                          </Row>
+                          <Row label="Pezzi venduti">
+                            <NumInput value={input.vendutoPrevPezzi} decimals={0}
+                              onChange={(v) => updateFamily(famiglia, 'vendutoPrevPezzi', v)} />
+                          </Row>
+                          <Row label="Mesi consuntivi">
+                            <NumInput value={input.mesiConsuntivi} decimals={0} placeholder="4"
+                              onChange={(v) => updateFamily(famiglia, 'mesiConsuntivi', v ?? 4)} />
+                          </Row>
+
+                          <p className="text-2xs text-gray-400 uppercase tracking-wide font-medium pt-2">Proiezione (su 6 mesi)</p>
+                          <RowComputed label="Venduto proiettato" value={comp.vendutoProiettato != null ? fmt(comp.vendutoProiettato, 0) + ' €' : '—'} />
+                          <RowComputed label="Pezzi proiettati"   value={comp.pezziProiettati != null ? fmt(Math.round(comp.pezziProiettati)) : '—'} />
+                          <RowComputed label="Val. medio / pezzo"  value={comp.valoreMedioPezzo != null ? fmt(comp.valoreMedioPezzo, 2) + ' €' : '—'} />
+                        </div>
+
+                        {/* Column 2: obiettivo + margini */}
+                        <div className="space-y-2">
+                          <p className="text-2xs text-gray-400 uppercase tracking-wide font-medium pt-1">Obiettivo PE27</p>
+                          <Row label="Obiettivo vendite (€)">
+                            <NumInput value={input.obiettivo} decimals={0}
+                              onChange={(v) => updateFamily(famiglia, 'obiettivo', v)} />
+                          </Row>
+                          {input.obiettivo != null && comp.valoreMedioPezzo == null && (
+                            <p className="text-2xs text-amber-600 flex items-center gap-1">
+                              <AlertTriangle size={10} /> Inserisci storico per calcolare i pezzi obiettivo
+                            </p>
+                          )}
+                          <RowComputed label="Pezzi obiettivo" value={comp.obiettivoPezzi != null ? Math.round(comp.obiettivoPezzi) + ' pz' : '—'} highlight />
+
+                          <p className="text-2xs text-gray-400 uppercase tracking-wide font-medium pt-2">Margini</p>
+                          <Row label="Margine pieno (%)">
+                            <NumInput value={input.marginePieno} decimals={1} suffix="%"
+                              onChange={(v) => updateFamily(famiglia, 'marginePieno', v)} />
+                          </Row>
+                          <Row label="Sconto luglio (%)">
+                            <NumInput value={input.scontoMese5} decimals={1} suffix="%"
+                              onChange={(v) => updateFamily(famiglia, 'scontoMese5', v)} />
+                          </Row>
+                          <Row label="Sconto agosto (%)">
+                            <NumInput value={input.scontoMese6} decimals={1} suffix="%"
+                              onChange={(v) => updateFamily(famiglia, 'scontoMese6', v)} />
+                          </Row>
+                          <RowComputed label="Mg. luglio"         value={comp.margineMese5 != null ? pct(comp.margineMese5) : '—'} />
+                          <RowComputed label="Mg. agosto"         value={comp.margineMese6 != null ? pct(comp.margineMese6) : '—'} />
+                          <RowComputed label="Mg. medio effettivo" value={comp.margineMedioEffettivo != null ? pct(comp.margineMedioEffettivo) : '—'} highlight />
+                          <RowComputed label="Margine obiettivo"  value={comp.margineObiettivo != null ? fmt(comp.margineObiettivo, 0) + ' €' : '—'} />
+                        </div>
+
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── SOTTOCLASSI view ─────────────────────────────────────────────── */}
+        {view === 'sottoclassi' && (
+          <div className="space-y-4">
+            {MODA_FAMIGLIE.map((famiglia) => {
+              const subclasses = MODA_SUBCLASSES[famiglia as keyof typeof MODA_SUBCLASSES] ?? [];
+              const fam = familyComputed[famiglia];
+
+              return (
+                <div key={famiglia} className="bg-white border border-border rounded-2xl overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-border bg-gray-50/50 flex items-center gap-3">
+                    <span className="text-xs font-semibold text-gray-700">{famiglia}</span>
+                    {fam.obiettivoPezzi != null && (
+                      <span className="text-2xs text-gray-400">Obiettivo: {Math.round(fam.obiettivoPezzi)} pz</span>
+                    )}
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border text-2xs text-gray-400 uppercase tracking-wide">
+                          <th className="text-left px-4 py-2 font-medium">Sottoclasse</th>
+                          <th className="text-right px-2 py-2 font-medium">Pz PE25</th>
+                          <th className="text-right px-2 py-2 font-medium">Pz PE26</th>
+                          <th className="text-right px-2 py-2 font-medium">Inc. PE25</th>
+                          <th className="text-right px-2 py-2 font-medium">Inc. PE26</th>
+                          <th className="text-right px-2 py-2 font-medium">Inc. Media</th>
+                          <th className="text-right px-2 py-2 font-medium">Continu.</th>
+                          <th className="text-right px-2 py-2 font-medium">Fabb. Raw</th>
+                          <th className="text-right px-2 py-2 font-medium">Fabb. Netto</th>
+                          <th className="text-right px-2 py-2 font-medium">Ordinato</th>
+                          <th className="text-right px-2 py-2 font-medium">Extra</th>
+                          <th className="text-right px-3 py-2 font-medium">Stato</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/50">
+                        {subclasses.map((sottoclasse) => {
+                          const row = getSubclassRow(famiglia, sottoclasse);
+                          const comp = subclassComputed[`${famiglia}|${sottoclasse}`];
+                          if (!comp) return null;
+
+                          return (
+                            <tr key={sottoclasse} className="hover:bg-gray-50/50 transition-colors">
+                              <td className="px-4 py-2 font-medium text-gray-800 whitespace-nowrap">{sottoclasse}</td>
+
+                              {/* Pezzi PE25 */}
+                              <td className="px-2 py-1 text-right">
+                                <NumInput value={row.pezziPE25} decimals={0}
+                                  onChange={(v) => updateSubclass(famiglia, sottoclasse, 'pezziPE25', v)} />
+                              </td>
+                              {/* Pezzi PE26 */}
+                              <td className="px-2 py-1 text-right">
+                                <NumInput value={row.pezziPE26} decimals={0}
+                                  onChange={(v) => updateSubclass(famiglia, sottoclasse, 'pezziPE26', v)} />
+                              </td>
+
+                              {/* Computed read-only */}
+                              <td className="px-2 py-2 text-right text-gray-500">{fmtPct(comp.incidenzaPE25 != null ? comp.incidenzaPE25 * 100 : null)}</td>
+                              <td className="px-2 py-2 text-right text-gray-500">{fmtPct(comp.incidenzaPE26 != null ? comp.incidenzaPE26 * 100 : null)}</td>
+                              <td className="px-2 py-2 text-right font-medium">{fmtPct(comp.incidenzaMedia != null ? comp.incidenzaMedia * 100 : null)}</td>
+
+                              {/* Continuativi */}
+                              <td className="px-2 py-1 text-right">
+                                <NumInput value={row.continuativi} decimals={0}
+                                  onChange={(v) => updateSubclass(famiglia, sottoclasse, 'continuativi', v ?? 0)} />
+                              </td>
+
+                              <td className="px-2 py-2 text-right text-gray-500">
+                                {comp.fabbisognoRaw != null ? Math.round(comp.fabbisognoRaw) : '—'}
+                              </td>
+                              <td className="px-2 py-2 text-right font-medium">
+                                {comp.fabbisognoNetto != null ? Math.round(comp.fabbisognoNetto) : '—'}
+                              </td>
+                              <td className="px-2 py-2 text-right">
+                                <span className={comp.ordinato > 0 ? 'text-blue-700 font-medium' : 'text-gray-300'}>{comp.ordinato}</span>
+                              </td>
+                              <td className="px-2 py-2 text-right">
+                                {comp.extra != null
+                                  ? <span className={comp.extra >= 0 ? 'text-green-700' : 'text-red-600 font-medium'}>{comp.extra >= 0 ? '+' : ''}{Math.round(comp.extra)}</span>
+                                  : '—'}
+                              </td>
+                              <td className="px-3 py-2 text-right">{statusBadge(comp.status)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── CONFERENTI view ──────────────────────────────────────────────── */}
+        {view === 'conferenti' && (
+          <div>
+            {orderData.length === 0 ? (
+              <div className="bg-white border border-border rounded-2xl p-8 text-center">
+                <p className="text-sm text-gray-400">Nessun prodotto in ordine o carrello per MODA PE27.</p>
+                <p className="text-2xs text-gray-300 mt-1">I dati si aggiornano automaticamente quando aggiungi prodotti agli ordini.</p>
+              </div>
+            ) : (
+              (() => {
+                // Group by conferente
+                const byConf = new Map<string, { rows: OrderAggRow[]; totPezzi: number; totImponibile: number; totRetail: number }>();
+                for (const row of orderData) {
+                  const conf = row.conferente;
+                  if (!byConf.has(conf)) byConf.set(conf, { rows: [], totPezzi: 0, totImponibile: 0, totRetail: 0 });
+                  const entry = byConf.get(conf)!;
+                  entry.rows.push(row);
+                  entry.totPezzi += row.pezzi;
+                  entry.totImponibile += row.imponibile;
+                  entry.totRetail += row.retailStimato;
+                }
+
+                return (
+                  <div className="bg-white border border-border rounded-2xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-border text-2xs text-gray-400 uppercase tracking-wide bg-gray-50/50">
+                            <th className="text-left px-4 py-2 font-medium">Conferente</th>
+                            <th className="text-left px-2 py-2 font-medium">Famiglia</th>
+                            <th className="text-left px-2 py-2 font-medium">Sottoclasse</th>
+                            <th className="text-right px-2 py-2 font-medium">Pz</th>
+                            <th className="text-right px-2 py-2 font-medium">Imponibile</th>
+                            <th className="text-right px-3 py-2 font-medium">Retail stimato</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/50">
+                          {[...byConf.entries()].map(([conf, { rows, totPezzi, totImponibile, totRetail }]) => (
+                            <>
+                              {rows.map((row, i) => (
+                                <tr key={`${conf}-${i}`} className="hover:bg-gray-50/50">
+                                  {i === 0 && (
+                                    <td className="px-4 py-2 font-semibold text-gray-800 whitespace-nowrap align-top" rowSpan={rows.length}>
+                                      {conf}
+                                    </td>
+                                  )}
+                                  <td className="px-2 py-2 text-gray-600">{row.famiglia}</td>
+                                  <td className="px-2 py-2 text-gray-500">{row.sottoclasse}</td>
+                                  <td className="px-2 py-2 text-right">{row.pezzi}</td>
+                                  <td className="px-2 py-2 text-right">{fmt(row.imponibile, 0)} €</td>
+                                  <td className="px-3 py-2 text-right text-gray-500">{fmt(row.retailStimato, 0)} €</td>
+                                </tr>
+                              ))}
+                              <tr className="bg-gray-50 font-medium text-gray-700 border-t border-gray-200">
+                                <td className="px-4 py-1.5" colSpan={3}>Totale {conf}</td>
+                                <td className="px-2 py-1.5 text-right">{totPezzi}</td>
+                                <td className="px-2 py-1.5 text-right">{fmt(totImponibile, 0)} €</td>
+                                <td className="px-3 py-1.5 text-right">{fmt(totRetail, 0)} €</td>
+                              </tr>
+                            </>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()
+            )}
+          </div>
+        )}
+
+        {/* ── SINTESI view ─────────────────────────────────────────────────── */}
+        {view === 'sintesi' && (
+          <div className="space-y-4">
+
+            {/* KPI grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { label: 'Obiettivo totale',      value: fmt(summary.obiettivoTotale, 0) + ' €' },
+                { label: 'Margine obiettivo tot.',  value: fmt(summary.margineObiettivoTotale, 0) + ' €' },
+                { label: 'Fabbisogno pezzi',      value: fmt(Math.round(summary.fabbisognoTotalePezzi)) + ' pz' },
+                { label: 'Continuativi totali',   value: fmt(summary.continuativiTotali) + ' pz' },
+                { label: 'Ordinato totale',       value: fmt(summary.ordinatoTotale) + ' pz' },
+                { label: 'Delta',                 value: (summary.delta >= 0 ? '+' : '') + fmt(summary.delta) + ' pz' },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-white border border-border rounded-xl px-4 py-3">
+                  <p className="text-2xs text-gray-400 mb-0.5">{label}</p>
+                  <p className="text-base font-semibold text-primary">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Copertura progress */}
+            <div className="bg-white border border-border rounded-2xl px-4 py-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-700">Copertura budget</span>
+                <span className="text-sm font-bold text-primary">{fmtCov(summary.copertura)}</span>
+              </div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-accent rounded-full transition-all"
+                  style={{ width: `${Math.min(100, (summary.copertura ?? 0) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Per family summary table */}
+            <div className="bg-white border border-border rounded-2xl overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-border bg-gray-50/50">
+                <span className="text-xs font-semibold text-gray-700">Riepilogo per famiglia</span>
+              </div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-2xs text-gray-400 uppercase tracking-wide">
+                    <th className="text-left px-4 py-2 font-medium">Famiglia</th>
+                    <th className="text-right px-3 py-2 font-medium">Obiettivo €</th>
+                    <th className="text-right px-3 py-2 font-medium">Ob. Pz</th>
+                    <th className="text-right px-3 py-2 font-medium">Fabb. Pz</th>
+                    <th className="text-right px-3 py-2 font-medium">Ordinato</th>
+                    <th className="text-right px-3 py-2 font-medium">Mg eff.</th>
+                    <th className="text-right px-3 py-2 font-medium">Mg Ob. €</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {MODA_FAMIGLIE.map((famiglia) => {
+                    const input = getFamilyInput(famiglia);
+                    const comp = familyComputed[famiglia];
+                    const ordinato = orderData.filter((o) => o.famiglia === famiglia).reduce((s, o) => s + o.pezzi, 0);
+                    const subclasses = MODA_SUBCLASSES[famiglia as keyof typeof MODA_SUBCLASSES] ?? [];
+                    const fabbisogno = subclasses.reduce((sum, s) => {
+                      const c = subclassComputed[`${famiglia}|${s}`];
+                      return sum + (c?.fabbisognoNetto ?? 0);
+                    }, 0);
+
+                    return (
+                      <tr key={famiglia} className="hover:bg-gray-50/50">
+                        <td className="px-4 py-2.5 font-medium text-gray-800">{famiglia}</td>
+                        <td className="px-3 py-2.5 text-right">{input.obiettivo != null ? fmt(input.obiettivo, 0) + ' €' : '—'}</td>
+                        <td className="px-3 py-2.5 text-right">{comp.obiettivoPezzi != null ? Math.round(comp.obiettivoPezzi) : '—'}</td>
+                        <td className="px-3 py-2.5 text-right font-medium">{Math.round(fabbisogno) || '—'}</td>
+                        <td className="px-3 py-2.5 text-right">
+                          <span className={ordinato > 0 ? 'text-blue-700 font-medium' : 'text-gray-300'}>{ordinato || '—'}</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-right">{comp.margineMedioEffettivo != null ? pct(comp.margineMedioEffettivo) : '—'}</td>
+                        <td className="px-3 py-2.5 text-right">{comp.margineObiettivo != null ? fmt(comp.margineObiettivo, 0) + ' €' : '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+// ─── Small layout helpers ─────────────────────────────────────────────────────
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-2 py-0.5">
+      <span className="text-xs text-gray-500 flex-shrink-0">{label}</span>
+      <div className="w-28 flex-shrink-0">{children}</div>
+    </div>
+  );
+}
+
+function RowComputed({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-2 py-0.5">
+      <span className="text-xs text-gray-400 flex-shrink-0">{label}</span>
+      <span className={`text-xs text-right w-28 flex-shrink-0 ${highlight ? 'font-semibold text-primary' : 'text-gray-600'}`}>{value}</span>
+    </div>
+  );
+}

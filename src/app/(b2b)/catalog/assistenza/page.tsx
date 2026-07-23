@@ -1,8 +1,8 @@
-// AGGIORNATO: 2026-07-22 (raggruppamento Colore e Fantasia/Stampa in modifica anteprima; anagrafica da foto; ricerca prodotti per collezione)
+// AGGIORNATO: 2026-07-23 (Budget PE27: pianificazione budget per famiglia e sottoclasse moda)
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,
-  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge, Bell, Settings, Sparkles, Palette, MessageSquare,
+  Eye, Download, Smartphone, HelpCircle, Layers, Film, Globe, Wallet, GitMerge, Bell, Settings, Sparkles, Palette, MessageSquare, BarChart2,
 } from 'lucide-react';
 
 export const metadata = { title: 'Guida all\'app — ON EARTH' };
@@ -27,6 +27,7 @@ const SECTIONS = [
   { id: 'multilingua',        label: 'Multilingua',                       icon: Globe },
   { id: 'impostazioni',       label: 'Impostazioni',                      icon: Settings },
   { id: 'moda-pe27',          label: 'Moda PE27',                         icon: Sparkles },
+  { id: 'budget-pe27',        label: 'Budget PE27',                       icon: BarChart2 },
   { id: 'ruota-cromatica',    label: 'Ruota Cromatica',                   icon: Palette },
   { id: 'survey',             label: 'Questionario',                      icon: MessageSquare },
   { id: 'assistenza-tecnica', label: 'Assistenza tecnica',                icon: HelpCircle },
@@ -390,9 +391,25 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 20. Ruota Cromatica */}
+        {/* 20. Budget PE27 */}
+        <section id="budget-pe27" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
+          <SectionHeader n={20} icon={BarChart2} label="Budget PE27" />
+          <p className="text-sm text-gray-600 mb-3">
+            La pagina <strong>Budget PE27</strong> è disponibile solo per gli operatori Meridiano361 e permette di pianificare il budget acquisti stagionale.
+            Aprila dalla home MODA PE27 → <em>Budget PE27</em>.
+          </p>
+          <ul className="space-y-2">
+            <Bullet><span className="font-medium">Vista Famiglie:</span> inserisci i dati storici (venduto PE25 e PE26 in valore e pezzi, mesi consuntivi), l&apos;obiettivo stagionale in €, il margine pieno e gli sconti dei mesi 5 e 6. L&apos;app calcola automaticamente venduto proiettato, valore medio pezzo e obiettivo in pezzi.</Bullet>
+            <Bullet><span className="font-medium">Vista Sottoclassi:</span> per ogni sottoclasse inserisci i pezzi ordinati in PE25, PE26 e i capi continuativi già disponibili. L&apos;app calcola l&apos;incidenza di ogni sottoclasse sulla famiglia e il fabbisogno netto (obiettivo pezzi × incidenza media − continuativi).</Bullet>
+            <Bullet><span className="font-medium">Vista Conferenti:</span> mostra la suddivisione degli ordini e carrelli attivi per fornitore (conferente), con pezzi, imponibile e retail stimato.</Bullet>
+            <Bullet><span className="font-medium">Vista Sintesi:</span> quadro riepilogativo con copertura del budget, totale ordinato vs obiettivo per famiglia e margine medio effettivo (ponderato sui 6 mesi stagionali).</Bullet>
+            <Bullet>Tutti i campi si salvano automaticamente (debounce 800 ms) non appena smetti di digitare.</Bullet>
+          </ul>
+        </section>
+
+        {/* 21. Ruota Cromatica */}
         <section id="ruota-cromatica" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={20} icon={Palette} label="Ruota Cromatica" />
+          <SectionHeader n={21} icon={Palette} label="Ruota Cromatica" />
           <p className="text-sm text-gray-600 mb-3">
             La <strong>Ruota Cromatica</strong> è uno strumento di visual merchandising per i prodotti Moda PE27.
             Visualizza la ruota cromatica e trova abbinamenti ottimali per tavoli, pareti e vetrine.
@@ -407,9 +424,9 @@ export default function AssistenzaPage() {
           </ul>
         </section>
 
-        {/* 21. Questionario */}
+        {/* 22. Questionario */}
         <section id="survey" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={21} icon={MessageSquare} label="Questionario" />
+          <SectionHeader n={22} icon={MessageSquare} label="Questionario" />
           <p className="text-sm text-gray-600 mb-2">
             Abbiamo inviato un breve questionario (2 minuti) per raccogliere il tuo feedback sull'app.
             Puoi rispondere cliccando il link nell'email che hai ricevuto oppure direttamente dal link nella notifica push.
@@ -417,9 +434,9 @@ export default function AssistenzaPage() {
           <p className="text-xs text-gray-400">Il questionario è disponibile fino a domenica 21 giugno 2026.</p>
         </section>
 
-        {/* 22. Assistenza tecnica */}
+        {/* 23. Assistenza tecnica */}
         <section id="assistenza-tecnica" className="bg-white border border-border rounded-lg p-5 sm:p-6 scroll-mt-6">
-          <SectionHeader n={22} icon={HelpCircle} label="Assistenza tecnica" />
+          <SectionHeader n={23} icon={HelpCircle} label="Assistenza tecnica" />
           <p className="text-sm text-gray-600">
             Per problemi tecnici{' '}
             <a

@@ -8,8 +8,10 @@ export function useFeatureFlags() {
   const role = session?.user?.role;
   // Admins always have access; operators get it from the JWT-stored org check
   const canVisual = isAdminRole(role) || (session?.user?.canAccessVisual ?? false);
+  const isMeridiano361 = isAdminRole(role) || (session?.user?.isMeridiano361 ?? false);
   return {
     mondiEspositivi: canVisual,
     canAccessFullModa: canVisual,
+    isMeridiano361,
   };
 }

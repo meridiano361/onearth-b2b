@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Heart, ShoppingCart, Package2, FileText, ImageIcon, Film, Clock, Lock, Palette, Layout } from 'lucide-react';
+import { LayoutGrid, Heart, ShoppingCart, Package2, FileText, ImageIcon, Film, Clock, Lock, Palette, Layout, BarChart2 } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useSession } from 'next-auth/react';
 import { isAdminRole } from '@/lib/roles';
@@ -51,8 +51,9 @@ export default function ModaHome() {
   const { collections } = useSettings();
   const { data: session } = useSession();
   const isAdmin = isAdminRole(session?.user?.role);
-  const { mondiEspositivi } = useFeatureFlags();
+  const { mondiEspositivi, isMeridiano361 } = useFeatureFlags();
   const showVisual = isAdmin || mondiEspositivi;
+  const showBudget = isMeridiano361;
   const deadline = collections.moda.bookingDeadline;
   const isExpired = deadline ? new Date(deadline) < new Date() : false;
 
@@ -96,6 +97,13 @@ export default function ModaHome() {
         <NavCard href="/moda/ruota-cromatica" icon={Palette} label="Ruota Cromatica" />
         {showVisual && <NavCard href="/moda/pareti" icon={Layout} label="Esposizione" />}
       </div>
+
+      {/* Budget solo per Meridiano361 */}
+      {showBudget && (
+        <div className="mt-3">
+          <NavCard href="/budget" icon={BarChart2} label="Budget PE27" />
+        </div>
+      )}
     </div>
   );
 }

@@ -19,9 +19,15 @@ async function repairOperatorOrg(token: any) {
   if (op?.organizationId) token.organizationId = op.organizationId;
 }
 
+function orgNormalize(orgNome: string): string {
+  return orgNome.toLowerCase().replace(/[\s_-]/g, '');
+}
 function orgCanAccessVisual(orgNome: string): boolean {
-  const n = orgNome.toLowerCase().replace(/[\s_-]/g, '');
+  const n = orgNormalize(orgNome);
   return n.includes('meridiano361') || n.includes('bottegasolidale');
+}
+function orgIsMeridiano361(orgNome: string): boolean {
+  return orgNormalize(orgNome).includes('meridiano361');
 }
 
 const FULL_MODA_EMAILS = new Set([
@@ -40,7 +46,10 @@ async function computeCanAccessVisual(token: any) {
     where: { id: token.organizationId as string },
     select: { nome: true },
   });
-  if (org?.nome) token.canAccessVisual = orgCanAccessVisual(org.nome);
+  if (org?.nome) {
+    token.canAccessVisual = orgCanAccessVisual(org.nome);
+    token.isMeridiano361 = orgIsMeridiano361(org.nome);
+  }
 }
 
 export const authOptions: NextAuthOptions = {
@@ -141,7 +150,10 @@ export const authOptions: NextAuthOptions = {
         if (user.organizationId) token.organizationId = user.organizationId;
         if (user.featureMondiEspositivi !== undefined) token.featureMondiEspositivi = user.featureMondiEspositivi;
         // canAccessVisual: meridiano361/bottega solidale orgs + 3 specific operators
-        if ((user as any).orgNome) token.canAccessVisual = orgCanAccessVisual((user as any).orgNome);
+        if ((user as any).orgNome) {
+          token.canAccessVisual = orgCanAccessVisual((user as any).orgNome);
+          token.isMeridiano361 = orgIsMeridiano361((user as any).orgNome);
+        }
         if (user.email && FULL_MODA_EMAILS.has(user.email)) token.canAccessVisual = true;
       }
       // Repair old OPERATOR sessions missing organizationId
@@ -173,6 +185,7 @@ export const authOptions: NextAuthOptions = {
         if (token.canaleName && !token.destinazioneName) session.user.destinazioneName = token.canaleName as string;
         if (token.featureMondiEspositivi !== undefined) session.user.featureMondiEspositivi = token.featureMondiEspositivi as boolean;
         if (token.canAccessVisual !== undefined) (session.user as any).canAccessVisual = token.canAccessVisual as boolean;
+        if (token.isMeridiano361 !== undefined) session.user.isMeridiano361 = token.isMeridiano361 as boolean;
       }
       return session;
     },

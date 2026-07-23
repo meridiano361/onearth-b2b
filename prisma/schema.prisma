@@ -339,11 +339,14 @@ model Organization {
   nome      String   @unique
   createdAt DateTime @default(now())
 
-  operatori      Operator[]
-  canali         Canale[]
-  ordini         Order[]
-  pareti         PareteAttrezzata[]
-  continuativi   ProdottoContinuativo[]
+  operatori          Operator[]
+  canali             Canale[]
+  ordini             Order[]
+  pareti             PareteAttrezzata[]
+  continuativi       ProdottoContinuativo[]
+  budgetMeta         BudgetScenarioMeta[]     @relation("OrgBudgetMeta")
+  budgetFamilyInputs BudgetFamilyInput[]      @relation("OrgBudgetFamily")
+  budgetSubclasses   BudgetSubclassData[]     @relation("OrgBudgetSubclass")
 
   @@map("organizations")
 }
@@ -1078,4 +1081,59 @@ model CondizioniCommerciali {
 
   @@unique([conferente, collezione])
   @@map("condizioni_commerciali")
+}
+
+// ─── Budget Planning ──────────────────────────────────────────────────────────
+
+model BudgetScenarioMeta {
+  id             String   @id @default(cuid())
+  organizationId String
+  seasonCode     String   @default("PE27")
+  nome           String   @default("Budget principale")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation("OrgBudgetMeta", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, seasonCode])
+  @@map("budget_scenario_meta")
+}
+
+model BudgetFamilyInput {
+  id                String   @id @default(cuid())
+  organizationId    String
+  seasonCode        String   @default("PE27")
+  famiglia          String
+  vendutoPrevValore Decimal? @db.Decimal(12, 2)
+  vendutoPrevPezzi  Int?
+  mesiConsuntivi    Int      @default(4)
+  obiettivo         Decimal? @db.Decimal(12, 2)
+  marginePieno      Decimal? @db.Decimal(5, 2)
+  scontoMese5       Decimal? @db.Decimal(5, 2)
+  scontoMese6       Decimal? @db.Decimal(5, 2)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization Organization @relation("OrgBudgetFamily", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, seasonCode, famiglia])
+  @@map("budget_family_inputs")
+}
+
+model BudgetSubclassData {
+  id             String   @id @default(cuid())
+  organizationId String
+  seasonCode     String   @default("PE27")
+  famiglia       String
+  sottoclasse    String
+  pezziPE25      Int?
+  pezziPE26      Int?
+  continuativi   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation("OrgBudgetSubclass", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, seasonCode, famiglia, sottoclasse])
+  @@map("budget_subclass_data")
 }

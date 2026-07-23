@@ -429,6 +429,7 @@ declare module 'next-auth' {
       destinazioneName?: string;
       featureMondiEspositivi?: boolean;
       canAccessVisual?: boolean;
+      isMeridiano361?: boolean;
     };
   }
 
@@ -457,5 +458,6 @@ declare module 'next-auth/jwt' {
     destinazioneName?: string;
     featureMondiEspositivi?: boolean;
     canAccessVisual?: boolean;
+    isMeridiano361?: boolean;
   }
 }
