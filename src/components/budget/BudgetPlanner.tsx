@@ -14,7 +14,7 @@ import {
 // ─── Types for API response ────────────────────────────────────────────────────
 
 interface ScenarioData {
-  meta: { id: string; nome: string; seasonCode: string };
+  meta: { id: string; nome: string; seasonCode: string; obiettivoTotale: number | null };
   famiglie: string[];
   subclassesByFamiglia: Record<string, string[]>;
   familyInputs: FamilyInput[];
@@ -144,6 +144,29 @@ export default function BudgetPlanner() {
   // ── Local editable state (starts from server data) ─────────────────────────
   const [localFamily, setLocalFamily] = useState<Record<string, Partial<FamilyInput>>>({});
   const [localSubclass, setLocalSubclass] = useState<Record<string, Partial<SubclassRow>>>({});
+  const [localObiettivoTotale, setLocalObiettivoTotale] = useState<number | null | undefined>(undefined);
+
+  // Obiettivo totale: local override > DB value
+  const obiettivoTotale: number | null =
+    localObiettivoTotale !== undefined
+      ? localObiettivoTotale
+      : (scenario?.meta.obiettivoTotale ?? null);
+
+  // PE26 venduto per famiglia (from subclass data sums) — used as weight for distributing total obiettivo
+  const pe26VendutoPerFamiglia = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const f of MODA_FAMIGLIE) {
+      out[f] = (scenario?.subclassData ?? [])
+        .filter((sd) => sd.famiglia === f)
+        .reduce((s, sd) => s + (sd.valorePE26 ?? 0), 0);
+    }
+    return out;
+  }, [scenario?.subclassData]);
+
+  const pe26VendutoTotale = useMemo(
+    () => Object.values(pe26VendutoPerFamiglia).reduce((s, v) => s + v, 0),
+    [pe26VendutoPerFamiglia],
+  );
 
   function getFamilyInput(famiglia: string): FamilyInput {
     const db = scenario?.familyInputs.find((fi) => fi.famiglia === famiglia);
@@ -159,12 +182,23 @@ export default function BudgetPlanner() {
     const autoValore = subclassSums && subclassSums.valore > 0 ? subclassSums.valore : null;
     const autoPezzi  = subclassSums && subclassSums.pezzi  > 0 ? subclassSums.pezzi  : null;
 
+    // Distribute total obiettivo by PE26 weight (equal split if no PE26 data)
+    let obiettivoFamiglia: number | null = null;
+    if (obiettivoTotale != null) {
+      const famValore = pe26VendutoPerFamiglia[famiglia] ?? 0;
+      const weight =
+        pe26VendutoTotale > 0
+          ? famValore / pe26VendutoTotale
+          : 1 / MODA_FAMIGLIE.length;
+      obiettivoFamiglia = obiettivoTotale * weight;
+    }
+
     return {
       famiglia,
       vendutoPrevValore: local.vendutoPrevValore !== undefined ? local.vendutoPrevValore : (db?.vendutoPrevValore ?? autoValore),
       vendutoPrevPezzi:  local.vendutoPrevPezzi  !== undefined ? local.vendutoPrevPezzi  : (db?.vendutoPrevPezzi  ?? autoPezzi),
       mesiConsuntivi:    local.mesiConsuntivi     !== undefined ? local.mesiConsuntivi    : (db?.mesiConsuntivi    ?? 4),
-      obiettivo:         local.obiettivo          !== undefined ? local.obiettivo         : (db?.obiettivo         ?? null),
+      obiettivo:         obiettivoFamiglia,
       marginePieno:      local.marginePieno       !== undefined ? local.marginePieno      : (db?.marginePieno      ?? null),
       scontoMese5:       local.scontoMese5        !== undefined ? local.scontoMese5       : (db?.scontoMese5       ?? null),
       scontoMese6:       local.scontoMese6        !== undefined ? local.scontoMese6       : (db?.scontoMese6       ?? null),
@@ -186,6 +220,27 @@ export default function BudgetPlanner() {
 
   // ── Mutations (debounced per field) ────────────────────────────────────────
   const saveTimer = useRef<Record<string, NodeJS.Timeout>>({});
+
+  function saveObiettivoTotale(value: number | null) {
+    clearTimeout(saveTimer.current['obiettivo-totale']);
+    saveTimer.current['obiettivo-totale'] = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/budget', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ obiettivoTotale: value }),
+        });
+        if (!res.ok) throw new Error();
+        qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
+          old ? { ...old, meta: { ...old.meta, obiettivoTotale: value } } : old
+        );
+        setLocalObiettivoTotale(undefined);
+      } catch {
+        toast.error('Errore nel salvataggio obiettivo');
+        setLocalObiettivoTotale(undefined);
+      }
+    }, 800);
+  }
 
   function saveFamilyField(famiglia: string, field: string, value: unknown) {
     const key = `fam-${famiglia}-${field}`;
@@ -432,6 +487,49 @@ export default function BudgetPlanner() {
         {/* ── FAMIGLIE view ────────────────────────────────────────────────── */}
         {view === 'obiettivi' && (
           <div className="space-y-3">
+
+            {/* ── Obiettivo totale MODA PE27 ── */}
+            <div className="bg-white border border-border rounded-2xl px-4 py-3">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-xs font-semibold text-gray-700">Obiettivo vendite MODA — PE27</p>
+                  <p className="text-2xs text-gray-400 mt-0.5">Marzo – Agosto 2027 · distribuito per famiglia in base ai pesi PE26</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-40">
+                    <NumInput
+                      value={obiettivoTotale}
+                      decimals={0}
+                      suffix="€"
+                      placeholder="es. 150000"
+                      onChange={(v) => {
+                        setLocalObiettivoTotale(v);
+                        saveObiettivoTotale(v);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              {obiettivoTotale != null && pe26VendutoTotale > 0 && (
+                <div className="mt-2 pt-2 border-t border-border/50 flex flex-wrap gap-4">
+                  {MODA_FAMIGLIE.map((f) => {
+                    const w = (pe26VendutoPerFamiglia[f] ?? 0) / pe26VendutoTotale;
+                    return (
+                      <span key={f} className="text-2xs text-gray-400">
+                        {f}: <span className="text-gray-700 font-medium">{fmt(obiettivoTotale * w, 0)} €</span>
+                        <span className="ml-1 text-gray-300">({(w * 100).toFixed(0)}%)</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              {obiettivoTotale != null && pe26VendutoTotale === 0 && (
+                <p className="mt-2 text-2xs text-amber-600 flex items-center gap-1">
+                  <AlertTriangle size={10} /> Inserisci i dati PE26 per sottoclasse nel Fabbisogno per distribuire l&apos;obiettivo per famiglia
+                </p>
+              )}
+            </div>
+
             {MODA_FAMIGLIE.map((famiglia) => {
               const input = getFamilyInput(famiglia);
               const comp  = familyComputed[famiglia];
@@ -481,10 +579,10 @@ export default function BudgetPlanner() {
                         {/* Column 2: obiettivo + margini */}
                         <div className="space-y-2">
                           <p className="text-2xs text-gray-400 uppercase tracking-wide font-medium pt-1">Obiettivo PE27</p>
-                          <Row label="Obiettivo vendite (€)">
-                            <NumInput value={input.obiettivo} decimals={0}
-                              onChange={(v) => updateFamily(famiglia, 'obiettivo', v)} />
-                          </Row>
+                          <RowComputed
+                            label="Obiettivo vendite (€)"
+                            value={input.obiettivo != null ? fmt(input.obiettivo, 0) + ' €' : obiettivoTotale == null ? 'imposta obiettivo ↑' : '—'}
+                          />
                           {input.obiettivo != null && comp.valoreMedioPezzo == null && (
                             <p className="text-2xs text-amber-600 flex items-center gap-1">
                               <AlertTriangle size={10} /> Inserisci storico per calcolare i pezzi obiettivo

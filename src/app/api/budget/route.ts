@@ -1,6 +1,6 @@
 /**
  * GET  /api/budget  — returns (or creates) the budget scenario for the org + season.
- * PATCH /api/budget — updates the scenario name.
+ * PATCH /api/budget — updates meta fields (nome, obiettivoTotale).
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
@@ -47,7 +47,12 @@ export async function GET(_req: NextRequest) {
   });
 
   return NextResponse.json({
-    meta: { id: meta.id, nome: meta.nome, seasonCode: meta.seasonCode },
+    meta: {
+      id: meta.id,
+      nome: meta.nome,
+      seasonCode: meta.seasonCode,
+      obiettivoTotale: (meta as any).obiettivoTotale != null ? Number((meta as any).obiettivoTotale) : null,
+    },
     famiglie: MODA_FAMIGLIE,
     subclassesByFamiglia: MODA_SUBCLASSES,
     familyInputs: familyInputs.map((fi) => ({
@@ -76,13 +81,21 @@ export async function PATCH(req: NextRequest) {
 
   const orgId = session.user.organizationId!;
   const body = await req.json();
-  const nome = typeof body.nome === 'string' ? body.nome.trim() : null;
-  if (!nome) return NextResponse.json({ error: 'nome required' }, { status: 400 });
+
+  const update: Record<string, unknown> = {};
+  if (typeof body.nome === 'string' && body.nome.trim()) update.nome = body.nome.trim();
+  if ('obiettivoTotale' in body) {
+    update.obiettivoTotale = body.obiettivoTotale == null ? null : Number(body.obiettivoTotale) || null;
+  }
+
+  if (Object.keys(update).length === 0) {
+    return NextResponse.json({ error: 'nessun campo da aggiornare' }, { status: 400 });
+  }
 
   await prisma.budgetScenarioMeta.upsert({
     where: { organizationId_seasonCode: { organizationId: orgId, seasonCode: BUDGET_SEASON } },
-    create: { id: nanoid(), organizationId: orgId, seasonCode: BUDGET_SEASON, nome },
-    update: { nome },
+    create: { id: nanoid(), organizationId: orgId, seasonCode: BUDGET_SEASON, nome: 'Budget principale', ...update },
+    update,
   });
 
   return NextResponse.json({ ok: true });

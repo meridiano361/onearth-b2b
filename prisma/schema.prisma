@@ -1086,12 +1086,13 @@ model CondizioniCommerciali {
 // ─── Budget Planning ──────────────────────────────────────────────────────────
 
 model BudgetScenarioMeta {
-  id             String   @id @default(cuid())
-  organizationId String
-  seasonCode     String   @default("PE27")
-  nome           String   @default("Budget principale")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(cuid())
+  organizationId  String
+  seasonCode      String   @default("PE27")
+  nome            String   @default("Budget principale")
+  obiettivoTotale Decimal? @db.Decimal(12, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   organization Organization @relation("OrgBudgetMeta", fields: [organizationId], references: [id], onDelete: Cascade)
 
