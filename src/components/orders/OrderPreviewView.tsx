@@ -1027,7 +1027,13 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
           if (!it.product) return false;
           const sv = (it.product as any).sizeVariants;
           const productTaglia = (it.product as any).taglia;
-          if (Array.isArray(sv) && sv.length > 0 && !productTaglia && !it.taglia) return false;
+          if (Array.isArray(sv) && sv.length > 0 && !productTaglia && !it.taglia) {
+            // Only suppress if a sibling with a real taglia exists (phantom duplicate).
+            // If ALL items for this product have no taglia (pre-fix conversion), keep them.
+            const allItems = order?.items ?? [];
+            const hasRealSibling = allItems.some((other) => other.productId === it.productId && !!other.taglia);
+            if (hasRealSibling) return false;
+          }
           return true;
         })
         .map((it) => {

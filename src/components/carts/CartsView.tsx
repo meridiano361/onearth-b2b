@@ -29,7 +29,7 @@ export default function CartsView({ collection }: CartsViewProps) {
   const { data: session } = useSession();
   const preview = usePreview();
   const isOperator = session?.user.role === 'OPERATOR';
-  const { cartId, setCart, clearCart, updateQuantity: storeUpdateQty } = useCartStore();
+  const { cartId, setCart, clearCart, updateQuantity: storeUpdateQty, items: storeItems } = useCartStore();
   const routes = getCollectionRoutes(collection);
 
   const { data: carts = [], isLoading } = useQuery<Cart[]>({
@@ -528,10 +528,12 @@ export default function CartsView({ collection }: CartsViewProps) {
           const isDeleting = deletingId === cart.id;
           const isRenaming = renamingId === cart.id;
           const isExpanded = expandedId === cart.id;
-          const items = cart.items ?? [];
+          // For the active cart, prefer in-memory store items (always current, even
+          // before server-side PATCH calls for newly added size variants complete).
+          const items = (cart.id === cartId && storeItems.length > 0) ? storeItems : (cart.items ?? []);
           const itemCount = items.length;
           const pzCount = items.reduce((s, i) => s + i.quantity, 0);
-          const value = totalValue(cart);
+          const value = items.reduce((s, i) => s + effectivePrice(i.product) * i.quantity, 0);
           const hasLotIssues = items.some((i) => !isValidLotQuantity(i.quantity, i.product.lotSize));
 
           return (
