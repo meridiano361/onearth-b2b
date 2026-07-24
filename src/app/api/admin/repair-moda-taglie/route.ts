@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminRole } from '@/lib/roles';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { MODA_BRANCH_ID } from '@/lib/modaAccess';
 
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
 
   // 1. Find all Arch2 product IDs (have sizeVariants, so taglia lives on CartItem/OrderItem).
   const arch2Products = await prisma.product.findMany({
-    where: { sizeVariants: { not: null }, collezione: 'PE27' },
+    where: { sizeVariants: { not: Prisma.AnyNull }, collezione: 'PE27' },
     select: { id: true, sizeVariants: true },
   });
   const arch2Ids = new Set(arch2Products.map((p) => p.id));

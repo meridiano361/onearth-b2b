@@ -2,7 +2,7 @@
  * One-time repair: fixes MODA OrderItems where taglia='' due to convert/route.ts bug.
  * Run with: npx tsx scripts/repair-moda-taglie.ts [--dry-run]
  */
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const dryRun = process.argv.includes('--dry-run');
@@ -12,7 +12,7 @@ async function main() {
 
   // 1. Arch2 products: have sizeVariants (taglia lives on item, not product).
   const arch2Products = await prisma.product.findMany({
-    where: { sizeVariants: { not: null }, collezione: 'PE27' },
+    where: { sizeVariants: { not: Prisma.AnyNull }, collezione: 'PE27' },
     select: { id: true },
   });
   const arch2Ids = new Set(arch2Products.map((p) => p.id));
