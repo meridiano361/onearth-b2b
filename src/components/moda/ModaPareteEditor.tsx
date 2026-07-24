@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { compressImageToBase64 } from '@/lib/compressImage';
 import { capitalize } from '@/lib/utils';
+import { inferHueFromColore } from '@/lib/colorHarmony';
 import toast from 'react-hot-toast';
 import type {
   PareteAttrezzata, ElementoParete, ItemParete,
@@ -2158,8 +2159,14 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   const productColorMap = useMemo(
     () => new Map(
       (productsForColors?.data ?? [])
-        .map((p) => [p.id, hexFromProduct(p)] as [string, string])
-        .filter(([, hex]) => !!hex)
+        .map((p): [string, string] | null => {
+          const hex = hexFromProduct(p);
+          if (hex) return [p.id, hex];
+          const inferred = inferHueFromColore((p as any).colore);
+          if (inferred) return [p.id, inferred.hex];
+          return null;
+        })
+        .filter((e): e is [string, string] => e !== null)
     ),
     [productsForColors]
   );
