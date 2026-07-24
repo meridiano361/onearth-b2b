@@ -211,6 +211,9 @@ export default function BudgetPlanner() {
   const [localObiettivoSviluppo, setLocalObiettivoSviluppo] = useState<number | null | undefined>(undefined);
   // settori: driven entirely by local state initialized from server on first load
   const [settoriLocal, setSettoriLocal] = useState<Settore[] | null>(null);
+  // Refs to flush pending settori save on unmount
+  const latestSettoriRef = useRef<Settore[] | null>(null);
+  const hasPendingSettoriSave = useRef(false);
 
   // Initialize settoriLocal from server data the first time scenario loads
   const settori: Settore[] = settoriLocal ?? (scenario?.settori ?? []);
@@ -336,8 +339,10 @@ export default function BudgetPlanner() {
   }
 
   function saveSettori(rows: Settore[]) {
+    latestSettoriRef.current = rows;
+    hasPendingSettoriSave.current = true;
+
     // Optimistic: update the cache immediately so navigating away and back shows the correct data.
-    const snapshot = qc.getQueryData<ScenarioData>(['budget-scenario']);
     qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
       old ? { ...old, settori: rows } : old
     );
@@ -351,12 +356,30 @@ export default function BudgetPlanner() {
           body: JSON.stringify({ rows: rows.map((r, i) => ({ ...r, posizione: i })) }),
         });
         if (!res.ok) throw new Error();
+        hasPendingSettoriSave.current = false;
       } catch {
         toast.error('Errore nel salvataggio settori');
-        if (snapshot) qc.setQueryData(['budget-scenario'], snapshot);
       }
     }, 600);
   }
+
+  // Flush any pending settori save immediately when navigating away
+  useEffect(() => {
+    return () => {
+      if (hasPendingSettoriSave.current && latestSettoriRef.current) {
+        clearTimeout(saveTimer.current['settori']);
+        fetch('/api/budget/settori', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rows: latestSettoriRef.current.map((r, i) => ({ ...r, posizione: i })),
+          }),
+          keepalive: true,
+        }).catch(() => {});
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function saveFamilyField(famiglia: string, field: string, value: unknown) {
     const key = `fam-${famiglia}-${field}`;
@@ -511,7 +534,10 @@ export default function BudgetPlanner() {
     });
     if (res.ok) {
       toast.success('Scenario aggiornato');
-      qc.invalidateQueries({ queryKey: ['budget-scenario'] });
+      // Update cache directly to avoid overwriting pending settori edits
+      qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
+        old ? { ...old, meta: { ...old.meta, nome: nomeInput } } : old
+      );
     } else {
       toast.error('Errore salvataggio');
     }
@@ -640,7 +666,13 @@ export default function BudgetPlanner() {
                 </div>
                 <button
                   onClick={() => {
-                    const updated = [...settori, { nome: '', incidenza: 0, margine: 0, posizione: settori.length }];
+                    const nomiEsistenti = settori.map(s => s.nome.toLowerCase());
+                    let placeholder = 'Nuovo settore';
+                    let n = 2;
+                    while (nomiEsistenti.includes(placeholder.toLowerCase())) {
+                      placeholder = `Nuovo settore ${n++}`;
+                    }
+                    const updated = [...settori, { nome: placeholder, incidenza: 0, margine: 0, posizione: settori.length }];
                     setSettoriLocal(updated);
                     saveSettori(updated);
                   }}
