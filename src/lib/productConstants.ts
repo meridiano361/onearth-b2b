@@ -124,6 +124,7 @@ export const MATERIALE_OPTIONS = [
   'Ferro',
   'Fibra bambù',
   'Fibra latte',
+  'Fibra rosa',
   'Jeans',
   'Juta',
   'Lana',
