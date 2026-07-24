@@ -1861,7 +1861,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
                 <label className={bulkLabelClass}>Colore {i + 1}</label>
                 <select value={bulkEditValues[k]} onChange={(e) => setBulk(k, e.target.value)} className={bulkSelectClass}>
                   <option value="">— non modificare —</option>
-                  {COLORE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+                  {[...COLORE_OPTIONS].sort((a, b) => a.localeCompare(b, 'it')).map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>
               </div>
             ))}
