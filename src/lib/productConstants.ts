@@ -122,6 +122,7 @@ export const MATERIALE_OPTIONS = [
   'Elastan',
   'Fibra arancia',
   'Ferro',
+  'Fibra bambù',
   'Fibra latte',
   'Jeans',
   'Juta',

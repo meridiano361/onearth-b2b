@@ -83,7 +83,13 @@ function NumInput({
         type="number"
         value={local}
         placeholder={placeholder}
-        onChange={(e) => setRaw(e.target.value)}
+        onChange={(e) => {
+          setRaw(e.target.value);
+          // Propagate valid intermediate values immediately so setSettoriLocal (and the
+          // debounced save) are always current even if blur never fires (e.g. page navigation).
+          const n = parseFloat(e.target.value);
+          if (!isNaN(n)) onChange(n);
+        }}
         onFocus={() => setRaw(value != null ? value.toFixed(decimals) : '')}
         onBlur={() => {
           const parsed = raw === '' || raw === null ? null : parseFloat(raw);
@@ -290,6 +296,9 @@ export default function BudgetPlanner() {
   const saveTimer = useRef<Record<string, NodeJS.Timeout>>({});
 
   function saveObiettivoTotale(value: number | null) {
+    qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
+      old ? { ...old, meta: { ...old.meta, obiettivoTotale: value } } : old
+    );
     clearTimeout(saveTimer.current['obiettivo-totale']);
     saveTimer.current['obiettivo-totale'] = setTimeout(async () => {
       try {
@@ -299,9 +308,6 @@ export default function BudgetPlanner() {
           body: JSON.stringify({ obiettivoTotale: value }),
         });
         if (!res.ok) throw new Error();
-        qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
-          old ? { ...old, meta: { ...old.meta, obiettivoTotale: value } } : old
-        );
         setLocalObiettivoTotale(undefined);
       } catch {
         toast.error('Errore nel salvataggio obiettivo');
@@ -311,17 +317,18 @@ export default function BudgetPlanner() {
   }
 
   function saveMetaField(field: string, value: number | null) {
+    qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
+      old ? { ...old, meta: { ...old.meta, [field]: value } } : old
+    );
     clearTimeout(saveTimer.current[`meta-${field}`]);
     saveTimer.current[`meta-${field}`] = setTimeout(async () => {
       try {
-        await fetch('/api/budget', {
+        const res = await fetch('/api/budget', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ [field]: value }),
         });
-        qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
-          old ? { ...old, meta: { ...old.meta, [field]: value } } : old
-        );
+        if (!res.ok) throw new Error();
         if (field === 'costiNegozio') setLocalCostiNegozio(undefined);
         if (field === 'obiettivoRicavoSviluppo') setLocalObiettivoSviluppo(undefined);
       } catch { toast.error('Errore nel salvataggio'); }
@@ -329,18 +336,25 @@ export default function BudgetPlanner() {
   }
 
   function saveSettori(rows: Settore[]) {
+    // Optimistic: update the cache immediately so navigating away and back shows the correct data.
+    const snapshot = qc.getQueryData<ScenarioData>(['budget-scenario']);
+    qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
+      old ? { ...old, settori: rows } : old
+    );
+
     clearTimeout(saveTimer.current['settori']);
     saveTimer.current['settori'] = setTimeout(async () => {
       try {
-        await fetch('/api/budget/settori', {
+        const res = await fetch('/api/budget/settori', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rows: rows.map((r, i) => ({ ...r, posizione: i })) }),
         });
-        qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
-          old ? { ...old, settori: rows } : old
-        );
-      } catch { toast.error('Errore nel salvataggio settori'); }
+        if (!res.ok) throw new Error();
+      } catch {
+        toast.error('Errore nel salvataggio settori');
+        if (snapshot) qc.setQueryData(['budget-scenario'], snapshot);
+      }
     }, 600);
   }
 
