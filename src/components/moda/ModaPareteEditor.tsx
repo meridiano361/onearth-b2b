@@ -1555,12 +1555,13 @@ function PhotoStrip({ photos, align }: { photos: PhotoEntry[]; align: 'top' | 'b
 // ─── Wall renderer ────────────────────────────────────────────────────────────
 
 function WallRenderer({
-  config, onSelect, onUpdate, zoom,
+  config, onSelect, onUpdate, zoom, productColorMap,
 }: {
   config: ElementoParete[];
   onSelect?: (id: string) => void;
   onUpdate?: (id: string, patch: Partial<ElementoParete>) => void;
   zoom?: number;
+  productColorMap?: Map<string, string>;
 }) {
   const outerWallRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(WALL_SQUARES * GRID_SQ);
@@ -1616,7 +1617,8 @@ function WallRenderer({
     const out: PhotoEntry[] = [];
     function pushMensolaItem(it: ItemParete) {
       if (it.tipo === 'borsa' || it.tipo === 'accessorio') return;
-      out.push({ src: it.imageUrl || null, color: it.coloreHex || colorForTipo(it.tipo), label: it.productName ?? undefined });
+      const color = (it.productId && productColorMap?.get(it.productId)) || it.coloreHex || colorForTipo(it.tipo);
+      out.push({ src: it.imageUrl || null, color, label: it.productName ?? undefined });
     }
     for (const el of configSortedByVisualX) {
       if (el.tipo === 'mensola') {
@@ -1627,13 +1629,14 @@ function WallRenderer({
       }
     }
     return out;
-  }, [configSortedByVisualX]);
+  }, [configSortedByVisualX, productColorMap]);
 
   // Bottom strip: products from barra elements — hanging items (el.items) + mensola-on-barra items
   const bottomPhotos = useMemo(() => {
     const out: PhotoEntry[] = [];
     function pushItem(it: ItemParete) {
-      out.push({ src: it.imageUrl || null, color: it.coloreHex || colorForTipo(it.tipo), label: it.productName ?? undefined });
+      const color = (it.productId && productColorMap?.get(it.productId)) || it.coloreHex || colorForTipo(it.tipo);
+      out.push({ src: it.imageUrl || null, color, label: it.productName ?? undefined });
     }
     for (const el of configSortedByVisualX) {
       if (el.tipo !== 'barra') continue;
@@ -1641,7 +1644,7 @@ function WallRenderer({
       for (const m of getMensole(el)) for (const it of m.items) pushItem(it);
     }
     return out;
-  }, [configSortedByVisualX]);
+  }, [configSortedByVisualX, productColorMap]);
 
   function startDrag(e: React.PointerEvent, el: ElementoParete) {
     if (e.button !== 0) return;
@@ -1785,6 +1788,7 @@ function WallRenderer({
                   el={el}
                   zoom={effectiveZoom}
                   onUpdate={(patch) => onUpdate?.(el.id, patch)}
+                  productColorMap={productColorMap}
                 />
               </div>
             </div>
@@ -1798,8 +1802,8 @@ function WallRenderer({
   );
 }
 
-function MensolaBlock({ config }: { config: MensolaInlineConfig }) {
-  return <div style={{ marginLeft: config.offsetX ?? 0 }}><MensolaRenderer config={config} /></div>;
+function MensolaBlock({ config, productColorMap }: { config: MensolaInlineConfig; productColorMap?: Map<string, string> }) {
+  return <div style={{ marginLeft: config.offsetX ?? 0 }}><MensolaRenderer config={config} productColorMap={productColorMap} /></div>;
 }
 
 // Resolve mensole array from element (supports both old mensolaTop and new mensole fields)
@@ -1809,10 +1813,11 @@ function getMensole(el: ElementoParete): MensolaInlineConfig[] {
   return [];
 }
 
-function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
+function WallElementRenderer({ el, onUpdate, zoom = 1, productColorMap }: {
   el: ElementoParete;
   onUpdate?: (patch: Partial<ElementoParete>) => void;
   zoom?: number;
+  productColorMap?: Map<string, string>;
 }) {
   if (el.tipo === 'barra') {
     const dim = (el.dimensione ?? 'media') as DimensioneBarra;
@@ -1828,7 +1833,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
             ? <div style={{ width: BARRA_W[dim] }} />
             : el.items.map((it, i) => (
               <div key={it.id ?? i} className="relative group/bitem">
-                <CapoOnBarra item={it} />
+                <CapoOnBarra item={it} productColorMap={productColorMap} />
                 {onUpdate && (
                   <button
                     type="button"
@@ -1850,16 +1855,16 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
       return (
         <div className="flex items-start gap-2 flex-shrink-0">
           <div className="flex flex-col items-start">
-            {mensoleTop.map((m, i) => <MensolaBlock key={i} config={m} />)}
+            {mensoleTop.map((m, i) => <MensolaBlock key={i} config={m} productColorMap={productColorMap} />)}
             <div style={{ marginTop: mensoleTop.length ? 12 : 0 }}>{barraCore}</div>
           </div>
-          {mensoleSide.map((m, i) => <MensolaBlock key={`s${i}`} config={m} />)}
+          {mensoleSide.map((m, i) => <MensolaBlock key={`s${i}`} config={m} productColorMap={productColorMap} />)}
         </div>
       );
     }
     return (
       <div className="flex flex-col items-start flex-shrink-0">
-        {mensoleTop.map((m, i) => <MensolaBlock key={i} config={m} />)}
+        {mensoleTop.map((m, i) => <MensolaBlock key={i} config={m} productColorMap={productColorMap} />)}
         <div style={{ marginTop: 12 }}>{barraCore}</div>
       </div>
     );
@@ -1878,6 +1883,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
             key={i}
             config={m}
             zoom={zoom}
+            productColorMap={productColorMap}
             onUpdate={onUpdate ? (updated) => {
               const newMensole = mensole.map((ms, mi) => mi === i ? updated : ms);
               onUpdate({ mensole: newMensole });
@@ -1956,7 +1962,7 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
     if (mensole.length === 0) return wrapper(frontaleCore);
     return wrapper(
       <div className="flex flex-col items-start">
-        {mensole.map((m, i) => <MensolaBlock key={i} config={m} />)}
+        {mensole.map((m, i) => <MensolaBlock key={i} config={m} productColorMap={productColorMap} />)}
         <div style={{ marginTop: 12 }}>{frontaleCore}</div>
       </div>
     );
@@ -1965,10 +1971,11 @@ function WallElementRenderer({ el, onUpdate, zoom = 1 }: {
   return null;
 }
 
-function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
+function MensolaRenderer({ config, onUpdate, zoom = 1, productColorMap }: {
   config: MensolaInlineConfig;
   onUpdate?: (c: MensolaInlineConfig) => void;
   zoom?: number;
+  productColorMap?: Map<string, string>;
 }) {
   const w = MENSOLA_W[config.dimensione];
   const over = mensola_totalItemsW(config.items) > w;
@@ -2055,7 +2062,7 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
         {config.items.length === 0
           ? <div style={{ width: w, height: STRATO_H }} />
           : config.items.map((it, i) => {
-              const color = it.coloreHex || colorForTipo(it.tipo);
+              const color = (it.productId && productColorMap?.get(it.productId)) || it.coloreHex || colorForTipo(it.tipo);
 
               let inner: React.ReactNode;
               if (it.tipo === 'borsa') {
@@ -2112,8 +2119,8 @@ function MensolaRenderer({ config, onUpdate, zoom = 1 }: {
   );
 }
 
-function CapoOnBarra({ item }: { item: ItemParete }) {
-  const color = item.coloreHex || colorForTipo(item.tipo);
+function CapoOnBarra({ item, productColorMap }: { item: ItemParete; productColorMap?: Map<string, string> }) {
+  const color = (item.productId && productColorMap?.get(item.productId)) || item.coloreHex || colorForTipo(item.tipo);
   const h = item.tipo === 'abito' ? 96 : item.tipo === 'capospalla' ? 80 : 64;
   const count = Math.max(1, item.pezzi.length);
   return (
@@ -2142,6 +2149,21 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
   });
 
   const parete = data?.data;
+
+  const { data: productsForColors } = useQuery<{ data: Product[] }>({
+    queryKey: ['moda-products-visual'],
+    queryFn: () => fetch(`/api/products?active=true&gruppoMerceologico=Moda&limit=500`).then((r) => r.json()),
+    staleTime: 60_000,
+  });
+  const productColorMap = useMemo(
+    () => new Map(
+      (productsForColors?.data ?? [])
+        .map((p) => [p.id, hexFromProduct(p)] as [string, string])
+        .filter(([, hex]) => !!hex)
+    ),
+    [productsForColors]
+  );
+
   const [nome, setNome] = useState('');
   const [editingNome, setEditingNome] = useState(false);
   const [config, setConfig] = useState<ElementoParete[]>([]);
@@ -2456,6 +2478,7 @@ export default function ModaPareteEditor({ pareteId }: { pareteId: string }) {
                 handleConfigChange(next);
               }}
               zoom={previewZoom}
+              productColorMap={productColorMap}
             />
           </div>
         </div>
