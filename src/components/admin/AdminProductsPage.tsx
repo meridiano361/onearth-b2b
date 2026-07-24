@@ -437,7 +437,7 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
   const classeOptions = useMemo(() => uniqueSorted(allProducts, 'classe'), [allProducts]);
   const sottoclasseOptions = useMemo(() => uniqueSorted(allProducts, 'sottoclasse'), [allProducts]);
   const gruppoOmogeneoOptions = useMemo(() => uniqueSorted(allProducts, 'gruppoOmogeneo'), [allProducts]);
-  const coloreOptions = useMemo(() => uniqueSorted(allProducts, 'colore'), [allProducts]);
+  const coloreOptions = useMemo(() => uniqueSorted(allProducts, 'colore').filter(v => !v.includes('/')), [allProducts]);
   const temaColoreOptions = useMemo(() => {
     const set = new Set<string>();
     for (const p of allProducts) {
@@ -457,11 +457,11 @@ export default function AdminProductsPage({ lockedSection }: { lockedSection?: '
   const formaOptions = useMemo(() => uniqueSorted(allProducts, 'forma' as any), [allProducts]);
   const tagliaOptions = useMemo(() => uniqueSorted(allProducts, 'taglia' as any), [allProducts]);
   const misuraOptions = useMemo(() => uniqueSorted(allProducts, 'misura' as any), [allProducts]);
-  const colore2Options = useMemo(() => uniqueSorted(allProducts, 'colore2' as any), [allProducts]);
-  const colore3Options = useMemo(() => uniqueSorted(allProducts, 'colore3' as any), [allProducts]);
-  const materiale1Options = useMemo(() => uniqueSorted(allProducts, 'materiale1' as any), [allProducts]);
-  const materiale2Options = useMemo(() => uniqueSorted(allProducts, 'materiale2' as any), [allProducts]);
-  const materiale3Options = useMemo(() => uniqueSorted(allProducts, 'materiale3' as any), [allProducts]);
+  const colore2Options = useMemo(() => uniqueSorted(allProducts, 'colore2' as any).filter((v: string) => !v.includes('/')), [allProducts]);
+  const colore3Options = useMemo(() => uniqueSorted(allProducts, 'colore3' as any).filter((v: string) => !v.includes('/')), [allProducts]);
+  const materiale1Options = useMemo(() => uniqueSorted(allProducts, 'materiale1' as any).filter((v: string) => !v.includes('/')), [allProducts]);
+  const materiale2Options = useMemo(() => uniqueSorted(allProducts, 'materiale2' as any).filter((v: string) => !v.includes('/')), [allProducts]);
+  const materiale3Options = useMemo(() => uniqueSorted(allProducts, 'materiale3' as any).filter((v: string) => !v.includes('/')), [allProducts]);
   const composizioneOptions = useMemo(() => uniqueSorted(allProducts, 'composizione' as any), [allProducts]);
   const fantasiaOptions = useMemo(() => uniqueSorted(allProducts, 'fantasia' as any), [allProducts]);
   const lavorazioneOptions = useMemo(() => uniqueSorted(allProducts, 'lavorazione' as any), [allProducts]);
