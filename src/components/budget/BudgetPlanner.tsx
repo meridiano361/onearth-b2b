@@ -686,13 +686,7 @@ export default function BudgetPlanner() {
                 </div>
                 <button
                   onClick={() => {
-                    const nomiEsistenti = settori.map(s => s.nome.toLowerCase());
-                    let placeholder = 'Nuovo settore';
-                    let n = 2;
-                    while (nomiEsistenti.includes(placeholder.toLowerCase())) {
-                      placeholder = `Nuovo settore ${n++}`;
-                    }
-                    const updated = [...settori, { nome: placeholder, incidenza: 0, margine: 0, posizione: settori.length }];
+                    const updated = [...settori, { nome: '', incidenza: 0, margine: 0, posizione: settori.length }];
                     setSettoriLocal(updated);
                     saveSettori(updated);
                   }}
