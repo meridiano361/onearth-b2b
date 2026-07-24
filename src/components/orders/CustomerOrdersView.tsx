@@ -45,6 +45,7 @@ import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { getCollectionRoutes } from '@/lib/collectionRoutes';
 
 const PREVIEW_SORT_KEY = 'preview-sort';
+const RESO_CHOICES_KEY = 'reso-choices';
 const SORT_OPTIONS = [
   { value: 'name-asc',     label: 'Nome A→Z' },
   { value: 'name-desc',    label: 'Nome Z→A' },
@@ -77,7 +78,13 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
   const [budgetFamInputs, setBudgetFamInputs] = useState<Record<string, string>>({});
   const [savingBreakdown, setSavingBreakdown] = useState(false);
   // Per-order, per-conferente reso choice: orderId → conferente → 'con' | 'senza'
-  const [resoChoices, setResoChoices] = useState<Record<string, Record<string, 'con' | 'senza'>>>({});
+  const [resoChoices, setResoChoices] = useState<Record<string, Record<string, 'con' | 'senza'>>>(() => {
+    if (typeof window === 'undefined') return {};
+    try { return JSON.parse(localStorage.getItem(RESO_CHOICES_KEY) ?? '{}'); } catch { return {}; }
+  });
+  useEffect(() => {
+    localStorage.setItem(RESO_CHOICES_KEY, JSON.stringify(resoChoices));
+  }, [resoChoices]);
 
   async function handleSaveBudgetConferenti(orderId: string) {
     setSavingBreakdown(true);
