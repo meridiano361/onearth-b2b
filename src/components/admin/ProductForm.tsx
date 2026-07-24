@@ -430,14 +430,14 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
       dettaglio: src.dettaglio || '',
       nomLinea: src.nomLinea || '',
       modello: src.modello || '',
-      // Auto-split combined colors (e.g. "avorio/bianco") if colore2/3 are empty
+      // Auto-split combined colors (e.g. "avorio/giallo/blu"): slash in colore1 is always wrong, always split.
       ...(() => {
         const raw1 = src.colore || '';
         const raw2 = src.colore2 || '';
         const raw3 = src.colore3 || '';
-        if (raw1 && !raw2 && !raw3 && hasColorSeparator(raw1)) {
+        if (raw1 && hasColorSeparator(raw1)) {
           const [c1, c2, c3] = splitColori(raw1);
-          return { colore: c1, colore2: c2, colore3: c3 };
+          return { colore: capitalizeFirst(c1), colore2: capitalizeFirst(c2), colore3: capitalizeFirst(c3) };
         }
         return { colore: raw1, colore2: raw2, colore3: raw3 };
       })(),
@@ -1224,11 +1224,21 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
               <SinglePantoneField label="Pantone 1 *" value={pantoneSlots[0]} onChange={(v) => handleManualPantone(0, v)} isAutoFilled={pantoneAutoFilled[0]} />
             </div>
             <div className="space-y-2">
-              <Combobox label="Colore 2" field="colore" value={watchedColore2 || ''} onChange={(v) => setValue('colore2', v)} placeholder="es. blu" transform={capitalizeFirst} />
+              <Combobox label="Colore 2" field="colore" value={watchedColore2 || ''} placeholder="es. blu" transform={capitalizeFirst}
+                onChange={(v) => {
+                  if (hasColorSeparator(v)) {
+                    const [c2, c3] = splitColori(v);
+                    setValue('colore2', capitalizeFirst(c2)); setValue('colore3', capitalizeFirst(c3));
+                  } else { setValue('colore2', v); }
+                }} />
               <SinglePantoneField label="Pantone 2" value={pantoneSlots[1]} onChange={(v) => handleManualPantone(1, v)} isAutoFilled={pantoneAutoFilled[1]} />
             </div>
             <div className="space-y-2">
-              <Combobox label="Colore 3" field="colore" value={watchedColore3 || ''} onChange={(v) => setValue('colore3', v)} placeholder="es. bianco" transform={capitalizeFirst} />
+              <Combobox label="Colore 3" field="colore" value={watchedColore3 || ''} placeholder="es. bianco" transform={capitalizeFirst}
+                onChange={(v) => {
+                  if (hasColorSeparator(v)) { setValue('colore3', capitalizeFirst(splitColori(v)[0])); }
+                  else { setValue('colore3', v); }
+                }} />
               <SinglePantoneField label="Pantone 3" value={pantoneSlots[2]} onChange={(v) => handleManualPantone(2, v)} isAutoFilled={pantoneAutoFilled[2]} />
             </div>
           </div>
@@ -1282,8 +1292,18 @@ export default function ProductForm({ product, initialValues, duplicateSource, o
                   setValue('colore', capitalizeFirst(c1)); setValue('colore2', capitalizeFirst(c2)); setValue('colore3', capitalizeFirst(c3));
                 } else { setValue('colore', v); }
               }} />
-            <Combobox label="Colore 2" field="colore"  value={watch('colore2') || ''} onChange={(v) => setValue('colore2', v)} placeholder="es. blu" transform={capitalizeFirst} />
-            <Combobox label="Colore 3" field="colore"  value={watch('colore3') || ''} onChange={(v) => setValue('colore3', v)} placeholder="es. bianco" transform={capitalizeFirst} />
+            <Combobox label="Colore 2" field="colore" value={watch('colore2') || ''} placeholder="es. blu" transform={capitalizeFirst}
+              onChange={(v) => {
+                if (hasColorSeparator(v)) {
+                  const [c2, c3] = splitColori(v);
+                  setValue('colore2', capitalizeFirst(c2)); setValue('colore3', capitalizeFirst(c3));
+                } else { setValue('colore2', v); }
+              }} />
+            <Combobox label="Colore 3" field="colore" value={watch('colore3') || ''} placeholder="es. bianco" transform={capitalizeFirst}
+              onChange={(v) => {
+                if (hasColorSeparator(v)) { setValue('colore3', capitalizeFirst(splitColori(v)[0])); }
+                else { setValue('colore3', v); }
+              }} />
           </div>
           <p className="text-2xs text-gray-400 -mt-2">Al maschile: rosso, blu, nero, bianco, beige…</p>
           <Input label="Altri colori" {...register('altriColori')} placeholder="es. oro, argento, avorio chiaro…" />
