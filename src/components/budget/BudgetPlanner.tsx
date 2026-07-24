@@ -211,9 +211,11 @@ export default function BudgetPlanner() {
   const [localObiettivoSviluppo, setLocalObiettivoSviluppo] = useState<number | null | undefined>(undefined);
   // settori: driven entirely by local state initialized from server on first load
   const [settoriLocal, setSettoriLocal] = useState<Settore[] | null>(null);
-  // Refs to flush pending settori save on unmount
+  // Refs to flush pending saves on unmount
   const latestSettoriRef = useRef<Settore[] | null>(null);
   const hasPendingSettoriSave = useRef(false);
+  const pendingMetaRef = useRef<Record<string, number | null>>({});
+  const hasPendingMetaSave = useRef(false);
 
   // Initialize settoriLocal from server data the first time scenario loads
   const settori: Settore[] = settoriLocal ?? (scenario?.settori ?? []);
@@ -320,6 +322,9 @@ export default function BudgetPlanner() {
   }
 
   function saveMetaField(field: string, value: number | null) {
+    pendingMetaRef.current[field] = value;
+    hasPendingMetaSave.current = true;
+
     qc.setQueryData<ScenarioData>(['budget-scenario'], (old) =>
       old ? { ...old, meta: { ...old.meta, [field]: value } } : old
     );
@@ -332,6 +337,8 @@ export default function BudgetPlanner() {
           body: JSON.stringify({ [field]: value }),
         });
         if (!res.ok) throw new Error();
+        delete pendingMetaRef.current[field];
+        if (Object.keys(pendingMetaRef.current).length === 0) hasPendingMetaSave.current = false;
         if (field === 'costiNegozio') setLocalCostiNegozio(undefined);
         if (field === 'obiettivoRicavoSviluppo') setLocalObiettivoSviluppo(undefined);
       } catch { toast.error('Errore nel salvataggio'); }
@@ -363,9 +370,10 @@ export default function BudgetPlanner() {
     }, 600);
   }
 
-  // Flush any pending settori save immediately when navigating away
+  // Flush any pending saves immediately when navigating away
   useEffect(() => {
     return () => {
+      // Flush settori
       if (hasPendingSettoriSave.current && latestSettoriRef.current) {
         clearTimeout(saveTimer.current['settori']);
         fetch('/api/budget/settori', {
@@ -374,6 +382,18 @@ export default function BudgetPlanner() {
           body: JSON.stringify({
             rows: latestSettoriRef.current.map((r, i) => ({ ...r, posizione: i })),
           }),
+          keepalive: true,
+        }).catch(() => {});
+      }
+      // Flush meta fields (costiNegozio, obiettivoRicavoSviluppo)
+      if (hasPendingMetaSave.current && Object.keys(pendingMetaRef.current).length > 0) {
+        for (const field of Object.keys(pendingMetaRef.current)) {
+          clearTimeout(saveTimer.current[`meta-${field}`]);
+        }
+        fetch('/api/budget', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pendingMetaRef.current),
           keepalive: true,
         }).catch(() => {});
       }
