@@ -17,10 +17,11 @@ const FORBIDDEN = NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
 type AggRow = { conferente: string; famiglia: string; sottoclasse: string; pezzi: number; imponibile: number; retailStimato: number };
 
-// Mirror of CustomerOrdersView.effectiveUnitCost: prefers costoIe fields over unitPrice
-function effectiveCost(p: { costoIeConReso: any; costoIeSenzaReso: any }, unitPrice: number): number {
+function effectiveCost(p: { costoIeConReso: any; costoIeSenzaReso: any }, unitPrice: number, choice?: 'con' | 'senza'): number {
   const con = Number(p.costoIeConReso);
   const sen = Number(p.costoIeSenzaReso);
+  if (choice === 'senza' && sen > 0) return sen;
+  if (choice === 'con'   && con > 0) return con;
   if (con > 0) return con;
   if (sen > 0) return sen;
   return unitPrice;
@@ -77,7 +78,10 @@ export async function GET(req: NextRequest) {
 
   const orgId      = session.user.organizationId!;
   const operatorId = session.user.id;
-  const orderId    = new URL(req.url).searchParams.get('orderId');
+  const url        = new URL(req.url);
+  const orderId    = url.searchParams.get('orderId');
+  const resoChoicesParam = url.searchParams.get('resoChoices');
+  const resoChoices: Record<string, 'con' | 'senza'> = resoChoicesParam ? JSON.parse(resoChoicesParam) : {};
   const { add, values } = makeAgg();
 
   if (orderId) {
@@ -96,7 +100,8 @@ export async function GET(req: NextRequest) {
 
     for (const it of orderItems) {
       const p = it.product;
-      add(p.conferente, p.famiglia, p.sottoclasse, it.quantity, effectiveCost(p, Number(it.unitPrice)), p.retailPrice != null ? Number(p.retailPrice) : 0);
+      const choice = resoChoices[p.conferente || '—'];
+      add(p.conferente, p.famiglia, p.sottoclasse, it.quantity, effectiveCost(p, Number(it.unitPrice), choice), p.retailPrice != null ? Number(p.retailPrice) : 0);
     }
   } else {
     // All-orders mode: all non-cancelled org orders + operator DRAFT carts

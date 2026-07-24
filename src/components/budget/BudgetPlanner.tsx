@@ -155,6 +155,15 @@ export default function BudgetPlanner() {
   const [editingNome, setEditingNome] = useState(false);
   const [nomeInput, setNomeInput] = useState('');
   const [expandedFamily, setExpandedFamily] = useState<string | null>(MODA_FAMIGLIE[0]);
+  const [orderResoChoices, setOrderResoChoices] = useState<Record<string, 'con' | 'senza'>>({});
+
+  useEffect(() => {
+    if (!selectedOrderId) { setOrderResoChoices({}); return; }
+    try {
+      const all = JSON.parse(localStorage.getItem('reso-choices') ?? '{}');
+      setOrderResoChoices(all[selectedOrderId] ?? {});
+    } catch { setOrderResoChoices({}); }
+  }, [selectedOrderId]);
 
   // ── Queries ────────────────────────────────────────────────────────────────
   const { data: scenario, isLoading } = useQuery<ScenarioData>({
@@ -171,8 +180,12 @@ export default function BudgetPlanner() {
 
   // Single-order aggregate (for sintesi-ordine view + Fabbisogno ordinato column)
   const { data: singleOrderDataRaw, isFetching: singleOrderFetching } = useQuery<{ data: OrderAggRow[] }>({
-    queryKey: ['budget-order-data', selectedOrderId],
-    queryFn: () => fetch(`/api/budget/order-data?orderId=${selectedOrderId}`).then((r) => r.json()),
+    queryKey: ['budget-order-data', selectedOrderId, orderResoChoices],
+    queryFn: () => {
+      const params = new URLSearchParams({ orderId: selectedOrderId! });
+      if (Object.keys(orderResoChoices).length > 0) params.set('resoChoices', JSON.stringify(orderResoChoices));
+      return fetch(`/api/budget/order-data?${params}`).then((r) => r.json());
+    },
     enabled: !!selectedOrderId,
     staleTime: 0,
     refetchOnWindowFocus: true,
