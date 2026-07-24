@@ -9,23 +9,26 @@ import { useTranslations } from 'next-intl';
 import toast from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
 import { formatCurrency, formatDate, getOrderStatusLabel, getOrderStatusColor } from '@/lib/utils';
-function effectiveUnitCost(product: any, unitPrice: number): number {
+function effectiveUnitCost(product: any, unitPrice: number, choice?: 'con' | 'senza'): number {
   const conReso   = Number(product?.costoIeConReso);
   const senzaReso = Number(product?.costoIeSenzaReso);
+  if (choice === 'senza' && senzaReso > 0) return senzaReso;
+  if (choice === 'con'   && conReso   > 0) return conReso;
   if (conReso   > 0) return conReso;
   if (senzaReso > 0) return senzaReso;
   return unitPrice;
 }
 
-function orderProjections(order: Order) {
+function orderProjections(order: Order, choices: Record<string, 'con' | 'senza'> = {}) {
   let costoIe  = 0;
   let venditeII = 0;
   let venditeIE = 0;
   for (const item of order.items ?? []) {
     if (!item.product) continue;
-    const retail   = Number(item.product.retailPrice);
-    const iva      = item.product.iva ?? 22;
-    const unitCost = effectiveUnitCost(item.product, Number(item.unitPrice));
+    const conf   = (item.product as any)?.conferente ?? '';
+    const retail = Number(item.product.retailPrice);
+    const iva    = item.product.iva ?? 22;
+    const unitCost = effectiveUnitCost(item.product, Number(item.unitPrice), choices[conf]);
     costoIe   += unitCost * item.quantity;
     venditeII += retail * item.quantity;
     venditeIE += (retail * item.quantity) / (1 + iva / 100);
@@ -73,6 +76,8 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
   const [editingBudgetFamId, setEditingBudgetFamId] = useState<string | null>(null);
   const [budgetFamInputs, setBudgetFamInputs] = useState<Record<string, string>>({});
   const [savingBreakdown, setSavingBreakdown] = useState(false);
+  // Per-order, per-conferente reso choice: orderId → conferente → 'con' | 'senza'
+  const [resoChoices, setResoChoices] = useState<Record<string, Record<string, 'con' | 'senza'>>>({});
 
   async function handleSaveBudgetConferenti(orderId: string) {
     setSavingBreakdown(true);
@@ -514,7 +519,7 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
 
                 {/* Projections */}
                 {(() => {
-                  const { costoIe, venditeII, guadagno, margine } = orderProjections(order);
+                  const { costoIe, venditeII, guadagno, margine } = orderProjections(order, resoChoices[order.id] ?? {});
                   const budget = order.budgetPersonalizzato ?? null;
                   const budgetPct = budget && budget > 0 ? (costoIe / budget) * 100 : 0;
                   const budgetRemaining = budget != null ? budget - costoIe : null;
@@ -574,12 +579,23 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
 
                 {/* Costo per conferente */}
                 {(() => {
-                  const confMap = new Map<string, { count: number; pz: number; cost: number }>();
+                  type ConfEntry = { count: number; pz: number; cost: number; costCon: number; costSenza: number; hasBothPrices: boolean };
+                  const orderChoices = resoChoices[order.id] ?? {};
+                  const confMap = new Map<string, ConfEntry>();
                   for (const item of order.items ?? []) {
                     const conf = (item.product as any)?.conferente || '—';
-                    const cost = effectiveUnitCost(item.product, Number(item.unitPrice)) * item.quantity;
-                    const e = confMap.get(conf) ?? { count: 0, pz: 0, cost: 0 };
-                    confMap.set(conf, { count: e.count + 1, pz: e.pz + item.quantity, cost: e.cost + cost });
+                    const choice = orderChoices[conf];
+                    const conReso   = Number((item.product as any)?.costoIeConReso);
+                    const senzaReso = Number((item.product as any)?.costoIeSenzaReso);
+                    const e = confMap.get(conf) ?? { count: 0, pz: 0, cost: 0, costCon: 0, costSenza: 0, hasBothPrices: false };
+                    confMap.set(conf, {
+                      count: e.count + 1,
+                      pz: e.pz + item.quantity,
+                      cost:      e.cost      + effectiveUnitCost(item.product, Number(item.unitPrice), choice) * item.quantity,
+                      costCon:   e.costCon   + effectiveUnitCost(item.product, Number(item.unitPrice), 'con')  * item.quantity,
+                      costSenza: e.costSenza + effectiveUnitCost(item.product, Number(item.unitPrice), 'senza') * item.quantity,
+                      hasBothPrices: e.hasBothPrices || (conReso > 0 && senzaReso > 0),
+                    });
                   }
                   if (confMap.size <= 1) return null;
                   const isEditingConf = editingBudgetConfId === order.id;
@@ -587,8 +603,10 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                   const isEditingFam = editingBudgetFamId === order.id;
                   const famMap = new Map<string, { count: number; pz: number; cost: number }>();
                   for (const item of order.items ?? []) {
+                    const conf = (item.product as any)?.conferente || '—';
+                    const choice = orderChoices[conf];
                     const fam = (item.product as any)?.famiglia || '—';
-                    const cost = effectiveUnitCost(item.product, Number(item.unitPrice)) * item.quantity;
+                    const cost = effectiveUnitCost(item.product, Number(item.unitPrice), choice) * item.quantity;
                     const e = famMap.get(fam) ?? { count: 0, pz: 0, cost: 0 };
                     famMap.set(fam, { count: e.count + 1, pz: e.pz + item.quantity, cost: e.cost + cost });
                   }
@@ -630,21 +648,46 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                             </div>
                           </div>
                         ) : (
-                          <div className="space-y-0.5">
+                          <div className="space-y-1.5">
                             {[...confMap.entries()].map(([conf, data]) => {
                               const bud = budgetConf[conf];
                               const over = bud != null && data.cost > bud;
+                              const choice = orderChoices[conf];
                               return (
-                                <div key={conf} className="flex items-center justify-between">
-                                  <span className="text-xs text-primary font-medium truncate max-w-[55%]">{conf}</span>
-                                  <span className="text-2xs text-gray-500 tabular-nums">
-                                    {data.count} art · {data.pz} pz ·{' '}
-                                    {bud != null ? (
-                                      <span className={`font-semibold ${over ? 'text-red-500' : 'text-primary'}`}>{formatCurrency(data.cost)} / {formatCurrency(bud)}</span>
+                                <div key={conf}>
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="text-xs text-primary font-medium truncate max-w-[45%]">{conf}</span>
+                                    <span className="text-2xs text-gray-400 tabular-nums flex-shrink-0">
+                                      {data.count} art · {data.pz} pz
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-1 mt-0.5">
+                                    {data.hasBothPrices ? (
+                                      <div className="flex items-center gap-0.5">
+                                        <button
+                                          onClick={() => setResoChoices(p => ({ ...p, [order.id]: { ...(p[order.id] ?? {}), [conf]: 'con' } }))}
+                                          className={`text-2xs px-1.5 py-0.5 rounded transition-colors tabular-nums ${!choice || choice === 'con' ? 'bg-primary text-white font-medium' : 'text-gray-400 hover:text-primary border border-border'}`}
+                                        >
+                                          c/reso {formatCurrency(data.costCon)}
+                                        </button>
+                                        <button
+                                          onClick={() => setResoChoices(p => ({ ...p, [order.id]: { ...(p[order.id] ?? {}), [conf]: 'senza' } }))}
+                                          className={`text-2xs px-1.5 py-0.5 rounded transition-colors tabular-nums ${choice === 'senza' ? 'bg-primary text-white font-medium' : 'text-gray-400 hover:text-primary border border-border'}`}
+                                        >
+                                          s/reso {formatCurrency(data.costSenza)}
+                                        </button>
+                                      </div>
                                     ) : (
-                                      <span className="font-semibold text-primary">{formatCurrency(data.cost)}</span>
+                                      <span />
                                     )}
-                                  </span>
+                                    {bud != null ? (
+                                      <span className={`text-2xs font-semibold tabular-nums ${over ? 'text-red-500' : 'text-primary'}`}>
+                                        {formatCurrency(data.cost)} / {formatCurrency(bud)}
+                                      </span>
+                                    ) : (
+                                      <span className="text-2xs font-semibold text-primary tabular-nums">{formatCurrency(data.cost)}</span>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })}
