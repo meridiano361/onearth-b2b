@@ -19,8 +19,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { ids } = schema.parse(body);
 
-    const { count } = await prisma.product.deleteMany({
-      where: { id: { in: ids } },
+    const { count } = await prisma.$transaction(async (tx) => {
+      await tx.cartItem.deleteMany({ where: { productId: { in: ids } } });
+      await tx.orderItem.deleteMany({ where: { productId: { in: ids } } });
+      return tx.product.deleteMany({ where: { id: { in: ids } } });
     });
 
     return NextResponse.json({ deleted: count });
@@ -28,6 +30,7 @@ export async function POST(req: NextRequest) {
     if (err.name === 'ZodError') {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
     }
+    console.error('[bulk-delete]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
