@@ -20,6 +20,8 @@ export async function POST(req: NextRequest) {
     const { ids } = schema.parse(body);
 
     const { count } = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`DELETE FROM product_pantones WHERE product_id = ANY(${ids}::text[])`;
+      await tx.$executeRaw`DELETE FROM product_color_blocks WHERE product_id = ANY(${ids}::text[])`;
       await tx.cartItem.deleteMany({ where: { productId: { in: ids } } });
       await tx.orderItem.deleteMany({ where: { productId: { in: ids } } });
       return tx.product.deleteMany({ where: { id: { in: ids } } });

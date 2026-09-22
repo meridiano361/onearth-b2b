@@ -337,7 +337,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await prisma.product.delete({ where: { id: params.id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`DELETE FROM product_pantones WHERE product_id = ${params.id}`;
+      await tx.$executeRaw`DELETE FROM product_color_blocks WHERE product_id = ${params.id}`;
+      await tx.cartItem.deleteMany({ where: { productId: params.id } });
+      await tx.orderItem.deleteMany({ where: { productId: params.id } });
+      await tx.product.delete({ where: { id: params.id } });
+    });
     return NextResponse.json({ message: 'Product deleted' });
   } catch (err: any) {
     if (err.code === 'P2025') {
