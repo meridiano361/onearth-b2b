@@ -2,10 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Database, ChevronDown } from 'lucide-react';
+import { AlertTriangle, Database, ChevronDown } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Order } from '@/types';
 import toast from 'react-hot-toast';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useCollectionRoutes } from '@/hooks/useCollectionRoutes';
 
 interface Props {
   order: Order;
@@ -42,8 +44,17 @@ const DEMETRA_STEPS = [
 
 export default function OrderDemetraExport({ order, onExported }: Props) {
   const queryClient = useQueryClient();
+  const { collections } = useSettings();
+  const routes = useCollectionRoutes();
+
+  const bookingDeadline = routes.collectionId === 'moda'
+    ? collections.moda.bookingDeadline
+    : collections.casa.bookingDeadline;
+  const isExpired = Boolean(bookingDeadline && new Date(bookingDeadline) < new Date());
+
   const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const [helpPos, setHelpPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
+  const [pendingAction, setPendingAction] = useState<(() => Promise<void>) | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shortId = order.orderNumber ?? order.id.slice(0, 8).toUpperCase();
@@ -99,21 +110,16 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
 
   function itemCode(it: typeof items[number]) {
     const base = it.product?.code ?? '';
-    // taglia effettiva: prima dall'order item (Arch 2), poi dal prodotto stesso (Arch 1)
     const taglia = it.taglia || (it.product as any)?.taglia || '';
     if (!taglia) return base;
-    // Arch 2: cerca il codice esatto in sizeVariants
     const sv = (it.product as any)?.sizeVariants as { taglia: string; codice: string }[] | null | undefined;
     const match = sv?.find((v) => v.taglia === taglia);
     if (match?.codice) return match.codice;
-    // Arch 1 / fallback: converti la taglia nel suffisso del codice Demetra
     const suffix = taglia === 'S/M' ? 'SM' : taglia === 'L/XL' ? 'LX' : taglia;
     return `${base}${suffix}`;
   }
 
-  async function handleCSV(e: React.MouseEvent, filter?: { field: 'tranche' | 'conferente'; value: string }) {
-    e.stopPropagation();
-    setPos(null);
+  async function doCSV(filter?: { field: 'tranche' | 'conferente'; value: string }) {
     const filtered = filter
       ? items.filter(it => (it.product as any)?.[filter.field] === filter.value)
       : items;
@@ -124,7 +130,6 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
     const filename = filter
       ? `Demetra-${shortId}-${filter.value}.csv`
       : `Demetra-${shortId}-completo.csv`;
-    // UTF-8 BOM so Italian Excel opens it correctly
     download('﻿' + lines.join('\r\n'), filename, 'text/csv;charset=utf-8;');
     toast.success(`CSV ${filter ? filter.value : 'completo'} pronto`);
     await markExported(order.id);
@@ -132,9 +137,7 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
     onExported?.();
   }
 
-  async function handleXLSX(e: React.MouseEvent) {
-    e.stopPropagation();
-    setPos(null);
+  async function doXLSX() {
     try {
       const XLSX = await import('xlsx');
       const rows = [
@@ -158,6 +161,33 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
     } catch {
       toast.error('Errore nella generazione');
     }
+  }
+
+  function handleCSV(e: React.MouseEvent, filter?: { field: 'tranche' | 'conferente'; value: string }) {
+    e.stopPropagation();
+    setPos(null);
+    if (isExpired) {
+      setPendingAction(() => () => doCSV(filter));
+      return;
+    }
+    doCSV(filter);
+  }
+
+  function handleXLSX(e: React.MouseEvent) {
+    e.stopPropagation();
+    setPos(null);
+    if (isExpired) {
+      setPendingAction(() => () => doXLSX());
+      return;
+    }
+    doXLSX();
+  }
+
+  async function confirmExpiredDownload() {
+    if (!pendingAction) return;
+    const action = pendingAction;
+    setPendingAction(null);
+    await action();
   }
 
   return (
@@ -238,6 +268,44 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
                 </li>
               ))}
             </ol>
+          </div>,
+          document.body
+        )}
+
+      {/* Modal avviso prenotazione scaduta */}
+      {pendingAction &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+            style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+            onMouseDown={(e) => { if (e.target === e.currentTarget) setPendingAction(null); }}
+          >
+            <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 flex flex-col gap-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-2 text-sm text-gray-700 leading-relaxed">
+                  <p><strong>Attenzione: il periodo di prenotazione è scaduto.</strong></p>
+                  <p>Puoi scaricare il file, ma <strong>non importarlo su Demetra</strong>.</p>
+                  <p>Alcuni prodotti potrebbero non risultare disponibili in Demetra.</p>
+                  <p>Importare ora potrebbe generare prenotazioni incomplete o non evadibili.</p>
+                  <p>Scarica pure il file per tenerlo <strong>ad uso personale</strong>.</p>
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end pt-1">
+                <button
+                  onClick={() => setPendingAction(null)}
+                  className="px-4 py-2 text-xs rounded border border-border text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={confirmExpiredDownload}
+                  className="px-4 py-2 text-xs rounded bg-gray-800 text-white hover:bg-gray-700 transition-colors"
+                >
+                  Ho capito, scarica comunque
+                </button>
+              </div>
+            </div>
           </div>,
           document.body
         )}
