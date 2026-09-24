@@ -284,10 +284,10 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
               <div className="flex items-start gap-3">
                 <AlertTriangle size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-2 text-sm text-gray-700 leading-relaxed">
-                  <p><strong>Attenzione: il periodo di prenotazione è scaduto.</strong></p>
+                  <p><strong>Il periodo di prenotazione è scaduto.</strong></p>
                   <p>Puoi scaricare il file, ma <strong>non importarlo su Demetra</strong>.</p>
                   <p>Alcuni prodotti potrebbero non risultare disponibili in Demetra.</p>
-                  <p>Importare ora potrebbe generare prenotazioni incomplete o non evadibili.</p>
+                  <p>Importare ora rischia di generare prenotazioni <strong>incomplete o non evadibili</strong>.</p>
                   <p>Scarica pure il file per tenerlo <strong>ad uso personale</strong>.</p>
                 </div>
               </div>
