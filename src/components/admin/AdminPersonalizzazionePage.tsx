@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { GripVertical, ImageIcon, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import {
@@ -644,6 +644,7 @@ export default function AdminPersonalizzazionePage() {
   const [savingOe, setSavingOe] = useState(false);
 
   const { isMeridiano361: isM361 } = useFeatureFlags();
+  const qc = useQueryClient();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const { isLoading } = useQuery({
@@ -713,8 +714,24 @@ export default function AdminPersonalizzazionePage() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error((err as { error?: string }).error ?? 'Errore');
+        throw new Error((err as { error?: string }).error ?? `Errore HTTP ${res.status}`);
       }
+      // Rilegge i valori salvati dal DB e aggiorna lo state + cache
+      const saved = await fetch('/api/admin/oe-settings').then(r => r.json()) as Record<string, string>;
+      setOeSettings({
+        alimentari: {
+          titolo:      saved['oe.alimentari.titolo']      ?? 'OE Alimentari',
+          fotoUrl:     saved['oe.alimentari.fotoUrl']     ?? '',
+          sottotitolo: saved['oe.alimentari.sottotitolo'] ?? '',
+        },
+        benessere: {
+          titolo:      saved['oe.benessere.titolo']      ?? 'OE Benessere',
+          fotoUrl:     saved['oe.benessere.fotoUrl']     ?? '',
+          sottotitolo: saved['oe.benessere.sottotitolo'] ?? '',
+        },
+      });
+      // Invalida la cache della home per mostrare subito le nuove card
+      qc.invalidateQueries({ queryKey: ['oe-card-settings'] });
       toast.success('Sezioni OE salvate');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Errore nel salvataggio');
