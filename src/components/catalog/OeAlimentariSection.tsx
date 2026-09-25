@@ -1069,10 +1069,9 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                         <span className="text-[10px] text-gray-300">(fisso)</span>
                       </div>
                       {/* Prodotti esistenti */}
-                      {editNomi.map((nome, idx) => (
-                        <div key={nome} className="flex items-center gap-2 px-2 py-1.5 bg-white border border-border rounded-lg text-xs">
-                          <span className="flex-1 text-gray-700">{nome}</span>
-                          <button onClick={() => setEditNomi(editNomi.filter((_, j) => j !== idx))} className="text-gray-300 hover:text-red-500 flex-shrink-0"><X size={13} /></button>
+                      {editNomi.map((nome) => (
+                        <div key={nome} className="flex items-center px-2 py-1.5 bg-white border border-border rounded-lg text-xs">
+                          <span className="flex-1 font-semibold text-gray-800">{nome}</span>
                         </div>
                       ))}
                       {/* Aggiungi prodotto */}
@@ -1134,7 +1133,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                             <td className="py-1.5 pr-3">
                               <button onClick={() => openProdotto(r.nome)} className="text-left hover:text-primary flex items-start gap-1 group">
                                 <span className="flex flex-col">
-                                  <span>{r.nome}</span>
+                                  <span className="font-semibold">{r.nome}</span>
                                   {r.prod?.codice && <span className="font-mono text-[10px] text-gray-400">{r.prod.codice}</span>}
                                 </span>
                                 <Info size={10} className="text-gray-300 group-hover:text-primary flex-shrink-0 mt-0.5" />
