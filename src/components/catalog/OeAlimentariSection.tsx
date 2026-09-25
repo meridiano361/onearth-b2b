@@ -693,7 +693,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                 <span className="text-white font-bold text-sm">€{s.prezzo}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-primary">Strenna {fmt(s.prezzo)}</p>
+                <p className="font-semibold text-primary">Strenna {s.prezzo}</p>
                 <p className="text-xs text-gray-400">{s.prodotti.length + 1} componenti · costo {fmt(s.totCosto)} · {fmtN(totQte)} pz tot.</p>
               </div>
               <div className="flex items-center gap-2">
@@ -1059,7 +1059,7 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
             <tbody>
               {strenneKpi.map(s => (
                 <tr key={s.barcode} className="border-b border-border/40 hover:bg-gray-50">
-                  <td className="py-2 pr-3 font-medium whitespace-nowrap">Strenna {fmt(s.prezzo)}</td>
+                  <td className="py-2 pr-3 font-medium whitespace-nowrap">Strenna {s.prezzo}</td>
                   <td className="py-2 px-2 text-right text-gray-500">{fmt(s.totCosto)}</td>
                   <td className="py-2 px-2 text-right font-medium">{fmt(s.prezzo)}</td>
                   <td className="py-2 px-2 text-right">
