@@ -518,7 +518,6 @@ function TabCesti() {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-amber-700 font-medium">Click su una cella giacenza per modificarla · Usa <Pencil size={10} className="inline" /> per modificare dati e foto</p>
       <div className="overflow-x-auto -mx-4 px-4">
         <table className="min-w-full text-xs">
           <thead>
@@ -530,13 +529,21 @@ function TabCesti() {
               <th className="pb-2 pr-3 font-medium text-right">PVP</th>
               <th className="pb-2 pr-3 font-medium text-right">Costo i.e.</th>
               <th className="pb-2 pr-3 font-medium text-right">Costo i.i.</th>
-              {STORES_ALL.map(s => (
-                <th key={s} className="pb-2 pr-1 font-medium text-center w-10">{s}</th>
-              ))}
-              <th className="pb-2 pr-3 font-medium text-center">TOT</th>
-              <th className="pb-2 pr-3 font-medium text-center">Strenne</th>
-              <th className="pb-2 pr-3 font-medium text-center">Disp.</th>
+              {/* Giacenze header spanning all stores + TOT */}
+              <th colSpan={STORES_ALL.length + 1} className="pb-0 text-center font-semibold text-gray-500 border-b-0">
+                <span className="block pb-1 border-b border-dashed border-gray-200">Giacenze</span>
+              </th>
+              <th className="pb-2 pr-3 font-medium text-center text-blue-500">Strenne</th>
+              <th className="pb-2 pr-3 font-medium text-center text-red-500">Residui</th>
               <th className="pb-2 font-medium"></th>
+            </tr>
+            <tr className="text-gray-400 border-b border-border">
+              <th colSpan={7} />
+              {STORES_ALL.map(s => (
+                <th key={s} className="pb-1.5 pr-1 font-medium text-center w-10">{s}</th>
+              ))}
+              <th className="pb-1.5 pr-3 font-medium text-center">TOT</th>
+              <th colSpan={3} />
             </tr>
           </thead>
           <tbody>
@@ -577,7 +584,14 @@ function TabCesti() {
                         ) : (
                           <button
                             onClick={() => { setEditing({ codice: c.codice, negozio }); setEditVal(String(qta)); }}
-                            className={cn('w-full min-w-[28px] py-0.5 rounded hover:bg-blue-50 hover:ring-1 hover:ring-blue-300 transition-all', qta > 0 ? 'font-medium text-gray-700' : 'text-gray-300')}
+                            title="Clicca per modificare"
+                            className={cn(
+                              'w-full min-w-[28px] py-0.5 rounded ring-1 ring-inset transition-all',
+                              'hover:bg-blue-50 hover:ring-blue-400',
+                              qta > 0
+                                ? 'font-medium text-gray-700 ring-gray-200'
+                                : 'text-gray-400 ring-gray-100'
+                            )}
                           >{qta}</button>
                         )}
                       </td>
@@ -585,10 +599,10 @@ function TabCesti() {
                   })}
                   <td className="py-2 pr-3 text-center font-bold">{tot}</td>
                   <td className="py-2 pr-3 text-center">
-                    {perStrenne > 0 ? <span className="text-amber-600 font-medium">{perStrenne}</span> : <span className="text-gray-300">—</span>}
+                    {perStrenne > 0 ? <span className="text-blue-600 font-medium">{perStrenne}</span> : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="py-2 pr-3 text-center">
-                    <span className={cn('font-semibold', disponibili > 0 ? 'text-green-600' : disponibili < 0 ? 'text-red-500' : 'text-gray-400')}>
+                    <span className={cn(disponibili > 0 ? 'text-red-500' : disponibili < 0 ? 'text-red-600 font-semibold' : 'text-gray-400')}>
                       {disponibili !== 0 ? disponibili : '—'}
                     </span>
                   </td>
