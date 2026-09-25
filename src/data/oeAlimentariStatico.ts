@@ -11,21 +11,21 @@ export const STRENNA_FOTO: Record<number, string> = {
 
 export const CESTI_LICHENS = [
   { codice: '7430', descrizione: 'Rett. medio basso', misure: 'cm 33×23×8h', pvp: 15.00, costo: 3.75,
-    giacenze: { CR: 1, RE: 0, CA: 1, VI: 1, MN: 5, TR: 80, HUB: 121 } },
+    giacenze: { CR: 1, RE: 0, CA: 1, VI: 1, MN: 5, TN: 80, HUB: 121 } },
   { codice: '7431', descrizione: 'Rett. grande basso', misure: 'cm 38×28×9h', pvp: 20.00, costo: 5.00,
-    giacenze: { CR: 0, RE: 0, CA: 0, VI: 0, MN: 7, TR: 0, HUB: 81 } },
+    giacenze: { CR: 0, RE: 0, CA: 0, VI: 0, MN: 7, TN: 0, HUB: 81 } },
   { codice: '7433', descrizione: 'Rett. medio alto', misure: 'cm 30×19×13h', pvp: 15.00, costo: 3.75,
-    giacenze: { CR: 1, RE: 3, CA: 0, VI: 0, MN: 6, TR: 0, HUB: 78 } },
+    giacenze: { CR: 1, RE: 3, CA: 0, VI: 0, MN: 6, TN: 0, HUB: 78 } },
   { codice: '7434', descrizione: 'Rett. grande alto', misure: 'cm 32×22×16h', pvp: 18.00, costo: 4.50,
-    giacenze: { CR: 4, RE: 0, CA: 0, VI: 0, MN: 12, TR: 124, HUB: 93 } },
+    giacenze: { CR: 4, RE: 0, CA: 0, VI: 0, MN: 12, TN: 124, HUB: 93 } },
   { codice: '7436', descrizione: 'Medio ovale', misure: '', pvp: 27.00, costo: 6.75,
-    giacenze: { CR: 0, RE: 0, CA: 0, VI: 0, MN: 3, TR: 0, HUB: 7 } },
+    giacenze: { CR: 0, RE: 0, CA: 0, VI: 0, MN: 3, TN: 0, HUB: 7 } },
   { codice: '7437', descrizione: 'Grande ovale', misure: '', pvp: 35.00, costo: 8.75,
-    giacenze: { CR: 0, RE: 0, CA: 0, VI: 0, MN: 2, TR: 0, HUB: 13 } },
+    giacenze: { CR: 0, RE: 0, CA: 0, VI: 0, MN: 2, TN: 0, HUB: 13 } },
   { codice: '7439', descrizione: 'Rett. maxi medio', misure: 'cm 40×28×22h', pvp: 34.00, costo: 8.50,
-    giacenze: { CR: 0, RE: 0, CA: 0, VI: 0, MN: 4, TR: 0, HUB: 25 } },
+    giacenze: { CR: 0, RE: 0, CA: 0, VI: 0, MN: 4, TN: 0, HUB: 25 } },
   { codice: '7440', descrizione: 'Rett. maxi grande', misure: '', pvp: 40.00, costo: 10.00,
-    giacenze: { CR: 0, RE: 0, CA: 0, VI: 0, MN: 2, TR: 0, HUB: 21 } },
+    giacenze: { CR: 0, RE: 0, CA: 0, VI: 0, MN: 2, TN: 0, HUB: 21 } },
 ] as const;
 
 export const STRENNE = [

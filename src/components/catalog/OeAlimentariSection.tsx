@@ -397,7 +397,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
 type GiacenzaRow = { cestoCodice: string; negozio: string; qta: number };
 
 function TabCesti() {
-  const STORES_ALL = ['CR', 'RE', 'CA', 'VI', 'MN', 'TR', 'HUB'] as const;
+  const STORES_ALL = ['CR', 'RE', 'CA', 'VI', 'MN', 'TN', 'HUB'] as const;
   const [editing, setEditing] = useState<{ codice: string; negozio: string } | null>(null);
   const [editVal, setEditVal] = useState('');
 
@@ -1098,7 +1098,7 @@ function AnalisiCard({ id, title, open, onToggle, children }: { id: string; titl
 }
 
 function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
-  const STORES_ALL = ['CR', 'RE', 'CA', 'VI', 'MN', 'TR', 'HUB'] as const;
+  const STORES_ALL = ['CR', 'RE', 'CA', 'VI', 'MN', 'TN', 'HUB'] as const;
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const toggleSection = (id: string) => setOpenSections(s => ({ ...s, [id]: !s[id] }));
   const isOpen = (id: string) => !!openSections[id];
