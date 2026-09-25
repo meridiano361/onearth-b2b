@@ -14,6 +14,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { parseSettingsFromDb, DEFAULT_APP_SETTINGS } from '@/contexts/SettingsContext';
 import type { AppSettingsData } from '@/contexts/SettingsContext';
 import { SOCIAL_KEYS } from '@/lib/settingsHelpers';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -600,6 +601,7 @@ export default function AdminPersonalizzazionePage() {
   });
   const [savingOe, setSavingOe] = useState(false);
 
+  const { isMeridiano361: isM361 } = useFeatureFlags();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const { isLoading } = useQuery({
@@ -918,79 +920,77 @@ export default function AdminPersonalizzazionePage() {
             <Plus size={13} /> Aggiungi collezione
           </button>
           <SaveButton onClick={saveCollezioni} loading={savingCollezioni} />
-        </SectionCard>
-      </div>
 
-      {/* ── Sezioni OE ───────────────────────────────────────── */}
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-3">Sezioni OE (Meridiano 361)</p>
-        <SectionCard title="OE Alimentari e OE Benessere">
-          <p className="text-xs text-gray-400">Personalizza le card delle sezioni OE nella home degli operatori Meridiano 361.</p>
+          {/* Sezioni OE — solo operatori Meridiano 361 */}
+          {isM361 && (
+            <>
+              <div className="h-px bg-border mt-2" />
+              <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wide pt-1">Sezioni OE (Meridiano 361)</p>
+              <p className="text-xs text-gray-400">Foto di sfondo e sottotitolo per le card OE nella home degli operatori M361.</p>
 
-          {/* OE Alimentari */}
-          <div className="space-y-3">
-            <p className="text-xs font-semibold text-gray-600">OE Alimentari</p>
-            <ImageUploadInput
-              label="Foto di sfondo card"
-              value={oeSettings.alimentari.fotoUrl}
-              onChange={url => setOeSettings(s => ({ ...s, alimentari: { ...s.alimentari, fotoUrl: url } }))}
-            />
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Sottotitolo card</label>
-              <input
-                type="text"
-                value={oeSettings.alimentari.sottotitolo}
-                onChange={e => setOeSettings(s => ({ ...s, alimentari: { ...s.alimentari, sottotitolo: e.target.value } }))}
-                placeholder="es. Strenne Natale 2026"
-                className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
-              />
-            </div>
-          </div>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-gray-600">OE Alimentari</p>
+                <ImageUploadInput
+                  label="Foto di sfondo card"
+                  value={oeSettings.alimentari.fotoUrl}
+                  onChange={url => setOeSettings(s => ({ ...s, alimentari: { ...s.alimentari, fotoUrl: url } }))}
+                />
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Sottotitolo card</label>
+                  <input
+                    type="text"
+                    value={oeSettings.alimentari.sottotitolo}
+                    onChange={e => setOeSettings(s => ({ ...s, alimentari: { ...s.alimentari, sottotitolo: e.target.value } }))}
+                    placeholder="es. Strenne Natale 2026"
+                    className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                  />
+                </div>
+              </div>
 
-          <div className="h-px bg-border" />
+              <div className="h-px bg-border" />
 
-          {/* OE Benessere */}
-          <div className="space-y-3">
-            <p className="text-xs font-semibold text-gray-600">OE Benessere</p>
-            <ImageUploadInput
-              label="Foto di sfondo card"
-              value={oeSettings.benessere.fotoUrl}
-              onChange={url => setOeSettings(s => ({ ...s, benessere: { ...s.benessere, fotoUrl: url } }))}
-            />
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Sottotitolo card</label>
-              <input
-                type="text"
-                value={oeSettings.benessere.sottotitolo}
-                onChange={e => setOeSettings(s => ({ ...s, benessere: { ...s.benessere, sottotitolo: e.target.value } }))}
-                placeholder="es. Cosmetica e wellness"
-                className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
-              />
-            </div>
-          </div>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-gray-600">OE Benessere</p>
+                <ImageUploadInput
+                  label="Foto di sfondo card"
+                  value={oeSettings.benessere.fotoUrl}
+                  onChange={url => setOeSettings(s => ({ ...s, benessere: { ...s.benessere, fotoUrl: url } }))}
+                />
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Sottotitolo card</label>
+                  <input
+                    type="text"
+                    value={oeSettings.benessere.sottotitolo}
+                    onChange={e => setOeSettings(s => ({ ...s, benessere: { ...s.benessere, sottotitolo: e.target.value } }))}
+                    placeholder="es. Cosmetica e wellness"
+                    className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+                  />
+                </div>
+              </div>
 
-          {/* Preview */}
-          <div className="space-y-2">
-            <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wide">Anteprima card</p>
-            <div className="grid grid-cols-2 gap-2">
-              {(['alimentari', 'benessere'] as const).map(key => {
-                const cfg = oeSettings[key];
-                const titolo = key === 'alimentari' ? 'OE Alimentari' : 'OE Benessere';
-                return (
-                  <div key={key} className="relative rounded-xl overflow-hidden bg-black aspect-[2/1]">
-                    {cfg.fotoUrl && <img src={cfg.fotoUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />}
-                    <div className="relative z-10 p-3">
-                      <p className="text-[9px] tracking-[0.15em] uppercase text-white/40">Sezione</p>
-                      <p className="font-display text-base font-light tracking-widest text-white">{titolo}</p>
-                      {cfg.sottotitolo && <p className="text-[10px] text-white/60 mt-0.5">{cfg.sottotitolo}</p>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+              <div className="space-y-2">
+                <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wide">Anteprima card</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['alimentari', 'benessere'] as const).map(key => {
+                    const cfg = oeSettings[key];
+                    const titolo = key === 'alimentari' ? 'OE Alimentari' : 'OE Benessere';
+                    return (
+                      <div key={key} className="relative rounded-xl overflow-hidden bg-black aspect-[2/1]">
+                        {cfg.fotoUrl && <img src={cfg.fotoUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />}
+                        <div className="relative z-10 p-3">
+                          <p className="text-[9px] tracking-[0.15em] uppercase text-white/40">Sezione</p>
+                          <p className="font-display text-base font-light tracking-widest text-white">{titolo}</p>
+                          {cfg.sottotitolo && <p className="text-[10px] text-white/60 mt-0.5">{cfg.sottotitolo}</p>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
-          <SaveButton onClick={saveOeSettings} loading={savingOe} />
+              <SaveButton onClick={saveOeSettings} loading={savingOe} />
+            </>
+          )}
         </SectionCard>
       </div>
 
