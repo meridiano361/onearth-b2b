@@ -25,7 +25,13 @@ type Prodotto = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const fmt = (n: number) => n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 });
+const fmt = (n: number) => {
+  const abs = Math.abs(n).toFixed(2);
+  const [int, dec] = abs.split('.');
+  const intFmt = int.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return (n < 0 ? '-' : '') + intFmt + ',' + dec + ' €';
+};
+const fmtN = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
 const FORNITORE_COLORS: Record<string, string> = {
   'Pietra di scarto': 'bg-red-50 text-red-700',
@@ -688,7 +694,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-primary">Strenna {fmt(s.prezzo)}</p>
-                <p className="text-xs text-gray-400">{s.prodotti.length + 1} componenti · costo {fmt(s.totCosto)} · {totQte} pz tot.</p>
+                <p className="text-xs text-gray-400">{s.prodotti.length + 1} componenti · costo {fmt(s.totCosto)} · {fmtN(totQte)} pz tot.</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-mono text-gray-400">{s.barcode}</span>
@@ -749,7 +755,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs text-center text-gray-400 mt-2">Totale: {totQte} pz</p>
+                  <p className="text-xs text-center text-gray-400 mt-2">Totale: {fmtN(totQte)} pz</p>
                 </div>
               </div>
             )}
@@ -1028,7 +1034,7 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
       <section>
         <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Catalogo prodotti</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <KpiCard label="Prodotti a catalogo" value={`${prodotti.length}`} sub={`${Object.keys(byFornitore).length} fornitori`} />
+          <KpiCard label="Prodotti a catalogo" value={fmtN(prodotti.length)} sub={`${fmtN(Object.keys(byFornitore).length)} fornitori`} />
           <KpiCard label="Valore PVP catalogo" value={fmt(totPvpIi)} sub={`costo tot. ${fmt(totCostoIi)}`} />
           <KpiCard label="Margine medio" value={`${margMedio}%`} sub="sul catalogo completo" accent />
           <KpiCard label="Marg. unit. medio" value={fmt((totPvpIi - totCostoIi) / (prodotti.length || 1))} sub="per prodotto" />
@@ -1062,7 +1068,7 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
                     <span className={cn('font-semibold', s.margPerc >= 30 ? 'text-green-600' : 'text-amber-600')}>{s.margPerc}%</span>
                   </td>
                   <td className="py-2 px-2 text-right text-gray-700">{fmt(s.margUnit)}</td>
-                  <td className="py-2 px-2 text-right font-medium">{s.totQte}</td>
+                  <td className="py-2 px-2 text-right font-medium">{fmtN(s.totQte)}</td>
                   <td className="py-2 px-2 text-right font-medium text-primary">{fmt(s.fatturato)}</td>
                   <td className="py-2 pl-2 text-right font-semibold text-green-700">{fmt(s.margTot)}</td>
                 </tr>
@@ -1075,7 +1081,7 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
                 <td className="pt-2 px-2" />
                 <td className="pt-2 px-2 text-right text-green-600">{margStrennePerc}%</td>
                 <td className="pt-2 px-2" />
-                <td className="pt-2 px-2 text-right">{totPzStrenne}</td>
+                <td className="pt-2 px-2 text-right">{fmtN(totPzStrenne)}</td>
                 <td className="pt-2 px-2 text-right">{fmt(totFatturato)}</td>
                 <td className="pt-2 pl-2 text-right text-green-700">{fmt(totMargStrenne)}</td>
               </tr>
@@ -1083,7 +1089,7 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
           </table>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <KpiCard label="Fatturato previsto" value={fmt(totFatturato)} sub={`${totPzStrenne} strenne totali`} accent />
+          <KpiCard label="Fatturato previsto" value={fmt(totFatturato)} sub={`${fmtN(totPzStrenne)} strenne totali`} accent />
           <KpiCard label="Investimento" value={fmt(totCostoStrenne)} sub="costo acquisto stock" />
           <KpiCard label="Margine previsto" value={fmt(totMargStrenne)} sub={`${margStrennePerc}% sul fatturato`} accent />
         </div>
@@ -1168,7 +1174,7 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
       <section>
         <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Fabbisogno ordinativo</h2>
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <KpiCard label="Pezzi ancora da ordinare" value={`${totDaOrdinare}`} sub="su tutto il fabbisogno" />
+          <KpiCard label="Pezzi ancora da ordinare" value={fmtN(totDaOrdinare)} sub="su tutto il fabbisogno" />
           <KpiCard label="Valore ordine residuo" value={fmt(costoOrdinativo)} sub="costo IVA inclusa" accent />
         </div>
         <div className="space-y-1.5">
@@ -1177,12 +1183,12 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-primary truncate">{p.nome}</p>
               </div>
-              <span className="text-gray-400 flex-shrink-0">Fabb. {p.totale}</span>
-              <span className="text-green-600 flex-shrink-0">Ord. {p.ordinato}</span>
+              <span className="text-gray-400 flex-shrink-0">Fabb. {fmtN(p.totale)}</span>
+              <span className="text-green-600 flex-shrink-0">Ord. {fmtN(p.ordinato)}</span>
               {p.da > 0
-                ? <span className="font-bold text-red-600 flex-shrink-0 min-w-[70px] text-right">Da ord. {p.da}</span>
+                ? <span className="font-bold text-red-600 flex-shrink-0 min-w-[70px] text-right">Da ord. {fmtN(p.da)}</span>
                 : p.da < 0
-                ? <span className="text-green-600 flex-shrink-0 min-w-[70px] text-right">Surplus {Math.abs(p.da)}</span>
+                ? <span className="text-green-600 flex-shrink-0 min-w-[70px] text-right">Surplus {fmtN(Math.abs(p.da))}</span>
                 : <span className="text-gray-400 flex-shrink-0 min-w-[70px] text-right">✓ Ok</span>
               }
             </div>
