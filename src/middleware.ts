@@ -52,21 +52,10 @@ export default withAuth(
 );
 
 export const config = {
+  // Match every path except public pages, API routes and Next.js internals.
+  // This ensures withAuth always adds ?callbackUrl so refreshing any page
+  // brings the user back to the same page after re-login.
   matcher: [
-    '/home',
-    '/home/:path*',
-    '/catalog/:path*',
-    '/orders/:path*',
-    '/admin',
-    '/admin/:path*',
-    '/moda/:path*',
-    '/moda',
-    '/casa/:path*',
-    '/casa',
-    '/budget',
-    '/budget/:path*',
-    '/collezione-home',
-    '/collezione-home/:path*',
-    '/seleziona-destinazione',
+    '/((?!login|recupera-password|survey|_next/static|_next/image|favicon|apple-icon|icon\\.png|manifest|api/).*)',
   ],
 };
