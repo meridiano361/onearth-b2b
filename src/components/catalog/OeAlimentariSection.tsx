@@ -1081,6 +1081,9 @@ function KpiCard({ label, value, sub, accent }: { label: string; value: string; 
 
 function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
   const STORES_ALL = ['CR', 'RE', 'CA', 'VI', 'MN', 'TR', 'HUB'] as const;
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const toggleSection = (id: string) => setOpenSections(s => ({ ...s, [id]: !s[id] }));
+  const isOpen = (id: string) => !!openSections[id];
 
   const { data: giacenze = [] } = useQuery<GiacenzaRow[]>({
     queryKey: ['oe-cesti-giacenze'],
@@ -1170,17 +1173,25 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
 
       {/* ① KPI catalogo */}
       <section>
-        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Catalogo prodotti</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <KpiCard label="Prodotti a catalogo" value={fmtN(prodotti.length)} sub={`${fmtN(Object.keys(byFornitore).length)} fornitori`} />
-          <KpiCard label="Margine medio" value={`${margMedio}%`} sub="sul catalogo completo" accent />
-        </div>
+        <button onClick={() => toggleSection('catalogo')} className="w-full flex items-center justify-between mb-3 group">
+          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Catalogo prodotti</h2>
+          <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen('catalogo') ? 'rotate-180' : ''}`} />
+        </button>
+        {isOpen('catalogo') && (
+          <div className="grid grid-cols-2 gap-3">
+            <KpiCard label="Prodotti a catalogo" value={fmtN(prodotti.length)} sub={`${fmtN(Object.keys(byFornitore).length)} fornitori`} />
+            <KpiCard label="Margine medio" value={`${margMedio}%`} sub="sul catalogo completo" accent />
+          </div>
+        )}
       </section>
 
       {/* ② Strenne */}
       <section>
-        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Strenne — previsione commerciale</h2>
-        <div className="overflow-x-auto -mx-4 px-4 mb-4">
+        <button onClick={() => toggleSection('strenne')} className="w-full flex items-center justify-between mb-3 group">
+          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Strenne — previsione commerciale</h2>
+          <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen('strenne') ? 'rotate-180' : ''}`} />
+        </button>
+        {isOpen('strenne') && <><div className="overflow-x-auto -mx-4 px-4 mb-4">
           <table className="min-w-full text-xs">
             <thead>
               <tr className="border-b-2 border-border text-gray-400 text-left">
@@ -1228,55 +1239,65 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
           <KpiCard label="Fatturato previsto" value={fmt(totFatturato)} sub={`${fmtN(totPzStrenne)} strenne totali`} accent />
           <KpiCard label="Investimento" value={fmt(totCostoStrenne)} sub="costo acquisto stock" />
           <KpiCard label="Margine previsto" value={fmt(totMargStrenne)} sub={`${margStrennePerc}% sul fatturato`} accent />
-        </div>
+        </div></>}
       </section>
 
       {/* ③ Fornitori */}
       <section>
-        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Analisi per fornitore</h2>
-        <div className="space-y-2">
+        <button onClick={() => toggleSection('fornitori')} className="w-full flex items-center justify-between mb-3 group">
+          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Analisi per fornitore</h2>
+          <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen('fornitori') ? 'rotate-180' : ''}`} />
+        </button>
+        {isOpen('fornitori') && <div className="space-y-2">
           {Object.entries(byFornitore)
             .sort((a, b) => b[1].length - a[1].length)
             .map(([fornitore, prods]) => {
-              const valid     = prods.filter(p => p.pvpIi > 0 && p.costoIi > 0);
-              const avgMarg   = valid.length ? Math.round(valid.reduce((a, p) => a + ((p.pvpIi - p.costoIi) / p.pvpIi) * 100, 0) / valid.length) : 0;
-              const avgPvp    = prods.reduce((a, p) => a + p.pvpIi, 0) / (prods.length || 1);
-              const avgCosto  = prods.reduce((a, p) => a + p.costoIi, 0) / (prods.length || 1);
+              // costo effettivo = pezzi già ordinati × costoIi
+              const costoEffettivo = prods.reduce((a, p) => a + (p.ordinato?.ordinato ?? 0) * p.costoIi, 0);
+              // costo stimato = pezzi ancora da ordinare × costoIi
+              const costoStima = prods.reduce((a, p) => {
+                const fabStr  = FABBISOGNO_STRENNE[p.nome] ?? 0;
+                const totEmp  = EMPORI.reduce((s, e) => s + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
+                const totale  = fabStr + totEmp;
+                const da      = Math.max(0, totale - (p.ordinato?.ordinato ?? 0));
+                return a + da * p.costoIi;
+              }, 0);
               return (
-                <div key={fornitore} className="flex items-center gap-3 bg-white border border-border rounded-xl p-3">
-                  <span className={cn('text-[10px] font-medium px-2 py-1 rounded-lg min-w-[110px] text-center flex-shrink-0', fornitoreBadge(fornitore))}>
-                    {fornitore}
-                  </span>
-                  <div className="flex-1 grid grid-cols-4 gap-2 text-center">
-                    <div>
+                <div key={fornitore} className="bg-white border border-border rounded-xl p-3 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className={cn('text-[10px] font-medium px-2 py-1 rounded-lg min-w-[110px] text-center flex-shrink-0', fornitoreBadge(fornitore))}>
+                      {fornitore}
+                    </span>
+                    <div className="text-center">
                       <p className="text-[10px] text-gray-400">Prodotti</p>
                       <p className="text-sm font-bold">{prods.length}</p>
                     </div>
-                    <div>
-                      <p className="text-[10px] text-gray-400">Costo medio</p>
-                      <p className="text-sm font-semibold text-gray-600">{fmt(avgCosto)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-gray-400">PVP medio</p>
-                      <p className="text-sm font-semibold">{fmt(avgPvp)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-gray-400">Margine medio</p>
-                      <p className={cn('text-sm font-bold', avgMarg >= 45 ? 'text-green-600' : avgMarg >= 35 ? 'text-amber-600' : 'text-red-500')}>
-                        {avgMarg}%
-                      </p>
-                    </div>
                   </div>
+                  {(costoEffettivo > 0 || costoStima > 0) && (
+                    <div className="flex gap-2 pt-1 border-t border-border/40">
+                      <div className="flex-1 bg-blue-50 rounded-lg px-3 py-1.5 text-center">
+                        <p className="text-[10px] text-blue-500 font-medium">Costo effettivo (ordinato)</p>
+                        <p className="text-sm font-bold text-blue-700">{fmt(costoEffettivo)}</p>
+                      </div>
+                      <div className="flex-1 bg-amber-50 rounded-lg px-3 py-1.5 text-center">
+                        <p className="text-[10px] text-amber-600 font-medium">Costo stimato (da ord.)</p>
+                        <p className="text-sm font-bold text-amber-700">{fmt(costoStima)}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
-        </div>
+        </div>}
       </section>
 
       {/* ④ Classifica prodotti per margine */}
       <section>
-        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Classifica prodotti per margine</h2>
-        <div className="space-y-2">
+        <button onClick={() => toggleSection('margine')} className="w-full flex items-center justify-between mb-3 group">
+          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Classifica prodotti per margine</h2>
+          <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen('margine') ? 'rotate-180' : ''}`} />
+        </button>
+        {isOpen('margine') && <div className="space-y-2">
           {rankMargine.map((p, i) => (
             <div key={p.id} className="flex items-center gap-3 bg-white border border-border rounded-xl px-3 py-2.5 text-xs">
               <span className="w-5 text-gray-400 text-center font-mono flex-shrink-0">{i + 1}</span>
@@ -1303,12 +1324,16 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
               </span>
             </div>
           ))}
-        </div>
+        </div>}
       </section>
 
       {/* ⑤ Fabbisogno ordinativo */}
       <section>
-        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Fabbisogno ordinativo</h2>
+        <button onClick={() => toggleSection('fabbisogno')} className="w-full flex items-center justify-between mb-3 group">
+          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Fabbisogno ordinativo</h2>
+          <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen('fabbisogno') ? 'rotate-180' : ''}`} />
+        </button>
+        {isOpen('fabbisogno') && <>
         <div className="grid grid-cols-2 gap-3 mb-4">
           <KpiCard label="Pezzi ancora da ordinare" value={fmtN(totDaOrdinare)} sub="su tutto il fabbisogno" />
           <KpiCard label="Valore ordine residuo" value={fmt(costoOrdinativo)} sub="costo IVA inclusa" accent />
@@ -1329,12 +1354,16 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
               }
             </div>
           ))}
-        </div>
+        </div></>}
       </section>
 
       {/* ⑥ Cesti — valore giacenze */}
       <section>
-        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Cesti — valore giacenze</h2>
+        <button onClick={() => toggleSection('cesti')} className="w-full flex items-center justify-between mb-3 group">
+          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Cesti — valore giacenze</h2>
+          <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen('cesti') ? 'rotate-180' : ''}`} />
+        </button>
+        {isOpen('cesti') && <>
         <div className="grid grid-cols-2 gap-3 mb-4">
           <KpiCard label="Valore giacenza a PVP" value={fmt(totValCestiPvp)} sub={`costo ${fmt(totValCestiCosto)}`} />
           <KpiCard label="Margine sui cesti" value={`${Math.round(((totValCestiPvp - totValCestiCosto) / (totValCestiPvp || 1)) * 100)}%`} sub="sul totale giacenza" accent />
@@ -1386,7 +1415,7 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
               </tr>
             </tfoot>
           </table>
-        </div>
+        </div></>}
       </section>
 
     </div>
