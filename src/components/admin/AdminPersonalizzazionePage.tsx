@@ -894,7 +894,7 @@ export default function AdminPersonalizzazionePage() {
       {/* ── Collezioni ────────────────────────────────────────── */}
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-3">Collezioni</p>
-        <div className="bg-white border border-border rounded-xl p-4 space-y-3">
+        <SectionCard title="Collezioni">
           <p className="text-xs text-gray-400">Trascina per riordinare. L&apos;ordine determina la posizione nella home (prima = sinistra/alto). Usa il toggle per mostrare/nascondere.</p>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleCollezioniDragEnd}>
             <SortableContext items={collezioni.map(c => c.id)} strategy={verticalListSortingStrategy}>
@@ -918,14 +918,14 @@ export default function AdminPersonalizzazionePage() {
             <Plus size={13} /> Aggiungi collezione
           </button>
           <SaveButton onClick={saveCollezioni} loading={savingCollezioni} />
-        </div>
+        </SectionCard>
       </div>
 
       {/* ── Sezioni OE ───────────────────────────────────────── */}
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-3">Sezioni OE (Meridiano 361)</p>
-        <div className="bg-white border border-border rounded-xl p-5 space-y-6">
-          <p className="text-xs text-gray-400">Personalizza le card delle sezioni OE Alimentari e OE Benessere nella home degli operatori Meridiano 361.</p>
+        <SectionCard title="OE Alimentari e OE Benessere">
+          <p className="text-xs text-gray-400">Personalizza le card delle sezioni OE nella home degli operatori Meridiano 361.</p>
 
           {/* OE Alimentari */}
           <div className="space-y-3">
@@ -970,30 +970,28 @@ export default function AdminPersonalizzazionePage() {
           </div>
 
           {/* Preview */}
-          {(oeSettings.alimentari.fotoUrl || oeSettings.benessere.fotoUrl) && (
-            <div className="space-y-2">
-              <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wide">Anteprima card</p>
-              <div className="grid grid-cols-2 gap-2">
-                {(['alimentari', 'benessere'] as const).map(key => {
-                  const cfg = oeSettings[key];
-                  const titolo = key === 'alimentari' ? 'OE Alimentari' : 'OE Benessere';
-                  return (
-                    <div key={key} className="relative rounded-xl overflow-hidden bg-black aspect-[2/1]">
-                      {cfg.fotoUrl && <img src={cfg.fotoUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />}
-                      <div className="relative z-10 p-3">
-                        <p className="text-[9px] tracking-[0.15em] uppercase text-white/40">Sezione</p>
-                        <p className="font-display text-base font-light tracking-widest text-white">{titolo}</p>
-                        {cfg.sottotitolo && <p className="text-[10px] text-white/60 mt-0.5">{cfg.sottotitolo}</p>}
-                      </div>
+          <div className="space-y-2">
+            <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wide">Anteprima card</p>
+            <div className="grid grid-cols-2 gap-2">
+              {(['alimentari', 'benessere'] as const).map(key => {
+                const cfg = oeSettings[key];
+                const titolo = key === 'alimentari' ? 'OE Alimentari' : 'OE Benessere';
+                return (
+                  <div key={key} className="relative rounded-xl overflow-hidden bg-black aspect-[2/1]">
+                    {cfg.fotoUrl && <img src={cfg.fotoUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />}
+                    <div className="relative z-10 p-3">
+                      <p className="text-[9px] tracking-[0.15em] uppercase text-white/40">Sezione</p>
+                      <p className="font-display text-base font-light tracking-widest text-white">{titolo}</p>
+                      {cfg.sottotitolo && <p className="text-[10px] text-white/60 mt-0.5">{cfg.sottotitolo}</p>}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
+          </div>
 
           <SaveButton onClick={saveOeSettings} loading={savingOe} />
-        </div>
+        </SectionCard>
       </div>
 
       {/* ── Visualizzazione ───────────────────────────────────── */}
