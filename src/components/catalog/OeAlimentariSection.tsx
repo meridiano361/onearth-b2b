@@ -285,8 +285,9 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
                       <div><p className="text-[10px] text-gray-400">Consigliato</p><p className="text-xs text-blue-600">{fmt(p.pvpConsigliato)}</p></div>
                     )}
                     {m !== null && (
-                      <div className="ml-auto">
-                        <span className={cn('text-xs font-bold px-1.5 py-0.5 rounded', m >= 35 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700')}>{m}%</span>
+                      <div className="ml-auto text-right">
+                        <p className="text-[10px] text-gray-400">Margine</p>
+                        <p className="text-xs font-semibold text-gray-700">{m}%</p>
                       </div>
                     )}
                     {p.note && <div className="w-full"><p className="text-[10px] text-amber-600 bg-amber-50 rounded px-2 py-1">{p.note}</p></div>}
@@ -333,7 +334,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
                       <div><p className="text-[10px] text-gray-400">Cons.</p><p className="text-xs text-blue-600">{fmt(p.pvpConsigliato)}</p></div>
                     )}
                     {m !== null && (
-                      <span className={cn('text-xs font-bold px-1.5 py-1 rounded', m >= 35 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700')}>{m}%</span>
+                      <div className="text-right"><p className="text-[10px] text-gray-400">Margine</p><p className="text-xs font-semibold text-gray-700">{m}%</p></div>
                     )}
                   </div>
                   {/* Azioni */}
