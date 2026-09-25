@@ -985,7 +985,7 @@ export default function AdminPersonalizzazionePage() {
       {/* ── Sezioni OE ───────────────────────────────────────── */}
       {isM361 && (
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-3">Sezioni</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-3">Progetti OE</p>
           <div className="space-y-3">
             {(['alimentari', 'benessere'] as const).map(key => (
               <OeSezioneCard
