@@ -513,9 +513,15 @@ type AnagraticaState =
   | { kind: 'cesto'; data: typeof CESTI_LICHENS[number] };
 
 function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }) {
-  const m = margine(p);
+  const iva = p.ivaPerc / 100;
+  const costoIe = p.costoIi / (1 + iva);
+  const pvpIe = p.pvpIi / (1 + iva);
+  const marginePerc = p.pvpIi > 0 ? Math.round(((p.pvpIi - p.costoIi) / p.pvpIi) * 100) : null;
+  const margineUnit = p.pvpIi - p.costoIi;
+
   return (
     <div className="p-5 space-y-4">
+      {/* Intestazione */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           {p.fornitore && (
@@ -524,41 +530,66 @@ function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }
             </span>
           )}
           <h2 className="text-xl font-semibold text-primary leading-tight">{p.nome}</h2>
-          {p.formato && <p className="text-sm text-gray-400 mt-0.5">{p.formato}</p>}
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            {p.formato && <span className="text-sm text-gray-400">{p.formato}</span>}
+            <span className="text-xs text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">IVA {p.ivaPerc}%</span>
+          </div>
         </div>
         <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 flex-shrink-0">
           <X size={18} />
         </button>
       </div>
+
       {p.fotoUrl && (
         <img src={p.fotoUrl} alt={p.nome} className="w-full h-44 object-cover rounded-xl" />
       )}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="bg-gray-50 rounded-xl p-3">
-          <p className="text-[10px] text-gray-400 mb-0.5">Costo i.i.</p>
-          <p className="text-sm font-semibold">{fmt(p.costoIi)}</p>
-        </div>
-        <div className="bg-gray-50 rounded-xl p-3">
-          <p className="text-[10px] text-gray-400 mb-0.5">PVP i.i.</p>
-          <p className="text-sm font-semibold text-green-700">{fmt(p.pvpIi)}</p>
-        </div>
-        {p.pvpConsigliato != null && p.pvpConsigliato !== p.pvpIi && (
+
+      {/* Prezzi */}
+      <div>
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Prezzi</p>
+        <div className="grid grid-cols-2 gap-2">
           <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-[10px] text-gray-400 mb-0.5">PVP consigliato</p>
-            <p className="text-sm font-semibold text-blue-600">{fmt(p.pvpConsigliato)}</p>
+            <p className="text-[10px] text-gray-400 mb-0.5">Costo IVA esclusa</p>
+            <p className="text-sm font-semibold text-gray-700">{fmt(costoIe)}</p>
           </div>
-        )}
-        {m !== null && (
           <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-[10px] text-gray-400 mb-0.5">Margine</p>
-            <p className="text-sm font-semibold text-gray-700">{m}%</p>
+            <p className="text-[10px] text-gray-400 mb-0.5">Costo IVA inclusa</p>
+            <p className="text-sm font-semibold text-gray-700">{fmt(p.costoIi)}</p>
           </div>
-        )}
-        <div className="bg-gray-50 rounded-xl p-3">
-          <p className="text-[10px] text-gray-400 mb-0.5">IVA</p>
-          <p className="text-sm">{p.ivaPerc}%</p>
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-[10px] text-gray-400 mb-0.5">PVP IVA esclusa</p>
+            <p className="text-sm font-semibold text-green-700">{fmt(pvpIe)}</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-[10px] text-gray-400 mb-0.5">PVP IVA inclusa</p>
+            <p className="text-sm font-semibold text-green-700">{fmt(p.pvpIi)}</p>
+          </div>
+          {p.pvpConsigliato != null && p.pvpConsigliato !== p.pvpIi && (
+            <div className="bg-blue-50 rounded-xl p-3 col-span-2">
+              <p className="text-[10px] text-blue-400 mb-0.5">PVP consigliato IVA inclusa</p>
+              <p className="text-sm font-semibold text-blue-600">{fmt(p.pvpConsigliato)}</p>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Margine */}
+      {marginePerc !== null && (
+        <div>
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Margine</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-[10px] text-gray-400 mb-0.5">Margine %</p>
+              <p className="text-sm font-semibold text-gray-700">{marginePerc}%</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-[10px] text-gray-400 mb-0.5">Margine unitario</p>
+              <p className="text-sm font-semibold text-gray-700">{fmt(margineUnit)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {p.barcode && (
         <p className="text-xs text-gray-500">Barcode: <span className="font-mono text-gray-700">{p.barcode}</span></p>
       )}
