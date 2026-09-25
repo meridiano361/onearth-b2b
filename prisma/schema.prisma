@@ -1267,3 +1267,13 @@ model OeAlimentariOrdinato {
 
   @@map("oe_alimentari_ordinato")
 }
+
+model OeCestoGiacenza {
+  cestoCodice String   @map("cesto_codice")
+  negozio     String
+  qta         Int      @default(0)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@id([cestoCodice, negozio])
+  @@map("oe_cesti_giacenze")
+}

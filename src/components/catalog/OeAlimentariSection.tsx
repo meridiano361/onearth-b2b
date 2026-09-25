@@ -359,10 +359,38 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
 
 // ── Tab: Cesti ────────────────────────────────────────────────────────────────
 
+type GiacenzaRow = { cestoCodice: string; negozio: string; qta: number };
+
 function TabCesti() {
   const STORES_ALL = ['CR', 'RE', 'CA', 'VI', 'MN', 'TR', 'HUB'] as const;
+  const [editing, setEditing] = useState<{ codice: string; negozio: string } | null>(null);
+  const [editVal, setEditVal] = useState('');
 
-  // Quanti cesti vengono usati nelle strenne
+  const { data: giacenze = [], refetch } = useQuery<GiacenzaRow[]>({
+    queryKey: ['oe-cesti-giacenze'],
+    queryFn: async () => {
+      const res = await fetch('/api/oe/alimentari/cesti/giacenze');
+      return res.ok ? res.json() : [];
+    },
+    staleTime: 30_000,
+  });
+
+  // Mappa (cestoCodice, negozio) → qta
+  const gMap = new Map<string, number>();
+  giacenze.forEach(r => gMap.set(`${r.cestoCodice}:${r.negozio}`, r.qta));
+  const getQta = (codice: string, negozio: string) => gMap.get(`${codice}:${negozio}`) ?? 0;
+
+  const saveGiacenza = async (cestoCodice: string, negozio: string) => {
+    await fetch('/api/oe/alimentari/cesti/giacenze', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cestoCodice, negozio, qta: parseInt(editVal) || 0 }),
+    });
+    setEditing(null);
+    refetch();
+  };
+
+  // Quanti cesti servono per le strenne
   const cestoCounts: Record<string, number> = {};
   STRENNE.forEach(s => {
     const tot = Object.values(s.qte).reduce((a, b) => a + b, 0);
@@ -370,54 +398,81 @@ function TabCesti() {
   });
 
   return (
-    <div className="overflow-x-auto -mx-4 px-4">
-      <table className="min-w-full text-xs">
-        <thead>
-          <tr className="text-left text-gray-400 border-b border-border">
-            <th className="pb-2 pr-3 font-medium">Codice</th>
-            <th className="pb-2 pr-3 font-medium">Descrizione</th>
-            <th className="pb-2 pr-3 font-medium">Misure</th>
-            <th className="pb-2 pr-3 font-medium text-right">PVP</th>
-            <th className="pb-2 pr-3 font-medium text-right">Costo</th>
-            {STORES_ALL.map(s => <th key={s} className="pb-2 pr-2 font-medium text-center w-8">{s}</th>)}
-            <th className="pb-2 pr-3 font-medium text-center">TOT</th>
-            <th className="pb-2 pr-3 font-medium text-center">Strenne</th>
-            <th className="pb-2 font-medium text-center">Disponibili</th>
-          </tr>
-        </thead>
-        <tbody>
-          {CESTI_LICHENS.map(c => {
-            const tot = Object.values(c.giacenze as Record<string, number>).reduce((a, b) => a + b, 0);
-            const perStrenne = cestoCounts[c.codice] ?? 0;
-            const disponibili = tot - perStrenne;
-            return (
-              <tr key={c.codice} className="border-b border-border/40 hover:bg-gray-50">
-                <td className="py-2 pr-3 font-mono text-gray-500">{c.codice}</td>
-                <td className="py-2 pr-3 font-medium text-primary">{c.descrizione}</td>
-                <td className="py-2 pr-3 text-gray-400">{c.misure}</td>
-                <td className="py-2 pr-3 text-right font-medium">{fmt(c.pvp)}</td>
-                <td className="py-2 pr-3 text-right text-gray-500">{fmt(c.costo)}</td>
-                {STORES_ALL.map(s => (
-                  <td key={s} className="py-2 pr-2 text-center">
-                    <span className={cn('font-medium', (c.giacenze as Record<string, number>)[s] > 0 ? 'text-gray-700' : 'text-gray-300')}>
-                      {(c.giacenze as Record<string, number>)[s] ?? 0}
+    <div className="space-y-2">
+      <p className="text-xs text-amber-700 font-medium">Click su una cella per modificare la giacenza</p>
+      <div className="overflow-x-auto -mx-4 px-4">
+        <table className="min-w-full text-xs">
+          <thead>
+            <tr className="text-left text-gray-400 border-b border-border">
+              <th className="pb-2 pr-3 font-medium">Codice</th>
+              <th className="pb-2 pr-3 font-medium">Descrizione</th>
+              <th className="pb-2 pr-3 font-medium">Misure</th>
+              <th className="pb-2 pr-3 font-medium text-right">PVP</th>
+              <th className="pb-2 pr-3 font-medium text-right">Costo</th>
+              {STORES_ALL.map(s => (
+                <th key={s} className="pb-2 pr-1 font-medium text-center w-10">{s}</th>
+              ))}
+              <th className="pb-2 pr-3 font-medium text-center">TOT</th>
+              <th className="pb-2 pr-3 font-medium text-center">Strenne</th>
+              <th className="pb-2 font-medium text-center">Disponibili</th>
+            </tr>
+          </thead>
+          <tbody>
+            {CESTI_LICHENS.map(c => {
+              const tot = STORES_ALL.reduce((a, s) => a + getQta(c.codice, s), 0);
+              const perStrenne = cestoCounts[c.codice] ?? 0;
+              const disponibili = tot - perStrenne;
+              return (
+                <tr key={c.codice} className="border-b border-border/40 hover:bg-gray-50">
+                  <td className="py-2 pr-3 font-mono text-gray-500">{c.codice}</td>
+                  <td className="py-2 pr-3 font-medium text-primary whitespace-nowrap">{c.descrizione}</td>
+                  <td className="py-2 pr-3 text-gray-400 whitespace-nowrap">{c.misure || '—'}</td>
+                  <td className="py-2 pr-3 text-right font-medium">{fmt(c.pvp)}</td>
+                  <td className="py-2 pr-3 text-right text-gray-500">{fmt(c.costo)}</td>
+                  {STORES_ALL.map(negozio => {
+                    const qta = getQta(c.codice, negozio);
+                    const isEd = editing?.codice === c.codice && editing?.negozio === negozio;
+                    return (
+                      <td key={negozio} className="py-1 pr-1 text-center">
+                        {isEd ? (
+                          <input
+                            autoFocus
+                            type="number" min="0"
+                            className="w-10 text-center text-xs border border-primary rounded px-1 py-0.5"
+                            value={editVal}
+                            onChange={e => setEditVal(e.target.value)}
+                            onBlur={() => saveGiacenza(c.codice, negozio)}
+                            onKeyDown={e => e.key === 'Enter' && saveGiacenza(c.codice, negozio)}
+                          />
+                        ) : (
+                          <button
+                            onClick={() => { setEditing({ codice: c.codice, negozio }); setEditVal(String(qta)); }}
+                            className={cn(
+                              'w-full min-w-[28px] py-0.5 rounded hover:bg-blue-50 hover:ring-1 hover:ring-blue-300 transition-all',
+                              qta > 0 ? 'font-medium text-gray-700' : 'text-gray-300'
+                            )}
+                          >
+                            {qta}
+                          </button>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="py-2 pr-3 text-center font-bold">{tot}</td>
+                  <td className="py-2 pr-3 text-center">
+                    {perStrenne > 0 ? <span className="text-amber-600 font-medium">{perStrenne}</span> : <span className="text-gray-300">—</span>}
+                  </td>
+                  <td className="py-2 text-center">
+                    <span className={cn('font-semibold', disponibili > 0 ? 'text-green-600' : disponibili < 0 ? 'text-red-500' : 'text-gray-400')}>
+                      {disponibili !== 0 ? disponibili : '—'}
                     </span>
                   </td>
-                ))}
-                <td className="py-2 pr-3 text-center font-bold">{tot}</td>
-                <td className="py-2 pr-3 text-center">
-                  {perStrenne > 0 ? <span className="text-amber-600 font-medium">{perStrenne}</span> : <span className="text-gray-300">—</span>}
-                </td>
-                <td className="py-2 text-center">
-                  <span className={cn('font-semibold', disponibili > 0 ? 'text-green-600' : 'text-gray-400')}>
-                    {disponibili > 0 ? disponibili : '—'}
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
