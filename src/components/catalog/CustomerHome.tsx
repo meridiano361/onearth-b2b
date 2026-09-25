@@ -110,17 +110,23 @@ function OeCards() {
           <Link
             key={slug}
             href={`/${slug}`}
-            className="relative flex items-center justify-between gap-4 p-5 bg-black rounded-2xl hover:opacity-90 transition-opacity overflow-hidden"
+            className="block bg-black rounded-2xl overflow-hidden hover:opacity-90 transition-opacity duration-200"
           >
             {cfg?.fotoUrl && (
-              <img src={cfg.fotoUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-55 pointer-events-none" />
+              <img
+                src={cfg.fotoUrl}
+                alt={titolo}
+                className="w-full object-cover h-[40vh]"
+              />
             )}
-            <div className="relative z-10">
-              <p className="text-2xs tracking-[0.2em] uppercase text-white/40">Sezione</p>
-              <h2 className="font-display text-2xl font-light tracking-widest text-white mt-0.5">{titolo}</h2>
-              {cfg?.sottotitolo && <p className="text-xs text-white/60 mt-0.5">{cfg.sottotitolo}</p>}
+            <div className="flex items-center justify-between gap-4 p-6">
+              <div>
+                <p className="text-2xs tracking-[0.2em] uppercase text-white/50">Sezione</p>
+                <h2 className="font-display text-3xl font-light tracking-widest text-white mt-0.5">{titolo}</h2>
+                {cfg?.sottotitolo && <p className="text-xs text-white/60 mt-0.5">{cfg.sottotitolo}</p>}
+              </div>
+              <ChevronRight size={20} className="text-white/30 flex-shrink-0" />
             </div>
-            <ChevronRight size={20} className="text-white/30 flex-shrink-0 relative z-10" />
           </Link>
         );
       })}
