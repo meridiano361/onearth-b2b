@@ -443,7 +443,8 @@ function TabCesti() {
               <th className="pb-2 pr-3 font-medium">Descrizione</th>
               <th className="pb-2 pr-3 font-medium">Misure</th>
               <th className="pb-2 pr-3 font-medium text-right">PVP</th>
-              <th className="pb-2 pr-3 font-medium text-right">Costo</th>
+              <th className="pb-2 pr-3 font-medium text-right">Costo i.e.</th>
+              <th className="pb-2 pr-3 font-medium text-right">Costo i.i.</th>
               {STORES_ALL.map(s => (
                 <th key={s} className="pb-2 pr-1 font-medium text-center w-10">{s}</th>
               ))}
@@ -463,6 +464,7 @@ function TabCesti() {
                   <td className="py-2 pr-3 font-medium text-primary whitespace-nowrap">{c.descrizione}</td>
                   <td className="py-2 pr-3 text-gray-400 whitespace-nowrap">{c.misure || '—'}</td>
                   <td className="py-2 pr-3 text-right font-medium">{fmt(c.pvp)}</td>
+                  <td className="py-2 pr-3 text-right text-gray-500">{fmt(c.costo / 1.22)}</td>
                   <td className="py-2 pr-3 text-right text-gray-500">{fmt(c.costo)}</td>
                   {STORES_ALL.map(negozio => {
                     const qta = getQta(c.codice, negozio);
@@ -609,15 +611,21 @@ function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }
 }
 
 function CestoAnagrafica({ c, onClose }: { c: typeof CESTI_LICHENS[number]; onClose: () => void }) {
+  const costoIe = c.costo / 1.22;
+  const costoIi = c.costo;
+  const pvpIe   = c.pvp / 1.22;
+  const margineIe = pvpIe > 0 ? Math.round(((pvpIe - costoIe) / pvpIe) * 100) : 0;
+  const margineUnit = pvpIe - costoIe;
   return (
     <div className="p-5 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <span className="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded mb-1.5 bg-amber-50 text-amber-700">
-            Cesto Lichens
+            Cesto Lichens · IVA 22%
           </span>
           <h2 className="text-xl font-semibold text-primary leading-tight">{c.descrizione}</h2>
           {c.misure && <p className="text-sm text-gray-400 mt-0.5">{c.misure}</p>}
+          <p className="text-[10px] font-mono text-gray-400 mt-0.5">cod. {c.codice}</p>
         </div>
         <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 flex-shrink-0">
           <X size={18} />
@@ -625,20 +633,28 @@ function CestoAnagrafica({ c, onClose }: { c: typeof CESTI_LICHENS[number]; onCl
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-gray-50 rounded-xl p-3">
-          <p className="text-[10px] text-gray-400 mb-0.5">Costo</p>
-          <p className="text-sm font-semibold">{fmt(c.costo)}</p>
+          <p className="text-[10px] text-gray-400 mb-0.5">Costo i.e.</p>
+          <p className="text-sm font-semibold">{fmt(costoIe)}</p>
         </div>
         <div className="bg-gray-50 rounded-xl p-3">
-          <p className="text-[10px] text-gray-400 mb-0.5">PVP</p>
+          <p className="text-[10px] text-gray-400 mb-0.5">Costo i.i.</p>
+          <p className="text-sm font-semibold">{fmt(costoIi)}</p>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-[10px] text-gray-400 mb-0.5">PVP i.e.</p>
+          <p className="text-sm font-semibold text-green-700">{fmt(pvpIe)}</p>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-[10px] text-gray-400 mb-0.5">PVP i.i.</p>
           <p className="text-sm font-semibold text-green-700">{fmt(c.pvp)}</p>
         </div>
         <div className="bg-gray-50 rounded-xl p-3">
-          <p className="text-[10px] text-gray-400 mb-0.5">Codice</p>
-          <p className="text-sm font-mono">{c.codice}</p>
+          <p className="text-[10px] text-gray-400 mb-0.5">Margine %</p>
+          <p className={`text-sm font-bold ${margineIe >= 40 ? 'text-green-600' : margineIe >= 30 ? 'text-amber-600' : 'text-red-500'}`}>{margineIe}%</p>
         </div>
         <div className="bg-gray-50 rounded-xl p-3">
-          <p className="text-[10px] text-gray-400 mb-0.5">Margine</p>
-          <p className="text-sm font-semibold text-gray-700">{Math.round(((c.pvp - c.costo) / c.pvp) * 100)}%</p>
+          <p className="text-[10px] text-gray-400 mb-0.5">Margine unit.</p>
+          <p className="text-sm font-semibold text-gray-700">{fmt(margineUnit)}</p>
         </div>
       </div>
     </div>
