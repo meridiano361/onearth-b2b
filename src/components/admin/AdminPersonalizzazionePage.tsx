@@ -585,12 +585,20 @@ function CollezioneCard({ item, onChange, onDelete }: {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function AdminPersonalizzazionePage() {
+  type OeCardConfig = { fotoUrl: string; sottotitolo: string };
+  type OeSettingsState = { alimentari: OeCardConfig; benessere: OeCardConfig };
+
   const [settings, setSettings] = useState<AppSettingsData>(DEFAULT_APP_SETTINGS);
   const [saving, setSaving] = useState<string | null>(null);
   const [filtriVisibili, setFiltriVisibili] = useState<string[]>([]);
   const [savingFiltri, setSavingFiltri] = useState(false);
   const [collezioni, setCollezioni] = useState<CollezioneItem[]>([]);
   const [savingCollezioni, setSavingCollezioni] = useState(false);
+  const [oeSettings, setOeSettings] = useState<OeSettingsState>({
+    alimentari: { fotoUrl: '', sottotitolo: '' },
+    benessere: { fotoUrl: '', sottotitolo: '' },
+  });
+  const [savingOe, setSavingOe] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -625,10 +633,34 @@ export default function AdminPersonalizzazionePage() {
       colList = colList.map(c => ({ ...c, visibile: c.visibile ?? true, fotoFiltro: c.fotoFiltro ?? 'auto' }));
       setCollezioni(colList);
 
+      setOeSettings({
+        alimentari: { fotoUrl: flat['oe.alimentari.fotoUrl'] ?? '', sottotitolo: flat['oe.alimentari.sottotitolo'] ?? '' },
+        benessere:  { fotoUrl: flat['oe.benessere.fotoUrl']  ?? '', sottotitolo: flat['oe.benessere.sottotitolo']  ?? '' },
+      });
+
       return parsed;
     },
     staleTime: 0,
   });
+
+  async function saveOeSettings() {
+    setSavingOe(true);
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          'oe.alimentari.fotoUrl':     oeSettings.alimentari.fotoUrl,
+          'oe.alimentari.sottotitolo': oeSettings.alimentari.sottotitolo,
+          'oe.benessere.fotoUrl':      oeSettings.benessere.fotoUrl,
+          'oe.benessere.sottotitolo':  oeSettings.benessere.sottotitolo,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Sezioni OE salvate');
+    } catch { toast.error('Errore nel salvataggio'); }
+    finally { setSavingOe(false); }
+  }
 
   const update = useCallback(<K extends keyof AppSettingsData>(section: K, patch: Partial<AppSettingsData[K]>) => {
     setSettings(prev => ({ ...prev, [section]: { ...prev[section], ...patch } }));
@@ -886,6 +918,81 @@ export default function AdminPersonalizzazionePage() {
             <Plus size={13} /> Aggiungi collezione
           </button>
           <SaveButton onClick={saveCollezioni} loading={savingCollezioni} />
+        </div>
+      </div>
+
+      {/* ── Sezioni OE ───────────────────────────────────────── */}
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-3">Sezioni OE (Meridiano 361)</p>
+        <div className="bg-white border border-border rounded-xl p-5 space-y-6">
+          <p className="text-xs text-gray-400">Personalizza le card delle sezioni OE Alimentari e OE Benessere nella home degli operatori Meridiano 361.</p>
+
+          {/* OE Alimentari */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-gray-600">OE Alimentari</p>
+            <ImageUploadInput
+              label="Foto di sfondo card"
+              value={oeSettings.alimentari.fotoUrl}
+              onChange={url => setOeSettings(s => ({ ...s, alimentari: { ...s.alimentari, fotoUrl: url } }))}
+            />
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Sottotitolo card</label>
+              <input
+                type="text"
+                value={oeSettings.alimentari.sottotitolo}
+                onChange={e => setOeSettings(s => ({ ...s, alimentari: { ...s.alimentari, sottotitolo: e.target.value } }))}
+                placeholder="es. Strenne Natale 2026"
+                className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+              />
+            </div>
+          </div>
+
+          <div className="h-px bg-border" />
+
+          {/* OE Benessere */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-gray-600">OE Benessere</p>
+            <ImageUploadInput
+              label="Foto di sfondo card"
+              value={oeSettings.benessere.fotoUrl}
+              onChange={url => setOeSettings(s => ({ ...s, benessere: { ...s.benessere, fotoUrl: url } }))}
+            />
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Sottotitolo card</label>
+              <input
+                type="text"
+                value={oeSettings.benessere.sottotitolo}
+                onChange={e => setOeSettings(s => ({ ...s, benessere: { ...s.benessere, sottotitolo: e.target.value } }))}
+                placeholder="es. Cosmetica e wellness"
+                className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-gray-900"
+              />
+            </div>
+          </div>
+
+          {/* Preview */}
+          {(oeSettings.alimentari.fotoUrl || oeSettings.benessere.fotoUrl) && (
+            <div className="space-y-2">
+              <p className="text-2xs font-semibold text-gray-400 uppercase tracking-wide">Anteprima card</p>
+              <div className="grid grid-cols-2 gap-2">
+                {(['alimentari', 'benessere'] as const).map(key => {
+                  const cfg = oeSettings[key];
+                  const titolo = key === 'alimentari' ? 'OE Alimentari' : 'OE Benessere';
+                  return (
+                    <div key={key} className="relative rounded-xl overflow-hidden bg-black aspect-[2/1]">
+                      {cfg.fotoUrl && <img src={cfg.fotoUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />}
+                      <div className="relative z-10 p-3">
+                        <p className="text-[9px] tracking-[0.15em] uppercase text-white/40">Sezione</p>
+                        <p className="font-display text-base font-light tracking-widest text-white">{titolo}</p>
+                        {cfg.sottotitolo && <p className="text-[10px] text-white/60 mt-0.5">{cfg.sottotitolo}</p>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <SaveButton onClick={saveOeSettings} loading={savingOe} />
         </div>
       </div>
 

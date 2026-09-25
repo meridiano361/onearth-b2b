@@ -85,6 +85,49 @@ function NotificationPopup({ notification, onClose }: { notification: Notificati
   );
 }
 
+type OeCardCfg = { fotoUrl: string; sottotitolo: string };
+
+function OeCards() {
+  const { data } = useQuery<{ alimentari: OeCardCfg; benessere: OeCardCfg }>({
+    queryKey: ['oe-card-settings'],
+    queryFn: async () => {
+      const flat: Record<string, string> = await fetch('/api/settings/public').then(r => r.json());
+      return {
+        alimentari: { fotoUrl: flat['oe.alimentari.fotoUrl'] ?? '', sottotitolo: flat['oe.alimentari.sottotitolo'] ?? '' },
+        benessere:  { fotoUrl: flat['oe.benessere.fotoUrl']  ?? '', sottotitolo: flat['oe.benessere.sottotitolo']  ?? '' },
+      };
+    },
+    staleTime: 60_000,
+  });
+
+  return (
+    <div className="space-y-3 pt-2">
+      {(['oe-alimentari', 'oe-benessere'] as const).map((slug) => {
+        const key = slug === 'oe-alimentari' ? 'alimentari' : 'benessere';
+        const titolo = slug === 'oe-alimentari' ? 'OE Alimentari' : 'OE Benessere';
+        const cfg = data?.[key];
+        return (
+          <Link
+            key={slug}
+            href={`/${slug}`}
+            className="relative flex items-center justify-between gap-4 p-5 bg-black rounded-2xl hover:opacity-90 transition-opacity overflow-hidden"
+          >
+            {cfg?.fotoUrl && (
+              <img src={cfg.fotoUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-55 pointer-events-none" />
+            )}
+            <div className="relative z-10">
+              <p className="text-2xs tracking-[0.2em] uppercase text-white/40">Sezione</p>
+              <h2 className="font-display text-2xl font-light tracking-widest text-white mt-0.5">{titolo}</h2>
+              {cfg?.sottotitolo && <p className="text-xs text-white/60 mt-0.5">{cfg.sottotitolo}</p>}
+            </div>
+            <ChevronRight size={20} className="text-white/30 flex-shrink-0 relative z-10" />
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function CustomerHome({ canSeeModa, showOeSections = false }: { canSeeModa: boolean; showOeSections?: boolean }) {
   const { social: ss, collections, home } = useSettings();
   const searchParams = useSearchParams();
@@ -207,24 +250,7 @@ export default function CustomerHome({ canSeeModa, showOeSections = false }: { c
 
         {/* OE sections — solo Meridiano361 */}
         {showOeSections && (
-          <div className="space-y-3 pt-2">
-            {(['oe-alimentari', 'oe-benessere'] as const).map((slug) => {
-              const titolo = slug === 'oe-alimentari' ? 'OE Alimentari' : 'OE Benessere';
-              return (
-                <Link
-                  key={slug}
-                  href={`/${slug}`}
-                  className="flex items-center justify-between gap-4 p-5 bg-black rounded-2xl hover:opacity-90 transition-opacity"
-                >
-                  <div>
-                    <p className="text-2xs tracking-[0.2em] uppercase text-white/40">Sezione</p>
-                    <h2 className="font-display text-2xl font-light tracking-widest text-white mt-0.5">{titolo}</h2>
-                  </div>
-                  <ChevronRight size={20} className="text-white/30 flex-shrink-0" />
-                </Link>
-              );
-            })}
-          </div>
+          <OeCards />
         )}
 
         {/* Social */}
