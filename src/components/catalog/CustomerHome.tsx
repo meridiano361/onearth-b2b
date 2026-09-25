@@ -112,12 +112,18 @@ function OeCards() {
             href={`/${slug}`}
             className="block bg-black rounded-2xl overflow-hidden hover:opacity-90 transition-opacity duration-200"
           >
-            {cfg?.fotoUrl && (
+            {cfg?.fotoUrl ? (
               <img
                 src={cfg.fotoUrl}
                 alt={titolo}
                 className="w-full object-cover h-[40vh]"
               />
+            ) : (
+              <div className="h-[28vh] bg-gradient-to-b from-zinc-900 to-black relative overflow-hidden flex items-center justify-center">
+                <span className="font-display font-light tracking-[0.4em] text-white/[0.04] text-[clamp(60px,12vw,120px)] uppercase select-none">
+                  {key === 'alimentari' ? 'ALI' : 'BEN'}
+                </span>
+              </div>
             )}
             <div className="flex items-center justify-between gap-4 p-6">
               <div>
