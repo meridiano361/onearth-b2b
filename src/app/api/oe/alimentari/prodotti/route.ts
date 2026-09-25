@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
   const prodotto = await prisma.oeAlimentariProdotto.create({
     data: {
       nome: body.nome.trim(),
+      codice: body.codice?.trim() || null,
       barcode: body.barcode?.trim() || null,
       fornitore: body.fornitore?.trim() || null,
       formato: body.formato?.trim() || null,

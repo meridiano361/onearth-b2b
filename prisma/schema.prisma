@@ -1227,6 +1227,7 @@ model WebAuthnChallenge {
 
 model OeAlimentariProdotto {
   id             String   @id @default(cuid())
+  codice         String?
   barcode        String?
   fornitore      String?
   nome           String

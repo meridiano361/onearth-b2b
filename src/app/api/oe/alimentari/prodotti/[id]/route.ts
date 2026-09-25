@@ -17,6 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const body = await req.json();
   const data: Record<string, unknown> = {};
   if (body.nome !== undefined)           data.nome = body.nome;
+  if (body.codice !== undefined)         data.codice = body.codice || null;
   if (body.barcode !== undefined)        data.barcode = body.barcode || null;
   if (body.fornitore !== undefined)      data.fornitore = body.fornitore || null;
   if (body.formato !== undefined)        data.formato = body.formato || null;

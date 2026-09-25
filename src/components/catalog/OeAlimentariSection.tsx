@@ -15,7 +15,7 @@ type FabbisognoEmpori = { emporio: string; qta: number };
 type Ordinato = { ordinato: number } | null;
 
 type Prodotto = {
-  id: string; barcode: string | null; fornitore: string | null;
+  id: string; codice: string | null; barcode: string | null; fornitore: string | null;
   nome: string; formato: string | null; ivaPerc: number;
   costoIi: number; pvpIi: number; pvpConsigliato: number | null;
   fotoUrl: string | null; note: string | null; ordine: number;
@@ -88,8 +88,9 @@ function EditForm({ editData, setEditData, onSave, onCancel, saving }: {
     <div className="space-y-2 border-t border-border pt-2 pb-3 px-3">
       <div className="grid grid-cols-2 gap-1.5">
         <input className="input-oe col-span-2" placeholder="Nome" value={editData.nome ?? ''} onChange={e => setEditData(d => ({ ...d, nome: e.target.value }))} />
-        <input className="input-oe" placeholder="Fornitore" value={editData.fornitore ?? ''} onChange={e => setEditData(d => ({ ...d, fornitore: e.target.value }))} />
+        <input className="input-oe" placeholder="Codice" value={editData.codice ?? ''} onChange={e => setEditData(d => ({ ...d, codice: e.target.value }))} />
         <input className="input-oe" placeholder="Barcode" value={editData.barcode ?? ''} onChange={e => setEditData(d => ({ ...d, barcode: e.target.value }))} />
+        <input className="input-oe" placeholder="Fornitore" value={editData.fornitore ?? ''} onChange={e => setEditData(d => ({ ...d, fornitore: e.target.value }))} />
         <input className="input-oe" placeholder="Formato" value={editData.formato ?? ''} onChange={e => setEditData(d => ({ ...d, formato: e.target.value }))} />
         <select className="input-oe" value={editData.ivaPerc ?? 10} onChange={e => setEditData(d => ({ ...d, ivaPerc: parseFloat(e.target.value) }))}>
           <option value={4}>IVA 4%</option>
@@ -253,9 +254,10 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
         <div className="border border-primary/20 rounded-xl p-4 bg-blue-50 space-y-3">
           <p className="text-xs font-semibold text-primary">Nuovo prodotto</p>
           <div className="grid grid-cols-2 gap-2">
-            <input className="input-oe" placeholder="Nome *" value={newData.nome ?? ''} onChange={e => setNewData(d => ({ ...d, nome: e.target.value }))} />
-            <input className="input-oe" placeholder="Fornitore" value={newData.fornitore ?? ''} onChange={e => setNewData(d => ({ ...d, fornitore: e.target.value }))} />
+            <input className="input-oe col-span-2" placeholder="Nome *" value={newData.nome ?? ''} onChange={e => setNewData(d => ({ ...d, nome: e.target.value }))} />
+            <input className="input-oe" placeholder="Codice" value={newData.codice ?? ''} onChange={e => setNewData(d => ({ ...d, codice: e.target.value }))} />
             <input className="input-oe" placeholder="Barcode" value={newData.barcode ?? ''} onChange={e => setNewData(d => ({ ...d, barcode: e.target.value }))} />
+            <input className="input-oe" placeholder="Fornitore" value={newData.fornitore ?? ''} onChange={e => setNewData(d => ({ ...d, fornitore: e.target.value }))} />
             <input className="input-oe" placeholder="Formato (es. 314 ml)" value={newData.formato ?? ''} onChange={e => setNewData(d => ({ ...d, formato: e.target.value }))} />
             <select className="input-oe" value={newData.ivaPerc ?? 10} onChange={e => setNewData(d => ({ ...d, ivaPerc: parseFloat(e.target.value) }))}>
               <option value={4}>IVA 4%</option>
@@ -598,8 +600,15 @@ function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }
         </div>
       )}
 
-      {p.barcode && (
-        <p className="text-xs text-gray-500">Barcode: <span className="font-mono text-gray-700">{p.barcode}</span></p>
+      {(p.codice || p.barcode) && (
+        <div className="space-y-1">
+          {p.codice && (
+            <p className="text-xs text-gray-500">Codice: <span className="font-mono text-gray-700">{p.codice}</span></p>
+          )}
+          {p.barcode && (
+            <p className="text-xs text-gray-500">Barcode: <span className="font-mono text-gray-700">{p.barcode}</span></p>
+          )}
+        </div>
       )}
       {p.note && (
         <div className="bg-amber-50 rounded-xl p-3">
@@ -813,9 +822,12 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                         {righe.map(r => (
                           <tr key={r.nome} className="border-b border-border/20 hover:bg-gray-50">
                             <td className="py-1.5 pr-3">
-                              <button onClick={() => openProdotto(r.nome)} className="text-left hover:text-primary flex items-center gap-1 group">
-                                <span>{r.nome}</span>
-                                <Info size={10} className="text-gray-300 group-hover:text-primary flex-shrink-0" />
+                              <button onClick={() => openProdotto(r.nome)} className="text-left hover:text-primary flex items-start gap-1 group">
+                                <span className="flex flex-col">
+                                  <span>{r.nome}</span>
+                                  {r.prod?.codice && <span className="font-mono text-[10px] text-gray-400">{r.prod.codice}</span>}
+                                </span>
+                                <Info size={10} className="text-gray-300 group-hover:text-primary flex-shrink-0 mt-0.5" />
                               </button>
                             </td>
                             <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.cIe) : '—'}</td>
