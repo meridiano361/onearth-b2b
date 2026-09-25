@@ -4,7 +4,7 @@ import { useState, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Pencil, Trash2, Plus, X, Check, ChevronDown, ChevronUp,
-  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info,
+  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info, TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CESTI_LICHENS, STRENNE, FABBISOGNO_STRENNE, EMPORI, type Emporio } from '@/data/oeAlimentariStatico';
@@ -929,15 +929,338 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   );
 }
 
+// ── Analisi Commerciale ───────────────────────────────────────────────────────
+
+function KpiCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
+  return (
+    <div className={cn('rounded-xl p-3.5 border', accent ? 'bg-primary border-primary' : 'bg-white border-border')}>
+      <p className={cn('text-[10px] font-medium mb-0.5', accent ? 'text-white/60' : 'text-gray-400')}>{label}</p>
+      <p className={cn('text-xl font-bold leading-none', accent ? 'text-white' : 'text-primary')}>{value}</p>
+      {sub && <p className={cn('text-[10px] mt-1', accent ? 'text-white/50' : 'text-gray-400')}>{sub}</p>}
+    </div>
+  );
+}
+
+function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
+  const STORES_ALL = ['CR', 'RE', 'CA', 'VI', 'MN', 'TR', 'HUB'] as const;
+
+  const { data: giacenze = [] } = useQuery<GiacenzaRow[]>({
+    queryKey: ['oe-cesti-giacenze'],
+    queryFn: async () => {
+      const res = await fetch('/api/oe/alimentari/cesti/giacenze');
+      return res.ok ? res.json() : [];
+    },
+    staleTime: 30_000,
+  });
+
+  // ── KPI catalogo ────────────────────────────────────────────────────────────
+  const byFornitore: Record<string, Prodotto[]> = {};
+  prodotti.forEach(p => {
+    const f = p.fornitore ?? 'Sconosciuto';
+    if (!byFornitore[f]) byFornitore[f] = [];
+    byFornitore[f].push(p);
+  });
+  const totCostoIi = prodotti.reduce((a, p) => a + p.costoIi, 0);
+  const totPvpIi   = prodotti.reduce((a, p) => a + p.pvpIi, 0);
+  const margMedio  = totPvpIi > 0 ? Math.round(((totPvpIi - totCostoIi) / totPvpIi) * 100) : 0;
+
+  // ── Strenne ─────────────────────────────────────────────────────────────────
+  const strenneKpi = STRENNE.map(s => {
+    const totQte    = Object.values(s.qte).reduce((a, b) => a + b, 0);
+    const margPerc  = Math.round(((s.prezzo - s.totCosto) / s.prezzo) * 100);
+    const margUnit  = s.prezzo - s.totCosto;
+    const fatturato = s.prezzo * totQte;
+    const costoTot  = s.totCosto * totQte;
+    return { ...s, totQte, margPerc, margUnit, fatturato, costoTot, margTot: fatturato - costoTot };
+  });
+  const totFatturato     = strenneKpi.reduce((a, s) => a + s.fatturato, 0);
+  const totCostoStrenne  = strenneKpi.reduce((a, s) => a + s.costoTot, 0);
+  const totMargStrenne   = strenneKpi.reduce((a, s) => a + s.margTot, 0);
+  const totPzStrenne     = strenneKpi.reduce((a, s) => a + s.totQte, 0);
+  const margStrennePerc  = totFatturato > 0 ? Math.round((totMargStrenne / totFatturato) * 100) : 0;
+
+  // ── Prodotti per margine ─────────────────────────────────────────────────────
+  const rankMargine = prodotti
+    .filter(p => p.pvpIi > 0 && p.costoIi > 0)
+    .map(p => ({
+      ...p,
+      margPerc: Math.round(((p.pvpIi - p.costoIi) / p.pvpIi) * 100),
+      margUnit: p.pvpIi - p.costoIi,
+    }))
+    .sort((a, b) => b.margPerc - a.margPerc);
+
+  // ── Fabbisogno ordinativo ────────────────────────────────────────────────────
+  const ordinativoRighe = prodotti
+    .map(p => {
+      const fabStr  = FABBISOGNO_STRENNE[p.nome] ?? 0;
+      const totEmp  = EMPORI.reduce((s, e) => s + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
+      const totale  = fabStr + totEmp;
+      const ordinato = p.ordinato?.ordinato ?? 0;
+      const da       = totale - ordinato;
+      return { ...p, totale, ordinato, da };
+    })
+    .filter(p => p.totale > 0)
+    .sort((a, b) => b.da - a.da);
+  const totDaOrdinare     = ordinativoRighe.reduce((a, p) => a + Math.max(0, p.da), 0);
+  const costoOrdinativo   = ordinativoRighe.reduce((a, p) => a + Math.max(0, p.da) * p.costoIi, 0);
+
+  // ── Cesti ────────────────────────────────────────────────────────────────────
+  const gMap = new Map<string, number>();
+  giacenze.forEach(r => gMap.set(`${r.cestoCodice}:${r.negozio}`, r.qta));
+  const cestoCounts: Record<string, number> = {};
+  STRENNE.forEach(s => {
+    const tot = Object.values(s.qte).reduce((a, b) => a + b, 0);
+    cestoCounts[s.cestoCodice] = (cestoCounts[s.cestoCodice] ?? 0) + tot;
+  });
+  const cestiKpi = CESTI_LICHENS.map(c => {
+    const totGiac     = STORES_ALL.reduce((a, s) => a + (gMap.get(`${c.codice}:${s}`) ?? 0), 0);
+    const riservati   = cestoCounts[c.codice] ?? 0;
+    return { ...c, totGiac, riservati, disponibili: totGiac - riservati,
+      valoreCosto: totGiac * c.costo, valorePvp: totGiac * c.pvp };
+  });
+  const totValCestiCosto = cestiKpi.reduce((a, c) => a + c.valoreCosto, 0);
+  const totValCestiPvp   = cestiKpi.reduce((a, c) => a + c.valorePvp, 0);
+
+  return (
+    <div className="space-y-10 pb-8">
+
+      {/* ① KPI catalogo */}
+      <section>
+        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Catalogo prodotti</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <KpiCard label="Prodotti a catalogo" value={`${prodotti.length}`} sub={`${Object.keys(byFornitore).length} fornitori`} />
+          <KpiCard label="Valore PVP catalogo" value={fmt(totPvpIi)} sub={`costo tot. ${fmt(totCostoIi)}`} />
+          <KpiCard label="Margine medio" value={`${margMedio}%`} sub="sul catalogo completo" accent />
+          <KpiCard label="Marg. unit. medio" value={fmt((totPvpIi - totCostoIi) / (prodotti.length || 1))} sub="per prodotto" />
+        </div>
+      </section>
+
+      {/* ② Strenne */}
+      <section>
+        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Strenne — previsione commerciale</h2>
+        <div className="overflow-x-auto -mx-4 px-4 mb-4">
+          <table className="min-w-full text-xs">
+            <thead>
+              <tr className="border-b-2 border-border text-gray-400 text-left">
+                <th className="pb-2 pr-3 font-medium">Strenna</th>
+                <th className="pb-2 px-2 font-medium text-right">Costo</th>
+                <th className="pb-2 px-2 font-medium text-right">Prezzo</th>
+                <th className="pb-2 px-2 font-medium text-right">Marg.%</th>
+                <th className="pb-2 px-2 font-medium text-right">Marg. unit.</th>
+                <th className="pb-2 px-2 font-medium text-right">Pz</th>
+                <th className="pb-2 px-2 font-medium text-right">Fatturato</th>
+                <th className="pb-2 pl-2 font-medium text-right">Margine tot.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {strenneKpi.map(s => (
+                <tr key={s.barcode} className="border-b border-border/40 hover:bg-gray-50">
+                  <td className="py-2 pr-3 font-medium whitespace-nowrap">Strenna {fmt(s.prezzo)}</td>
+                  <td className="py-2 px-2 text-right text-gray-500">{fmt(s.totCosto)}</td>
+                  <td className="py-2 px-2 text-right font-medium">{fmt(s.prezzo)}</td>
+                  <td className="py-2 px-2 text-right">
+                    <span className={cn('font-semibold', s.margPerc >= 30 ? 'text-green-600' : 'text-amber-600')}>{s.margPerc}%</span>
+                  </td>
+                  <td className="py-2 px-2 text-right text-gray-700">{fmt(s.margUnit)}</td>
+                  <td className="py-2 px-2 text-right font-medium">{s.totQte}</td>
+                  <td className="py-2 px-2 text-right font-medium text-primary">{fmt(s.fatturato)}</td>
+                  <td className="py-2 pl-2 text-right font-semibold text-green-700">{fmt(s.margTot)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-border font-bold text-primary text-xs">
+                <td className="pt-2 pr-3">TOTALE</td>
+                <td className="pt-2 px-2 text-right text-gray-600">{fmt(totCostoStrenne)}</td>
+                <td className="pt-2 px-2" />
+                <td className="pt-2 px-2 text-right text-green-600">{margStrennePerc}%</td>
+                <td className="pt-2 px-2" />
+                <td className="pt-2 px-2 text-right">{totPzStrenne}</td>
+                <td className="pt-2 px-2 text-right">{fmt(totFatturato)}</td>
+                <td className="pt-2 pl-2 text-right text-green-700">{fmt(totMargStrenne)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <KpiCard label="Fatturato previsto" value={fmt(totFatturato)} sub={`${totPzStrenne} strenne totali`} accent />
+          <KpiCard label="Investimento" value={fmt(totCostoStrenne)} sub="costo acquisto stock" />
+          <KpiCard label="Margine previsto" value={fmt(totMargStrenne)} sub={`${margStrennePerc}% sul fatturato`} accent />
+        </div>
+      </section>
+
+      {/* ③ Fornitori */}
+      <section>
+        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Analisi per fornitore</h2>
+        <div className="space-y-2">
+          {Object.entries(byFornitore)
+            .sort((a, b) => b[1].length - a[1].length)
+            .map(([fornitore, prods]) => {
+              const valid     = prods.filter(p => p.pvpIi > 0 && p.costoIi > 0);
+              const avgMarg   = valid.length ? Math.round(valid.reduce((a, p) => a + ((p.pvpIi - p.costoIi) / p.pvpIi) * 100, 0) / valid.length) : 0;
+              const avgPvp    = prods.reduce((a, p) => a + p.pvpIi, 0) / (prods.length || 1);
+              const avgCosto  = prods.reduce((a, p) => a + p.costoIi, 0) / (prods.length || 1);
+              return (
+                <div key={fornitore} className="flex items-center gap-3 bg-white border border-border rounded-xl p-3">
+                  <span className={cn('text-[10px] font-medium px-2 py-1 rounded-lg min-w-[110px] text-center flex-shrink-0', fornitoreBadge(fornitore))}>
+                    {fornitore}
+                  </span>
+                  <div className="flex-1 grid grid-cols-4 gap-2 text-center">
+                    <div>
+                      <p className="text-[10px] text-gray-400">Prodotti</p>
+                      <p className="text-sm font-bold">{prods.length}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400">Costo medio</p>
+                      <p className="text-sm font-semibold text-gray-600">{fmt(avgCosto)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400">PVP medio</p>
+                      <p className="text-sm font-semibold">{fmt(avgPvp)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400">Margine medio</p>
+                      <p className={cn('text-sm font-bold', avgMarg >= 45 ? 'text-green-600' : avgMarg >= 35 ? 'text-amber-600' : 'text-red-500')}>
+                        {avgMarg}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </section>
+
+      {/* ④ Classifica prodotti per margine */}
+      <section>
+        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Classifica prodotti per margine</h2>
+        <div className="space-y-2">
+          {rankMargine.map((p, i) => (
+            <div key={p.id} className="flex items-center gap-3 bg-white border border-border rounded-xl px-3 py-2.5 text-xs">
+              <span className="w-5 text-gray-400 text-center font-mono flex-shrink-0">{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-primary truncate">{p.nome}</p>
+                {p.fornitore && <p className="text-[10px] text-gray-400">{p.fornitore}</p>}
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-gray-500 flex-shrink-0 text-[10px]">
+                <span>Costo {fmt(p.costoIi)}</span>
+                <span className="text-gray-300">·</span>
+                <span>PVP {fmt(p.pvpIi)}</span>
+                <span className="text-gray-300">·</span>
+                <span>unit. {fmt(p.margUnit)}</span>
+              </div>
+              {/* Barra */}
+              <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden flex-shrink-0">
+                <div
+                  className={cn('h-full rounded-full', p.margPerc >= 50 ? 'bg-green-500' : p.margPerc >= 35 ? 'bg-amber-400' : 'bg-red-400')}
+                  style={{ width: `${Math.min(p.margPerc, 100)}%` }}
+                />
+              </div>
+              <span className={cn('font-bold w-9 text-right flex-shrink-0', p.margPerc >= 50 ? 'text-green-600' : p.margPerc >= 35 ? 'text-amber-600' : 'text-red-500')}>
+                {p.margPerc}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ⑤ Fabbisogno ordinativo */}
+      <section>
+        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Fabbisogno ordinativo</h2>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <KpiCard label="Pezzi ancora da ordinare" value={`${totDaOrdinare}`} sub="su tutto il fabbisogno" />
+          <KpiCard label="Valore ordine residuo" value={fmt(costoOrdinativo)} sub="costo IVA inclusa" accent />
+        </div>
+        <div className="space-y-1.5">
+          {ordinativoRighe.map(p => (
+            <div key={p.id} className="flex items-center gap-3 text-xs bg-white border border-border rounded-lg px-3 py-2">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-primary truncate">{p.nome}</p>
+              </div>
+              <span className="text-gray-400 flex-shrink-0">Fabb. {p.totale}</span>
+              <span className="text-green-600 flex-shrink-0">Ord. {p.ordinato}</span>
+              {p.da > 0
+                ? <span className="font-bold text-red-600 flex-shrink-0 min-w-[70px] text-right">Da ord. {p.da}</span>
+                : p.da < 0
+                ? <span className="text-green-600 flex-shrink-0 min-w-[70px] text-right">Surplus {Math.abs(p.da)}</span>
+                : <span className="text-gray-400 flex-shrink-0 min-w-[70px] text-right">✓ Ok</span>
+              }
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ⑥ Cesti — valore giacenze */}
+      <section>
+        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Cesti — valore giacenze</h2>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <KpiCard label="Valore giacenza a PVP" value={fmt(totValCestiPvp)} sub={`costo ${fmt(totValCestiCosto)}`} />
+          <KpiCard label="Margine sui cesti" value={`${Math.round(((totValCestiPvp - totValCestiCosto) / (totValCestiPvp || 1)) * 100)}%`} sub="sul totale giacenza" accent />
+        </div>
+        <div className="overflow-x-auto -mx-4 px-4">
+          <table className="min-w-full text-xs">
+            <thead>
+              <tr className="border-b-2 border-border text-gray-400 text-left">
+                <th className="pb-2 pr-3 font-medium">Cesto</th>
+                <th className="pb-2 px-2 font-medium text-right">Giacenza</th>
+                <th className="pb-2 px-2 font-medium text-right">Riservati</th>
+                <th className="pb-2 px-2 font-medium text-right">Disponibili</th>
+                <th className="pb-2 px-2 font-medium text-right">Costo</th>
+                <th className="pb-2 px-2 font-medium text-right">PVP unit.</th>
+                <th className="pb-2 px-2 font-medium text-right">Val. costo</th>
+                <th className="pb-2 pl-2 font-medium text-right">Val. PVP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cestiKpi.map(c => (
+                <tr key={c.codice} className="border-b border-border/40 hover:bg-gray-50">
+                  <td className="py-2 pr-3">
+                    <p className="font-medium text-primary">{c.descrizione}</p>
+                    {c.misure && <p className="text-[10px] text-gray-400">{c.misure}</p>}
+                  </td>
+                  <td className="py-2 px-2 text-right font-medium">{c.totGiac}</td>
+                  <td className="py-2 px-2 text-right text-amber-600">{c.riservati || '—'}</td>
+                  <td className="py-2 px-2 text-right">
+                    <span className={cn('font-semibold', c.disponibili > 0 ? 'text-green-600' : c.disponibili < 0 ? 'text-red-500' : 'text-gray-400')}>
+                      {c.disponibili}
+                    </span>
+                  </td>
+                  <td className="py-2 px-2 text-right text-gray-500">{fmt(c.costo)}</td>
+                  <td className="py-2 px-2 text-right text-gray-500">{fmt(c.pvp)}</td>
+                  <td className="py-2 px-2 text-right text-gray-700">{fmt(c.valoreCosto)}</td>
+                  <td className="py-2 pl-2 text-right font-semibold text-primary">{fmt(c.valorePvp)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-border font-bold text-primary text-xs">
+                <td className="pt-2 pr-3">TOTALE</td>
+                <td className="pt-2 px-2 text-right">{cestiKpi.reduce((a, c) => a + c.totGiac, 0)}</td>
+                <td className="pt-2 px-2 text-right text-amber-600">{cestiKpi.reduce((a, c) => a + c.riservati, 0)}</td>
+                <td className="pt-2 px-2" />
+                <td className="pt-2 px-2" /><td className="pt-2 px-2" />
+                <td className="pt-2 px-2 text-right">{fmt(totValCestiCosto)}</td>
+                <td className="pt-2 pl-2 text-right">{fmt(totValCestiPvp)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  );
+}
+
 // ── Main Section ──────────────────────────────────────────────────────────────
 
-type Tab = 'prodotti' | 'cesti' | 'strenne' | 'fabbisogno';
+type Tab = 'prodotti' | 'cesti' | 'strenne' | 'fabbisogno' | 'analisi';
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'prodotti', label: 'Prodotti', icon: Package },
   { id: 'cesti', label: 'Cesti', icon: ShoppingBasket },
   { id: 'strenne', label: 'Strenne', icon: Gift },
   { id: 'fabbisogno', label: 'Fabbisogno', icon: BarChart2 },
+  { id: 'analisi', label: 'Analisi', icon: TrendingUp },
 ];
 
 export default function OeAlimentariSection() {
@@ -994,8 +1317,10 @@ export default function OeAlimentariSection() {
           <TabCesti />
         ) : tab === 'strenne' ? (
           <TabStrenne prodotti={prodotti} />
-        ) : (
+        ) : tab === 'fabbisogno' ? (
           <TabFabbisogno prodotti={prodotti} refetch={refetch} />
+        ) : (
+          <TabAnalisi prodotti={prodotti} />
         )}
       </div>
 
