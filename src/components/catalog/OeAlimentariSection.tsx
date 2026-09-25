@@ -1113,9 +1113,19 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
     if (!byFornitore[f]) byFornitore[f] = [];
     byFornitore[f].push(p);
   });
-  const totCostoIi = prodotti.reduce((a, p) => a + p.costoIi, 0);
-  const totPvpIi   = prodotti.reduce((a, p) => a + p.pvpIi, 0);
-  const margMedio  = totPvpIi > 0 ? Math.round(((totPvpIi - totCostoIi) / totPvpIi) * 100) : 0;
+
+  // ── Scaffale ─────────────────────────────────────────────────────────────────
+  const scaffaleRighe = prodotti
+    .map(p => {
+      const qtaPerEmp = EMPORI.map(e => p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0);
+      const totPz = qtaPerEmp.reduce((a, q) => a + q, 0);
+      return { ...p, qtaPerEmp, totPz, costoTot: totPz * p.costoIi, pvpTot: totPz * p.pvpIi };
+    })
+    .filter(p => p.totPz > 0);
+  const totPezziScaffale = scaffaleRighe.reduce((a, p) => a + p.totPz, 0);
+  const totCostoScaffale = scaffaleRighe.reduce((a, p) => a + p.costoTot, 0);
+  const totPvpScaffale   = scaffaleRighe.reduce((a, p) => a + p.pvpTot, 0);
+  const margScaffalePerc = totPvpScaffale > 0 ? Math.round(((totPvpScaffale - totCostoScaffale) / totPvpScaffale) * 100) : 0;
 
   // ── Strenne ─────────────────────────────────────────────────────────────────
   const strenneKpi = STRENNE.map(s => {
@@ -1138,6 +1148,8 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
   const totPzStrenne     = strenneKpi.reduce((a, s) => a + s.totQte, 0);
   const margStrennePerc  = totFatturato > 0 ? Math.round((totMargStrenne / totFatturato) * 100) : 0;
 
+  const strenneRank = [...strenneKpi].sort((a, b) => b.margPerc - a.margPerc);
+
   // ── Prodotti per margine ─────────────────────────────────────────────────────
   const rankMargine = prodotti
     .filter(p => p.pvpIi > 0 && p.costoIi > 0)
@@ -1147,21 +1159,6 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
       margUnit: p.pvpIi - p.costoIi,
     }))
     .sort((a, b) => b.margPerc - a.margPerc);
-
-  // ── Fabbisogno ordinativo ────────────────────────────────────────────────────
-  const ordinativoRighe = prodotti
-    .map(p => {
-      const fabStr  = FABBISOGNO_STRENNE[p.nome] ?? 0;
-      const totEmp  = EMPORI.reduce((s, e) => s + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
-      const totale  = fabStr + totEmp;
-      const ordinato = p.ordinato?.ordinato ?? 0;
-      const da       = totale - ordinato;
-      return { ...p, totale, ordinato, da };
-    })
-    .filter(p => p.totale > 0)
-    .sort((a, b) => b.da - a.da);
-  const totDaOrdinare     = ordinativoRighe.reduce((a, p) => a + Math.max(0, p.da), 0);
-  const costoOrdinativo   = ordinativoRighe.reduce((a, p) => a + Math.max(0, p.da) * p.costoIi, 0);
 
   // ── Cesti ────────────────────────────────────────────────────────────────────
   const gMap = new Map<string, number>();
@@ -1183,16 +1180,54 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
   return (
     <div className="space-y-10 pb-8">
 
-      {/* ① KPI catalogo */}
-      <AnalisiCard id="catalogo" title="Catalogo prodotti" open={isOpen('catalogo')} onToggle={() => toggleSection('catalogo')}>
+      {/* ① Prodotti a scaffale */}
+      <AnalisiCard id="scaffale" title="Prodotti a scaffale — previsione" open={isOpen('scaffale')} onToggle={() => toggleSection('scaffale')}>
         <div className="grid grid-cols-2 gap-3">
-          <KpiCard label="Prodotti a catalogo" value={fmtN(prodotti.length)} sub={`${fmtN(Object.keys(byFornitore).length)} fornitori`} />
-          <KpiCard label="Margine medio" value={`${margMedio}%`} sub="sul catalogo completo" accent />
+          <KpiCard label="Prodotti a scaffale" value={fmtN(scaffaleRighe.length)} sub={`${fmtN(totPezziScaffale)} pezzi previsti`} />
+          <KpiCard label="Margine medio" value={`${margScaffalePerc}%`} sub="PVP vs costo i.i." accent />
+        </div>
+        <div className="overflow-x-auto -mx-5 px-5">
+          <table className="min-w-full text-xs">
+            <thead>
+              <tr className="border-b-2 border-border text-gray-400 text-left">
+                <th className="pb-2 pr-3 font-medium">Prodotto</th>
+                {EMPORI.map(e => <th key={e} className="pb-2 px-2 font-medium text-right">{e}</th>)}
+                <th className="pb-2 px-2 font-medium text-right">Tot</th>
+                <th className="pb-2 pl-2 font-medium text-right">Costo tot. i.i.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scaffaleRighe.map(p => (
+                <tr key={p.id} className="border-b border-border/40 hover:bg-gray-50">
+                  <td className="py-2 pr-3 font-medium text-primary truncate max-w-[160px]">{p.nome}</td>
+                  {p.qtaPerEmp.map((q, i) => (
+                    <td key={i} className="py-2 px-2 text-right text-gray-600">{q || '—'}</td>
+                  ))}
+                  <td className="py-2 px-2 text-right font-bold">{fmtN(p.totPz)}</td>
+                  <td className="py-2 pl-2 text-right font-semibold text-primary">{fmt(p.costoTot)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-border font-bold text-xs">
+                <td className="pt-2 pr-3">TOTALE</td>
+                {EMPORI.map((e, i) => (
+                  <td key={e} className="pt-2 px-2 text-right">{fmtN(scaffaleRighe.reduce((a, p) => a + p.qtaPerEmp[i], 0))}</td>
+                ))}
+                <td className="pt-2 px-2 text-right text-primary">{fmtN(totPezziScaffale)}</td>
+                <td className="pt-2 pl-2 text-right text-primary">{fmt(totCostoScaffale)}</td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </AnalisiCard>
 
       {/* ② Strenne */}
-      <AnalisiCard id="strenne" title="Strenne — previsione commerciale" open={isOpen('strenne')} onToggle={() => toggleSection('strenne')}>
+      <AnalisiCard id="strenne" title="Strenne — previsione" open={isOpen('strenne')} onToggle={() => toggleSection('strenne')}>
+        <div className="grid grid-cols-2 gap-3">
+          <KpiCard label="Strenne" value={fmtN(strenneKpi.length)} sub={`${fmtN(totPzStrenne)} pezzi previsti`} />
+          <KpiCard label="Margine medio" value={`${margStrennePerc}%`} sub="sul fatturato previsto" accent />
+        </div>
         <div className="overflow-x-auto -mx-5 px-5">
           <table className="min-w-full text-xs">
             <thead>
@@ -1244,7 +1279,37 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
         </div>
       </AnalisiCard>
 
-      {/* ③ Fornitori */}
+      {/* ③ Strenne — classifica per margine */}
+      <AnalisiCard id="strenne-rank" title="Strenne — classifica per margine" open={isOpen('strenne-rank')} onToggle={() => toggleSection('strenne-rank')}>
+        <div className="space-y-2">
+          {strenneRank.map((s, i) => (
+            <div key={s.barcode} className="flex items-center gap-3 bg-white border border-border rounded-xl px-3 py-2.5 text-xs">
+              <span className="w-5 text-gray-400 text-center font-mono flex-shrink-0">{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-primary">Strenna {s.prezzo}</p>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-gray-500 flex-shrink-0 text-[10px]">
+                <span>Costo {fmt(s.costoReale)}</span>
+                <span className="text-gray-300">·</span>
+                <span>PVP {fmt(s.prezzo)}</span>
+                <span className="text-gray-300">·</span>
+                <span>Marg. {fmt(s.margUnit)}</span>
+              </div>
+              <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden flex-shrink-0">
+                <div
+                  className={cn('h-full rounded-full', s.margPerc >= 50 ? 'bg-green-500' : s.margPerc >= 35 ? 'bg-amber-400' : 'bg-red-400')}
+                  style={{ width: `${Math.min(s.margPerc, 100)}%` }}
+                />
+              </div>
+              <span className={cn('font-bold w-9 text-right flex-shrink-0', s.margPerc >= 50 ? 'text-green-600' : s.margPerc >= 35 ? 'text-amber-600' : 'text-red-500')}>
+                {s.margPerc}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </AnalisiCard>
+
+      {/* ④ Fornitori */}
       <AnalisiCard id="fornitori" title="Analisi per fornitore" open={isOpen('fornitori')} onToggle={() => toggleSection('fornitori')}>
         <div className="space-y-2">
           {Object.entries(byFornitore)
@@ -1318,87 +1383,6 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
               </span>
             </div>
           ))}
-        </div>
-      </AnalisiCard>
-
-      {/* ⑤ Fabbisogno ordinativo */}
-      <AnalisiCard id="fabbisogno" title="Fabbisogno ordinativo" open={isOpen('fabbisogno')} onToggle={() => toggleSection('fabbisogno')}>
-        <div className="grid grid-cols-2 gap-3">
-          <KpiCard label="Pezzi ancora da ordinare" value={fmtN(totDaOrdinare)} sub="su tutto il fabbisogno" />
-          <KpiCard label="Valore ordine residuo" value={fmt(costoOrdinativo)} sub="costo IVA inclusa" accent />
-        </div>
-        <div className="space-y-1.5">
-          {ordinativoRighe.map(p => (
-            <div key={p.id} className="flex items-center gap-3 text-xs bg-white border border-border rounded-lg px-3 py-2">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-primary truncate">{p.nome}</p>
-              </div>
-              <span className="text-gray-400 flex-shrink-0">Fabb. {fmtN(p.totale)}</span>
-              <span className="text-green-600 flex-shrink-0">Ord. {fmtN(p.ordinato)}</span>
-              {p.da > 0
-                ? <span className="font-bold text-red-600 flex-shrink-0 min-w-[70px] text-right">Da ord. {fmtN(p.da)}</span>
-                : p.da < 0
-                ? <span className="text-green-600 flex-shrink-0 min-w-[70px] text-right">Surplus {fmtN(Math.abs(p.da))}</span>
-                : <span className="text-gray-400 flex-shrink-0 min-w-[70px] text-right">✓ Ok</span>
-              }
-            </div>
-          ))}
-        </div>
-      </AnalisiCard>
-
-      {/* ⑥ Cesti — valore giacenze */}
-      <AnalisiCard id="cesti" title="Cesti — valore giacenze" open={isOpen('cesti')} onToggle={() => toggleSection('cesti')}>
-        <div className="grid grid-cols-2 gap-3">
-          <KpiCard label="Valore giacenza a PVP" value={fmt(totValCestiPvp)} sub={`costo ${fmt(totValCestiCosto)}`} />
-          <KpiCard label="Margine sui cesti" value={`${Math.round(((totValCestiPvp - totValCestiCosto) / (totValCestiPvp || 1)) * 100)}%`} sub="sul totale giacenza" accent />
-        </div>
-        <div className="overflow-x-auto -mx-5 px-5">
-          <table className="min-w-full text-xs">
-            <thead>
-              <tr className="border-b-2 border-border text-gray-400 text-left">
-                <th className="pb-2 pr-3 font-medium">Cesto</th>
-                <th className="pb-2 px-2 font-medium text-right">Giacenza</th>
-                <th className="pb-2 px-2 font-medium text-right">Riservati</th>
-                <th className="pb-2 px-2 font-medium text-right">Disponibili</th>
-                <th className="pb-2 px-2 font-medium text-right">Costo i.i.</th>
-                <th className="pb-2 px-2 font-medium text-right">PVP i.i.</th>
-                <th className="pb-2 px-2 font-medium text-right">Val. costo</th>
-                <th className="pb-2 pl-2 font-medium text-right">Val. PVP</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cestiKpi.map(c => (
-                <tr key={c.codice} className="border-b border-border/40 hover:bg-gray-50">
-                  <td className="py-2 pr-3">
-                    <p className="font-medium text-primary">{c.descrizione}</p>
-                    {c.misure && <p className="text-[10px] text-gray-400">{c.misure}</p>}
-                  </td>
-                  <td className="py-2 px-2 text-right font-medium">{c.totGiac}</td>
-                  <td className="py-2 px-2 text-right text-amber-600">{c.riservati || '—'}</td>
-                  <td className="py-2 px-2 text-right">
-                    <span className={cn('font-semibold', c.disponibili > 0 ? 'text-green-600' : c.disponibili < 0 ? 'text-red-500' : 'text-gray-400')}>
-                      {c.disponibili}
-                    </span>
-                  </td>
-                  <td className="py-2 px-2 text-right text-gray-500">{fmt(c.costo)}</td>
-                  <td className="py-2 px-2 text-right text-gray-500">{fmt(c.pvp)}</td>
-                  <td className="py-2 px-2 text-right text-gray-700">{fmt(c.valoreCosto)}</td>
-                  <td className="py-2 pl-2 text-right font-semibold text-primary">{fmt(c.valorePvp)}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-border font-bold text-primary text-xs">
-                <td className="pt-2 pr-3">TOTALE</td>
-                <td className="pt-2 px-2 text-right">{cestiKpi.reduce((a, c) => a + c.totGiac, 0)}</td>
-                <td className="pt-2 px-2 text-right text-amber-600">{cestiKpi.reduce((a, c) => a + c.riservati, 0)}</td>
-                <td className="pt-2 px-2" />
-                <td className="pt-2 px-2" /><td className="pt-2 px-2" />
-                <td className="pt-2 px-2 text-right">{fmt(totValCestiCosto)}</td>
-                <td className="pt-2 pl-2 text-right">{fmt(totValCestiPvp)}</td>
-              </tr>
-            </tfoot>
-          </table>
         </div>
       </AnalisiCard>
 
