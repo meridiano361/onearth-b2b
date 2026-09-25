@@ -682,6 +682,11 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
         const isOpen = openIdx === i;
         const totQte = Object.values(s.qte).reduce((a, b) => a + b, 0);
         const cesto = CESTI_LICHENS.find(c => c.codice === s.cestoCodice);
+        const costoProdotti = s.prodotti.reduce((acc, sp) => {
+          const prod = prodotti.find(p => p.nome === sp.nome);
+          return acc + (prod?.costoIi ?? 0);
+        }, 0);
+        const costoReale = s.costoCesto + costoProdotti;
         return (
           <div key={s.barcode} className="border border-border rounded-xl bg-white overflow-hidden">
             {/* Header */}
@@ -694,7 +699,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-primary">Strenna {s.prezzo}</p>
-                <p className="text-xs text-gray-400">{s.prodotti.length + 1} componenti · costo {fmt(s.totCosto)} · {fmtN(totQte)} pz tot.</p>
+                <p className="text-xs text-gray-400">{s.prodotti.length + 1} componenti · costo {fmt(costoReale)} · {fmtN(totQte)} pz tot.</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-mono text-gray-400">{s.barcode}</span>
@@ -717,22 +722,25 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                       <Info size={12} className="text-gray-300 group-hover:text-primary transition-colors" />
                     </div>
                   </button>
-                  {s.prodotti.map(sp => (
-                    <button
-                      key={sp.nome}
-                      onClick={() => openProdotto(sp.nome)}
-                      className="w-full flex items-center justify-between py-1 border-b border-border/30 hover:bg-gray-50 rounded transition-colors text-left group"
-                    >
-                      <span className="text-sm">{sp.nome}</span>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-xs text-gray-500">{fmt(sp.pvp)}</span>
-                        <Info size={12} className="text-gray-300 group-hover:text-primary transition-colors" />
-                      </div>
-                    </button>
-                  ))}
+                  {s.prodotti.map(sp => {
+                    const prod = prodotti.find(p => p.nome === sp.nome);
+                    return (
+                      <button
+                        key={sp.nome}
+                        onClick={() => openProdotto(sp.nome)}
+                        className="w-full flex items-center justify-between py-1 border-b border-border/30 hover:bg-gray-50 rounded transition-colors text-left group"
+                      >
+                        <span className="text-sm">{sp.nome}</span>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-xs text-gray-500">{prod ? fmt(prod.costoIi) : '—'}</span>
+                          <Info size={12} className="text-gray-300 group-hover:text-primary transition-colors" />
+                        </div>
+                      </button>
+                    );
+                  })}
                   <div className="flex items-center justify-between pt-1 font-semibold">
                     <span className="text-sm">Totale costo</span>
-                    <span className="text-sm text-primary">{fmt(s.totCosto)}</span>
+                    <span className="text-sm text-primary">{fmt(costoReale)}</span>
                   </div>
                   <div className="flex items-center justify-between font-semibold text-green-700">
                     <span className="text-sm">Prezzo vendita</span>
@@ -740,7 +748,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                   </div>
                   <div className="flex items-center justify-between text-gray-500">
                     <span className="text-xs">Margine</span>
-                    <span className="text-xs font-medium">{Math.round(((s.prezzo - s.totCosto) / s.prezzo) * 100)}%</span>
+                    <span className="text-xs font-medium">{Math.round(((s.prezzo - costoReale) / s.prezzo) * 100)}%</span>
                   </div>
                 </div>
 
@@ -973,11 +981,17 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
   // ── Strenne ─────────────────────────────────────────────────────────────────
   const strenneKpi = STRENNE.map(s => {
     const totQte    = Object.values(s.qte).reduce((a, b) => a + b, 0);
-    const margPerc  = Math.round(((s.prezzo - s.totCosto) / s.prezzo) * 100);
-    const margUnit  = s.prezzo - s.totCosto;
+    // costo reale = costo cesto + somma costoIi dei prodotti (dal DB)
+    const costoProdotti = s.prodotti.reduce((acc, sp) => {
+      const prod = prodotti.find(p => p.nome === sp.nome);
+      return acc + (prod?.costoIi ?? 0);
+    }, 0);
+    const costoReale = s.costoCesto + costoProdotti;
+    const margPerc  = costoReale > 0 ? Math.round(((s.prezzo - costoReale) / s.prezzo) * 100) : 0;
+    const margUnit  = s.prezzo - costoReale;
     const fatturato = s.prezzo * totQte;
-    const costoTot  = s.totCosto * totQte;
-    return { ...s, totQte, margPerc, margUnit, fatturato, costoTot, margTot: fatturato - costoTot };
+    const costoTot  = costoReale * totQte;
+    return { ...s, costoReale, totQte, margPerc, margUnit, fatturato, costoTot, margTot: fatturato - costoTot };
   });
   const totFatturato     = strenneKpi.reduce((a, s) => a + s.fatturato, 0);
   const totCostoStrenne  = strenneKpi.reduce((a, s) => a + s.costoTot, 0);
@@ -1060,7 +1074,7 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
               {strenneKpi.map(s => (
                 <tr key={s.barcode} className="border-b border-border/40 hover:bg-gray-50">
                   <td className="py-2 pr-3 font-medium whitespace-nowrap">Strenna {s.prezzo}</td>
-                  <td className="py-2 px-2 text-right text-gray-500">{fmt(s.totCosto)}</td>
+                  <td className="py-2 px-2 text-right text-gray-500">{fmt(s.costoReale)}</td>
                   <td className="py-2 px-2 text-right font-medium">{fmt(s.prezzo)}</td>
                   <td className="py-2 px-2 text-right">
                     <span className={cn('font-semibold', s.margPerc >= 30 ? 'text-green-600' : 'text-amber-600')}>{s.margPerc}%</span>
