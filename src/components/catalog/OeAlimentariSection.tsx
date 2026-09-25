@@ -4,10 +4,11 @@ import { useState, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Pencil, Trash2, Plus, X, Check, ChevronDown, ChevronUp,
-  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info, TrendingUp,
+  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info, TrendingUp, ImageIcon,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
-import { CESTI_LICHENS, STRENNE, FABBISOGNO_STRENNE, EMPORI, STRENNA_FOTO, type Emporio } from '@/data/oeAlimentariStatico';
+import { STRENNE, FABBISOGNO_STRENNE, EMPORI, STRENNA_FOTO, type Emporio } from '@/data/oeAlimentariStatico';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -397,11 +398,31 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
 // ── Tab: Cesti ────────────────────────────────────────────────────────────────
 
 type GiacenzaRow = { cestoCodice: string; negozio: string; qta: number };
+type CestoDB = { codice: string; descrizione: string; misure: string; pvp: number; costo: number; fotoUrl: string };
+
+const EMPTY_CESTO: Omit<CestoDB, 'fotoUrl'> & { fotoUrl: string } = { codice: '', descrizione: '', misure: '', pvp: 0, costo: 0, fotoUrl: '' };
 
 function TabCesti() {
   const STORES_ALL = ['CR', 'RE', 'CA', 'VI', 'MN', 'TN', 'HUB'] as const;
+
+  // Giacenze editing
   const [editing, setEditing] = useState<{ codice: string; negozio: string } | null>(null);
   const [editVal, setEditVal] = useState('');
+
+  // Cesto editing
+  const [editCesto, setEditCesto] = useState<CestoDB | null>(null);
+  const [savingCesto, setSavingCesto] = useState(false);
+  const [addingCesto, setAddingCesto] = useState(false);
+  const [newCesto, setNewCesto] = useState<CestoDB>({ ...EMPTY_CESTO });
+  const [uploadingFoto, setUploadingFoto] = useState<string | null>(null); // codice che sta caricando
+  const fileRef = useRef<HTMLInputElement>(null);
+  const fileTarget = useRef<'edit' | 'new'>('edit');
+
+  const { data: cesti = [], refetch: refetchCesti } = useQuery<CestoDB[]>({
+    queryKey: ['oe-cesti'],
+    queryFn: () => fetch('/api/oe/alimentari/cesti').then(r => r.json()),
+    staleTime: 30_000,
+  });
 
   const { data: giacenze = [], refetch } = useQuery<GiacenzaRow[]>({
     queryKey: ['oe-cesti-giacenze'],
@@ -412,7 +433,6 @@ function TabCesti() {
     staleTime: 30_000,
   });
 
-  // Mappa (cestoCodice, negozio) → qta
   const gMap = new Map<string, number>();
   giacenze.forEach(r => gMap.set(`${r.cestoCodice}:${r.negozio}`, r.qta));
   const getQta = (codice: string, negozio: string) => gMap.get(`${codice}:${negozio}`) ?? 0;
@@ -427,20 +447,83 @@ function TabCesti() {
     refetch();
   };
 
-  // Quanti cesti servono per le strenne
   const cestoCounts: Record<string, number> = {};
   STRENNE.forEach(s => {
     const tot = Object.values(s.qte).reduce((a, b) => a + b, 0);
     cestoCounts[s.cestoCodice] = (cestoCounts[s.cestoCodice] ?? 0) + tot;
   });
 
+  async function handleFotoFile(file: File) {
+    const target = fileTarget.current;
+    const codice = target === 'edit' ? editCesto?.codice : 'new';
+    setUploadingFoto(codice ?? null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/admin/oe-settings/upload', { method: 'POST', body: fd });
+      const json = await res.json();
+      if (json.url) {
+        if (target === 'edit' && editCesto) setEditCesto(prev => prev ? { ...prev, fotoUrl: json.url } : prev);
+        else setNewCesto(prev => ({ ...prev, fotoUrl: json.url }));
+      } else {
+        toast.error(json.error ?? 'Upload fallito');
+      }
+    } catch { toast.error('Errore upload foto'); }
+    finally { setUploadingFoto(null); }
+  }
+
+  async function saveCestoEdit() {
+    if (!editCesto) return;
+    setSavingCesto(true);
+    try {
+      const res = await fetch(`/api/oe/alimentari/cesti/${encodeURIComponent(editCesto.codice)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ descrizione: editCesto.descrizione, misure: editCesto.misure, pvp: editCesto.pvp, costo: editCesto.costo, fotoUrl: editCesto.fotoUrl }),
+      });
+      if (res.ok) { setEditCesto(null); refetchCesti(); toast.success('Cesto salvato'); }
+      else { const j = await res.json(); toast.error(j.error ?? 'Salvataggio fallito'); }
+    } finally { setSavingCesto(false); }
+  }
+
+  async function deleteCesto(codice: string) {
+    if (!confirm(`Eliminare il cesto ${codice}?`)) return;
+    const res = await fetch(`/api/oe/alimentari/cesti/${encodeURIComponent(codice)}`, { method: 'DELETE' });
+    if (res.ok) { refetchCesti(); toast.success('Cesto eliminato'); }
+    else toast.error('Eliminazione fallita');
+  }
+
+  async function addCesto() {
+    if (!newCesto.codice.trim() || !newCesto.descrizione.trim()) {
+      toast.error('Codice e descrizione obbligatori');
+      return;
+    }
+    const res = await fetch('/api/oe/alimentari/cesti', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newCesto),
+    });
+    if (res.ok) {
+      setAddingCesto(false);
+      setNewCesto({ ...EMPTY_CESTO });
+      refetchCesti();
+      toast.success('Cesto aggiunto');
+    } else {
+      const j = await res.json();
+      toast.error(j.error ?? 'Aggiunta fallita');
+    }
+  }
+
+  const inpCls = 'border border-border rounded px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-primary w-full';
+
   return (
-    <div className="space-y-2">
-      <p className="text-xs text-amber-700 font-medium">Click su una cella per modificare la giacenza</p>
+    <div className="space-y-3">
+      <p className="text-xs text-amber-700 font-medium">Click su una cella giacenza per modificarla · Usa <Pencil size={10} className="inline" /> per modificare dati e foto</p>
       <div className="overflow-x-auto -mx-4 px-4">
         <table className="min-w-full text-xs">
           <thead>
             <tr className="text-left text-gray-400 border-b border-border">
+              <th className="pb-2 pr-2 font-medium w-10">Foto</th>
               <th className="pb-2 pr-3 font-medium">Codice</th>
               <th className="pb-2 pr-3 font-medium">Descrizione</th>
               <th className="pb-2 pr-3 font-medium">Misure</th>
@@ -452,16 +535,25 @@ function TabCesti() {
               ))}
               <th className="pb-2 pr-3 font-medium text-center">TOT</th>
               <th className="pb-2 pr-3 font-medium text-center">Strenne</th>
-              <th className="pb-2 font-medium text-center">Disponibili</th>
+              <th className="pb-2 pr-3 font-medium text-center">Disp.</th>
+              <th className="pb-2 font-medium"></th>
             </tr>
           </thead>
           <tbody>
-            {CESTI_LICHENS.map(c => {
+            {cesti.map(c => {
               const tot = STORES_ALL.reduce((a, s) => a + getQta(c.codice, s), 0);
               const perStrenne = cestoCounts[c.codice] ?? 0;
               const disponibili = tot - perStrenne;
               return (
                 <tr key={c.codice} className="border-b border-border/40 hover:bg-gray-50">
+                  <td className="py-1 pr-2">
+                    <div className="w-8 h-8 rounded overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      {c.fotoUrl
+                        ? <img src={c.fotoUrl} alt={c.descrizione} className="w-full h-full object-cover" />
+                        : <ImageIcon size={12} className="text-gray-300" />
+                      }
+                    </div>
+                  </td>
                   <td className="py-2 pr-3 font-mono text-gray-500">{c.codice}</td>
                   <td className="py-2 pr-3 font-medium text-primary whitespace-nowrap">{c.descrizione}</td>
                   <td className="py-2 pr-3 text-gray-400 whitespace-nowrap">{c.misure || '—'}</td>
@@ -475,8 +567,7 @@ function TabCesti() {
                       <td key={negozio} className="py-1 pr-1 text-center">
                         {isEd ? (
                           <input
-                            autoFocus
-                            type="number" min="0"
+                            autoFocus type="number" min="0"
                             className="w-10 text-center text-xs border border-primary rounded px-1 py-0.5"
                             value={editVal}
                             onChange={e => setEditVal(e.target.value)}
@@ -486,13 +577,8 @@ function TabCesti() {
                         ) : (
                           <button
                             onClick={() => { setEditing({ codice: c.codice, negozio }); setEditVal(String(qta)); }}
-                            className={cn(
-                              'w-full min-w-[28px] py-0.5 rounded hover:bg-blue-50 hover:ring-1 hover:ring-blue-300 transition-all',
-                              qta > 0 ? 'font-medium text-gray-700' : 'text-gray-300'
-                            )}
-                          >
-                            {qta}
-                          </button>
+                            className={cn('w-full min-w-[28px] py-0.5 rounded hover:bg-blue-50 hover:ring-1 hover:ring-blue-300 transition-all', qta > 0 ? 'font-medium text-gray-700' : 'text-gray-300')}
+                          >{qta}</button>
                         )}
                       </td>
                     );
@@ -501,10 +587,16 @@ function TabCesti() {
                   <td className="py-2 pr-3 text-center">
                     {perStrenne > 0 ? <span className="text-amber-600 font-medium">{perStrenne}</span> : <span className="text-gray-300">—</span>}
                   </td>
-                  <td className="py-2 text-center">
+                  <td className="py-2 pr-3 text-center">
                     <span className={cn('font-semibold', disponibili > 0 ? 'text-green-600' : disponibili < 0 ? 'text-red-500' : 'text-gray-400')}>
                       {disponibili !== 0 ? disponibili : '—'}
                     </span>
+                  </td>
+                  <td className="py-2 text-right">
+                    <div className="flex items-center gap-1 justify-end">
+                      <button onClick={() => setEditCesto({ ...c })} className="p-1 text-gray-400 hover:text-primary rounded transition-colors"><Pencil size={12} /></button>
+                      <button onClick={() => deleteCesto(c.codice)} className="p-1 text-gray-400 hover:text-red-500 rounded transition-colors"><Trash2 size={12} /></button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -512,6 +604,127 @@ function TabCesti() {
           </tbody>
         </table>
       </div>
+
+      {/* Aggiungi cesto */}
+      {!addingCesto ? (
+        <button onClick={() => setAddingCesto(true)} className="flex items-center gap-1.5 text-xs text-primary font-medium hover:opacity-75 transition-opacity pt-1">
+          <Plus size={13} />Aggiungi cesto
+        </button>
+      ) : (
+        <div className="border border-border rounded-xl p-3 space-y-2.5 bg-gray-50">
+          <p className="text-xs font-semibold text-gray-600">Nuovo cesto</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] text-gray-400 mb-0.5 block">Codice *</label>
+              <input className={inpCls} value={newCesto.codice} onChange={e => setNewCesto(p => ({ ...p, codice: e.target.value }))} placeholder="es. 7441" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 mb-0.5 block">Descrizione *</label>
+              <input className={inpCls} value={newCesto.descrizione} onChange={e => setNewCesto(p => ({ ...p, descrizione: e.target.value }))} placeholder="es. Rett. piccolo" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 mb-0.5 block">Misure</label>
+              <input className={inpCls} value={newCesto.misure} onChange={e => setNewCesto(p => ({ ...p, misure: e.target.value }))} placeholder="es. cm 25×18×6h" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 mb-0.5 block">Foto</label>
+              <div className="flex items-center gap-2">
+                {newCesto.fotoUrl
+                  ? <img src={newCesto.fotoUrl} alt="" className="w-8 h-8 rounded object-cover border border-border" />
+                  : <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center border border-border"><ImageIcon size={12} className="text-gray-300" /></div>
+                }
+                <button
+                  type="button"
+                  disabled={uploadingFoto !== null}
+                  onClick={() => { fileTarget.current = 'new'; fileRef.current?.click(); }}
+                  className="text-[10px] px-2 py-1 bg-white border border-border rounded hover:bg-gray-50 disabled:opacity-50"
+                >{uploadingFoto === 'new' ? 'Caricamento…' : 'Carica'}</button>
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 mb-0.5 block">PVP i.i. (€)</label>
+              <input className={inpCls} type="number" min="0" step="0.01" value={newCesto.pvp || ''} onChange={e => setNewCesto(p => ({ ...p, pvp: parseFloat(e.target.value) || 0 }))} placeholder="0.00" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 mb-0.5 block">Costo i.i. (€)</label>
+              <input className={inpCls} type="number" min="0" step="0.01" value={newCesto.costo || ''} onChange={e => setNewCesto(p => ({ ...p, costo: parseFloat(e.target.value) || 0 }))} placeholder="0.00" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={addCesto} className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs rounded-lg font-medium"><Check size={11} />Aggiungi</button>
+            <button onClick={() => { setAddingCesto(false); setNewCesto({ ...EMPTY_CESTO }); }} className="px-3 py-1.5 text-xs text-gray-500 rounded-lg border border-border hover:bg-gray-50">Annulla</button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal modifica cesto */}
+      {editCesto && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setEditCesto(null)} />
+          <div className="relative bg-white w-full max-w-sm rounded-t-2xl sm:rounded-2xl p-5 space-y-3 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-sm text-primary">Modifica cesto {editCesto.codice}</h3>
+              <button onClick={() => setEditCesto(null)} className="p-1 text-gray-400 hover:text-gray-600"><X size={16} /></button>
+            </div>
+            {/* Foto */}
+            <div>
+              <label className="text-[10px] text-gray-400 mb-1 block">Foto</label>
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center border border-border flex-shrink-0">
+                  {editCesto.fotoUrl
+                    ? <img src={editCesto.fotoUrl} alt={editCesto.descrizione} className="w-full h-full object-cover" />
+                    : <ImageIcon size={20} className="text-gray-300" />
+                  }
+                </div>
+                <div className="flex-1 space-y-1">
+                  <input type="text" value={editCesto.fotoUrl} onChange={e => setEditCesto(p => p ? { ...p, fotoUrl: e.target.value } : p)} placeholder="https://..." className={inpCls} />
+                  <button
+                    type="button"
+                    disabled={uploadingFoto !== null}
+                    onClick={() => { fileTarget.current = 'edit'; fileRef.current?.click(); }}
+                    className="px-3 py-1 bg-gray-100 text-xs rounded hover:bg-gray-200 disabled:opacity-50"
+                  >{uploadingFoto === editCesto.codice ? 'Caricamento…' : 'Carica immagine'}</button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 mb-0.5 block">Codice</label>
+              <p className="text-xs font-mono text-gray-500 px-2 py-1.5 bg-gray-50 rounded border border-border">{editCesto.codice}</p>
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 mb-0.5 block">Descrizione</label>
+              <input className={inpCls} value={editCesto.descrizione} onChange={e => setEditCesto(p => p ? { ...p, descrizione: e.target.value } : p)} />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 mb-0.5 block">Misure</label>
+              <input className={inpCls} value={editCesto.misure} onChange={e => setEditCesto(p => p ? { ...p, misure: e.target.value } : p)} placeholder="es. cm 33×23×8h" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-gray-400 mb-0.5 block">PVP i.i. (€)</label>
+                <input className={inpCls} type="number" min="0" step="0.01" value={editCesto.pvp} onChange={e => setEditCesto(p => p ? { ...p, pvp: parseFloat(e.target.value) || 0 } : p)} />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 mb-0.5 block">Costo i.i. (€)</label>
+                <input className={inpCls} type="number" min="0" step="0.01" value={editCesto.costo} onChange={e => setEditCesto(p => p ? { ...p, costo: parseFloat(e.target.value) || 0 } : p)} />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={saveCestoEdit} disabled={savingCesto} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-white text-xs rounded-xl font-medium disabled:opacity-50">
+                <Check size={12} />{savingCesto ? 'Salvataggio…' : 'Salva'}
+              </button>
+              <button onClick={() => setEditCesto(null)} className="px-4 py-2 text-xs text-gray-500 border border-border rounded-xl hover:bg-gray-50">Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Input file nascosto */}
+      <input
+        ref={fileRef as React.RefObject<HTMLInputElement>}
+        type="file" accept="image/*" className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFotoFile(f); e.target.value = ''; }}
+      />
     </div>
   );
 }
@@ -520,7 +733,7 @@ function TabCesti() {
 
 type AnagraticaState =
   | { kind: 'prodotto'; data: Prodotto }
-  | { kind: 'cesto'; data: typeof CESTI_LICHENS[number] };
+  | { kind: 'cesto'; data: CestoDB };
 
 function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }) {
   const iva = p.ivaPerc / 100;
@@ -619,7 +832,7 @@ function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }
   );
 }
 
-function CestoAnagrafica({ c, onClose }: { c: typeof CESTI_LICHENS[number]; onClose: () => void }) {
+function CestoAnagrafica({ c, onClose }: { c: CestoDB; onClose: () => void }) {
   const costoIe = c.costo / 1.22;
   const costoIi = c.costo;
   const pvpIe   = c.pvp / 1.22;
@@ -640,6 +853,7 @@ function CestoAnagrafica({ c, onClose }: { c: typeof CESTI_LICHENS[number]; onCl
           <X size={18} />
         </button>
       </div>
+      {c.fotoUrl && <img src={c.fotoUrl} alt={c.descrizione} className="w-full h-44 object-cover rounded-xl" />}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-gray-50 rounded-xl p-3">
           <p className="text-[10px] text-gray-400 mb-0.5">Costo i.e.</p>
@@ -759,9 +973,15 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
     if (p) setAnagratica({ kind: 'prodotto', data: p });
   };
 
+  const { data: cestiDb = [] } = useQuery<CestoDB[]>({
+    queryKey: ['oe-cesti'],
+    queryFn: () => fetch('/api/oe/alimentari/cesti').then(r => r.json()),
+    staleTime: 60_000,
+  });
+
   const openCesto = (codice: string) => {
-    const c = CESTI_LICHENS.find(ce => ce.codice === codice);
-    if (c) setAnagratica({ kind: 'cesto', data: c as typeof CESTI_LICHENS[number] });
+    const c = cestiDb.find(ce => ce.codice === codice);
+    if (c) setAnagratica({ kind: 'cesto', data: c });
   };
 
   return (
@@ -770,7 +990,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
       {STRENNE.map((s, i) => {
         const isOpen = openIdx === i;
         const totQte = EMPORI.reduce((a, emp) => a + getQte(s.barcode, emp), 0);
-        const cesto = CESTI_LICHENS.find(c => c.codice === s.cestoCodice);
+        const cesto = cestiDb.find(c => c.codice === s.cestoCodice);
         const nomiComp = getNomi(s.barcode);
         const costoProdotti = nomiComp.reduce((acc, nome) => {
           const prod = prodotti.find(p => p.nome === nome);
@@ -1208,6 +1428,12 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
     staleTime: 30_000,
   });
 
+  const { data: cestiDb = [] } = useQuery<CestoDB[]>({
+    queryKey: ['oe-cesti'],
+    queryFn: () => fetch('/api/oe/alimentari/cesti').then(r => r.json()),
+    staleTime: 60_000,
+  });
+
   // ── KPI catalogo ────────────────────────────────────────────────────────────
   const byFornitore: Record<string, Prodotto[]> = {};
   prodotti.forEach(p => {
@@ -1270,7 +1496,7 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
     const tot = Object.values(s.qte).reduce((a, b) => a + b, 0);
     cestoCounts[s.cestoCodice] = (cestoCounts[s.cestoCodice] ?? 0) + tot;
   });
-  const cestiKpi = CESTI_LICHENS.map(c => {
+  const cestiKpi = cestiDb.map(c => {
     const totGiac     = STORES_ALL.reduce((a, s) => a + (gMap.get(`${c.codice}:${s}`) ?? 0), 0);
     const riservati   = cestoCounts[c.codice] ?? 0;
     return { ...c, totGiac, riservati, disponibili: totGiac - riservati,

@@ -1269,6 +1269,18 @@ model OeAlimentariOrdinato {
   @@map("oe_alimentari_ordinato")
 }
 
+model OeCesto {
+  codice      String   @id
+  descrizione String   @default("")
+  misure      String   @default("") @map("misure")
+  pvp         Float    @default(0)
+  costo       Float    @default(0)
+  fotoUrl     String   @default("") @map("foto_url")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("oe_cesti")
+}
+
 model OeCestoGiacenza {
   cestoCodice String   @map("cesto_codice")
   negozio     String
