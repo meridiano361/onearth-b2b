@@ -85,9 +85,23 @@ function EditForm({ editData, setEditData, onSave, onCancel, saving }: {
         <input className="input-oe" placeholder="Fornitore" value={editData.fornitore ?? ''} onChange={e => setEditData(d => ({ ...d, fornitore: e.target.value }))} />
         <input className="input-oe" placeholder="Barcode" value={editData.barcode ?? ''} onChange={e => setEditData(d => ({ ...d, barcode: e.target.value }))} />
         <input className="input-oe" placeholder="Formato" value={editData.formato ?? ''} onChange={e => setEditData(d => ({ ...d, formato: e.target.value }))} />
-        <input className="input-oe" type="number" step="0.01" placeholder="Costo i.i." value={editData.costoIi ?? ''} onChange={e => setEditData(d => ({ ...d, costoIi: parseFloat(e.target.value) }))} />
-        <input className="input-oe" type="number" step="0.01" placeholder="PVP i.i." value={editData.pvpIi ?? ''} onChange={e => setEditData(d => ({ ...d, pvpIi: parseFloat(e.target.value) }))} />
-        <input className="input-oe" type="number" step="0.01" placeholder="PVP cons." value={editData.pvpConsigliato ?? ''} onChange={e => setEditData(d => ({ ...d, pvpConsigliato: parseFloat(e.target.value) }))} />
+        <select className="input-oe" value={editData.ivaPerc ?? 10} onChange={e => setEditData(d => ({ ...d, ivaPerc: parseFloat(e.target.value) }))}>
+          <option value={4}>IVA 4%</option>
+          <option value={10}>IVA 10%</option>
+          <option value={22}>IVA 22%</option>
+        </select>
+        <div className="relative">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">€</span>
+          <input className="input-oe pl-6" type="number" step="0.01" placeholder="Costo i.i." value={editData.costoIi ?? ''} onChange={e => setEditData(d => ({ ...d, costoIi: parseFloat(e.target.value) }))} />
+        </div>
+        <div className="relative">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">€</span>
+          <input className="input-oe pl-6" type="number" step="0.01" placeholder="PVP i.i." value={editData.pvpIi ?? ''} onChange={e => setEditData(d => ({ ...d, pvpIi: parseFloat(e.target.value) }))} />
+        </div>
+        <div className="relative col-span-2">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">€</span>
+          <input className="input-oe pl-6" type="number" step="0.01" placeholder="PVP consigliato" value={editData.pvpConsigliato ?? ''} onChange={e => setEditData(d => ({ ...d, pvpConsigliato: parseFloat(e.target.value) }))} />
+        </div>
         <input className="input-oe col-span-2" placeholder="Note" value={editData.note ?? ''} onChange={e => setEditData(d => ({ ...d, note: e.target.value }))} />
       </div>
       <div className="flex gap-2">
@@ -237,8 +251,23 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
             <input className="input-oe" placeholder="Fornitore" value={newData.fornitore ?? ''} onChange={e => setNewData(d => ({ ...d, fornitore: e.target.value }))} />
             <input className="input-oe" placeholder="Barcode" value={newData.barcode ?? ''} onChange={e => setNewData(d => ({ ...d, barcode: e.target.value }))} />
             <input className="input-oe" placeholder="Formato (es. 314 ml)" value={newData.formato ?? ''} onChange={e => setNewData(d => ({ ...d, formato: e.target.value }))} />
-            <input className="input-oe" placeholder="Costo i.i. €" type="number" step="0.01" value={newData.costoIi ?? ''} onChange={e => setNewData(d => ({ ...d, costoIi: parseFloat(e.target.value) }))} />
-            <input className="input-oe" placeholder="PVP i.i. €" type="number" step="0.01" value={newData.pvpIi ?? ''} onChange={e => setNewData(d => ({ ...d, pvpIi: parseFloat(e.target.value) }))} />
+            <select className="input-oe" value={newData.ivaPerc ?? 10} onChange={e => setNewData(d => ({ ...d, ivaPerc: parseFloat(e.target.value) }))}>
+              <option value={4}>IVA 4%</option>
+              <option value={10}>IVA 10%</option>
+              <option value={22}>IVA 22%</option>
+            </select>
+            <div className="relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">€</span>
+              <input className="input-oe pl-6" placeholder="Costo i.i." type="number" step="0.01" value={newData.costoIi ?? ''} onChange={e => setNewData(d => ({ ...d, costoIi: parseFloat(e.target.value) }))} />
+            </div>
+            <div className="relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">€</span>
+              <input className="input-oe pl-6" placeholder="PVP i.i." type="number" step="0.01" value={newData.pvpIi ?? ''} onChange={e => setNewData(d => ({ ...d, pvpIi: parseFloat(e.target.value) }))} />
+            </div>
+            <div className="relative col-span-2">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">€</span>
+              <input className="input-oe pl-6 col-span-2" placeholder="PVP consigliato" type="number" step="0.01" value={newData.pvpConsigliato ?? ''} onChange={e => setNewData(d => ({ ...d, pvpConsigliato: parseFloat(e.target.value) }))} />
+            </div>
             <input className="input-oe col-span-2" placeholder="Note" value={newData.note ?? ''} onChange={e => setNewData(d => ({ ...d, note: e.target.value }))} />
           </div>
           <div className="flex gap-2">
