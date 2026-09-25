@@ -105,7 +105,7 @@ function OeCards() {
         },
       };
     },
-    staleTime: 60_000,
+    staleTime: 0,
   });
 
   return (
