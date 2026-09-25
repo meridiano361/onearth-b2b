@@ -109,7 +109,7 @@ function OeCards() {
   });
 
   return (
-    <div className="space-y-3 pt-2">
+    <div className="grid grid-cols-2 gap-3 pt-2">
       {(['oe-alimentari', 'oe-benessere'] as const).map((slug) => {
         const key = slug === 'oe-alimentari' ? 'alimentari' : 'benessere';
         const cfg = data?.[key];
@@ -128,13 +128,13 @@ function OeCards() {
                 className="w-full object-cover transition-all h-[58vh]"
               />
             )}
-            <div className="flex items-center justify-between gap-4 p-6">
-              <div>
+            <div className="flex items-center justify-between gap-2 p-4">
+              <div className="min-w-0">
                 <p className="text-2xs tracking-[0.2em] uppercase text-white/50">Sezione</p>
-                <h2 className="font-display text-3xl font-light tracking-widest text-white mt-0.5">{titolo}</h2>
-                {cfg?.sottotitolo && <p className="text-xs text-white/60 mt-0.5">{cfg.sottotitolo}</p>}
+                <h2 className="font-display text-xl font-light tracking-widest text-white mt-0.5 truncate">{titolo}</h2>
+                {cfg?.sottotitolo && <p className="text-xs text-white/60 mt-0.5 truncate">{cfg.sottotitolo}</p>}
               </div>
-              <ChevronRight size={20} className="text-white/30 group-hover:text-white transition-colors flex-shrink-0" />
+              <ChevronRight size={16} className="text-white/30 group-hover:text-white transition-colors flex-shrink-0" />
             </div>
           </Link>
         );
