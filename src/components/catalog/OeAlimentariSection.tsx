@@ -4,7 +4,7 @@ import { useState, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Pencil, Trash2, Plus, X, Check, ChevronDown, ChevronUp,
-  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search,
+  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CESTI_LICHENS, STRENNE, FABBISOGNO_STRENNE, EMPORI, type Emporio } from '@/data/oeAlimentariStatico';
@@ -477,12 +477,140 @@ function TabCesti() {
   );
 }
 
+// ── Anagrafica Drawer ─────────────────────────────────────────────────────────
+
+type AnagraticaState =
+  | { kind: 'prodotto'; data: Prodotto }
+  | { kind: 'cesto'; data: typeof CESTI_LICHENS[number] };
+
+function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }) {
+  const m = margine(p);
+  return (
+    <div className="p-5 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1">
+          {p.fornitore && (
+            <span className={cn('inline-block text-[10px] font-medium px-1.5 py-0.5 rounded mb-1.5', fornitoreBadge(p.fornitore))}>
+              {p.fornitore}
+            </span>
+          )}
+          <h2 className="text-xl font-semibold text-primary leading-tight">{p.nome}</h2>
+          {p.formato && <p className="text-sm text-gray-400 mt-0.5">{p.formato}</p>}
+        </div>
+        <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 flex-shrink-0">
+          <X size={18} />
+        </button>
+      </div>
+      {p.fotoUrl && (
+        <img src={p.fotoUrl} alt={p.nome} className="w-full h-44 object-cover rounded-xl" />
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-[10px] text-gray-400 mb-0.5">Costo i.i.</p>
+          <p className="text-sm font-semibold">{fmt(p.costoIi)}</p>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-[10px] text-gray-400 mb-0.5">PVP i.i.</p>
+          <p className="text-sm font-semibold text-green-700">{fmt(p.pvpIi)}</p>
+        </div>
+        {p.pvpConsigliato != null && p.pvpConsigliato !== p.pvpIi && (
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-[10px] text-gray-400 mb-0.5">PVP consigliato</p>
+            <p className="text-sm font-semibold text-blue-600">{fmt(p.pvpConsigliato)}</p>
+          </div>
+        )}
+        {m !== null && (
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-[10px] text-gray-400 mb-0.5">Margine</p>
+            <p className="text-sm font-semibold text-gray-700">{m}%</p>
+          </div>
+        )}
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-[10px] text-gray-400 mb-0.5">IVA</p>
+          <p className="text-sm">{p.ivaPerc}%</p>
+        </div>
+      </div>
+      {p.barcode && (
+        <p className="text-xs text-gray-500">Barcode: <span className="font-mono text-gray-700">{p.barcode}</span></p>
+      )}
+      {p.note && (
+        <div className="bg-amber-50 rounded-xl p-3">
+          <p className="text-xs text-amber-700">{p.note}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CestoAnagrafica({ c, onClose }: { c: typeof CESTI_LICHENS[number]; onClose: () => void }) {
+  return (
+    <div className="p-5 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1">
+          <span className="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded mb-1.5 bg-amber-50 text-amber-700">
+            Cesto Lichens
+          </span>
+          <h2 className="text-xl font-semibold text-primary leading-tight">{c.descrizione}</h2>
+          {c.misure && <p className="text-sm text-gray-400 mt-0.5">{c.misure}</p>}
+        </div>
+        <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 flex-shrink-0">
+          <X size={18} />
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-[10px] text-gray-400 mb-0.5">Costo</p>
+          <p className="text-sm font-semibold">{fmt(c.costo)}</p>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-[10px] text-gray-400 mb-0.5">PVP</p>
+          <p className="text-sm font-semibold text-green-700">{fmt(c.pvp)}</p>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-[10px] text-gray-400 mb-0.5">Codice</p>
+          <p className="text-sm font-mono">{c.codice}</p>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-[10px] text-gray-400 mb-0.5">Margine</p>
+          <p className="text-sm font-semibold text-gray-700">{Math.round(((c.pvp - c.costo) / c.pvp) * 100)}%</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AnagraticaDrawer({ item, onClose }: { item: AnagraticaState; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white w-full max-w-sm rounded-t-2xl sm:rounded-2xl overflow-y-auto max-h-[85vh]">
+        {item.kind === 'prodotto'
+          ? <ProdottoAnagrafica p={item.data} onClose={onClose} />
+          : <CestoAnagrafica c={item.data} onClose={onClose} />
+        }
+      </div>
+    </div>
+  );
+}
+
 // ── Tab: Strenne ──────────────────────────────────────────────────────────────
 
-function TabStrenne() {
+function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const [anagratica, setAnagratica] = useState<AnagraticaState | null>(null);
+
+  const openProdotto = (nome: string) => {
+    const p = prodotti.find(pd => pd.nome === nome);
+    if (p) setAnagratica({ kind: 'prodotto', data: p });
+  };
+
+  const openCesto = (codice: string) => {
+    const c = CESTI_LICHENS.find(ce => ce.codice === codice);
+    if (c) setAnagratica({ kind: 'cesto', data: c as typeof CESTI_LICHENS[number] });
+  };
 
   return (
+    <>
     <div className="space-y-3">
       {STRENNE.map((s, i) => {
         const isOpen = openIdx === i;
@@ -513,15 +641,28 @@ function TabStrenne() {
                 {/* Composizione */}
                 <div className="pt-3 space-y-1.5">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Composizione</p>
-                  <div className="flex items-center justify-between py-1.5 border-b border-border/40">
+                  <button
+                    onClick={() => openCesto(s.cestoCodice)}
+                    className="w-full flex items-center justify-between py-1.5 border-b border-border/40 hover:bg-gray-50 rounded transition-colors text-left group"
+                  >
                     <span className="text-sm text-gray-600">🧺 Cesto {cesto?.descrizione ?? s.cestoCodice} ({s.cestoCodice})</span>
-                    <span className="text-xs text-gray-500">{fmt(s.costoCesto)}</span>
-                  </div>
-                  {s.prodotti.map(p => (
-                    <div key={p.nome} className="flex items-center justify-between py-1 border-b border-border/30">
-                      <span className="text-sm">{p.nome}</span>
-                      <span className="text-xs text-gray-500">{fmt(p.pvp)}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs text-gray-500">{fmt(s.costoCesto)}</span>
+                      <Info size={12} className="text-gray-300 group-hover:text-primary transition-colors" />
                     </div>
+                  </button>
+                  {s.prodotti.map(sp => (
+                    <button
+                      key={sp.nome}
+                      onClick={() => openProdotto(sp.nome)}
+                      className="w-full flex items-center justify-between py-1 border-b border-border/30 hover:bg-gray-50 rounded transition-colors text-left group"
+                    >
+                      <span className="text-sm">{sp.nome}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-gray-500">{fmt(sp.pvp)}</span>
+                        <Info size={12} className="text-gray-300 group-hover:text-primary transition-colors" />
+                      </div>
+                    </button>
                   ))}
                   <div className="flex items-center justify-between pt-1 font-semibold">
                     <span className="text-sm">Totale costo</span>
@@ -556,6 +697,8 @@ function TabStrenne() {
         );
       })}
     </div>
+    {anagratica && <AnagraticaDrawer item={anagratica} onClose={() => setAnagratica(null)} />}
+    </>
   );
 }
 
@@ -790,7 +933,7 @@ export default function OeAlimentariSection() {
         ) : tab === 'cesti' ? (
           <TabCesti />
         ) : tab === 'strenne' ? (
-          <TabStrenne />
+          <TabStrenne prodotti={prodotti} />
         ) : (
           <TabFabbisogno prodotti={prodotti} refetch={refetch} />
         )}
