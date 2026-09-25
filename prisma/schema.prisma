@@ -1277,3 +1277,13 @@ model OeCestoGiacenza {
   @@id([cestoCodice, negozio])
   @@map("oe_cesti_giacenze")
 }
+
+model OeStrennaQta {
+  barcode   String
+  emporio   String
+  qta       Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@id([barcode, emporio])
+  @@map("oe_strenne_qte")
+}

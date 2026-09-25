@@ -677,9 +677,36 @@ function AnagraticaDrawer({ item, onClose }: { item: AnagraticaState; onClose: (
 
 // ── Tab: Strenne ──────────────────────────────────────────────────────────────
 
+type QtaRow = { barcode: string; emporio: string; qta: number };
+
 function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [anagratica, setAnagratica] = useState<AnagraticaState | null>(null);
+  const [editing, setEditing] = useState<{ barcode: string; emporio: string } | null>(null);
+  const [editVal, setEditVal] = useState('');
+
+  const { data: qteRows = [], refetch: refetchQte } = useQuery<QtaRow[]>({
+    queryKey: ['oe-strenne-qte'],
+    queryFn: async () => {
+      const res = await fetch('/api/oe/alimentari/strenne/qte');
+      return res.ok ? res.json() : [];
+    },
+    staleTime: 30_000,
+  });
+
+  const qteMap = new Map<string, number>();
+  qteRows.forEach(r => qteMap.set(`${r.barcode}:${r.emporio}`, r.qta));
+  const getQte = (barcode: string, emporio: string) => qteMap.get(`${barcode}:${emporio}`) ?? 0;
+
+  const saveQte = async (barcode: string, emporio: string) => {
+    await fetch('/api/oe/alimentari/strenne/qte', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ barcode, emporio, qta: parseInt(editVal) || 0 }),
+    });
+    setEditing(null);
+    refetchQte();
+  };
 
   const openProdotto = (nome: string) => {
     const p = prodotti.find(pd => pd.nome === nome);
@@ -696,7 +723,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
     <div className="space-y-3">
       {STRENNE.map((s, i) => {
         const isOpen = openIdx === i;
-        const totQte = Object.values(s.qte).reduce((a, b) => a + b, 0);
+        const totQte = EMPORI.reduce((a, emp) => a + getQte(s.barcode, emp), 0);
         const cesto = CESTI_LICHENS.find(c => c.codice === s.cestoCodice);
         const costoProdotti = s.prodotti.reduce((acc, sp) => {
           const prod = prodotti.find(p => p.nome === sp.nome);
@@ -723,66 +750,147 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
               </div>
             </button>
 
-            {isOpen && (
+            {isOpen && (() => {
+              // calcoli ie per composizione
+              const cestoIe = s.costoCesto / 1.22;
+              const cestoPvpIe = (cesto?.pvp ?? 0) / 1.22;
+              const cestoPvpIi = cesto?.pvp ?? 0;
+              const righe = s.prodotti.map(sp => {
+                const prod = prodotti.find(p => p.nome === sp.nome);
+                const iva = (prod?.ivaPerc ?? 10) / 100;
+                const cIi = prod?.costoIi ?? 0;
+                const cIe = cIi / (1 + iva);
+                const pIi = prod?.pvpIi ?? 0;
+                const pIe = pIi / (1 + iva);
+                return { nome: sp.nome, prod, cIi, cIe, pIi, pIe, marg: pIe - cIe };
+              });
+              const totCIi = righe.reduce((a, r) => a + r.cIi, 0) + s.costoCesto;
+              const totCIe = righe.reduce((a, r) => a + r.cIe, 0) + cestoIe;
+              const totPIi = righe.reduce((a, r) => a + r.pIi, 0) + cestoPvpIi;
+              const totPIe = righe.reduce((a, r) => a + r.pIe, 0) + cestoPvpIe;
+              const margTotIe = totPIe - totCIe;
+              const margPercIe = totPIe > 0 ? Math.round((margTotIe / totPIe) * 100) : 0;
+              const margTotPrev = margTotIe * totQte;
+              return (
               <div className="px-4 pb-4 space-y-4 border-t border-border">
-                {/* Composizione */}
-                <div className="pt-3 space-y-1.5">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Composizione</p>
-                  <button
-                    onClick={() => openCesto(s.cestoCodice)}
-                    className="w-full flex items-center justify-between py-1.5 border-b border-border/40 hover:bg-gray-50 rounded transition-colors text-left group"
-                  >
-                    <span className="text-sm text-gray-600">🧺 Cesto {cesto?.descrizione ?? s.cestoCodice} ({s.cestoCodice})</span>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-xs text-gray-500">{fmt(s.costoCesto)}</span>
-                      <Info size={12} className="text-gray-300 group-hover:text-primary transition-colors" />
-                    </div>
-                  </button>
-                  {s.prodotti.map(sp => {
-                    const prod = prodotti.find(p => p.nome === sp.nome);
-                    return (
-                      <button
-                        key={sp.nome}
-                        onClick={() => openProdotto(sp.nome)}
-                        className="w-full flex items-center justify-between py-1 border-b border-border/30 hover:bg-gray-50 rounded transition-colors text-left group"
-                      >
-                        <span className="text-sm">{sp.nome}</span>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-xs text-gray-500">{prod ? fmt(prod.costoIi) : '—'}</span>
-                          <Info size={12} className="text-gray-300 group-hover:text-primary transition-colors" />
-                        </div>
-                      </button>
-                    );
-                  })}
-                  <div className="flex items-center justify-between pt-1 font-semibold">
-                    <span className="text-sm">Totale costo</span>
-                    <span className="text-sm text-primary">{fmt(costoReale)}</span>
-                  </div>
-                  <div className="flex items-center justify-between font-semibold text-green-700">
-                    <span className="text-sm">Prezzo vendita</span>
-                    <span className="text-sm">{fmt(s.prezzo)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-gray-500">
-                    <span className="text-xs">Margine</span>
-                    <span className="text-xs font-medium">{Math.round(((s.prezzo - costoReale) / s.prezzo) * 100)}%</span>
+                {/* Composizione con prezzi dettagliati */}
+                <div className="pt-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Composizione</p>
+                  <div className="overflow-x-auto -mx-4 px-4">
+                    <table className="min-w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border text-gray-400 text-right">
+                          <th className="pb-1.5 text-left font-medium pr-3">Articolo</th>
+                          <th className="pb-1.5 font-medium pr-2">Costo i.e.</th>
+                          <th className="pb-1.5 font-medium pr-2">Costo i.i.</th>
+                          <th className="pb-1.5 font-medium pr-2">PVP i.e.</th>
+                          <th className="pb-1.5 font-medium pr-2">PVP i.i.</th>
+                          <th className="pb-1.5 font-medium">Marg. ie</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {/* Cesto */}
+                        <tr className="border-b border-border/30 hover:bg-gray-50">
+                          <td className="py-1.5 pr-3">
+                            <button onClick={() => openCesto(s.cestoCodice)} className="text-left text-gray-600 hover:text-primary flex items-center gap-1 group">
+                              <span>🧺 {cesto?.descrizione ?? s.cestoCodice}</span>
+                              <Info size={10} className="text-gray-300 group-hover:text-primary flex-shrink-0" />
+                            </button>
+                          </td>
+                          <td className="py-1.5 pr-2 text-right text-gray-500">{fmt(cestoIe)}</td>
+                          <td className="py-1.5 pr-2 text-right text-gray-500">{fmt(s.costoCesto)}</td>
+                          <td className="py-1.5 pr-2 text-right text-gray-500">{fmt(cestoPvpIe)}</td>
+                          <td className="py-1.5 pr-2 text-right text-gray-500">{fmt(cestoPvpIi)}</td>
+                          <td className="py-1.5 text-right font-medium text-green-700">{fmt(cestoPvpIe - cestoIe)}</td>
+                        </tr>
+                        {/* Prodotti */}
+                        {righe.map(r => (
+                          <tr key={r.nome} className="border-b border-border/20 hover:bg-gray-50">
+                            <td className="py-1.5 pr-3">
+                              <button onClick={() => openProdotto(r.nome)} className="text-left hover:text-primary flex items-center gap-1 group">
+                                <span>{r.nome}</span>
+                                <Info size={10} className="text-gray-300 group-hover:text-primary flex-shrink-0" />
+                              </button>
+                            </td>
+                            <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.cIe) : '—'}</td>
+                            <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.cIi) : '—'}</td>
+                            <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.pIe) : '—'}</td>
+                            <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.pIi) : '—'}</td>
+                            <td className="py-1.5 text-right font-medium text-green-700">{r.prod ? fmt(r.marg) : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 border-border font-semibold text-primary text-xs">
+                          <td className="pt-1.5 pr-3">Totale</td>
+                          <td className="pt-1.5 pr-2 text-right">{fmt(totCIe)}</td>
+                          <td className="pt-1.5 pr-2 text-right">{fmt(totCIi)}</td>
+                          <td className="pt-1.5 pr-2 text-right">{fmt(totPIe)}</td>
+                          <td className="pt-1.5 pr-2 text-right">{fmt(totPIi)}</td>
+                          <td className="pt-1.5 text-right text-green-700">{fmt(margTotIe)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
                   </div>
                 </div>
 
-                {/* Quantità per emporio */}
+                {/* Riepilogo margine */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-green-50 rounded-xl p-3">
+                    <p className="text-[10px] text-gray-500 mb-0.5">Prezzo vendita</p>
+                    <p className="text-sm font-bold text-primary">{fmt(s.prezzo)}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-[10px] text-gray-500 mb-0.5">Costo ie totale</p>
+                    <p className="text-sm font-semibold">{fmt(totCIe)}</p>
+                  </div>
+                  <div className={cn('rounded-xl p-3', margPercIe >= 30 ? 'bg-green-50' : 'bg-amber-50')}>
+                    <p className="text-[10px] text-gray-500 mb-0.5">Margine ie (1 strenna)</p>
+                    <p className={cn('text-sm font-bold', margPercIe >= 30 ? 'text-green-700' : 'text-amber-700')}>{fmt(margTotIe)} <span className="text-xs font-normal">({margPercIe}%)</span></p>
+                  </div>
+                  <div className={cn('rounded-xl p-3', margPercIe >= 30 ? 'bg-green-50' : 'bg-amber-50')}>
+                    <p className="text-[10px] text-gray-500 mb-0.5">Margine ie previsto ({fmtN(totQte)} pz)</p>
+                    <p className={cn('text-sm font-bold', margPercIe >= 30 ? 'text-green-700' : 'text-amber-700')}>{fmt(margTotPrev)}</p>
+                  </div>
+                </div>
+
+                {/* Quantità per emporio — editabili */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Quantità per emporio</p>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Quantità per emporio <span className="text-amber-600 font-normal normal-case">(click per modificare)</span></p>
                   <div className="grid grid-cols-5 gap-2">
-                    {EMPORI.map(emp => (
-                      <div key={emp} className="text-center bg-gray-50 rounded-lg p-2">
-                        <p className="text-[10px] text-gray-400 font-medium">{emp}</p>
-                        <p className="text-lg font-bold text-primary">{(s.qte as Record<string, number>)[emp] ?? 0}</p>
-                      </div>
-                    ))}
+                    {EMPORI.map(emp => {
+                      const qta = getQte(s.barcode, emp);
+                      const isEd = editing?.barcode === s.barcode && editing?.emporio === emp;
+                      return (
+                        <div key={emp} className="text-center bg-gray-50 rounded-lg p-2">
+                          <p className="text-[10px] text-gray-400 font-medium mb-1">{emp}</p>
+                          {isEd ? (
+                            <input
+                              autoFocus
+                              type="number" min="0"
+                              className="w-full text-center text-sm border border-primary rounded px-1 py-0.5 font-bold"
+                              value={editVal}
+                              onChange={e => setEditVal(e.target.value)}
+                              onBlur={() => saveQte(s.barcode, emp)}
+                              onKeyDown={e => e.key === 'Enter' && saveQte(s.barcode, emp)}
+                            />
+                          ) : (
+                            <button
+                              onClick={() => { setEditing({ barcode: s.barcode, emporio: emp }); setEditVal(String(qta)); }}
+                              className={cn('w-full py-0.5 rounded text-lg font-bold hover:bg-blue-50 hover:ring-1 hover:ring-blue-300 transition-all', qta > 0 ? 'text-primary' : 'text-gray-300')}
+                            >
+                              {qta}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                   <p className="text-xs text-center text-gray-400 mt-2">Totale: {fmtN(totQte)} pz</p>
                 </div>
               </div>
-            )}
+              );
+            })()}
           </div>
         );
       })}
