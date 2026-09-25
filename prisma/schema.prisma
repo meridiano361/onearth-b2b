@@ -1222,3 +1222,48 @@ model WebAuthnChallenge {
   @@index([userId, userType])
   @@map("webauthn_challenges")
 }
+
+// ─── OE Alimentari ────────────────────────────────────────────────────────────
+
+model OeAlimentariProdotto {
+  id             String   @id @default(cuid())
+  barcode        String?
+  fornitore      String?
+  nome           String
+  formato        String?
+  ivaPerc        Float    @default(10) @map("iva_perc")
+  costoIi        Float    @default(0)  @map("costo_ii")
+  pvpIi          Float    @default(0)  @map("pvp_ii")
+  pvpConsigliato Float?                @map("pvp_consigliato")
+  fotoUrl        String?               @map("foto_url")
+  note           String?
+  ordine         Int      @default(0)
+  updatedAt      DateTime @updatedAt   @map("updated_at")
+
+  fabbisognoEmpori OeAlimentariFabbisognoEmpori[]
+  ordinato         OeAlimentariOrdinato?
+
+  @@map("oe_alimentari_prodotti")
+}
+
+model OeAlimentariFabbisognoEmpori {
+  prodottoId String   @map("prodotto_id")
+  emporio    String
+  qta        Int      @default(0)
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  prodotto OeAlimentariProdotto @relation(fields: [prodottoId], references: [id], onDelete: Cascade)
+
+  @@id([prodottoId, emporio])
+  @@map("oe_alimentari_fabbisogno_empori")
+}
+
+model OeAlimentariOrdinato {
+  prodottoId String   @id @map("prodotto_id")
+  ordinato   Int      @default(0)
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  prodotto OeAlimentariProdotto @relation(fields: [prodottoId], references: [id], onDelete: Cascade)
+
+  @@map("oe_alimentari_ordinato")
+}

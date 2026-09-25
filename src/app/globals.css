@@ -93,6 +93,11 @@
     @apply text-2xs font-semibold tracking-widest uppercase text-gray-500;
   }
 
+  /* OE Alimentari input */
+  .input-oe {
+    @apply w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-primary;
+  }
+
   /* Quantity input */
   .qty-input {
     @apply w-12 text-center border border-border rounded text-sm font-medium bg-white focus:outline-none focus:border-accent;
