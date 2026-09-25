@@ -956,13 +956,6 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
 
   return (
     <div className="space-y-4">
-      {/* Legenda */}
-      <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-        <span>🔵 Strenne = fabbisogno per assemblare le strenne</span>
-        <span>🟡 Empori = vendita libera a scaffale</span>
-        <span className="text-amber-700 font-medium">Click su una cella per modificarla</span>
-      </div>
-
       <div className="overflow-x-auto -mx-4 px-4">
         <table className="min-w-full text-xs border-collapse">
           <thead>
