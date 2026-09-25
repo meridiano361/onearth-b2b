@@ -241,7 +241,7 @@ function SortableMenuItem({ item, onChange }: { item: MenuItemDef; onChange: (ke
   );
 }
 
-function ImageUploadInput({ label, value, onChange }: { label: string; value: string; onChange: (url: string) => void }) {
+function ImageUploadInput({ label, value, onChange, uploadUrl = '/api/upload' }: { label: string; value: string; onChange: (url: string) => void; uploadUrl?: string }) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   async function handleFile(file: File) {
@@ -249,7 +249,7 @@ function ImageUploadInput({ label, value, onChange }: { label: string; value: st
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const res = await fetch(uploadUrl, { method: 'POST', body: fd });
       const json = await res.json();
       if (json.url) onChange(json.url);
       else toast.error(json.error ?? 'Upload fallito');
@@ -606,7 +606,7 @@ function OeSezioneCard({ label, cfg, onChange }: {
             <label className="text-xs text-gray-500 mb-1 block">Nome sezione (titolo card)</label>
             <input type="text" value={cfg.titolo} onChange={e => onChange({ titolo: e.target.value })} placeholder={label} className={inp} />
           </div>
-          <ImageUploadInput label="Foto di sfondo card" value={cfg.fotoUrl} onChange={url => onChange({ fotoUrl: url })} />
+          <ImageUploadInput label="Foto di sfondo card" value={cfg.fotoUrl} onChange={url => onChange({ fotoUrl: url })} uploadUrl="/api/admin/oe-settings/upload" />
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Sottotitolo card</label>
             <input type="text" value={cfg.sottotitolo} onChange={e => onChange({ sottotitolo: e.target.value })} placeholder="es. Strenne Natale 2026" className={inp} />
