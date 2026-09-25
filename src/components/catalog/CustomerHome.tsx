@@ -117,7 +117,7 @@ function OeCards() {
               <img
                 src={cfg.fotoUrl}
                 alt={titolo}
-                className="w-full object-cover transition-all h-[40vh]"
+                className="w-full object-cover transition-all h-[58vh]"
               />
             )}
             <div className="flex items-center justify-between gap-4 p-6">
