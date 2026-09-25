@@ -1033,11 +1033,9 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
       {/* ① KPI catalogo */}
       <section>
         <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Catalogo prodotti</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <KpiCard label="Prodotti a catalogo" value={fmtN(prodotti.length)} sub={`${fmtN(Object.keys(byFornitore).length)} fornitori`} />
-          <KpiCard label="Valore PVP catalogo" value={fmt(totPvpIi)} sub={`costo tot. ${fmt(totCostoIi)}`} />
           <KpiCard label="Margine medio" value={`${margMedio}%`} sub="sul catalogo completo" accent />
-          <KpiCard label="Marg. unit. medio" value={fmt((totPvpIi - totCostoIi) / (prodotti.length || 1))} sub="per prodotto" />
         </div>
       </section>
 
