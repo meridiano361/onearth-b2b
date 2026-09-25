@@ -1079,6 +1079,18 @@ function KpiCard({ label, value, sub, accent }: { label: string; value: string; 
   );
 }
 
+function AnalisiCard({ id, title, open, onToggle, children }: { id: string; title: string; open: boolean; onToggle: () => void; children: React.ReactNode }) {
+  return (
+    <div className={cn('bg-white border border-border overflow-hidden transition-all', open ? 'rounded-2xl' : 'rounded-2xl')}>
+      <button onClick={onToggle} className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors group">
+        <span className="text-sm font-semibold text-gray-800">{title}</span>
+        <ChevronDown size={16} className={cn('flex-shrink-0 transition-transform duration-200', open ? 'rotate-180 text-primary' : 'text-gray-400 group-hover:text-primary')} />
+      </button>
+      {open && <div className="border-t border-border px-5 pt-4 pb-5 space-y-4">{children}</div>}
+    </div>
+  );
+}
+
 function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
   const STORES_ALL = ['CR', 'RE', 'CA', 'VI', 'MN', 'TR', 'HUB'] as const;
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
@@ -1172,26 +1184,16 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
     <div className="space-y-10 pb-8">
 
       {/* ① KPI catalogo */}
-      <section>
-        <button onClick={() => toggleSection('catalogo')} className="w-full flex items-center justify-between mb-3 group">
-          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Catalogo prodotti</h2>
-          <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen('catalogo') ? 'rotate-180' : ''}`} />
-        </button>
-        {isOpen('catalogo') && (
-          <div className="grid grid-cols-2 gap-3">
-            <KpiCard label="Prodotti a catalogo" value={fmtN(prodotti.length)} sub={`${fmtN(Object.keys(byFornitore).length)} fornitori`} />
-            <KpiCard label="Margine medio" value={`${margMedio}%`} sub="sul catalogo completo" accent />
-          </div>
-        )}
-      </section>
+      <AnalisiCard id="catalogo" title="Catalogo prodotti" open={isOpen('catalogo')} onToggle={() => toggleSection('catalogo')}>
+        <div className="grid grid-cols-2 gap-3">
+          <KpiCard label="Prodotti a catalogo" value={fmtN(prodotti.length)} sub={`${fmtN(Object.keys(byFornitore).length)} fornitori`} />
+          <KpiCard label="Margine medio" value={`${margMedio}%`} sub="sul catalogo completo" accent />
+        </div>
+      </AnalisiCard>
 
       {/* ② Strenne */}
-      <section>
-        <button onClick={() => toggleSection('strenne')} className="w-full flex items-center justify-between mb-3 group">
-          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Strenne — previsione commerciale</h2>
-          <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen('strenne') ? 'rotate-180' : ''}`} />
-        </button>
-        {isOpen('strenne') && <><div className="overflow-x-auto -mx-4 px-4 mb-4">
+      <AnalisiCard id="strenne" title="Strenne — previsione commerciale" open={isOpen('strenne')} onToggle={() => toggleSection('strenne')}>
+        <div className="overflow-x-auto -mx-5 px-5">
           <table className="min-w-full text-xs">
             <thead>
               <tr className="border-b-2 border-border text-gray-400 text-left">
@@ -1239,16 +1241,12 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
           <KpiCard label="Fatturato previsto" value={fmt(totFatturato)} sub={`${fmtN(totPzStrenne)} strenne totali`} accent />
           <KpiCard label="Investimento" value={fmt(totCostoStrenne)} sub="costo acquisto stock" />
           <KpiCard label="Margine previsto" value={fmt(totMargStrenne)} sub={`${margStrennePerc}% sul fatturato`} accent />
-        </div></>}
-      </section>
+        </div>
+      </AnalisiCard>
 
       {/* ③ Fornitori */}
-      <section>
-        <button onClick={() => toggleSection('fornitori')} className="w-full flex items-center justify-between mb-3 group">
-          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Analisi per fornitore</h2>
-          <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen('fornitori') ? 'rotate-180' : ''}`} />
-        </button>
-        {isOpen('fornitori') && <div className="space-y-2">
+      <AnalisiCard id="fornitori" title="Analisi per fornitore" open={isOpen('fornitori')} onToggle={() => toggleSection('fornitori')}>
+        <div className="space-y-2">
           {Object.entries(byFornitore)
             .sort((a, b) => b[1].length - a[1].length)
             .map(([fornitore, prods]) => {
@@ -1288,16 +1286,12 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
                 </div>
               );
             })}
-        </div>}
-      </section>
+        </div>
+      </AnalisiCard>
 
       {/* ④ Classifica prodotti per margine */}
-      <section>
-        <button onClick={() => toggleSection('margine')} className="w-full flex items-center justify-between mb-3 group">
-          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Classifica prodotti per margine</h2>
-          <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen('margine') ? 'rotate-180' : ''}`} />
-        </button>
-        {isOpen('margine') && <div className="space-y-2">
+      <AnalisiCard id="margine" title="Classifica prodotti per margine" open={isOpen('margine')} onToggle={() => toggleSection('margine')}>
+        <div className="space-y-2">
           {rankMargine.map((p, i) => (
             <div key={p.id} className="flex items-center gap-3 bg-white border border-border rounded-xl px-3 py-2.5 text-xs">
               <span className="w-5 text-gray-400 text-center font-mono flex-shrink-0">{i + 1}</span>
@@ -1324,17 +1318,12 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
               </span>
             </div>
           ))}
-        </div>}
-      </section>
+        </div>
+      </AnalisiCard>
 
       {/* ⑤ Fabbisogno ordinativo */}
-      <section>
-        <button onClick={() => toggleSection('fabbisogno')} className="w-full flex items-center justify-between mb-3 group">
-          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Fabbisogno ordinativo</h2>
-          <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen('fabbisogno') ? 'rotate-180' : ''}`} />
-        </button>
-        {isOpen('fabbisogno') && <>
-        <div className="grid grid-cols-2 gap-3 mb-4">
+      <AnalisiCard id="fabbisogno" title="Fabbisogno ordinativo" open={isOpen('fabbisogno')} onToggle={() => toggleSection('fabbisogno')}>
+        <div className="grid grid-cols-2 gap-3">
           <KpiCard label="Pezzi ancora da ordinare" value={fmtN(totDaOrdinare)} sub="su tutto il fabbisogno" />
           <KpiCard label="Valore ordine residuo" value={fmt(costoOrdinativo)} sub="costo IVA inclusa" accent />
         </div>
@@ -1354,21 +1343,16 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
               }
             </div>
           ))}
-        </div></>}
-      </section>
+        </div>
+      </AnalisiCard>
 
       {/* ⑥ Cesti — valore giacenze */}
-      <section>
-        <button onClick={() => toggleSection('cesti')} className="w-full flex items-center justify-between mb-3 group">
-          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Cesti — valore giacenze</h2>
-          <ChevronDown size={12} className={`text-gray-400 transition-transform ${isOpen('cesti') ? 'rotate-180' : ''}`} />
-        </button>
-        {isOpen('cesti') && <>
-        <div className="grid grid-cols-2 gap-3 mb-4">
+      <AnalisiCard id="cesti" title="Cesti — valore giacenze" open={isOpen('cesti')} onToggle={() => toggleSection('cesti')}>
+        <div className="grid grid-cols-2 gap-3">
           <KpiCard label="Valore giacenza a PVP" value={fmt(totValCestiPvp)} sub={`costo ${fmt(totValCestiCosto)}`} />
           <KpiCard label="Margine sui cesti" value={`${Math.round(((totValCestiPvp - totValCestiCosto) / (totValCestiPvp || 1)) * 100)}%`} sub="sul totale giacenza" accent />
         </div>
-        <div className="overflow-x-auto -mx-4 px-4">
+        <div className="overflow-x-auto -mx-5 px-5">
           <table className="min-w-full text-xs">
             <thead>
               <tr className="border-b-2 border-border text-gray-400 text-left">
@@ -1415,8 +1399,8 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
               </tr>
             </tfoot>
           </table>
-        </div></>}
-      </section>
+        </div>
+      </AnalisiCard>
 
     </div>
   );
