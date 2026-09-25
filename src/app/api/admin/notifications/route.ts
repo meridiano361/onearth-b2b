@@ -15,7 +15,7 @@ export async function GET() {
   if (!(await requireAdmin())) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const notifications = await prisma.notification.findMany({
-    include: { _count: { select: { reads: true } } },
+    include: { _count: { select: { reads: true, customerReads: true } } },
     orderBy: { createdAt: 'desc' },
   });
 

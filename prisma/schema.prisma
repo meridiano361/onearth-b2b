@@ -703,6 +703,20 @@ model NotificationRead {
   @@map("notification_reads")
 }
 
+model NotificheConfig {
+  id             String   @id
+  nome           String
+  descrizione    String?
+  attiva         Boolean  @default(true)
+  canale         String   // 'email' | 'push' | 'entrambi'
+  destinatari    String
+  evento         String
+  giorniAnticipo Int?     @map("giorni_anticipo")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("notifiche_config")
+}
+
 model AccessLog {
   id          String   @id @default(cuid())
   operatorId  String

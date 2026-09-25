@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import AdminNotificheSettingsSection from './AdminNotificheSettingsSection';
 import { Plus, Pencil, Trash2, X, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatDate } from '@/lib/utils';
@@ -634,6 +635,11 @@ export default function AdminImpostazioniPage({ currentUserId }: { currentUserId
       {/* Section: Email benvenuto */}
       <section className="mt-10">
         <EmailConfigSection />
+      </section>
+
+      {/* Section: Notifiche */}
+      <section className="mt-10">
+        <AdminNotificheSettingsSection />
       </section>
 
       {/* Modal */}
