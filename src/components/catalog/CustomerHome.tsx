@@ -85,7 +85,7 @@ function NotificationPopup({ notification, onClose }: { notification: Notificati
   );
 }
 
-type OeCardCfg = { fotoUrl: string; sottotitolo: string };
+type OeCardCfg = { titolo: string; fotoUrl: string; sottotitolo: string };
 
 function OeCards() {
   const { data } = useQuery<{ alimentari: OeCardCfg; benessere: OeCardCfg }>({
@@ -93,8 +93,16 @@ function OeCards() {
     queryFn: async () => {
       const flat: Record<string, string> = await fetch('/api/settings/public').then(r => r.json());
       return {
-        alimentari: { fotoUrl: flat['oe.alimentari.fotoUrl'] ?? '', sottotitolo: flat['oe.alimentari.sottotitolo'] ?? '' },
-        benessere:  { fotoUrl: flat['oe.benessere.fotoUrl']  ?? '', sottotitolo: flat['oe.benessere.sottotitolo']  ?? '' },
+        alimentari: {
+          titolo:      flat['oe.alimentari.titolo']      ?? 'OE Alimentari',
+          fotoUrl:     flat['oe.alimentari.fotoUrl']     ?? '',
+          sottotitolo: flat['oe.alimentari.sottotitolo'] ?? '',
+        },
+        benessere: {
+          titolo:      flat['oe.benessere.titolo']      ?? 'OE Benessere',
+          fotoUrl:     flat['oe.benessere.fotoUrl']     ?? '',
+          sottotitolo: flat['oe.benessere.sottotitolo'] ?? '',
+        },
       };
     },
     staleTime: 60_000,
@@ -104,8 +112,8 @@ function OeCards() {
     <div className="space-y-3 pt-2">
       {(['oe-alimentari', 'oe-benessere'] as const).map((slug) => {
         const key = slug === 'oe-alimentari' ? 'alimentari' : 'benessere';
-        const titolo = slug === 'oe-alimentari' ? 'OE Alimentari' : 'OE Benessere';
         const cfg = data?.[key];
+        const titolo = cfg?.titolo ?? (slug === 'oe-alimentari' ? 'OE Alimentari' : 'OE Benessere');
         return (
           <Link
             key={slug}
