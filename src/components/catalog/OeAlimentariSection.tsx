@@ -1196,8 +1196,8 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
             <thead>
               <tr className="border-b-2 border-border text-gray-400 text-left">
                 <th className="pb-2 pr-3 font-medium">Strenna</th>
-                <th className="pb-2 px-2 font-medium text-right">Costo</th>
-                <th className="pb-2 px-2 font-medium text-right">Prezzo</th>
+                <th className="pb-2 px-2 font-medium text-right">Costo i.i.</th>
+                <th className="pb-2 px-2 font-medium text-right">Prezzo i.i.</th>
                 <th className="pb-2 px-2 font-medium text-right">Marg.%</th>
                 <th className="pb-2 px-2 font-medium text-right">Marg. unit.</th>
                 <th className="pb-2 px-2 font-medium text-right">Pz</th>
@@ -1376,8 +1376,8 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
                 <th className="pb-2 px-2 font-medium text-right">Giacenza</th>
                 <th className="pb-2 px-2 font-medium text-right">Riservati</th>
                 <th className="pb-2 px-2 font-medium text-right">Disponibili</th>
-                <th className="pb-2 px-2 font-medium text-right">Costo</th>
-                <th className="pb-2 px-2 font-medium text-right">PVP unit.</th>
+                <th className="pb-2 px-2 font-medium text-right">Costo i.i.</th>
+                <th className="pb-2 px-2 font-medium text-right">PVP i.i.</th>
                 <th className="pb-2 px-2 font-medium text-right">Val. costo</th>
                 <th className="pb-2 pl-2 font-medium text-right">Val. PVP</th>
               </tr>
