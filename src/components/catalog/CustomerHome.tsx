@@ -85,7 +85,7 @@ function NotificationPopup({ notification, onClose }: { notification: Notificati
   );
 }
 
-export default function CustomerHome({ canSeeModa }: { canSeeModa: boolean }) {
+export default function CustomerHome({ canSeeModa, showOeSections = false }: { canSeeModa: boolean; showOeSections?: boolean }) {
   const { social: ss, collections, home } = useSettings();
   const searchParams = useSearchParams();
   const devPreview = searchParams.get('devPreview') === '1';
@@ -203,6 +203,28 @@ export default function CustomerHome({ canSeeModa }: { canSeeModa: boolean }) {
           );
         })() : (
           lista.length > 0 && <CollectionCard info={lista.find(c => c.id === 'casa') ?? lista[0]} />
+        )}
+
+        {/* OE sections — solo Meridiano361 */}
+        {showOeSections && (
+          <div className="space-y-3 pt-2">
+            {(['oe-alimentari', 'oe-benessere'] as const).map((slug) => {
+              const titolo = slug === 'oe-alimentari' ? 'OE Alimentari' : 'OE Benessere';
+              return (
+                <Link
+                  key={slug}
+                  href={`/${slug}`}
+                  className="flex items-center justify-between gap-4 p-5 bg-black rounded-2xl hover:opacity-90 transition-opacity"
+                >
+                  <div>
+                    <p className="text-2xs tracking-[0.2em] uppercase text-white/40">Sezione</p>
+                    <h2 className="font-display text-2xl font-light tracking-widest text-white mt-0.5">{titolo}</h2>
+                  </div>
+                  <ChevronRight size={20} className="text-white/30 flex-shrink-0" />
+                </Link>
+              );
+            })}
+          </div>
         )}
 
         {/* Social */}

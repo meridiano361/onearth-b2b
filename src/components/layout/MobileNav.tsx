@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import {
   Home, LayoutGrid, ShoppingCart, Package, Heart, HelpCircle, Settings, Gem, BarChart2,
+  Utensils, Leaf,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCartStore } from '@/store/cartStore';
@@ -75,6 +76,16 @@ const BUDGET_ITEM: NavItem = {
   isActive: (p) => p.startsWith('/budget'),
 };
 
+const OE_ALIMENTARI_BASE: NavItem[] = [
+  HOME_ITEM,
+  { icon: Utensils, label: 'OE Alim.', href: '/oe-alimentari', isActive: (p) => p.startsWith('/oe-alimentari') },
+];
+
+const OE_BENESSERE_BASE: NavItem[] = [
+  HOME_ITEM,
+  { icon: Leaf, label: 'OE Ben.', href: '/oe-benessere', isActive: (p) => p.startsWith('/oe-benessere') },
+];
+
 // Path definitivamente MODA (mai casa)
 function isModaPath(p: string) { return p.startsWith('/moda') || p.startsWith('/budget'); }
 
@@ -108,6 +119,8 @@ function getNavItems(pathname: string, isAdmin: boolean, canVisual: boolean, isM
   if (isModaPath(pathname)) return [...getModaItems(isAdmin, canVisual, isMeridiano361), tail];
   if (isHomeCollectionPath(pathname)) return [...HOME_COLLECTION_BASE, tail];
   if (isCasaPath(pathname)) return [...CASA_BASE, tail];
+  if (pathname.startsWith('/oe-alimentari')) return [...OE_ALIMENTARI_BASE, tail];
+  if (pathname.startsWith('/oe-benessere')) return [...OE_BENESSERE_BASE, tail];
 
   // Path ambigui (scheda prodotto /catalog/[id], assistenza, impostazioni, ecc.)
   // Si usa il branch selezionato dall'utente in home, persisto in localStorage
