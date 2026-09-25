@@ -1186,8 +1186,8 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
   return (
     <div className="space-y-10 pb-8">
 
-      {/* ① Prodotti a scaffale */}
-      <AnalisiCard id="scaffale" title="Prodotti a scaffale — previsione" open={isOpen('scaffale')} onToggle={() => toggleSection('scaffale')}>
+      {/* ① Prodotti — previsione */}
+      <AnalisiCard id="scaffale" title="Prodotti — previsione" open={isOpen('scaffale')} onToggle={() => toggleSection('scaffale')}>
         <div className="grid grid-cols-2 gap-3">
           <KpiCard label="Prodotti a scaffale" value={fmtN(scaffaleRighe.length)} sub={`${fmtN(totPezziScaffale)} pezzi previsti`} />
           <KpiCard label="Margine medio" value={`${margScaffalePerc}%`} sub="PVP vs costo i.i." accent />
@@ -1285,8 +1285,39 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
         </div>
       </AnalisiCard>
 
-      {/* ③ Strenne — classifica per margine */}
-      <AnalisiCard id="strenne-rank" title="Strenne — classifica per margine" open={isOpen('strenne-rank')} onToggle={() => toggleSection('strenne-rank')}>
+      {/* ③ Prodotti — classifica */}
+      <AnalisiCard id="margine" title="Prodotti — classifica" open={isOpen('margine')} onToggle={() => toggleSection('margine')}>
+        <div className="space-y-2">
+          {rankMargine.map((p, i) => (
+            <div key={p.id} className="flex items-center gap-3 bg-white border border-border rounded-xl px-3 py-2.5 text-xs">
+              <span className="w-5 text-gray-400 text-center font-mono flex-shrink-0">{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-primary truncate">{p.nome}</p>
+                {p.fornitore && <p className="text-[10px] text-gray-400">{p.fornitore}</p>}
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-gray-500 flex-shrink-0 text-[10px]">
+                <span>Costo {fmt(p.costoIi)}</span>
+                <span className="text-gray-300">·</span>
+                <span>PVP {fmt(p.pvpIi)}</span>
+                <span className="text-gray-300">·</span>
+                <span>unit. {fmt(p.margUnit)}</span>
+              </div>
+              <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden flex-shrink-0">
+                <div
+                  className={cn('h-full rounded-full', p.margPerc >= 50 ? 'bg-green-500' : p.margPerc >= 35 ? 'bg-amber-400' : 'bg-red-400')}
+                  style={{ width: `${Math.min(p.margPerc, 100)}%` }}
+                />
+              </div>
+              <span className={cn('font-bold w-9 text-right flex-shrink-0', p.margPerc >= 50 ? 'text-green-600' : p.margPerc >= 35 ? 'text-amber-600' : 'text-red-500')}>
+                {p.margPerc}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </AnalisiCard>
+
+      {/* ④ Strenne — classifica */}
+      <AnalisiCard id="strenne-rank" title="Strenne — classifica" open={isOpen('strenne-rank')} onToggle={() => toggleSection('strenne-rank')}>
         <div className="space-y-2">
           {strenneRank.map((s, i) => (
             <div key={s.barcode} className="flex items-center gap-3 bg-white border border-border rounded-xl px-3 py-2.5 text-xs">
@@ -1315,15 +1346,13 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
         </div>
       </AnalisiCard>
 
-      {/* ④ Fornitori */}
-      <AnalisiCard id="fornitori" title="Analisi per fornitore" open={isOpen('fornitori')} onToggle={() => toggleSection('fornitori')}>
+      {/* ⑤ Fornitori — costi */}
+      <AnalisiCard id="fornitori" title="Fornitori — costi" open={isOpen('fornitori')} onToggle={() => toggleSection('fornitori')}>
         <div className="space-y-2">
           {Object.entries(byFornitore)
             .sort((a, b) => b[1].length - a[1].length)
             .map(([fornitore, prods]) => {
-              // costo effettivo = pezzi già ordinati × costoIi
               const costoEffettivo = prods.reduce((a, p) => a + (p.ordinato?.ordinato ?? 0) * p.costoIi, 0);
-              // costo stimato = pezzi ancora da ordinare × costoIi
               const costoStima = prods.reduce((a, p) => {
                 const fabStr  = FABBISOGNO_STRENNE[p.nome] ?? 0;
                 const totEmp  = EMPORI.reduce((s, e) => s + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
@@ -1357,38 +1386,6 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
                 </div>
               );
             })}
-        </div>
-      </AnalisiCard>
-
-      {/* ④ Classifica prodotti per margine */}
-      <AnalisiCard id="margine" title="Classifica prodotti per margine" open={isOpen('margine')} onToggle={() => toggleSection('margine')}>
-        <div className="space-y-2">
-          {rankMargine.map((p, i) => (
-            <div key={p.id} className="flex items-center gap-3 bg-white border border-border rounded-xl px-3 py-2.5 text-xs">
-              <span className="w-5 text-gray-400 text-center font-mono flex-shrink-0">{i + 1}</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-primary truncate">{p.nome}</p>
-                {p.fornitore && <p className="text-[10px] text-gray-400">{p.fornitore}</p>}
-              </div>
-              <div className="hidden sm:flex items-center gap-2 text-gray-500 flex-shrink-0 text-[10px]">
-                <span>Costo {fmt(p.costoIi)}</span>
-                <span className="text-gray-300">·</span>
-                <span>PVP {fmt(p.pvpIi)}</span>
-                <span className="text-gray-300">·</span>
-                <span>unit. {fmt(p.margUnit)}</span>
-              </div>
-              {/* Barra */}
-              <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden flex-shrink-0">
-                <div
-                  className={cn('h-full rounded-full', p.margPerc >= 50 ? 'bg-green-500' : p.margPerc >= 35 ? 'bg-amber-400' : 'bg-red-400')}
-                  style={{ width: `${Math.min(p.margPerc, 100)}%` }}
-                />
-              </div>
-              <span className={cn('font-bold w-9 text-right flex-shrink-0', p.margPerc >= 50 ? 'text-green-600' : p.margPerc >= 35 ? 'text-amber-600' : 'text-red-500')}>
-                {p.margPerc}%
-              </span>
-            </div>
-          ))}
         </div>
       </AnalisiCard>
 
