@@ -1,6 +1,14 @@
 export const EMPORI = ['MN', 'RE', 'CR', 'CA', 'VI'] as const;
 export type Emporio = typeof EMPORI[number];
 
+export const STRENNA_FOTO: Record<number, string> = {
+  30:  '/strenne/strenna-30.svg',
+  40:  '/strenne/strenna-40.svg',
+  50:  '/strenne/strenna-50.svg',
+  70:  '/strenne/strenna-70.svg',
+  100: '/strenne/strenna-100.svg',
+};
+
 export const CESTI_LICHENS = [
   { codice: '7430', descrizione: 'Rett. medio basso', misure: 'cm 33×23×8h', pvp: 15.00, costo: 3.75,
     giacenze: { CR: 1, RE: 0, CA: 1, VI: 1, MN: 5, TR: 80, HUB: 121 } },

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="bg30" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#c0392b"/>
+      <stop offset="100%" stop-color="#7b0e0e"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f39c12" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#f39c12" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="400" height="400" fill="url(#bg30)"/>
+
+  <!-- Subtle vignette overlay -->
+  <rect width="400" height="400" fill="url(#glow)"/>
+
+  <!-- Snow dots -->
+  <circle cx="40" cy="30" r="3" fill="white" fill-opacity="0.6"/>
+  <circle cx="80" cy="60" r="2" fill="white" fill-opacity="0.4"/>
+  <circle cx="130" cy="20" r="4" fill="white" fill-opacity="0.5"/>
+  <circle cx="200" cy="15" r="2.5" fill="white" fill-opacity="0.7"/>
+  <circle cx="270" cy="40" r="3.5" fill="white" fill-opacity="0.4"/>
+  <circle cx="330" cy="25" r="2" fill="white" fill-opacity="0.6"/>
+  <circle cx="370" cy="55" r="3" fill="white" fill-opacity="0.5"/>
+  <circle cx="60" cy="90" r="2" fill="white" fill-opacity="0.3"/>
+  <circle cx="350" cy="90" r="2.5" fill="white" fill-opacity="0.4"/>
+  <circle cx="15" cy="140" r="3" fill="white" fill-opacity="0.5"/>
+  <circle cx="385" cy="130" r="2" fill="white" fill-opacity="0.4"/>
+  <circle cx="100" cy="350" r="3" fill="white" fill-opacity="0.4"/>
+  <circle cx="300" cy="370" r="2.5" fill="white" fill-opacity="0.5"/>
+  <circle cx="50" cy="320" r="2" fill="white" fill-opacity="0.3"/>
+  <circle cx="370" cy="340" r="3" fill="white" fill-opacity="0.4"/>
+
+  <!-- Holly left -->
+  <ellipse cx="60" cy="320" rx="22" ry="13" fill="#27ae60" transform="rotate(-30 60 320)"/>
+  <ellipse cx="85" cy="310" rx="22" ry="13" fill="#2ecc71" transform="rotate(15 85 310)"/>
+  <ellipse cx="50" cy="305" rx="20" ry="12" fill="#1e8449" transform="rotate(-50 50 305)"/>
+  <!-- Holly berries -->
+  <circle cx="72" cy="308" r="6" fill="#e74c3c"/>
+  <circle cx="82" cy="302" r="5" fill="#c0392b"/>
+  <circle cx="65" cy="300" r="5.5" fill="#e74c3c"/>
+
+  <!-- Holly right -->
+  <ellipse cx="340" cy="320" rx="22" ry="13" fill="#27ae60" transform="rotate(30 340 320)"/>
+  <ellipse cx="315" cy="310" rx="22" ry="13" fill="#2ecc71" transform="rotate(-15 315 310)"/>
+  <ellipse cx="350" cy="305" rx="20" ry="12" fill="#1e8449" transform="rotate(50 350 305)"/>
+  <circle cx="328" cy="308" r="6" fill="#e74c3c"/>
+  <circle cx="318" cy="302" r="5" fill="#c0392b"/>
+  <circle cx="335" cy="300" r="5.5" fill="#e74c3c"/>
+
+  <!-- Stars scattered -->
+  <!-- Star at top left -->
+  <g transform="translate(55,65) rotate(15)">
+    <polygon points="0,-12 2.8,-8 8,-8 4,−4.5 5.5,2 0,-2 -5.5,2 -4,-4.5 -8,-8 -2.8,-8" fill="#f1c40f" fill-opacity="0.8"/>
+  </g>
+  <!-- 6-pointed snowflake top center -->
+  <g transform="translate(200,55)">
+    <line x1="0" y1="-18" x2="0" y2="18" stroke="white" stroke-width="2.5" stroke-opacity="0.5"/>
+    <line x1="-15.6" y1="-9" x2="15.6" y2="9" stroke="white" stroke-width="2.5" stroke-opacity="0.5"/>
+    <line x1="15.6" y1="-9" x2="-15.6" y2="9" stroke="white" stroke-width="2.5" stroke-opacity="0.5"/>
+    <line x1="0" y1="-10" x2="-5" y2="-16" stroke="white" stroke-width="1.5" stroke-opacity="0.5"/>
+    <line x1="0" y1="-10" x2="5" y2="-16" stroke="white" stroke-width="1.5" stroke-opacity="0.5"/>
+    <line x1="0" y1="10" x2="-5" y2="16" stroke="white" stroke-width="1.5" stroke-opacity="0.5"/>
+    <line x1="0" y1="10" x2="5" y2="16" stroke="white" stroke-width="1.5" stroke-opacity="0.5"/>
+  </g>
+
+  <!-- Ribbon horizontal -->
+  <rect x="0" y="190" width="400" height="20" fill="#f1c40f" fill-opacity="0.8"/>
+  <!-- Ribbon vertical -->
+  <rect x="190" y="0" width="20" height="400" fill="#f1c40f" fill-opacity="0.8"/>
+  <!-- Bow center -->
+  <ellipse cx="200" cy="200" rx="35" ry="35" fill="#e67e22"/>
+  <ellipse cx="170" cy="185" rx="28" ry="16" fill="#e67e22" transform="rotate(-20 170 185)"/>
+  <ellipse cx="230" cy="185" rx="28" ry="16" fill="#f39c12" transform="rotate(20 230 185)"/>
+  <ellipse cx="170" cy="215" rx="22" ry="12" fill="#e67e22" transform="rotate(20 170 215)"/>
+  <ellipse cx="230" cy="215" rx="22" ry="12" fill="#f39c12" transform="rotate(-20 230 215)"/>
+  <circle cx="200" cy="200" r="15" fill="#f39c12"/>
+  <circle cx="200" cy="200" r="8" fill="#e67e22"/>
+
+  <!-- Subtle grain texture lines -->
+  <rect x="0" y="0" width="400" height="400" fill="none" stroke="white" stroke-opacity="0.03" stroke-width="0"/>
+</svg>

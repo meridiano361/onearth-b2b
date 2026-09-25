@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="bg40" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#1a472a"/>
+      <stop offset="100%" stop-color="#0a1f10"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="400" height="400" fill="url(#bg40)"/>
+
+  <!-- Albero di natale stilizzato -->
+  <!-- Tronco -->
+  <rect x="185" y="310" width="30" height="45" rx="4" fill="#6d3a1e"/>
+
+  <!-- Strati albero -->
+  <polygon points="200,60 130,170 270,170" fill="#1e6b35"/>
+  <polygon points="200,100 115,230 285,230" fill="#27924a"/>
+  <polygon points="200,155 100,305 300,305" fill="#1a7a3c"/>
+
+  <!-- Decorazioni palline -->
+  <circle cx="170" cy="155" r="8" fill="#e74c3c"/>
+  <circle cx="225" cy="160" r="7" fill="#f1c40f"/>
+  <circle cx="150" cy="200" r="8" fill="#f1c40f"/>
+  <circle cx="245" cy="195" r="9" fill="#e74c3c"/>
+  <circle cx="200" cy="185" r="7" fill="#ecf0f1"/>
+  <circle cx="175" cy="260" r="9" fill="#f1c40f"/>
+  <circle cx="220" cy="265" r="8" fill="#e74c3c"/>
+  <circle cx="245" cy="245" r="7" fill="#ecf0f1"/>
+  <circle cx="155" cy="252" r="8" fill="#e74c3c"/>
+  <circle cx="130" cy="275" r="7" fill="#f1c40f"/>
+  <circle cx="270" cy="272" r="8" fill="#ecf0f1"/>
+  <!-- Stelle sulle palline -->
+  <circle cx="170" cy="155" r="3" fill="white" fill-opacity="0.5"/>
+  <circle cx="225" cy="160" r="2.5" fill="white" fill-opacity="0.5"/>
+
+  <!-- Stella in cima -->
+  <polygon points="200,48 205,62 220,62 209,71 213,85 200,76 187,85 191,71 180,62 195,62" fill="#f1c40f"/>
+
+  <!-- Neve sotto albero -->
+  <ellipse cx="200" cy="355" rx="90" ry="18" fill="white" fill-opacity="0.15"/>
+
+  <!-- Fiocchi di neve -->
+  <g transform="translate(45,60)">
+    <line x1="0" y1="-14" x2="0" y2="14" stroke="white" stroke-width="2" stroke-opacity="0.6"/>
+    <line x1="-12.1" y1="-7" x2="12.1" y2="7" stroke="white" stroke-width="2" stroke-opacity="0.6"/>
+    <line x1="12.1" y1="-7" x2="-12.1" y2="7" stroke="white" stroke-width="2" stroke-opacity="0.6"/>
+  </g>
+  <g transform="translate(355,80)">
+    <line x1="0" y1="-10" x2="0" y2="10" stroke="white" stroke-width="1.5" stroke-opacity="0.5"/>
+    <line x1="-8.7" y1="-5" x2="8.7" y2="5" stroke="white" stroke-width="1.5" stroke-opacity="0.5"/>
+    <line x1="8.7" y1="-5" x2="-8.7" y2="5" stroke="white" stroke-width="1.5" stroke-opacity="0.5"/>
+  </g>
+  <g transform="translate(30,330)">
+    <line x1="0" y1="-12" x2="0" y2="12" stroke="white" stroke-width="1.5" stroke-opacity="0.4"/>
+    <line x1="-10.4" y1="-6" x2="10.4" y2="6" stroke="white" stroke-width="1.5" stroke-opacity="0.4"/>
+    <line x1="10.4" y1="-6" x2="-10.4" y2="6" stroke="white" stroke-width="1.5" stroke-opacity="0.4"/>
+  </g>
+  <g transform="translate(370,350)">
+    <line x1="0" y1="-12" x2="0" y2="12" stroke="white" stroke-width="1.5" stroke-opacity="0.4"/>
+    <line x1="-10.4" y1="-6" x2="10.4" y2="6" stroke="white" stroke-width="1.5" stroke-opacity="0.4"/>
+    <line x1="10.4" y1="-6" x2="-10.4" y2="6" stroke="white" stroke-width="1.5" stroke-opacity="0.4"/>
+  </g>
+
+  <!-- Neve puntini -->
+  <circle cx="80" cy="30" r="3" fill="white" fill-opacity="0.5"/>
+  <circle cx="150" cy="50" r="2" fill="white" fill-opacity="0.4"/>
+  <circle cx="300" cy="35" r="2.5" fill="white" fill-opacity="0.6"/>
+  <circle cx="340" cy="20" r="3" fill="white" fill-opacity="0.4"/>
+  <circle cx="20" cy="200" r="2" fill="white" fill-opacity="0.3"/>
+  <circle cx="380" cy="180" r="2.5" fill="white" fill-opacity="0.4"/>
+  <circle cx="15" cy="280" r="3" fill="white" fill-opacity="0.3"/>
+  <circle cx="385" cy="290" r="2" fill="white" fill-opacity="0.5"/>
+
+  <!-- Lucette catenella -->
+  <path d="M 0 380 Q 50 360 100 375 Q 150 390 200 375 Q 250 360 300 375 Q 350 390 400 375" fill="none" stroke="#f1c40f" stroke-width="2" stroke-opacity="0.5"/>
+  <circle cx="50" cy="367" r="4" fill="#e74c3c" fill-opacity="0.8"/>
+  <circle cx="100" cy="375" r="4" fill="#f1c40f" fill-opacity="0.8"/>
+  <circle cx="150" cy="382" r="4" fill="#27ae60" fill-opacity="0.8"/>
+  <circle cx="200" cy="375" r="4" fill="#e74c3c" fill-opacity="0.8"/>
+  <circle cx="250" cy="368" r="4" fill="#f1c40f" fill-opacity="0.8"/>
+  <circle cx="300" cy="375" r="4" fill="#27ae60" fill-opacity="0.8"/>
+  <circle cx="350" cy="382" r="4" fill="#e74c3c" fill-opacity="0.8"/>
+</svg>

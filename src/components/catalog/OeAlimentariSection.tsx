@@ -7,7 +7,7 @@ import {
   Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info, TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CESTI_LICHENS, STRENNE, FABBISOGNO_STRENNE, EMPORI, type Emporio } from '@/data/oeAlimentariStatico';
+import { CESTI_LICHENS, STRENNE, FABBISOGNO_STRENNE, EMPORI, STRENNA_FOTO, type Emporio } from '@/data/oeAlimentariStatico';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -737,8 +737,14 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
               onClick={() => setOpenIdx(isOpen ? null : i)}
               className="w-full flex items-center gap-3 p-4 text-left"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-sm">€{s.prezzo}</span>
+              <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
+                {STRENNA_FOTO[s.prezzo]
+                  ? <img src={STRENNA_FOTO[s.prezzo]} alt={`Strenna ${s.prezzo}`} className="absolute inset-0 w-full h-full object-cover" />
+                  : <div className="absolute inset-0 bg-primary" />
+                }
+                <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center">
+                  <span className="text-white font-bold text-lg leading-none">€{s.prezzo}</span>
+                </div>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-primary">Strenna {s.prezzo}</p>
