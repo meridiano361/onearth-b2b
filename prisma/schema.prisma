@@ -1288,3 +1288,12 @@ model OeStrennaQta {
   @@id([barcode, emporio])
   @@map("oe_strenne_qte")
 }
+
+model OeStrennaProdotto {
+  strennaBarcode String @map("strenna_barcode")
+  prodottoNome   String @map("prodotto_nome")
+  ordine         Int    @default(0)
+
+  @@id([strennaBarcode, prodottoNome])
+  @@map("oe_strenna_prodotti")
+}

@@ -689,10 +689,15 @@ function AnagraticaDrawer({ item, onClose }: { item: AnagraticaState; onClose: (
 type QtaRow = { barcode: string; emporio: string; qta: number };
 
 function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
+  const qc = useQueryClient();
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [anagratica, setAnagratica] = useState<AnagraticaState | null>(null);
   const [editing, setEditing] = useState<{ barcode: string; emporio: string } | null>(null);
   const [editVal, setEditVal] = useState('');
+  const [editingComp, setEditingComp] = useState<string | null>(null);
+  const [editNomi, setEditNomi] = useState<string[]>([]);
+  const [addingProd, setAddingProd] = useState(false);
+  const [savingComp, setSavingComp] = useState(false);
 
   const { data: qteRows = [], refetch: refetchQte } = useQuery<QtaRow[]>({
     queryKey: ['oe-strenne-qte'],
@@ -702,6 +707,38 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
     },
     staleTime: 30_000,
   });
+
+  const { data: composizioneDb = {} } = useQuery<Record<string, string[]>>({
+    queryKey: ['oe-strenne-composizione'],
+    queryFn: async () => {
+      const res = await fetch('/api/oe/alimentari/strenne/composizione');
+      return res.ok ? res.json() : {};
+    },
+    staleTime: 60_000,
+  });
+
+  const getNomi = (barcode: string): string[] => {
+    if (barcode in composizioneDb) return composizioneDb[barcode];
+    return [...(STRENNE.find(s => s.barcode === barcode)?.prodotti.map(p => p.nome) ?? [])];
+  };
+
+  const startEditComp = (barcode: string) => {
+    setEditNomi(getNomi(barcode));
+    setEditingComp(barcode);
+    setAddingProd(false);
+  };
+
+  const saveComposizione = async (barcode: string) => {
+    setSavingComp(true);
+    await fetch(`/api/oe/alimentari/strenne/composizione/${encodeURIComponent(barcode)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prodotti: editNomi }),
+    });
+    await qc.invalidateQueries({ queryKey: ['oe-strenne-composizione'] });
+    setEditingComp(null);
+    setSavingComp(false);
+  };
 
   const qteMap = new Map<string, number>();
   qteRows.forEach(r => qteMap.set(`${r.barcode}:${r.emporio}`, r.qta));
@@ -734,8 +771,9 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
         const isOpen = openIdx === i;
         const totQte = EMPORI.reduce((a, emp) => a + getQte(s.barcode, emp), 0);
         const cesto = CESTI_LICHENS.find(c => c.codice === s.cestoCodice);
-        const costoProdotti = s.prodotti.reduce((acc, sp) => {
-          const prod = prodotti.find(p => p.nome === sp.nome);
+        const nomiComp = getNomi(s.barcode);
+        const costoProdotti = nomiComp.reduce((acc, nome) => {
+          const prod = prodotti.find(p => p.nome === nome);
           return acc + (prod?.costoIi ?? 0);
         }, 0);
         const costoReale = s.costoCesto + costoProdotti;
@@ -757,7 +795,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-primary">Strenna {s.prezzo}</p>
-                <p className="text-xs text-gray-400">{s.prodotti.length + 1} componenti · costo {fmt(costoReale)} · {fmtN(totQte)} pz tot.</p>
+                <p className="text-xs text-gray-400">{nomiComp.length + 1} componenti · costo {fmt(costoReale)} · {fmtN(totQte)} pz tot.</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-mono text-gray-400">{s.barcode}</span>
@@ -770,14 +808,15 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
               const cestoIe = s.costoCesto / 1.22;
               const cestoPvpIe = (cesto?.pvp ?? 0) / 1.22;
               const cestoPvpIi = cesto?.pvp ?? 0;
-              const righe = s.prodotti.map(sp => {
-                const prod = prodotti.find(p => p.nome === sp.nome);
+              const isEditComp = editingComp === s.barcode;
+              const righe = nomiComp.map(nome => {
+                const prod = prodotti.find(p => p.nome === nome);
                 const iva = (prod?.ivaPerc ?? 10) / 100;
                 const cIi = prod?.costoIi ?? 0;
                 const cIe = cIi / (1 + iva);
                 const pIi = prod?.pvpIi ?? 0;
                 const pIe = pIi / (1 + iva);
-                return { nome: sp.nome, prod, cIi, cIe, pIi, pIe, marg: pIe - cIe };
+                return { nome, prod, cIi, cIe, pIi, pIe, marg: pIe - cIe };
               });
               const totCIi = righe.reduce((a, r) => a + r.cIi, 0) + s.costoCesto;
               const totCIe = righe.reduce((a, r) => a + r.cIe, 0) + cestoIe;
@@ -790,7 +829,58 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
               <div className="px-4 pb-4 space-y-4 border-t border-border">
                 {/* Composizione con prezzi dettagliati */}
                 <div className="pt-3">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Composizione</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Composizione</p>
+                    {!isEditComp
+                      ? <button onClick={() => startEditComp(s.barcode)} className="flex items-center gap-1 text-xs text-primary hover:underline"><Pencil size={11} /> Modifica</button>
+                      : <div className="flex items-center gap-2">
+                          <button onClick={() => setEditingComp(null)} className="text-xs text-gray-400 hover:text-gray-600">Annulla</button>
+                          <button onClick={() => saveComposizione(s.barcode)} disabled={savingComp} className="flex items-center gap-1 text-xs bg-primary text-white px-2 py-0.5 rounded-md disabled:opacity-50"><Check size={11} /> Salva</button>
+                        </div>
+                    }
+                  </div>
+
+                  {isEditComp ? (
+                    /* ── Editor inline composizione ── */
+                    <div className="space-y-1.5">
+                      {/* Cesto (non modificabile) */}
+                      <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded-lg text-xs text-gray-500">
+                        <span className="flex-1">🧺 {cesto?.descrizione ?? s.cestoCodice}</span>
+                        <span className="text-[10px] text-gray-300">(fisso)</span>
+                      </div>
+                      {/* Prodotti esistenti */}
+                      {editNomi.map((nome, idx) => (
+                        <div key={nome} className="flex items-center gap-2 px-2 py-1.5 bg-white border border-border rounded-lg text-xs">
+                          <span className="flex-1 text-gray-700">{nome}</span>
+                          <button onClick={() => setEditNomi(editNomi.filter((_, j) => j !== idx))} className="text-gray-300 hover:text-red-500 flex-shrink-0"><X size={13} /></button>
+                        </div>
+                      ))}
+                      {/* Aggiungi prodotto */}
+                      {addingProd ? (
+                        <select
+                          autoFocus
+                          className="w-full text-xs border border-primary rounded-lg px-2 py-1.5 bg-white"
+                          defaultValue=""
+                          onChange={e => {
+                            if (e.target.value) {
+                              setEditNomi([...editNomi, e.target.value]);
+                              setAddingProd(false);
+                            }
+                          }}
+                          onBlur={() => setAddingProd(false)}
+                        >
+                          <option value="" disabled>Seleziona prodotto…</option>
+                          {prodotti
+                            .filter(p => !editNomi.includes(p.nome))
+                            .sort((a, b) => a.nome.localeCompare(b.nome))
+                            .map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)
+                          }
+                        </select>
+                      ) : (
+                        <button onClick={() => setAddingProd(true)} className="flex items-center gap-1 text-xs text-primary hover:underline px-2 py-1"><Plus size={11} /> Aggiungi prodotto</button>
+                      )}
+                    </div>
+                  ) : (
                   <div className="overflow-x-auto -mx-4 px-4">
                     <table className="min-w-full text-xs">
                       <thead>
@@ -850,6 +940,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                       </tfoot>
                     </table>
                   </div>
+                  )}
                 </div>
 
                 {/* Riepilogo margine */}
