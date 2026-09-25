@@ -110,20 +110,15 @@ function OeCards() {
           <Link
             key={slug}
             href={`/${slug}`}
-            className="block bg-black rounded-2xl overflow-hidden hover:opacity-90 transition-opacity duration-200"
+            className="block bg-black rounded-2xl overflow-hidden hover:opacity-90 transition-opacity duration-200 group"
           >
-            {cfg?.fotoUrl ? (
+            {cfg?.fotoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={cfg.fotoUrl}
                 alt={titolo}
-                className="w-full object-cover h-[40vh]"
+                className="w-full object-cover transition-all h-[40vh]"
               />
-            ) : (
-              <div className="h-[28vh] bg-gradient-to-b from-zinc-900 to-black relative overflow-hidden flex items-center justify-center">
-                <span className="font-display font-light tracking-[0.4em] text-white/[0.04] text-[clamp(60px,12vw,120px)] uppercase select-none">
-                  {key === 'alimentari' ? 'ALI' : 'BEN'}
-                </span>
-              </div>
             )}
             <div className="flex items-center justify-between gap-4 p-6">
               <div>
@@ -131,7 +126,7 @@ function OeCards() {
                 <h2 className="font-display text-3xl font-light tracking-widest text-white mt-0.5">{titolo}</h2>
                 {cfg?.sottotitolo && <p className="text-xs text-white/60 mt-0.5">{cfg.sottotitolo}</p>}
               </div>
-              <ChevronRight size={20} className="text-white/30 flex-shrink-0" />
+              <ChevronRight size={20} className="text-white/30 group-hover:text-white transition-colors flex-shrink-0" />
             </div>
           </Link>
         );
