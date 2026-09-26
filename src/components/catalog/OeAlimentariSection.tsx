@@ -1093,13 +1093,13 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
     if (p) setAnagratica({ kind: 'prodotto', data: p });
   };
 
-  const { data: cestiDb = [] } = useQuery<CestoDB[]>({
+  const { data: cestiDb = [], isLoading: isCestiLoading } = useQuery<CestoDB[]>({
     queryKey: ['oe-cesti'],
     queryFn: () => fetch('/api/oe/alimentari/cesti').then(r => r.json()),
     staleTime: 60_000,
   });
 
-  const { data: strennaFotoDb = {} } = useQuery<Record<string, { fotoUrl: string; nome: string; cestoCodice: string }>>({
+  const { data: strennaFotoDb = {}, isLoading: isFotoLoading } = useQuery<Record<string, { fotoUrl: string; nome: string; cestoCodice: string }>>({
     queryKey: ['oe-strenne-foto'],
     queryFn: async () => {
       const res = await fetch('/api/oe/alimentari/strenne/foto');
@@ -1107,6 +1107,8 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
     },
     staleTime: 60_000,
   });
+
+  const fotoPronte = !isCestiLoading && !isFotoLoading;
 
   const getStrennaFoto = (barcode: string, prezzo: number): string =>
     strennaFotoDb[barcode]?.fotoUrl || STRENNA_FOTO[prezzo] || '';
@@ -1163,7 +1165,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
           return acc + (prod?.costoIi ?? 0);
         }, 0);
         const costoReale = s.costoCesto + costoProdotti;
-        const strennaFoto = strennaFotoDb[s.barcode]?.fotoUrl || cesto?.fotoUrl || STRENNA_FOTO[s.prezzo] || '';
+        const strennaFoto = fotoPronte ? (strennaFotoDb[s.barcode]?.fotoUrl || cesto?.fotoUrl || '') : '';
         return (
           <div key={s.barcode} className="border border-border rounded-xl bg-white overflow-hidden">
             {/* Header */}
