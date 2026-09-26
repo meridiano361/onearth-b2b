@@ -4,7 +4,7 @@ import { useState, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Pencil, Trash2, Plus, X, Check, ChevronDown, ChevronUp,
-  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info, TrendingUp, ImageIcon,
+  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info, TrendingUp, ImageIcon, ZoomIn,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,31 @@ type Prodotto = {
   fabbisognoEmpori: FabbisognoEmpori[];
   ordinato: Ordinato;
 };
+
+// ── ImageLightbox ─────────────────────────────────────────────────────────────
+
+function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95"
+      onClick={onClose}
+    >
+      <img
+        src={src}
+        alt={alt}
+        className="max-w-full max-h-full object-contain select-none"
+        style={{ touchAction: 'pinch-zoom' }}
+        onClick={e => e.stopPropagation()}
+      />
+      <button
+        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+        onClick={onClose}
+      >
+        <X size={20} />
+      </button>
+    </div>
+  );
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -58,25 +83,47 @@ function ProdottoFoto({ p, uploadFoto, fileRefs }: {
   uploadFoto: (id: string, file: File) => void;
   fileRefs: React.MutableRefObject<Record<string, HTMLInputElement | null>>;
 }) {
+  const [lightbox, setLightbox] = useState(false);
   return (
-    <div
-      className="relative flex-shrink-0 rounded-lg bg-gray-50 border border-border overflow-hidden cursor-pointer group w-16 h-16"
-      onClick={() => fileRefs.current[p.id]?.click()}
-      title="Clicca per caricare una foto"
-    >
-      {p.fotoUrl
-        ? <img src={p.fotoUrl} alt={p.nome} className="w-full h-full object-cover" />
-        : <div className="w-full h-full flex items-center justify-center text-gray-300"><Package size={22} /></div>
-      }
-      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-        <Camera size={16} className="text-white" />
+    <>
+      <div className="relative flex-shrink-0 rounded-lg bg-gray-50 border border-border overflow-hidden w-16 h-16 group">
+        {p.fotoUrl ? (
+          <>
+            <img
+              src={p.fotoUrl} alt={p.nome}
+              className="w-full h-full object-cover cursor-zoom-in"
+              onClick={() => setLightbox(true)}
+            />
+            {/* Camera button — bottom-right corner */}
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); fileRefs.current[p.id]?.click(); }}
+              className="absolute bottom-0.5 right-0.5 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Sostituisci foto"
+            >
+              <Camera size={10} />
+            </button>
+          </>
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center text-gray-300 cursor-pointer"
+            onClick={() => fileRefs.current[p.id]?.click()}
+            title="Carica foto"
+          >
+            <Package size={22} />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+              <Camera size={16} className="text-white" />
+            </div>
+          </div>
+        )}
+        <input
+          ref={el => { fileRefs.current[p.id] = el; }}
+          type="file" accept="image/*" className="hidden"
+          onChange={e => e.target.files?.[0] && uploadFoto(p.id, e.target.files[0])}
+        />
       </div>
-      <input
-        ref={el => { fileRefs.current[p.id] = el; }}
-        type="file" accept="image/*" className="hidden"
-        onChange={e => e.target.files?.[0] && uploadFoto(p.id, e.target.files[0])}
-      />
-    </div>
+      {lightbox && p.fotoUrl && <ImageLightbox src={p.fotoUrl} alt={p.nome} onClose={() => setLightbox(false)} />}
+    </>
   );
 }
 
@@ -516,8 +563,11 @@ function TabCesti() {
 
   const inpCls = 'border border-border rounded px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-primary w-full';
 
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
   return (
     <div className="space-y-3">
+      {lightboxSrc && <ImageLightbox src={lightboxSrc} alt="Cesto" onClose={() => setLightboxSrc(null)} />}
       <div className="overflow-x-auto -mx-4 px-4">
         <table className="min-w-full text-xs">
           <thead>
@@ -554,7 +604,10 @@ function TabCesti() {
               return (
                 <tr key={c.codice} className="border-b border-border/40 hover:bg-gray-50">
                   <td className="py-1 pr-2">
-                    <div className="w-8 h-8 rounded overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <div
+                      className={cn('w-8 h-8 rounded overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0', c.fotoUrl && 'cursor-zoom-in')}
+                      onClick={() => c.fotoUrl && setLightboxSrc(c.fotoUrl)}
+                    >
                       {c.fotoUrl
                         ? <img src={c.fotoUrl} alt={c.descrizione} className="w-full h-full object-cover" />
                         : <ImageIcon size={12} className="text-gray-300" />
@@ -750,6 +803,7 @@ type AnagraticaState =
   | { kind: 'cesto'; data: CestoDB };
 
 function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }) {
+  const [lightbox, setLightbox] = useState(false);
   const iva = p.ivaPerc / 100;
   const costoIe = p.costoIi / (1 + iva);
   const pvpIe = p.pvpIi / (1 + iva);
@@ -778,7 +832,15 @@ function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }
       </div>
 
       {p.fotoUrl && (
-        <img src={p.fotoUrl} alt={p.nome} className="w-full h-44 object-cover rounded-xl" />
+        <>
+          <div className="relative group cursor-zoom-in" onClick={() => setLightbox(true)}>
+            <img src={p.fotoUrl} alt={p.nome} className="w-full h-44 object-cover rounded-xl" />
+            <div className="absolute inset-0 rounded-xl bg-black/0 group-hover:bg-black/20 transition-colors flex items-end justify-end p-2">
+              <ZoomIn size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+            </div>
+          </div>
+          {lightbox && <ImageLightbox src={p.fotoUrl} alt={p.nome} onClose={() => setLightbox(false)} />}
+        </>
       )}
 
       {/* Prezzi */}
@@ -847,6 +909,7 @@ function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }
 }
 
 function CestoAnagrafica({ c, onClose }: { c: CestoDB; onClose: () => void }) {
+  const [lightbox, setLightbox] = useState(false);
   const costoIe = c.costo / 1.22;
   const costoIi = c.costo;
   const pvpIe   = c.pvp / 1.22;
@@ -867,7 +930,17 @@ function CestoAnagrafica({ c, onClose }: { c: CestoDB; onClose: () => void }) {
           <X size={18} />
         </button>
       </div>
-      {c.fotoUrl && <img src={c.fotoUrl} alt={c.descrizione} className="w-full h-44 object-cover rounded-xl" />}
+      {c.fotoUrl && (
+        <>
+          <div className="relative group cursor-zoom-in" onClick={() => setLightbox(true)}>
+            <img src={c.fotoUrl} alt={c.descrizione} className="w-full h-44 object-cover rounded-xl" />
+            <div className="absolute inset-0 rounded-xl bg-black/0 group-hover:bg-black/20 transition-colors flex items-end justify-end p-2">
+              <ZoomIn size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+            </div>
+          </div>
+          {lightbox && <ImageLightbox src={c.fotoUrl} alt={c.descrizione} onClose={() => setLightbox(false)} />}
+        </>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-gray-50 rounded-xl p-3">
           <p className="text-[10px] text-gray-400 mb-0.5">Costo i.e.</p>
@@ -998,8 +1071,11 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
     if (c) setAnagratica({ kind: 'cesto', data: c });
   };
 
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
   return (
     <>
+    {lightboxSrc && <ImageLightbox src={lightboxSrc} alt="Strenna" onClose={() => setLightboxSrc(null)} />}
     <div className="space-y-3">
       {STRENNE.map((s, i) => {
         const isOpen = openIdx === i;
@@ -1018,12 +1094,15 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
               onClick={() => setOpenIdx(isOpen ? null : i)}
               className="w-full flex items-center gap-3 p-4 text-left"
             >
-              <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
+              <div
+                className={cn('relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0', STRENNA_FOTO[s.prezzo] && 'cursor-zoom-in')}
+                onClick={e => { if (STRENNA_FOTO[s.prezzo]) { e.stopPropagation(); setLightboxSrc(STRENNA_FOTO[s.prezzo]); } }}
+              >
                 {STRENNA_FOTO[s.prezzo]
                   ? <img src={STRENNA_FOTO[s.prezzo]} alt={`Strenna ${s.prezzo}`} className="absolute inset-0 w-full h-full object-cover" />
                   : <div className="absolute inset-0 bg-primary" />
                 }
-                <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center">
+                <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center pointer-events-none">
                   <span className="text-white font-bold text-lg leading-none">€{s.prezzo}</span>
                 </div>
               </div>
