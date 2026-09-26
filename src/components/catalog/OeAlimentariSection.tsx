@@ -1193,11 +1193,18 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                         <span className="text-[10px] text-gray-300">(fisso)</span>
                       </div>
                       {/* Prodotti esistenti */}
-                      {editNomi.map((nome) => (
-                        <div key={nome} className="flex items-center px-2 py-1.5 bg-white border border-border rounded-lg text-xs">
-                          <span className="flex-1 font-semibold text-gray-800">{nome}</span>
-                        </div>
-                      ))}
+                      {editNomi.map((nome) => {
+                        const fotoUrl = prodotti.find(p => p.nome === nome)?.fotoUrl;
+                        return (
+                          <div key={nome} className="flex items-center gap-2 px-2 py-1.5 bg-white border border-border rounded-lg text-xs">
+                            {fotoUrl
+                              ? <img src={fotoUrl} alt={nome} className="w-6 h-6 rounded object-cover flex-shrink-0 border border-border/50" />
+                              : <div className="w-6 h-6 rounded bg-gray-100 flex-shrink-0 border border-border/50" />
+                            }
+                            <span className="flex-1 font-semibold text-gray-800">{nome}</span>
+                          </div>
+                        );
+                      })}
                       {/* Aggiungi prodotto */}
                       {addingProd ? (
                         <select
@@ -1255,12 +1262,16 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                         {righe.map(r => (
                           <tr key={r.nome} className="border-b border-border/20 hover:bg-gray-50">
                             <td className="py-1.5 pr-3">
-                              <button onClick={() => openProdotto(r.nome)} className="text-left hover:text-primary flex items-start gap-1 group">
+                              <button onClick={() => openProdotto(r.nome)} className="text-left hover:text-primary flex items-center gap-2 group">
+                                {r.prod?.fotoUrl
+                                  ? <img src={r.prod.fotoUrl} alt={r.nome} className="w-7 h-7 rounded object-cover flex-shrink-0 border border-border/50" />
+                                  : <div className="w-7 h-7 rounded bg-gray-100 flex-shrink-0 border border-border/50" />
+                                }
                                 <span className="flex flex-col">
                                   <span className="font-semibold">{r.nome}</span>
                                   {r.prod?.codice && <span className="font-mono text-[10px] text-gray-400">{r.prod.codice}</span>}
                                 </span>
-                                <Info size={10} className="text-gray-300 group-hover:text-primary flex-shrink-0 mt-0.5" />
+                                <Info size={10} className="text-gray-300 group-hover:text-primary flex-shrink-0" />
                               </button>
                             </td>
                             <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.cIe) : '—'}</td>
