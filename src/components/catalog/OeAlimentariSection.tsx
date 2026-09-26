@@ -1030,6 +1030,8 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
   const [editNomi, setEditNomi] = useState<string[]>([]);
   const [addingProd, setAddingProd] = useState(false);
   const [savingComp, setSavingComp] = useState(false);
+  const [uploadingStrennaFoto, setUploadingStrennaFoto] = useState<string | null>(null);
+  const strennaFotoRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const { data: qteRows = [], refetch: refetchQte } = useQuery<QtaRow[]>({
     queryKey: ['oe-strenne-qte'],
@@ -1097,6 +1099,35 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
     staleTime: 60_000,
   });
 
+  const { data: strennaFotoDb = {} } = useQuery<Record<string, string>>({
+    queryKey: ['oe-strenne-foto'],
+    queryFn: async () => {
+      const res = await fetch('/api/oe/alimentari/strenne/foto');
+      return res.ok ? res.json() : {};
+    },
+    staleTime: 60_000,
+  });
+
+  const getStrennaFoto = (barcode: string, prezzo: number): string =>
+    strennaFotoDb[barcode] || STRENNA_FOTO[prezzo] || '';
+
+  const uploadStrennaFoto = async (barcode: string, file: File) => {
+    setUploadingStrennaFoto(barcode);
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch('/api/admin/oe-settings/upload', { method: 'POST', body: fd });
+    if (!res.ok) { toast.error('Errore upload'); setUploadingStrennaFoto(null); return; }
+    const { url } = await res.json();
+    await fetch(`/api/oe/alimentari/strenne/foto/${encodeURIComponent(barcode)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fotoUrl: url }),
+    });
+    await qc.invalidateQueries({ queryKey: ['oe-strenne-foto'] });
+    setUploadingStrennaFoto(null);
+    toast.success('Foto strenna aggiornata');
+  };
+
   const openCesto = (codice: string) => {
     const c = cestiDb.find(ce => ce.codice === codice);
     if (c) setAnagratica({ kind: 'cesto', data: c });
@@ -1118,6 +1149,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
           return acc + (prod?.costoIi ?? 0);
         }, 0);
         const costoReale = s.costoCesto + costoProdotti;
+        const strennaFoto = getStrennaFoto(s.barcode, s.prezzo);
         return (
           <div key={s.barcode} className="border border-border rounded-xl bg-white overflow-hidden">
             {/* Header */}
@@ -1126,16 +1158,32 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
               className="w-full flex items-center gap-3 p-4 text-left"
             >
               <div
-                className={cn('relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0', STRENNA_FOTO[s.prezzo] && 'cursor-zoom-in')}
-                onClick={e => { if (STRENNA_FOTO[s.prezzo]) { e.stopPropagation(); setLightboxSrc(STRENNA_FOTO[s.prezzo]); } }}
+                className={cn('relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 group/foto', strennaFoto && 'cursor-zoom-in')}
+                onClick={e => { if (strennaFoto) { e.stopPropagation(); setLightboxSrc(strennaFoto); } }}
               >
-                {STRENNA_FOTO[s.prezzo]
-                  ? <img src={STRENNA_FOTO[s.prezzo]} alt={`Strenna ${s.prezzo}`} className="absolute inset-0 w-full h-full object-cover" />
+                {strennaFoto
+                  ? <img src={strennaFoto} alt={`Strenna ${s.prezzo}`} className="absolute inset-0 w-full h-full object-cover" />
                   : <div className="absolute inset-0 bg-primary" />
                 }
                 <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center pointer-events-none">
                   <span className="text-white font-bold text-lg leading-none">€{s.prezzo}</span>
                 </div>
+                {/* Camera upload */}
+                <label
+                  onClick={e => e.stopPropagation()}
+                  className="absolute bottom-0.5 right-0.5 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover/foto:opacity-100 transition-opacity cursor-pointer z-10"
+                  title="Cambia foto strenna"
+                >
+                  {uploadingStrennaFoto === s.barcode
+                    ? <span className="text-[8px]">…</span>
+                    : <Camera size={10} />
+                  }
+                  <input
+                    ref={el => { strennaFotoRefs.current[s.barcode] = el; }}
+                    type="file" accept="image/*" className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadStrennaFoto(s.barcode, f); e.target.value = ''; }}
+                  />
+                </label>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-primary">Strenna {s.prezzo}</p>
@@ -1194,14 +1242,25 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                       </div>
                       {/* Prodotti esistenti */}
                       {editNomi.map((nome) => {
-                        const fotoUrl = prodotti.find(p => p.nome === nome)?.fotoUrl;
+                        const prod = prodotti.find(p => p.nome === nome);
                         return (
-                          <div key={nome} className="flex items-center gap-2 px-2 py-1.5 bg-white border border-border rounded-lg text-xs">
-                            {fotoUrl
-                              ? <img src={fotoUrl} alt={nome} className="w-6 h-6 rounded object-cover flex-shrink-0 border border-border/50" />
+                          <div key={nome} className={cn(
+                            'flex items-center gap-2 px-2 py-1.5 border rounded-lg text-xs',
+                            prod ? 'bg-white border-border' : 'bg-amber-50 border-amber-200'
+                          )}>
+                            {prod?.fotoUrl
+                              ? <img src={prod.fotoUrl} alt={nome} className="w-6 h-6 rounded object-cover flex-shrink-0 border border-border/50" />
                               : <div className="w-6 h-6 rounded bg-gray-100 flex-shrink-0 border border-border/50" />
                             }
                             <span className="flex-1 font-semibold text-gray-800">{nome}</span>
+                            {!prod && <span className="text-[10px] text-amber-500">non in catalogo</span>}
+                            <button
+                              onClick={() => setEditNomi(editNomi.filter(n => n !== nome))}
+                              className="p-0.5 text-gray-300 hover:text-red-500 rounded transition-colors flex-shrink-0"
+                              title="Rimuovi"
+                            >
+                              <X size={12} />
+                            </button>
                           </div>
                         );
                       })}
@@ -1365,10 +1424,39 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
 
 // ── Tab: Fabbisogno ───────────────────────────────────────────────────────────
 
+type FabbisognoSortBy = 'default' | 'nome_az' | 'nome_za' | 'fornitore' | 'totale_desc' | 'da_ordinare_desc';
+
 function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () => void }) {
   const [editing, setEditing] = useState<{ id: string; field: string } | null>(null);
   const [editVal, setEditVal] = useState('');
   const [saving, setSaving] = useState(false);
+  const [searchFab, setSearchFab] = useState('');
+  const [sortFab, setSortFab] = useState<FabbisognoSortBy>('default');
+  const [filtroFab, setFiltroFab] = useState<string | null>(null);
+
+  const fornitoriFab = useMemo(() => {
+    const set = new Set(prodotti.map(p => p.fornitore).filter(Boolean));
+    return Array.from(set).sort((a, b) => (a ?? '').localeCompare(b ?? '', 'it')) as string[];
+  }, [prodotti]);
+
+  const displayedProdotti = useMemo(() => {
+    const q = searchFab.toLowerCase().trim();
+    let list = prodotti.filter(p => {
+      if (filtroFab && p.fornitore !== filtroFab) return false;
+      if (!q) return true;
+      return p.nome.toLowerCase().includes(q) || (p.fornitore ?? '').toLowerCase().includes(q);
+    });
+    const totale = (p: Prodotto) => (FABBISOGNO_STRENNE[p.nome] ?? 0) + EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
+    const daOrdinare = (p: Prodotto) => totale(p) - (p.ordinato?.ordinato ?? 0);
+    switch (sortFab) {
+      case 'nome_az':          list = [...list].sort((a, b) => a.nome.localeCompare(b.nome, 'it')); break;
+      case 'nome_za':          list = [...list].sort((a, b) => b.nome.localeCompare(a.nome, 'it')); break;
+      case 'fornitore':        list = [...list].sort((a, b) => (a.fornitore ?? '').localeCompare(b.fornitore ?? '', 'it') || a.nome.localeCompare(b.nome, 'it')); break;
+      case 'totale_desc':      list = [...list].sort((a, b) => totale(b) - totale(a)); break;
+      case 'da_ordinare_desc': list = [...list].sort((a, b) => daOrdinare(b) - daOrdinare(a)); break;
+    }
+    return list;
+  }, [prodotti, searchFab, filtroFab, sortFab]);
 
   const startEdit = (id: string, field: string, current: number) => {
     setEditing({ id, field });
@@ -1400,7 +1488,60 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   const cellKey = (id: string, field: string) => `${id}:${field}`;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* Toolbar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[140px]">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            className="input-oe pl-7"
+            placeholder="Cerca prodotto o fornitore…"
+            value={searchFab}
+            onChange={e => setSearchFab(e.target.value)}
+          />
+          {searchFab && (
+            <button onClick={() => setSearchFab('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X size={12} />
+            </button>
+          )}
+        </div>
+        <select
+          value={sortFab}
+          onChange={e => setSortFab(e.target.value as FabbisognoSortBy)}
+          className="input-oe text-xs flex-shrink-0 pr-6 cursor-pointer"
+        >
+          <option value="default">Ordine default</option>
+          <option value="nome_az">A → Z</option>
+          <option value="nome_za">Z → A</option>
+          <option value="fornitore">Per fornitore</option>
+          <option value="totale_desc">Totale ↓</option>
+          <option value="da_ordinare_desc">Da ordinare ↓</option>
+        </select>
+      </div>
+      {/* Filtri fornitore */}
+      {fornitoriFab.length > 0 && (
+        <div className="flex gap-1.5 flex-wrap">
+          <button
+            onClick={() => setFiltroFab(null)}
+            className={cn('px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors', !filtroFab ? 'bg-primary text-white border-primary' : 'border-border text-gray-500 hover:border-gray-400')}
+          >
+            Tutti
+          </button>
+          {fornitoriFab.map(f => (
+            <button
+              key={f}
+              onClick={() => setFiltroFab(filtroFab === f ? null : f)}
+              className={cn('px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors',
+                filtroFab === f
+                  ? cn(fornitoreBadge(f), 'border-transparent')
+                  : 'border-border text-gray-500 hover:border-gray-400'
+              )}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="overflow-x-auto -mx-4 px-4">
         <table className="min-w-full text-xs border-collapse">
           <thead>
@@ -1415,7 +1556,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
             </tr>
           </thead>
           <tbody>
-            {prodotti.map(p => {
+            {displayedProdotti.map(p => {
               const fabStr = FABBISOGNO_STRENNE[p.nome] ?? 0;
               const empMap: Record<string, number> = {};
               p.fabbisognoEmpori.forEach(r => { empMap[r.emporio] = r.qta; });

@@ -1309,3 +1309,11 @@ model OeStrennaProdotto {
   @@id([strennaBarcode, prodottoNome])
   @@map("oe_strenna_prodotti")
 }
+
+model OeStrennaFoto {
+  barcode   String   @id
+  fotoUrl   String   @default("") @map("foto_url")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("oe_strenne_foto")
+}
