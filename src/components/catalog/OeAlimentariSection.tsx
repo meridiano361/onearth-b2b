@@ -1478,6 +1478,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   const [searchFab, setSearchFab] = useState('');
   const [sortFab, setSortFab] = useState<FabbisognoSortBy>('default');
   const [filtroFab, setFiltroFab] = useState<string | null>(null);
+  const [anagratica, setAnagratica] = useState<AnagraticaState | null>(null);
 
   const fornitoriFab = useMemo(() => {
     const set = new Set(prodotti.map(p => p.fornitore).filter(Boolean));
@@ -1533,6 +1534,8 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   const cellKey = (id: string, field: string) => `${id}:${field}`;
 
   return (
+    <>
+    {anagratica && <AnagraticaDrawer item={anagratica} onClose={() => setAnagratica(null)} />}
     <div className="space-y-3">
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -1613,17 +1616,16 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               return (
                 <tr key={p.id} className="border-b border-border/40 hover:bg-gray-50 group">
                   <td className="py-2 pr-3">
-                    <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setAnagratica({ kind: 'prodotto', data: p })}
+                      className="flex items-center gap-2 text-left group/btn"
+                    >
                       {p.fotoUrl
                         ? <img src={p.fotoUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
                         : <div className="w-6 h-6 rounded bg-gray-100 flex-shrink-0" />
                       }
-                      <div>
-                        <p className="font-medium text-primary leading-tight">{p.nome}</p>
-                        {p.fornitore && <p className="text-[10px] text-gray-400">{p.fornitore}</p>}
-                        {p.barcode && <p className="text-[10px] font-mono text-gray-300">{p.barcode}</p>}
-                      </div>
-                    </div>
+                      <p className="font-medium text-primary leading-tight group-hover/btn:underline">{p.nome}</p>
+                    </button>
                   </td>
 
                   {/* Fabbisogno strenne */}
@@ -1706,6 +1708,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
         </table>
       </div>
     </div>
+    </>
   );
 }
 
