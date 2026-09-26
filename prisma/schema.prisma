@@ -1233,9 +1233,10 @@ model OeAlimentariProdotto {
   nome           String
   formato        String?
   ivaPerc        Float    @default(10) @map("iva_perc")
-  costoIi        Float    @default(0)  @map("costo_ii")
-  pvpIi          Float    @default(0)  @map("pvp_ii")
-  pvpConsigliato Float?                @map("pvp_consigliato")
+  costoIi            Float    @default(0)  @map("costo_ii")
+  pvpIi              Float    @default(0)  @map("pvp_ii")
+  pvpConsigliato     Float?                @map("pvp_consigliato")
+  prezziConfermati   Boolean  @default(false) @map("prezzi_confermati")
   fotoUrl        String?               @map("foto_url")
   note           String?
   ordine         Int      @default(0)

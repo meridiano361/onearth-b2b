@@ -20,6 +20,7 @@ type Prodotto = {
   nome: string; formato: string | null; ivaPerc: number;
   costoIi: number; pvpIi: number; pvpConsigliato: number | null;
   fotoUrl: string | null; note: string | null; ordine: number;
+  prezziConfermati: boolean;
   fabbisognoEmpori: FabbisognoEmpori[];
   ordinato: Ordinato;
 };
@@ -179,6 +180,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
   const [search, setSearch] = useState('');
   const [filtroFornitore, setFiltroFornitore] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortBy>('default');
+  const [filtroStato, setFiltroStato] = useState<'tutti' | 'provvisori' | 'confermati'>('tutti');
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const fornitori = useMemo(() => {
@@ -196,6 +198,15 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
     await fetch(`/api/oe/alimentari/prodotti/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editData) });
     setEditId(null);
     setSaving(false);
+    refetch();
+  };
+
+  const toggleConferma = async (p: Prodotto) => {
+    await fetch(`/api/oe/alimentari/prodotti/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prezziConfermati: !p.prezziConfermati }),
+    });
     refetch();
   };
 
@@ -229,6 +240,8 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
     const q = search.toLowerCase().trim();
     let list = prodotti.filter(p => {
       if (filtroFornitore && p.fornitore !== filtroFornitore) return false;
+      if (filtroStato === 'provvisori' && p.prezziConfermati) return false;
+      if (filtroStato === 'confermati' && !p.prezziConfermati) return false;
       if (!q) return true;
       return p.nome.toLowerCase().includes(q) ||
         (p.barcode ?? '').includes(q) ||
@@ -296,6 +309,30 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
         <button onClick={() => setAdding(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs rounded-lg hover:opacity-80 transition-opacity flex-shrink-0">
           <Plus size={13} /> Aggiungi
         </button>
+      </div>
+
+      {/* Filtri stato prezzi */}
+      <div className="flex gap-1.5 flex-wrap items-center">
+        {(['tutti', 'provvisori', 'confermati'] as const).map(s => (
+          <button
+            key={s}
+            onClick={() => setFiltroStato(s)}
+            className={cn('px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors',
+              filtroStato === s
+                ? s === 'tutti' ? 'bg-primary text-white border-primary'
+                  : s === 'provvisori' ? 'bg-amber-500 text-white border-amber-500'
+                  : 'bg-green-600 text-white border-green-600'
+                : 'border-border text-gray-500 hover:border-gray-400'
+            )}
+          >
+            {s === 'tutti' ? 'Tutti' : s === 'provvisori' ? '~ Provvisori' : '✓ Confermati'}
+          </button>
+        ))}
+        {prodotti.filter(p => !p.prezziConfermati).length > 0 && filtroStato !== 'confermati' && (
+          <span className="text-[10px] text-amber-600 font-medium">
+            {prodotti.filter(p => !p.prezziConfermati).length} con prezzi provvisori
+          </span>
+        )}
       </div>
 
       {/* Filtri fornitore */}
@@ -394,19 +431,33 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
                   </div>
                 </div>
                 {!isEditing && (
-                  <div className="px-3 pb-3 flex items-center gap-3 flex-wrap">
-                    <div><p className="text-[10px] text-gray-400">Costo</p><p className="text-xs font-medium text-gray-600">{fmt(p.costoIi)}</p></div>
-                    <div><p className="text-[10px] text-gray-400">PVP</p><p className="text-xs font-semibold text-green-700">{fmt(p.pvpIi)}</p></div>
-                    {p.pvpConsigliato && p.pvpConsigliato !== p.pvpIi && (
-                      <div><p className="text-[10px] text-gray-400">Consigliato</p><p className="text-xs text-blue-600">{fmt(p.pvpConsigliato)}</p></div>
-                    )}
-                    {m !== null && (
-                      <div className="ml-auto text-right">
-                        <p className="text-[10px] text-gray-400">Margine</p>
-                        <p className="text-xs font-semibold text-gray-700">{m}%</p>
-                      </div>
-                    )}
-                    {p.note && <div className="w-full"><p className="text-[10px] text-amber-600 bg-amber-50 rounded px-2 py-1">{p.note}</p></div>}
+                  <div className="px-3 pb-3 space-y-1.5">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div><p className="text-[10px] text-gray-400">Costo</p><p className="text-xs font-medium text-gray-600">{fmt(p.costoIi)}</p></div>
+                      <div><p className="text-[10px] text-gray-400">PVP</p><p className="text-xs font-semibold text-green-700">{fmt(p.pvpIi)}</p></div>
+                      {p.pvpConsigliato && p.pvpConsigliato !== p.pvpIi && (
+                        <div><p className="text-[10px] text-gray-400">Consigliato</p><p className="text-xs text-blue-600">{fmt(p.pvpConsigliato)}</p></div>
+                      )}
+                      {m !== null && (
+                        <div className="ml-auto text-right">
+                          <p className="text-[10px] text-gray-400">Margine</p>
+                          <p className="text-xs font-semibold text-gray-700">{m}%</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <button
+                        onClick={() => toggleConferma(p)}
+                        className={cn('flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-colors',
+                          p.prezziConfermati
+                            ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                            : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                        )}
+                      >
+                        {p.prezziConfermati ? <><Check size={9} /> Confermati</> : <>~ Provvisori</>}
+                      </button>
+                    </div>
+                    {p.note && <p className="text-[10px] text-amber-600 bg-amber-50 rounded px-2 py-1">{p.note}</p>}
                   </div>
                 )}
                 {isEditing && <EditForm editData={editData} setEditData={setEditData} onSave={() => saveEdit(p.id)} onCancel={() => setEditId(null)} saving={saving} />}
@@ -452,6 +503,16 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
                     {m !== null && (
                       <div className="text-right"><p className="text-[10px] text-gray-400">Margine</p><p className="text-xs font-semibold text-gray-700">{m}%</p></div>
                     )}
+                    <button
+                      onClick={() => toggleConferma(p)}
+                      className={cn('flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-colors',
+                        p.prezziConfermati
+                          ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                          : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                      )}
+                    >
+                      {p.prezziConfermati ? <><Check size={9} /> Conf.</> : <>~ Prov.</>}
+                    </button>
                   </div>
                   {/* Azioni */}
                   <div className="flex gap-1 flex-shrink-0">
