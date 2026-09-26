@@ -1163,7 +1163,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
           return acc + (prod?.costoIi ?? 0);
         }, 0);
         const costoReale = s.costoCesto + costoProdotti;
-        const strennaFoto = getStrennaFoto(s.barcode, s.prezzo);
+        const strennaFoto = strennaFotoDb[s.barcode]?.fotoUrl || cesto?.fotoUrl || STRENNA_FOTO[s.prezzo] || '';
         return (
           <div key={s.barcode} className="border border-border rounded-xl bg-white overflow-hidden">
             {/* Header */}
