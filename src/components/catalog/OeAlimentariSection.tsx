@@ -2070,7 +2070,6 @@ export default function OeAlimentariSection() {
       <div className="px-5 pt-8 pb-4">
         <p className="text-2xs tracking-[0.2em] uppercase text-gray-400">sezione</p>
         <h1 className="font-display text-3xl font-light tracking-widest leading-tight mt-0.5">OE ALIMENTARI</h1>
-        <p className="text-xs text-gray-400 mt-1">Strenne Natale — gestione prodotti e fabbisogno</p>
       </div>
 
       {/* Tabs */}
