@@ -1149,19 +1149,35 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
   };
 
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [viewStrenne, setViewStrenne] = useState<'cards' | 'matrice'>('cards');
+  const [viewStrenne, setViewStrenne] = useState<'composizione' | 'elenco'>('composizione');
+  const [searchElenco, setSearchElenco] = useState('');
+  const [sortElenco, setSortElenco] = useState<'default' | 'az' | 'za'>('default');
 
-  // Dati per vista matrice
+  // Dati per vista elenco
   const strenneInfo = useMemo(() => STRENNE.map(s => {
     const totQte = EMPORI.reduce((a, emp) => a + getQte(s.barcode, emp), 0);
     const nomi = getNomi(s.barcode);
-    return { s, totQte, nomi };
+    const cestoCodiceEff = strennaFotoDb[s.barcode]?.cestoCodice || s.cestoCodice;
+    const cesto = cestiDb.find(c => c.codice === cestoCodiceEff);
+    return { s, totQte, nomi, cestoCodiceEff, cesto };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [qteRows, composizioneDb]);
+  }), [qteRows, composizioneDb, strennaFotoDb, cestiDb]);
 
-  const tuttiNomi = useMemo(() => {
-    const set = new Set(strenneInfo.flatMap(si => si.nomi));
-    return [...set];
+  const tuttiNomiElenco = useMemo(() => {
+    const all = [...new Set(strenneInfo.flatMap(si => si.nomi))];
+    const q = searchElenco.toLowerCase().trim();
+    const filtered = q ? all.filter(n => n.toLowerCase().includes(q)) : all;
+    if (sortElenco === 'az') return [...filtered].sort((a, b) => a.localeCompare(b, 'it'));
+    if (sortElenco === 'za') return [...filtered].sort((a, b) => b.localeCompare(a, 'it'));
+    return filtered;
+  }, [strenneInfo, searchElenco, sortElenco]);
+
+  const tuttiCestiElenco = useMemo(() => {
+    const map = new Map<string, CestoDB | undefined>();
+    strenneInfo.forEach(({ cestoCodiceEff, cesto }) => {
+      if (!map.has(cestoCodiceEff)) map.set(cestoCodiceEff, cesto);
+    });
+    return [...map.entries()];
   }, [strenneInfo]);
 
   return (
@@ -1170,85 +1186,143 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
     <div className="space-y-3">
 
       {/* Toggle vista */}
-      <div className="flex items-center justify-between">
-        <div className="flex border border-border rounded-lg overflow-hidden">
-          <button
-            onClick={() => setViewStrenne('cards')}
-            className={cn('px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5',
-              viewStrenne === 'cards' ? 'bg-primary text-white' : 'text-gray-500 hover:text-gray-700')}
-          >
-            <Gift size={12} /> Strenne
-          </button>
-          <button
-            onClick={() => setViewStrenne('matrice')}
-            className={cn('px-3 py-1.5 text-xs font-medium transition-colors border-l border-border flex items-center gap-1.5',
-              viewStrenne === 'matrice' ? 'bg-primary text-white' : 'text-gray-500 hover:text-gray-700')}
-          >
-            <LayoutGrid size={12} /> Matrice
-          </button>
-        </div>
+      <div className="flex border border-border rounded-lg overflow-hidden self-start">
+        <button
+          onClick={() => setViewStrenne('composizione')}
+          className={cn('px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5',
+            viewStrenne === 'composizione' ? 'bg-primary text-white' : 'text-gray-500 hover:text-gray-700')}
+        >
+          <Gift size={12} /> Composizione
+        </button>
+        <button
+          onClick={() => setViewStrenne('elenco')}
+          className={cn('px-3 py-1.5 text-xs font-medium transition-colors border-l border-border flex items-center gap-1.5',
+            viewStrenne === 'elenco' ? 'bg-primary text-white' : 'text-gray-500 hover:text-gray-700')}
+        >
+          <LayoutGrid size={12} /> Elenco
+        </button>
       </div>
 
-      {/* ── Vista Matrice ── */}
-      {viewStrenne === 'matrice' && (
-        <div className="overflow-x-auto -mx-4 px-4">
-          <table className="min-w-full text-xs border-collapse">
-            <thead>
-              <tr className="border-b-2 border-border">
-                <th className="pb-2 pr-4 text-left font-medium text-gray-500 min-w-[160px]">Prodotto</th>
-                {strenneInfo.map(({ s }) => (
-                  <th key={s.barcode} className="pb-2 px-3 text-center font-medium min-w-[72px]">
-                    <p className="text-primary">{getStrennaName(s.barcode, s.prezzo)}</p>
-                    <p className="text-[10px] text-gray-400 font-normal">€{s.prezzo}</p>
-                  </th>
-                ))}
-                <th className="pb-2 pl-3 text-center font-medium text-gray-500">Totale</th>
-              </tr>
-              <tr className="border-b border-border/50 bg-gray-50/50">
-                <td className="py-1 pr-4 text-[10px] text-gray-400 italic">Pezzi totali</td>
-                {strenneInfo.map(({ s, totQte }) => (
-                  <td key={s.barcode} className="py-1 px-3 text-center text-[10px] font-medium text-amber-600">{totQte || '—'}</td>
-                ))}
-                <td />
-              </tr>
-            </thead>
-            <tbody>
-              {tuttiNomi.map(nome => {
-                const prod = prodotti.find(p => p.nome === nome);
-                const tot = strenneInfo.reduce((a, { nomi, totQte }) => a + (nomi.includes(nome) ? totQte : 0), 0);
-                return (
-                  <tr key={nome} className="border-b border-border/30 hover:bg-gray-50 group">
-                    <td className="py-2 pr-4">
-                      <div className="flex items-center gap-2">
-                        {prod?.fotoUrl
-                          ? <img src={prod.fotoUrl} alt={nome} className="w-6 h-6 rounded object-cover flex-shrink-0 border border-border/50" />
-                          : <div className="w-6 h-6 rounded bg-gray-100 flex-shrink-0" />
-                        }
-                        <span className="font-medium text-gray-700">{nome}</span>
-                      </div>
-                    </td>
-                    {strenneInfo.map(({ s, nomi, totQte }) => {
-                      const presente = nomi.includes(nome);
-                      return (
+      {/* ── Vista Elenco ── */}
+      {viewStrenne === 'elenco' && (
+        <>
+          {/* Toolbar sort/search */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative flex-1 min-w-[140px]">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                className="input-oe pl-7"
+                placeholder="Cerca prodotto…"
+                value={searchElenco}
+                onChange={e => setSearchElenco(e.target.value)}
+              />
+              {searchElenco && (
+                <button onClick={() => setSearchElenco('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+            <select
+              value={sortElenco}
+              onChange={e => setSortElenco(e.target.value as typeof sortElenco)}
+              className="input-oe text-xs flex-shrink-0 pr-6 cursor-pointer"
+            >
+              <option value="default">Ordine composizione</option>
+              <option value="az">A → Z</option>
+              <option value="za">Z → A</option>
+            </select>
+          </div>
+
+          <div className="overflow-x-auto -mx-4 px-4">
+            <table className="min-w-full text-xs border-collapse">
+              <thead>
+                <tr className="border-b-2 border-border">
+                  <th className="pb-2 pr-4 text-left font-medium text-gray-500 min-w-[180px]">Articolo</th>
+                  {strenneInfo.map(({ s }) => (
+                    <th key={s.barcode} className="pb-2 px-3 text-center font-medium min-w-[72px]">
+                      <p className="text-primary">{getStrennaName(s.barcode, s.prezzo)}</p>
+                      <p className="text-[10px] text-gray-400 font-normal">€{s.prezzo}</p>
+                    </th>
+                  ))}
+                  <th className="pb-2 pl-3 text-center font-medium text-gray-500">Totale</th>
+                </tr>
+                <tr className="border-b border-border/50 bg-gray-50/50">
+                  <td className="py-1 pr-4 text-[10px] text-gray-400 italic">Pz. per strenna</td>
+                  {strenneInfo.map(({ s, totQte }) => (
+                    <td key={s.barcode} className="py-1 px-3 text-center text-[10px] font-medium text-amber-600">{totQte || '—'}</td>
+                  ))}
+                  <td />
+                </tr>
+              </thead>
+              <tbody>
+                {/* ── Prodotti ── */}
+                <tr className="bg-gray-50">
+                  <td colSpan={strenneInfo.length + 2} className="py-1 px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Prodotti</td>
+                </tr>
+                {tuttiNomiElenco.map(nome => {
+                  const prod = prodotti.find(p => p.nome === nome);
+                  const tot = strenneInfo.reduce((a, { nomi, totQte }) => a + (nomi.includes(nome) ? totQte : 0), 0);
+                  return (
+                    <tr key={nome} className="border-b border-border/30 hover:bg-gray-50">
+                      <td className="py-2 pr-4">
+                        <div className="flex items-center gap-2">
+                          {prod?.fotoUrl
+                            ? <img src={prod.fotoUrl} alt={nome} className="w-6 h-6 rounded object-cover flex-shrink-0 border border-border/50" />
+                            : <div className="w-6 h-6 rounded bg-gray-100 flex-shrink-0" />
+                          }
+                          <span className="font-medium text-gray-700">{nome}</span>
+                        </div>
+                      </td>
+                      {strenneInfo.map(({ s, nomi, totQte }) => (
                         <td key={s.barcode} className="py-2 px-3 text-center">
-                          {presente
-                            ? <span className="font-semibold text-primary">{totQte || <Check size={12} className="mx-auto text-primary" />}</span>
+                          {nomi.includes(nome)
+                            ? <span className="font-semibold text-primary">{totQte || '1'}</span>
                             : <span className="text-gray-200">—</span>
                           }
                         </td>
-                      );
-                    })}
-                    <td className="py-2 pl-3 text-center font-bold text-primary">{tot || '—'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      ))}
+                      <td className="py-2 pl-3 text-center font-bold text-primary">{tot || '—'}</td>
+                    </tr>
+                  );
+                })}
+
+                {/* ── Cesti ── */}
+                <tr className="bg-gray-50">
+                  <td colSpan={strenneInfo.length + 2} className="py-1 px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cesti</td>
+                </tr>
+                {tuttiCestiElenco.map(([codice, cesto]) => {
+                  const tot = strenneInfo.reduce((a, { cestoCodiceEff, totQte }) => a + (cestoCodiceEff === codice ? totQte : 0), 0);
+                  return (
+                    <tr key={codice} className="border-b border-border/30 hover:bg-gray-50">
+                      <td className="py-2 pr-4">
+                        <div className="flex items-center gap-2">
+                          {cesto?.fotoUrl
+                            ? <img src={cesto.fotoUrl} alt={cesto.descrizione} className="w-6 h-6 rounded object-cover flex-shrink-0 border border-border/50" />
+                            : <div className="w-6 h-6 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center text-gray-300 text-sm">🧺</div>
+                          }
+                          <span className="font-medium text-gray-700">{cesto?.descrizione ?? codice}</span>
+                        </div>
+                      </td>
+                      {strenneInfo.map(({ s, cestoCodiceEff, totQte }) => (
+                        <td key={s.barcode} className="py-2 px-3 text-center">
+                          {cestoCodiceEff === codice
+                            ? <span className="font-semibold text-amber-600">{totQte || '1'}</span>
+                            : <span className="text-gray-200">—</span>
+                          }
+                        </td>
+                      ))}
+                      <td className="py-2 pl-3 text-center font-bold text-amber-600">{tot || '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
-      {/* ── Vista Cards ── */}
-      {viewStrenne === 'cards' && STRENNE.map((s, i) => {
+      {/* ── Vista Composizione ── */}
+      {viewStrenne === 'composizione' && STRENNE.map((s, i) => {
         const isOpen = openIdx === i;
         const totQte = EMPORI.reduce((a, emp) => a + getQte(s.barcode, emp), 0);
         const cestoCodiceEff = getStrennaCesto(s.barcode, s.cestoCodice);
