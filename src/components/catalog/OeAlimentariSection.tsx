@@ -1351,8 +1351,12 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                         {/* Cesto */}
                         <tr className="border-b border-border/30 hover:bg-gray-50">
                           <td className="py-1.5 pr-3">
-                            <button onClick={() => openCesto(cestoCodiceEff)} className="text-left text-gray-600 hover:text-primary flex items-center gap-1 group">
-                              <span>🧺 {cesto?.descrizione ?? cestoCodiceEff}</span>
+                            <button onClick={() => openCesto(cestoCodiceEff)} className="text-left text-gray-600 hover:text-primary flex items-center gap-2 group">
+                              {cesto?.fotoUrl
+                                ? <img src={cesto.fotoUrl} alt={cesto.descrizione} className="w-7 h-7 rounded object-cover flex-shrink-0 border border-border/50" />
+                                : <div className="w-7 h-7 rounded bg-gray-100 flex-shrink-0 border border-border/50 flex items-center justify-center text-gray-300 text-base">🧺</div>
+                              }
+                              <span className="font-semibold">{cesto?.descrizione ?? cestoCodiceEff}</span>
                               <Info size={10} className="text-gray-300 group-hover:text-primary flex-shrink-0" />
                             </button>
                           </td>
