@@ -76,8 +76,6 @@ function margine(p: Prodotto) {
 
 // ── Tab: Prodotti ─────────────────────────────────────────────────────────────
 
-const FORNITORI_LIST = ['Pietra di scarto', 'Giuste terre', 'Luccini', 'Sapori di Libertà', 'Semi Liberi'];
-
 function ProdottoFoto({ p, uploadFoto, fileRefs }: {
   p: Prodotto;
   uploadFoto: (id: string, file: File) => void;
@@ -169,6 +167,8 @@ function EditForm({ editData, setEditData, onSave, onCancel, saving }: {
   );
 }
 
+type SortBy = 'default' | 'nome_az' | 'nome_za' | 'fornitore' | 'pvp_asc' | 'pvp_desc' | 'margine_desc';
+
 function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () => void }) {
   const [editId, setEditId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<Prodotto>>({});
@@ -178,7 +178,13 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [search, setSearch] = useState('');
   const [filtroFornitore, setFiltroFornitore] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortBy>('default');
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const fornitori = useMemo(() => {
+    const set = new Set(prodotti.map(p => p.fornitore).filter(Boolean));
+    return Array.from(set).sort((a, b) => (a ?? '').localeCompare(b ?? '', 'it')) as string[];
+  }, [prodotti]);
 
   const startEdit = (p: Prodotto) => {
     setEditId(p.id);
@@ -221,7 +227,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return prodotti.filter(p => {
+    let list = prodotti.filter(p => {
       if (filtroFornitore && p.fornitore !== filtroFornitore) return false;
       if (!q) return true;
       return p.nome.toLowerCase().includes(q) ||
@@ -229,13 +235,22 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
         (p.fornitore ?? '').toLowerCase().includes(q) ||
         (p.formato ?? '').toLowerCase().includes(q);
     });
-  }, [prodotti, search, filtroFornitore]);
+    switch (sortBy) {
+      case 'nome_az':      list = [...list].sort((a, b) => a.nome.localeCompare(b.nome, 'it')); break;
+      case 'nome_za':      list = [...list].sort((a, b) => b.nome.localeCompare(a.nome, 'it')); break;
+      case 'fornitore':    list = [...list].sort((a, b) => (a.fornitore ?? '').localeCompare(b.fornitore ?? '', 'it') || a.nome.localeCompare(b.nome, 'it')); break;
+      case 'pvp_asc':     list = [...list].sort((a, b) => a.pvpIi - b.pvpIi); break;
+      case 'pvp_desc':    list = [...list].sort((a, b) => b.pvpIi - a.pvpIi); break;
+      case 'margine_desc': list = [...list].sort((a, b) => (margine(b) ?? 0) - (margine(a) ?? 0)); break;
+    }
+    return list;
+  }, [prodotti, search, filtroFornitore, sortBy]);
 
   return (
     <div className="space-y-3">
-      {/* Toolbar: search + view toggle + add */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
+      {/* Toolbar: search + sort + view toggle + add */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[160px]">
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             className="input-oe pl-7"
@@ -249,6 +264,20 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
             </button>
           )}
         </div>
+        {/* Ordinamento */}
+        <select
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value as SortBy)}
+          className="input-oe text-xs flex-shrink-0 pr-6 cursor-pointer"
+        >
+          <option value="default">Ordine default</option>
+          <option value="nome_az">A → Z</option>
+          <option value="nome_za">Z → A</option>
+          <option value="fornitore">Per fornitore</option>
+          <option value="pvp_asc">Prezzo ↑</option>
+          <option value="pvp_desc">Prezzo ↓</option>
+          <option value="margine_desc">Margine ↓</option>
+        </select>
         {/* View toggle */}
         <div className="flex border border-border rounded-lg overflow-hidden flex-shrink-0">
           <button
@@ -270,27 +299,29 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
       </div>
 
       {/* Filtri fornitore */}
-      <div className="flex gap-1.5 flex-wrap">
-        <button
-          onClick={() => setFiltroFornitore(null)}
-          className={cn('px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors', !filtroFornitore ? 'bg-primary text-white border-primary' : 'border-border text-gray-500 hover:border-gray-400')}
-        >
-          Tutti
-        </button>
-        {FORNITORI_LIST.map(f => (
+      {fornitori.length > 0 && (
+        <div className="flex gap-1.5 flex-wrap">
           <button
-            key={f}
-            onClick={() => setFiltroFornitore(filtroFornitore === f ? null : f)}
-            className={cn('px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors',
-              filtroFornitore === f
-                ? cn(fornitoreBadge(f), 'border-transparent')
-                : 'border-border text-gray-500 hover:border-gray-400'
-            )}
+            onClick={() => setFiltroFornitore(null)}
+            className={cn('px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors', !filtroFornitore ? 'bg-primary text-white border-primary' : 'border-border text-gray-500 hover:border-gray-400')}
           >
-            {f}
+            Tutti
           </button>
-        ))}
-      </div>
+          {fornitori.map(f => (
+            <button
+              key={f}
+              onClick={() => setFiltroFornitore(filtroFornitore === f ? null : f)}
+              className={cn('px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors',
+                filtroFornitore === f
+                  ? cn(fornitoreBadge(f), 'border-transparent')
+                  : 'border-border text-gray-500 hover:border-gray-400'
+              )}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Contatore risultati */}
       <p className="text-xs text-gray-400">
