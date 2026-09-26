@@ -1311,9 +1311,11 @@ model OeStrennaProdotto {
 }
 
 model OeStrennaFoto {
-  barcode   String   @id
-  fotoUrl   String   @default("") @map("foto_url")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  barcode      String   @id
+  fotoUrl      String   @default("") @map("foto_url")
+  nome         String   @default("") @map("nome")
+  cestoCodice  String   @default("") @map("cesto_codice")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("oe_strenne_foto")
 }

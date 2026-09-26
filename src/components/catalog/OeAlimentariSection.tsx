@@ -1099,7 +1099,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
     staleTime: 60_000,
   });
 
-  const { data: strennaFotoDb = {} } = useQuery<Record<string, string>>({
+  const { data: strennaFotoDb = {} } = useQuery<Record<string, { fotoUrl: string; nome: string; cestoCodice: string }>>({
     queryKey: ['oe-strenne-foto'],
     queryFn: async () => {
       const res = await fetch('/api/oe/alimentari/strenne/foto');
@@ -1109,7 +1109,22 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
   });
 
   const getStrennaFoto = (barcode: string, prezzo: number): string =>
-    strennaFotoDb[barcode] || STRENNA_FOTO[prezzo] || '';
+    strennaFotoDb[barcode]?.fotoUrl || STRENNA_FOTO[prezzo] || '';
+
+  const getStrennaName = (barcode: string, prezzo: number): string =>
+    strennaFotoDb[barcode]?.nome || `Strenna ${prezzo}`;
+
+  const getStrennaCesto = (barcode: string, defaultCodice: string): string =>
+    strennaFotoDb[barcode]?.cestoCodice || defaultCodice;
+
+  const patchStrenna = async (barcode: string, data: { fotoUrl?: string; nome?: string; cestoCodice?: string }) => {
+    await fetch(`/api/oe/alimentari/strenne/foto/${encodeURIComponent(barcode)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    await qc.invalidateQueries({ queryKey: ['oe-strenne-foto'] });
+  };
 
   const uploadStrennaFoto = async (barcode: string, file: File) => {
     setUploadingStrennaFoto(barcode);
@@ -1118,15 +1133,13 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
     const res = await fetch('/api/admin/oe-settings/upload', { method: 'POST', body: fd });
     if (!res.ok) { toast.error('Errore upload'); setUploadingStrennaFoto(null); return; }
     const { url } = await res.json();
-    await fetch(`/api/oe/alimentari/strenne/foto/${encodeURIComponent(barcode)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fotoUrl: url }),
-    });
-    await qc.invalidateQueries({ queryKey: ['oe-strenne-foto'] });
+    await patchStrenna(barcode, { fotoUrl: url });
     setUploadingStrennaFoto(null);
     toast.success('Foto strenna aggiornata');
   };
+
+  const [renamingBarcode, setRenamingBarcode] = useState<string | null>(null);
+  const [renameVal, setRenameVal] = useState('');
 
   const openCesto = (codice: string) => {
     const c = cestiDb.find(ce => ce.codice === codice);
@@ -1142,7 +1155,8 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
       {STRENNE.map((s, i) => {
         const isOpen = openIdx === i;
         const totQte = EMPORI.reduce((a, emp) => a + getQte(s.barcode, emp), 0);
-        const cesto = cestiDb.find(c => c.codice === s.cestoCodice);
+        const cestoCodiceEff = getStrennaCesto(s.barcode, s.cestoCodice);
+        const cesto = cestiDb.find(c => c.codice === cestoCodiceEff);
         const nomiComp = getNomi(s.barcode);
         const costoProdotti = nomiComp.reduce((acc, nome) => {
           const prod = prodotti.find(p => p.nome === nome);
@@ -1165,9 +1179,6 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                   ? <img src={strennaFoto} alt={`Strenna ${s.prezzo}`} className="absolute inset-0 w-full h-full object-cover" />
                   : <div className="absolute inset-0 bg-primary" />
                 }
-                <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-white font-bold text-lg leading-none">€{s.prezzo}</span>
-                </div>
                 {/* Camera upload */}
                 <label
                   onClick={e => e.stopPropagation()}
@@ -1186,7 +1197,32 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                 </label>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-primary">Strenna {s.prezzo}</p>
+                {renamingBarcode === s.barcode ? (
+                  <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                    <input
+                      autoFocus
+                      className="text-sm font-semibold text-primary border border-primary rounded px-2 py-0.5 bg-white w-full min-w-0"
+                      value={renameVal}
+                      onChange={e => setRenameVal(e.target.value)}
+                      onKeyDown={async e => {
+                        if (e.key === 'Enter') { await patchStrenna(s.barcode, { nome: renameVal }); setRenamingBarcode(null); }
+                        if (e.key === 'Escape') setRenamingBarcode(null);
+                      }}
+                      onBlur={async () => { await patchStrenna(s.barcode, { nome: renameVal }); setRenamingBarcode(null); }}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 group/rename">
+                    <p className="font-semibold text-primary truncate">{getStrennaName(s.barcode, s.prezzo)}</p>
+                    <button
+                      onClick={e => { e.stopPropagation(); setRenameVal(getStrennaName(s.barcode, s.prezzo)); setRenamingBarcode(s.barcode); }}
+                      className="p-0.5 text-gray-300 hover:text-primary rounded opacity-0 group-hover/rename:opacity-100 transition-opacity flex-shrink-0"
+                      title="Rinomina"
+                    >
+                      <Pencil size={11} />
+                    </button>
+                  </div>
+                )}
                 <p className="text-xs text-gray-400">{nomiComp.length + 1} componenti · costo {fmt(costoReale)} · {fmtN(totQte)} pz tot.</p>
               </div>
               <div className="flex items-center gap-2">
@@ -1235,10 +1271,19 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                   {isEditComp ? (
                     /* ── Editor inline composizione ── */
                     <div className="space-y-1.5">
-                      {/* Cesto (non modificabile) */}
-                      <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded-lg text-xs text-gray-500">
-                        <span className="flex-1">🧺 {cesto?.descrizione ?? s.cestoCodice}</span>
-                        <span className="text-[10px] text-gray-300">(fisso)</span>
+                      {/* Cesto — selezionabile */}
+                      <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 rounded-lg text-xs text-gray-600">
+                        <span className="flex-shrink-0">🧺</span>
+                        <select
+                          className="flex-1 bg-transparent border-none text-xs text-gray-600 font-medium cursor-pointer focus:outline-none"
+                          value={cestoCodiceEff}
+                          onClick={e => e.stopPropagation()}
+                          onChange={async e => { await patchStrenna(s.barcode, { cestoCodice: e.target.value }); }}
+                        >
+                          {cestiDb.map(c => (
+                            <option key={c.codice} value={c.codice}>{c.codice} – {c.descrizione}</option>
+                          ))}
+                        </select>
                       </div>
                       {/* Prodotti esistenti */}
                       {editNomi.map((nome) => {
@@ -1306,8 +1351,8 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                         {/* Cesto */}
                         <tr className="border-b border-border/30 hover:bg-gray-50">
                           <td className="py-1.5 pr-3">
-                            <button onClick={() => openCesto(s.cestoCodice)} className="text-left text-gray-600 hover:text-primary flex items-center gap-1 group">
-                              <span>🧺 {cesto?.descrizione ?? s.cestoCodice}</span>
+                            <button onClick={() => openCesto(cestoCodiceEff)} className="text-left text-gray-600 hover:text-primary flex items-center gap-1 group">
+                              <span>🧺 {cesto?.descrizione ?? cestoCodiceEff}</span>
                               <Info size={10} className="text-gray-300 group-hover:text-primary flex-shrink-0" />
                             </button>
                           </td>

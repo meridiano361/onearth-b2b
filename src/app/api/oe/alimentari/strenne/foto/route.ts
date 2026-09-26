@@ -14,7 +14,7 @@ async function requireM361() {
 export async function GET() {
   if (!await requireM361()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const rows = await prisma.oeStrennaFoto.findMany();
-  const result: Record<string, string> = {};
-  for (const r of rows) result[r.barcode] = r.fotoUrl;
+  const result: Record<string, { fotoUrl: string; nome: string; cestoCodice: string }> = {};
+  for (const r of rows) result[r.barcode] = { fotoUrl: r.fotoUrl, nome: r.nome, cestoCodice: r.cestoCodice };
   return NextResponse.json(result);
 }

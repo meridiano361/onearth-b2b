@@ -13,11 +13,15 @@ async function requireM361() {
 
 export async function PATCH(req: NextRequest, { params }: { params: { barcode: string } }) {
   if (!await requireM361()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  const { fotoUrl } = await req.json();
+  const body = await req.json();
+  const data: { fotoUrl?: string; nome?: string; cestoCodice?: string } = {};
+  if (body.fotoUrl !== undefined) data.fotoUrl = body.fotoUrl;
+  if (body.nome !== undefined) data.nome = body.nome;
+  if (body.cestoCodice !== undefined) data.cestoCodice = body.cestoCodice;
   const row = await prisma.oeStrennaFoto.upsert({
     where: { barcode: params.barcode },
-    update: { fotoUrl },
-    create: { barcode: params.barcode, fotoUrl },
+    update: data,
+    create: { barcode: params.barcode, fotoUrl: data.fotoUrl ?? '', nome: data.nome ?? '', cestoCodice: data.cestoCodice ?? '' },
   });
   return NextResponse.json(row);
 }
