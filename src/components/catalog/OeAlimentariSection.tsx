@@ -1712,7 +1712,9 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   const [editVal, setEditVal] = useState('');
   const [saving, setSaving] = useState(false);
   const [searchFab, setSearchFab] = useState('');
-  const [sortFab, setSortFab] = useState<FabbisognoSortBy>('default');
+  const [sortFab, setSortFab] = useState<FabbisognoSortBy>(() => {
+    try { return (localStorage.getItem('fab-sort') as FabbisognoSortBy) ?? 'default'; } catch { return 'default'; }
+  });
   const [filtroFab, setFiltroFab] = useState<string | null>(null);
   const [anagratica, setAnagratica] = useState<AnagraticaState | null>(null);
   const [openAlimentari, setOpenAlimentari] = useState(() => {
@@ -1902,7 +1904,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
         </div>
         <select
           value={sortFab}
-          onChange={e => setSortFab(e.target.value as FabbisognoSortBy)}
+          onChange={e => { const v = e.target.value as FabbisognoSortBy; setSortFab(v); try { localStorage.setItem('fab-sort', v); } catch {} }}
           className="input-oe text-xs flex-shrink-0 pr-6 cursor-pointer"
         >
           <option value="default">Ordine default</option>
