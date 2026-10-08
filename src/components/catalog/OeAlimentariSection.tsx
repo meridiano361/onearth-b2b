@@ -1757,17 +1757,31 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
     staleTime: 60_000,
   });
 
-  // Quantità strenne per prodotto: somma (pezzi_in_strenna × qta_totale_strenna su tutti gli empori)
-  const fabbisognoStrenneCalc = useMemo(() => {
-    const result: Record<string, number> = {};
+  // Quota strenne per prodotto per emporio: result[nome][emporio] = pz necessari per le strenne
+  const fabbisognoStrennePerEmporio = useMemo(() => {
+    const result: Record<string, Record<string, number>> = {};
     STRENNE.forEach(s => {
-      const prodotti = composizioneDbFab[s.barcode] ?? [];
-      const totalQta = qteStrenneRows.filter(r => r.barcode === s.barcode).reduce((a, r) => a + r.qta, 0);
-      if (totalQta === 0) return;
-      prodotti.forEach(nome => { result[nome] = (result[nome] ?? 0) + totalQta; });
+      const ps = composizioneDbFab[s.barcode] ?? [];
+      EMPORI.forEach(emp => {
+        const qty = qteStrenneRows.filter(r => r.barcode === s.barcode && r.emporio === emp).reduce((a, r) => a + r.qta, 0);
+        if (qty === 0) return;
+        ps.forEach(nome => {
+          if (!result[nome]) result[nome] = {};
+          result[nome][emp] = (result[nome][emp] ?? 0) + qty;
+        });
+      });
     });
     return result;
   }, [composizioneDbFab, qteStrenneRows]);
+
+  // Totale strenne per prodotto (somma su tutti gli empori) — usato per la colonna Str.
+  const fabbisognoStrenneCalc = useMemo(() => {
+    const result: Record<string, number> = {};
+    Object.entries(fabbisognoStrennePerEmporio).forEach(([nome, empMap]) => {
+      result[nome] = Object.values(empMap).reduce((a, v) => a + v, 0);
+    });
+    return result;
+  }, [fabbisognoStrennePerEmporio]);
 
   const displayedProdotti = useMemo(() => {
     const q = searchFab.toLowerCase().trim();
@@ -2017,7 +2031,9 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       </td>
                       {EMPORI.map(emp => {
                         const row = p.fabbisognoEmpori.find(r => r.emporio === emp);
-                        const fab = row?.qta ?? 0;
+                        const fabNeg = row?.qta ?? 0;
+                        const fabStr = fabbisognoStrennePerEmporio[p.nome]?.[emp] ?? 0;
+                        const fab = fabNeg + fabStr;
                         const gia = row?.giacenza ?? 0;
                         const ord = row?.ordinato ?? 0;
                         const empCoperto = fab > 0 && (gia + ord) >= fab;
@@ -2026,18 +2042,23 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                         const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato';
                         return (
                           <>
-                            <td key={`${emp}-fab`} className="py-1.5 px-0.5 text-center border-l border-border/40">
+                            <td key={`${emp}-fab`} className="py-1 px-0.5 text-center border-l border-border/40">
                               {isEditFab ? (
-                                <input autoFocus type="number" min="0"
-                                  className="w-10 text-center text-xs border-2 border-primary rounded-md px-0.5 py-0.5 outline-none bg-white"
-                                  value={editVal} onChange={e => setEditVal(e.target.value)}
-                                  onBlur={() => saveEmporio(p.id, emp)} onKeyDown={e => e.key === 'Enter' && saveEmporio(p.id, emp)}
-                                />
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <input autoFocus type="number" inputMode="numeric" min="0"
+                                    className="w-full min-w-[2.5rem] text-center text-xs border-2 border-primary rounded-md px-1 py-1 outline-none bg-white"
+                                    value={editVal} onChange={e => setEditVal(e.target.value)}
+                                    onFocus={e => e.target.select()}
+                                    onBlur={() => saveEmporio(p.id, emp)} onKeyDown={e => e.key === 'Enter' && saveEmporio(p.id, emp)}
+                                  />
+                                  {fabStr > 0 && <span className="text-[9px] text-blue-400 leading-none">+{fabStr} str.</span>}
+                                </div>
                               ) : (
-                                <button onClick={() => startEdit(p.id, emp, fab)}
-                                  className={cn('w-10 py-0.5 rounded text-xs font-medium transition-all hover:ring-1 hover:ring-primary/40', fab > 0 ? 'text-blue-600' : 'text-gray-300')}
+                                <button onClick={() => startEdit(p.id, emp, fabNeg)}
+                                  className={cn('w-full py-0.5 rounded text-xs font-medium transition-all hover:ring-1 hover:ring-primary/40 flex flex-col items-center', fab > 0 ? 'text-blue-600' : 'text-gray-300')}
                                 >
-                                  {fab > 0 ? fab : '—'}
+                                  <span>{fab > 0 ? fab : '—'}</span>
+                                  {fabStr > 0 && fab > 0 && <span className="text-[9px] text-blue-400 leading-none font-normal">{fabStr} str.</span>}
                                 </button>
                               )}
                             </td>
