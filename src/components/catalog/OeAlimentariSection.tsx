@@ -1850,7 +1850,13 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   return (
     <>
     {anagratica && <AnagraticaDrawer item={anagratica} onClose={() => setAnagratica(null)} />}
-    <div className="space-y-3">
+    <div className="space-y-4">
+
+      {/* ── Sottosezione: Prodotti ─────────────────────────────────────────────── */}
+      <div className="space-y-3">
+      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+        <Package size={12} /> Prodotti
+      </h3>
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[140px]">
@@ -2021,11 +2027,12 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
           </tbody>
         </table>
       </div>
+      </div>{/* fine sottosezione Prodotti */}
 
-      {/* Cesti lichens da strenne */}
+      {/* ── Sottosezione: Cesti ───────────────────────────────────────────────── */}
       {cestiFabbisogno.length > 0 && (
-        <div className="mt-2">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
             <ShoppingBasket size={12} /> Cesti Lichens
           </h3>
           <div className="overflow-x-auto -mx-4 px-4">
@@ -2089,10 +2096,10 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                               </span>
                             </td>
                             {/* Giacenza */}
-                            <td key={`${emp}-gia`} className="py-1.5 px-0.5 text-center">
+                            <td key={`${emp}-gia`} className="py-1 px-0.5 text-center">
                               {isEditG ? (
                                 <input autoFocus type="number" min="0"
-                                  className="w-10 text-center text-xs border border-primary rounded px-0.5 py-0.5"
+                                  className="w-10 text-center text-xs border-2 border-primary rounded-md px-0.5 py-1 outline-none bg-white"
                                   value={editCestoFabVal}
                                   onChange={e => setEditCestoFabVal(e.target.value)}
                                   onBlur={saveCestoFab}
@@ -2101,17 +2108,22 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                               ) : (
                                 <button
                                   onClick={() => startEditCestoFab(codice, emp, 'giacenza', giac)}
-                                  className={cn('w-full min-w-[28px] py-0.5 rounded hover:bg-gray-100 hover:ring-1 hover:ring-gray-300 transition-all', giac > 0 ? 'text-gray-700 font-medium' : 'text-gray-300')}
+                                  className={cn(
+                                    'w-10 py-1 rounded-md border text-xs font-medium transition-all hover:border-primary hover:bg-primary/5',
+                                    giac > 0
+                                      ? 'border-gray-300 bg-white text-gray-700'
+                                      : 'border-dashed border-gray-300 bg-gray-50 text-gray-400'
+                                  )}
                                 >
-                                  {giac > 0 ? giac : '0'}
+                                  {giac > 0 ? giac : '—'}
                                 </button>
                               )}
                             </td>
                             {/* Ordinato */}
-                            <td key={`${emp}-ord`} className="py-1.5 px-0.5 text-center">
+                            <td key={`${emp}-ord`} className="py-1 px-0.5 text-center">
                               {isEditO ? (
                                 <input autoFocus type="number" min="0"
-                                  className="w-10 text-center text-xs border border-green-500 rounded px-0.5 py-0.5"
+                                  className="w-10 text-center text-xs border-2 border-green-500 rounded-md px-0.5 py-1 outline-none bg-white"
                                   value={editCestoFabVal}
                                   onChange={e => setEditCestoFabVal(e.target.value)}
                                   onBlur={saveCestoFab}
@@ -2120,9 +2132,14 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                               ) : (
                                 <button
                                   onClick={() => startEditCestoFab(codice, emp, 'ordinato', ord)}
-                                  className={cn('w-full min-w-[28px] py-0.5 rounded hover:bg-green-50 hover:ring-1 hover:ring-green-300 transition-all font-semibold', ord > 0 ? 'text-green-700' : 'text-gray-300')}
+                                  className={cn(
+                                    'w-10 py-1 rounded-md border text-xs font-semibold transition-all hover:border-green-500 hover:bg-green-50',
+                                    ord > 0
+                                      ? 'border-green-300 bg-green-50/60 text-green-700'
+                                      : 'border-dashed border-gray-300 bg-gray-50 text-gray-400'
+                                  )}
                                 >
-                                  {ord > 0 ? ord : '0'}
+                                  {ord > 0 ? ord : '—'}
                                 </button>
                               )}
                             </td>
@@ -2141,6 +2158,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
           </div>
         </div>
       )}
+
     </div>
     </>
   );
