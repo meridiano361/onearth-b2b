@@ -1872,6 +1872,36 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
     {anagratica && <AnagraticaDrawer item={anagratica} onClose={() => setAnagratica(null)} />}
     <div className="space-y-4">
 
+      {/* Toolbar globale — sopra entrambe le sezioni */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[140px]">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            className="input-oe pl-7"
+            placeholder="Cerca prodotto, fornitore o cesto…"
+            value={searchFab}
+            onChange={e => setSearchFab(e.target.value)}
+          />
+          {searchFab && (
+            <button onClick={() => setSearchFab('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X size={12} />
+            </button>
+          )}
+        </div>
+        <select
+          value={sortFab}
+          onChange={e => setSortFab(e.target.value as FabbisognoSortBy)}
+          className="input-oe text-xs flex-shrink-0 pr-6 cursor-pointer"
+        >
+          <option value="default">Ordine default</option>
+          <option value="nome_az">A → Z</option>
+          <option value="nome_za">Z → A</option>
+          <option value="fornitore">Per fornitore</option>
+          <option value="totale_desc">Totale ↓</option>
+          <option value="da_ordinare_desc">Da ordinare ↓</option>
+        </select>
+      </div>
+
       {/* ── Sottosezione: ALIMENTARI ──────────────────────────────────────────── */}
       <div className="space-y-3">
         <button onClick={() => setOpenAlimentari(o => !o)} className="flex items-center gap-2 w-full text-left group">
@@ -1882,35 +1912,6 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
         </button>
 
         {openAlimentari && <>
-          {/* Toolbar */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative flex-1 min-w-[140px]">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                className="input-oe pl-7"
-                placeholder="Cerca prodotto o fornitore…"
-                value={searchFab}
-                onChange={e => setSearchFab(e.target.value)}
-              />
-              {searchFab && (
-                <button onClick={() => setSearchFab('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-            <select
-              value={sortFab}
-              onChange={e => setSortFab(e.target.value as FabbisognoSortBy)}
-              className="input-oe text-xs flex-shrink-0 pr-6 cursor-pointer"
-            >
-              <option value="default">Ordine default</option>
-              <option value="nome_az">A → Z</option>
-              <option value="nome_za">Z → A</option>
-              <option value="fornitore">Per fornitore</option>
-              <option value="totale_desc">Totale ↓</option>
-              <option value="da_ordinare_desc">Da ordinare ↓</option>
-            </select>
-          </div>
           {/* Filtri fornitore */}
           {fornitoriFab.length > 0 && (
             <div className="flex gap-1.5 flex-wrap">
@@ -2090,7 +2091,11 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                 </tr>
               </thead>
               <tbody>
-                {cestiFabbisogno.map(({ codice, cesto, empMap, totale }) => {
+                {cestiFabbisogno.filter(({ codice, cesto }) => {
+                  if (!searchFab) return true;
+                  const q = searchFab.toLowerCase();
+                  return codice.toLowerCase().includes(q) || (cesto?.descrizione ?? '').toLowerCase().includes(q);
+                }).map(({ codice, cesto, empMap, totale }) => {
                   const dbRow = (emp: string) => cestiFabDb.find(r => r.cestoCodice === codice && r.emporio === emp);
                   const totGiacenza = EMPORI.reduce((a, e) => a + (dbRow(e)?.giacenza ?? 0), 0);
                   const totOrdinato = EMPORI.reduce((a, e) => a + (dbRow(e)?.ordinato ?? 0), 0);
