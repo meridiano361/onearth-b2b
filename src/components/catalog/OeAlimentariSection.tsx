@@ -1938,7 +1938,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
             <table className="min-w-full text-xs border-collapse">
               <thead>
                 <tr className="text-left text-gray-400 border-b border-border/40">
-                  <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2}>Prodotto</th>
+                  <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2} />
                   <th className="pb-1 px-2 font-medium text-center text-blue-500" rowSpan={2}>Str.</th>
                   {EMPORI.map(e => (
                     <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40">
@@ -2073,11 +2073,10 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                 <tr className="text-left text-gray-400 border-b border-border/40">
                   <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2} />
                   {EMPORI.map(e => (
-                    <th key={e} colSpan={3} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40">
+                    <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40">
                       {e}
                     </th>
                   ))}
-                  <th className="pb-1 px-2 font-medium text-center text-gray-500" rowSpan={2} />
                 </tr>
                 {/* Riga 2: sotto-intestazioni */}
                 <tr className="text-left text-gray-400 border-b-2 border-border">
@@ -2086,6 +2085,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px]">Fab</th>
                       <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px]">Gia</th>
                       <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px]">Ord</th>
+                      <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5" />
                     </>
                   ))}
                 </tr>
@@ -2178,13 +2178,17 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                 </button>
                               )}
                             </td>
+                            {/* Spia per emporio */}
+                            <td key={`${emp}-spia`} className="py-1.5 px-1 text-center">
+                              {fab > 0 && (
+                                <span className={cn('inline-block w-2 h-2 rounded-full', (giac + ord) >= fab ? 'bg-green-500' : 'bg-red-500')}
+                                  title={(giac + ord) >= fab ? 'Coperto' : `Mancano ${fab - giac - ord}`} />
+                              )}
+                            </td>
                           </>
                         );
                       })}
-                      {/* Spia */}
-                      <td className="py-1.5 px-2 text-center">
-                        <span className={cn('inline-block w-2.5 h-2.5 rounded-full', totale === 0 ? 'bg-gray-200' : coperto ? 'bg-green-500' : 'bg-red-500')} title={coperto ? 'Coperto' : `Mancano ${totale - totGiacenza - totOrdinato}`} />
-                      </td>
+
                     </tr>
                   );
                 })}
