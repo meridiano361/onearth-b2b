@@ -11,19 +11,29 @@ async function requireM361() {
   return ok ? session : null;
 }
 
-// PATCH body: { prodottoId, emporio, qta }
+// PATCH body: { prodottoId, emporio, qta?, giacenza?, ordinato? }
 export async function PATCH(req: NextRequest) {
   if (!await requireM361()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { prodottoId, emporio, qta } = await req.json();
-  if (!prodottoId || !emporio || qta === undefined) {
+  const body = await req.json();
+  const { prodottoId, emporio } = body;
+  if (!prodottoId || !emporio) {
     return NextResponse.json({ error: 'Parametri mancanti' }, { status: 400 });
   }
 
+  const update: { qta?: number; giacenza?: number; ordinato?: number } = {};
+  const create: { prodottoId: string; emporio: string; qta: number; giacenza: number; ordinato: number } = {
+    prodottoId, emporio, qta: 0, giacenza: 0, ordinato: 0,
+  };
+
+  if (body.qta !== undefined)       { update.qta = Number(body.qta);             create.qta = Number(body.qta); }
+  if (body.giacenza !== undefined)  { update.giacenza = Number(body.giacenza);   create.giacenza = Number(body.giacenza); }
+  if (body.ordinato !== undefined)  { update.ordinato = Number(body.ordinato);   create.ordinato = Number(body.ordinato); }
+
   const row = await prisma.oeAlimentariFabbisognoEmpori.upsert({
     where: { prodottoId_emporio: { prodottoId, emporio } },
-    create: { prodottoId, emporio, qta: Number(qta) },
-    update: { qta: Number(qta) },
+    create,
+    update,
   });
   return NextResponse.json(row);
 }

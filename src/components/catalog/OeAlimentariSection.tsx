@@ -12,7 +12,7 @@ import { STRENNE, FABBISOGNO_STRENNE, EMPORI, STRENNA_FOTO, type Emporio } from 
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type FabbisognoEmpori = { emporio: string; qta: number };
+type FabbisognoEmpori = { emporio: string; qta: number; giacenza: number; ordinato: number };
 type Ordinato = { ordinato: number } | null;
 
 type Prodotto = {
@@ -1715,6 +1715,10 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   const [sortFab, setSortFab] = useState<FabbisognoSortBy>('default');
   const [filtroFab, setFiltroFab] = useState<string | null>(null);
   const [anagratica, setAnagratica] = useState<AnagraticaState | null>(null);
+  const [openAlimentari, setOpenAlimentari] = useState(true);
+  const [openCesti, setOpenCesti] = useState(true);
+  const [editingGO, setEditingGO] = useState<{ id: string; emporio: string; field: 'giacenza' | 'ordinato' } | null>(null);
+  const [editGOVal, setEditGOVal] = useState('');
 
   const fornitoriFab = useMemo(() => {
     const set = new Set(prodotti.map(p => p.fornitore).filter(Boolean));
@@ -1847,209 +1851,221 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
 
   const cellKey = (id: string, field: string) => `${id}:${field}`;
 
+  const startEditGO = (id: string, emporio: string, field: 'giacenza' | 'ordinato', current: number) => {
+    setEditingGO({ id, emporio, field });
+    setEditGOVal(String(current));
+  };
+
+  const saveGO = async () => {
+    if (!editingGO) return;
+    const { id, emporio, field } = editingGO;
+    await fetch('/api/oe/alimentari/fabbisogno', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prodottoId: id, emporio, [field]: parseInt(editGOVal) || 0 }),
+    });
+    setEditingGO(null);
+    refetch();
+  };
+
   return (
     <>
     {anagratica && <AnagraticaDrawer item={anagratica} onClose={() => setAnagratica(null)} />}
     <div className="space-y-4">
 
-      {/* ── Sottosezione: Prodotti ─────────────────────────────────────────────── */}
+      {/* ── Sottosezione: ALIMENTARI ──────────────────────────────────────────── */}
       <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Package size={14} className="text-primary" />
-        <span className="text-sm font-semibold text-gray-700">Prodotti</span>
-        <div className="flex-1 h-px bg-border" />
-      </div>
-      {/* Toolbar */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[140px]">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            className="input-oe pl-7"
-            placeholder="Cerca prodotto o fornitore…"
-            value={searchFab}
-            onChange={e => setSearchFab(e.target.value)}
-          />
-          {searchFab && (
-            <button onClick={() => setSearchFab('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-              <X size={12} />
-            </button>
-          )}
-        </div>
-        <select
-          value={sortFab}
-          onChange={e => setSortFab(e.target.value as FabbisognoSortBy)}
-          className="input-oe text-xs flex-shrink-0 pr-6 cursor-pointer"
-        >
-          <option value="default">Ordine default</option>
-          <option value="nome_az">A → Z</option>
-          <option value="nome_za">Z → A</option>
-          <option value="fornitore">Per fornitore</option>
-          <option value="totale_desc">Totale ↓</option>
-          <option value="da_ordinare_desc">Da ordinare ↓</option>
-        </select>
-      </div>
-      {/* Filtri fornitore */}
-      {fornitoriFab.length > 0 && (
-        <div className="flex gap-1.5 flex-wrap">
-          <button
-            onClick={() => setFiltroFab(null)}
-            className={cn('px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors', !filtroFab ? 'bg-primary text-white border-primary' : 'border-border text-gray-500 hover:border-gray-400')}
-          >
-            Tutti
-          </button>
-          {fornitoriFab.map(f => (
-            <button
-              key={f}
-              onClick={() => setFiltroFab(filtroFab === f ? null : f)}
-              className={cn('px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors',
-                filtroFab === f
-                  ? cn(fornitoreBadge(f), 'border-transparent')
-                  : 'border-border text-gray-500 hover:border-gray-400'
+        <button onClick={() => setOpenAlimentari(o => !o)} className="flex items-center gap-2 w-full text-left group">
+          <Package size={14} className="text-primary flex-shrink-0" />
+          <span className="text-sm font-semibold text-gray-700">Alimentari</span>
+          <div className="flex-1 h-px bg-border" />
+          {openAlimentari ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+        </button>
+
+        {openAlimentari && <>
+          {/* Toolbar */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative flex-1 min-w-[140px]">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                className="input-oe pl-7"
+                placeholder="Cerca prodotto o fornitore…"
+                value={searchFab}
+                onChange={e => setSearchFab(e.target.value)}
+              />
+              {searchFab && (
+                <button onClick={() => setSearchFab('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <X size={12} />
+                </button>
               )}
+            </div>
+            <select
+              value={sortFab}
+              onChange={e => setSortFab(e.target.value as FabbisognoSortBy)}
+              className="input-oe text-xs flex-shrink-0 pr-6 cursor-pointer"
             >
-              {f}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="overflow-x-auto -mx-4 px-4">
-        <table className="min-w-full text-xs border-collapse">
-          <thead>
-            <tr className="text-left text-gray-400 border-b-2 border-border">
-              <th className="pb-2 pr-3 font-medium min-w-[160px]">Prodotto</th>
-              <th className="pb-2 px-2 font-medium text-center text-blue-600">Str.</th>
-              {EMPORI.map(e => <th key={e} className="pb-2 px-2 font-medium text-center text-amber-600">{e}</th>)}
-              <th className="pb-2 px-2 font-medium text-center text-amber-600">Tot Emp.</th>
-              <th className="pb-2 px-2 font-medium text-center font-bold text-gray-700">Totale</th>
-              <th className="pb-2 px-2 font-medium text-center text-green-700">Ordinato</th>
-              <th className="pb-2 pl-2 font-medium text-center">Da ord.</th>
-              <th className="pb-2 pl-2 font-medium text-center" />
-            </tr>
-          </thead>
-          <tbody>
-            {displayedProdotti.map(p => {
-              const fabStr = FABBISOGNO_STRENNE[p.nome] ?? 0;
-              const empMap: Record<string, number> = {};
-              p.fabbisognoEmpori.forEach(r => { empMap[r.emporio] = r.qta; });
-              const totEmp = EMPORI.reduce((a, e) => a + (empMap[e] ?? 0), 0);
-              const totale = fabStr + totEmp;
-              const ordinato = p.ordinato?.ordinato ?? 0;
-              const daOrdinare = totale - ordinato;
+              <option value="default">Ordine default</option>
+              <option value="nome_az">A → Z</option>
+              <option value="nome_za">Z → A</option>
+              <option value="fornitore">Per fornitore</option>
+              <option value="totale_desc">Totale ↓</option>
+              <option value="da_ordinare_desc">Da ordinare ↓</option>
+            </select>
+          </div>
+          {/* Filtri fornitore */}
+          {fornitoriFab.length > 0 && (
+            <div className="flex gap-1.5 flex-wrap">
+              <button
+                onClick={() => setFiltroFab(null)}
+                className={cn('px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors', !filtroFab ? 'bg-primary text-white border-primary' : 'border-border text-gray-500 hover:border-gray-400')}
+              >
+                Tutti
+              </button>
+              {fornitoriFab.map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFiltroFab(filtroFab === f ? null : f)}
+                  className={cn('px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors',
+                    filtroFab === f ? cn(fornitoreBadge(f), 'border-transparent') : 'border-border text-gray-500 hover:border-gray-400'
+                  )}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="overflow-x-auto -mx-4 px-4">
+            <table className="min-w-full text-xs border-collapse">
+              <thead>
+                <tr className="text-left text-gray-400 border-b border-border/40">
+                  <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2}>Prodotto</th>
+                  <th className="pb-1 px-2 font-medium text-center text-blue-500" rowSpan={2}>Str.</th>
+                  {EMPORI.map(e => (
+                    <th key={e} colSpan={3} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40">
+                      {e}
+                    </th>
+                  ))}
+                  <th className="pb-1 px-2 font-medium text-center text-gray-500" rowSpan={2}>Tot</th>
+                  <th className="pb-1 px-2 font-medium text-center" rowSpan={2} />
+                </tr>
+                <tr className="text-left text-gray-400 border-b-2 border-border">
+                  {EMPORI.map(e => (
+                    <>
+                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px]">Fab</th>
+                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px]">Gia</th>
+                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px]">Ord</th>
+                    </>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {displayedProdotti.map(p => {
+                  const fabStr = FABBISOGNO_STRENNE[p.nome] ?? 0;
+                  const totFab = fabStr + EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
+                  const totGia = EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.giacenza ?? 0), 0);
+                  const totOrd = EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.ordinato ?? 0), 0);
+                  const copertoRow = totFab > 0 && (totGia + totOrd) >= totFab;
 
-              return (
-                <tr key={p.id} className="border-b border-border/40 hover:bg-gray-50 group">
-                  <td className="py-2 pr-3">
-                    <button
-                      onClick={() => setAnagratica({ kind: 'prodotto', data: p })}
-                      className="flex items-center gap-2 text-left group/btn"
-                    >
-                      {p.fotoUrl
-                        ? <img src={p.fotoUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
-                        : <div className="w-6 h-6 rounded bg-gray-100 flex-shrink-0" />
-                      }
-                      <p className="font-medium text-primary leading-tight group-hover/btn:underline">{p.nome}</p>
-                    </button>
-                  </td>
-
-                  {/* Fabbisogno strenne */}
-                  <td className="py-2 px-2 text-center">
-                    <span className={cn('font-medium', fabStr > 0 ? 'text-blue-600' : 'text-gray-300')}>
-                      {fabStr > 0 ? fabStr : '—'}
-                    </span>
-                  </td>
-
-                  {/* Fabbisogno empori — editabili */}
-                  {EMPORI.map(emp => {
-                    const qta = empMap[emp] ?? 0;
-                    const key = cellKey(p.id, emp);
-                    const isEd = editing?.id === p.id && editing?.field === emp;
-                    return (
-                      <td key={emp} className="py-2 px-1 text-center">
-                        {isEd ? (
-                          <input
-                            autoFocus
-                            type="number" min="0"
-                            className="w-12 text-center text-xs border border-primary rounded px-1 py-0.5"
-                            value={editVal}
-                            onChange={e => setEditVal(e.target.value)}
-                            onBlur={() => saveEmporio(p.id, emp)}
-                            onKeyDown={e => e.key === 'Enter' && saveEmporio(p.id, emp)}
-                          />
-                        ) : (
-                          <button
-                            onClick={() => startEdit(p.id, emp, qta)}
-                            className={cn('w-full min-w-[28px] py-0.5 rounded hover:bg-amber-50 hover:ring-1 hover:ring-amber-300 transition-all', qta > 0 ? 'text-amber-700 font-medium' : 'text-gray-300')}
-                          >
-                            {qta > 0 ? qta : '0'}
-                          </button>
+                  return (
+                    <tr key={p.id} className="border-b border-border/40 hover:bg-gray-50 group">
+                      <td className="py-2 pr-3">
+                        <button onClick={() => setAnagratica({ kind: 'prodotto', data: p })} className="flex items-center gap-2 text-left group/btn">
+                          {p.fotoUrl
+                            ? <img src={p.fotoUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
+                            : <div className="w-6 h-6 rounded bg-gray-100 flex-shrink-0" />
+                          }
+                          <p className="font-medium text-primary leading-tight group-hover/btn:underline">{p.nome}</p>
+                        </button>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <span className={cn('font-medium', fabStr > 0 ? 'text-blue-600' : 'text-gray-300')}>{fabStr > 0 ? fabStr : '—'}</span>
+                      </td>
+                      {EMPORI.map(emp => {
+                        const row = p.fabbisognoEmpori.find(r => r.emporio === emp);
+                        const fab = row?.qta ?? 0;
+                        const gia = row?.giacenza ?? 0;
+                        const ord = row?.ordinato ?? 0;
+                        const empCoperto = fab > 0 && (gia + ord) >= fab;
+                        const isEditFab = editing?.id === p.id && editing?.field === emp;
+                        const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza';
+                        const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato';
+                        return (
+                          <>
+                            <td key={`${emp}-fab`} className={cn('py-1.5 px-0.5 text-center border-l border-border/40', fab > 0 ? (empCoperto ? 'bg-green-50/50' : 'bg-red-50/50') : '')}>
+                              {isEditFab ? (
+                                <input autoFocus type="number" min="0"
+                                  className="w-10 text-center text-xs border-2 border-primary rounded-md px-0.5 py-0.5 outline-none bg-white"
+                                  value={editVal} onChange={e => setEditVal(e.target.value)}
+                                  onBlur={() => saveEmporio(p.id, emp)} onKeyDown={e => e.key === 'Enter' && saveEmporio(p.id, emp)}
+                                />
+                              ) : (
+                                <button onClick={() => startEdit(p.id, emp, fab)}
+                                  className={cn('w-10 py-0.5 rounded text-xs font-medium transition-all hover:ring-1 hover:ring-primary/40', fab > 0 ? 'text-blue-600' : 'text-gray-300')}
+                                >
+                                  {fab > 0 ? fab : '—'}
+                                </button>
+                              )}
+                            </td>
+                            <td key={`${emp}-gia`} className="py-1 px-0.5 text-center">
+                              {isEditGia ? (
+                                <input autoFocus type="number" min="0"
+                                  className="w-10 text-center text-xs border-2 border-primary rounded-md px-0.5 py-1 outline-none bg-white"
+                                  value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
+                                  onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
+                                />
+                              ) : (
+                                <button onClick={() => startEditGO(p.id, emp, 'giacenza', gia)}
+                                  className={cn('w-10 py-1 rounded-md border text-xs font-medium transition-all hover:border-primary hover:bg-primary/5',
+                                    gia > 0 ? 'border-gray-300 bg-white text-gray-700' : 'border-dashed border-gray-300 bg-gray-50 text-gray-400')}
+                                >
+                                  {gia > 0 ? gia : '—'}
+                                </button>
+                              )}
+                            </td>
+                            <td key={`${emp}-ord`} className="py-1 px-0.5 text-center">
+                              {isEditOrd ? (
+                                <input autoFocus type="number" min="0"
+                                  className="w-10 text-center text-xs border-2 border-green-500 rounded-md px-0.5 py-1 outline-none bg-white"
+                                  value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
+                                  onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
+                                />
+                              ) : (
+                                <button onClick={() => startEditGO(p.id, emp, 'ordinato', ord)}
+                                  className={cn('w-10 py-1 rounded-md border text-xs font-semibold transition-all hover:border-green-500 hover:bg-green-50',
+                                    ord > 0 ? 'border-green-300 bg-green-50/60 text-green-700' : 'border-dashed border-gray-300 bg-gray-50 text-gray-400')}
+                                >
+                                  {ord > 0 ? ord : '—'}
+                                </button>
+                              )}
+                            </td>
+                          </>
+                        );
+                      })}
+                      <td className="py-2 px-2 text-center font-bold text-primary">{totFab || '—'}</td>
+                      <td className="py-2 px-2 text-center">
+                        {totFab > 0 && (
+                          <span className={cn('inline-block w-2.5 h-2.5 rounded-full', copertoRow ? 'bg-green-500' : 'bg-red-500')}
+                            title={copertoRow ? 'Coperto' : `Mancano ${totFab - totGia - totOrd}`} />
                         )}
                       </td>
-                    );
-                  })}
-
-                  {/* Tot empori */}
-                  <td className="py-2 px-2 text-center font-medium text-amber-700">{totEmp || '—'}</td>
-
-                  {/* Totale */}
-                  <td className="py-2 px-2 text-center font-bold text-primary">{totale || '—'}</td>
-
-                  {/* Ordinato — editabile */}
-                  <td className="py-2 px-1 text-center">
-                    {editing?.id === p.id && editing?.field === 'ordinato' ? (
-                      <input
-                        autoFocus
-                        type="number" min="0"
-                        className="w-14 text-center text-xs border border-green-500 rounded px-1 py-0.5"
-                        value={editVal}
-                        onChange={e => setEditVal(e.target.value)}
-                        onBlur={() => saveOrdinato(p.id)}
-                        onKeyDown={e => e.key === 'Enter' && saveOrdinato(p.id)}
-                      />
-                    ) : (
-                      <button
-                        onClick={() => startEdit(p.id, 'ordinato', ordinato)}
-                        className={cn('w-full min-w-[36px] py-0.5 rounded hover:bg-green-50 hover:ring-1 hover:ring-green-300 transition-all font-semibold', ordinato > 0 ? 'text-green-700' : 'text-gray-300')}
-                      >
-                        {ordinato > 0 ? ordinato : '0'}
-                      </button>
-                    )}
-                  </td>
-
-                  {/* Da ordinare */}
-                  <td className="py-2 pl-2 text-center">
-                    {daOrdinare > 0
-                      ? <span className="font-bold text-red-600">{daOrdinare}</span>
-                      : daOrdinare < 0
-                      ? <span className="text-xs text-green-600">+{Math.abs(daOrdinare)}</span>
-                      : <span className="text-gray-400">✓</span>
-                    }
-                  </td>
-                  {/* Spia */}
-                  <td className="py-2 pl-2 text-center">
-                    {totale > 0 && (
-                      <span
-                        className={cn('inline-block w-2.5 h-2.5 rounded-full', ordinato >= totale ? 'bg-green-500' : 'bg-red-500')}
-                        title={ordinato >= totale ? 'Coperto' : `Da ordinare: ${daOrdinare}`}
-                      />
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>}
       </div>
-      </div>{/* fine sottosezione Prodotti */}
 
-      {/* ── Sottosezione: Cesti ───────────────────────────────────────────────── */}
+      {/* ── Sottosezione: CESTI ───────────────────────────────────────────────── */}
       {cestiFabbisogno.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <ShoppingBasket size={14} className="text-primary" />
-            <span className="text-sm font-semibold text-gray-700">Cesti Lichens</span>
+          <button onClick={() => setOpenCesti(o => !o)} className="flex items-center gap-2 w-full text-left">
+            <ShoppingBasket size={14} className="text-primary flex-shrink-0" />
+            <span className="text-sm font-semibold text-gray-700">Cesti</span>
             <div className="flex-1 h-px bg-border" />
-          </div>
-          <div className="overflow-x-auto -mx-4 px-4">
+            {openCesti ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+          </button>
+          {openCesti && <div className="overflow-x-auto -mx-4 px-4">
             <table className="min-w-full text-xs border-collapse">
               <thead>
                 {/* Riga 1: intestazioni macro */}
@@ -2169,7 +2185,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                 })}
               </tbody>
             </table>
-          </div>
+          </div>}
         </div>
       )}
 
