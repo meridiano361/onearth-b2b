@@ -1854,9 +1854,11 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
 
       {/* ── Sottosezione: Prodotti ─────────────────────────────────────────────── */}
       <div className="space-y-3">
-      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-        <Package size={12} /> Prodotti
-      </h3>
+      <div className="flex items-center gap-2">
+        <Package size={14} className="text-primary" />
+        <span className="text-sm font-semibold text-gray-700">Prodotti</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[140px]">
@@ -1921,6 +1923,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               <th className="pb-2 px-2 font-medium text-center font-bold text-gray-700">Totale</th>
               <th className="pb-2 px-2 font-medium text-center text-green-700">Ordinato</th>
               <th className="pb-2 pl-2 font-medium text-center">Da ord.</th>
+              <th className="pb-2 pl-2 font-medium text-center" />
             </tr>
           </thead>
           <tbody>
@@ -2021,6 +2024,15 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       : <span className="text-gray-400">✓</span>
                     }
                   </td>
+                  {/* Spia */}
+                  <td className="py-2 pl-2 text-center">
+                    {totale > 0 && (
+                      <span
+                        className={cn('inline-block w-2.5 h-2.5 rounded-full', ordinato >= totale ? 'bg-green-500' : 'bg-red-500')}
+                        title={ordinato >= totale ? 'Coperto' : `Da ordinare: ${daOrdinare}`}
+                      />
+                    )}
+                  </td>
                 </tr>
               );
             })}
@@ -2032,9 +2044,11 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
       {/* ── Sottosezione: Cesti ───────────────────────────────────────────────── */}
       {cestiFabbisogno.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-            <ShoppingBasket size={12} /> Cesti Lichens
-          </h3>
+          <div className="flex items-center gap-2">
+            <ShoppingBasket size={14} className="text-primary" />
+            <span className="text-sm font-semibold text-gray-700">Cesti Lichens</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
           <div className="overflow-x-auto -mx-4 px-4">
             <table className="min-w-full text-xs border-collapse">
               <thead>
