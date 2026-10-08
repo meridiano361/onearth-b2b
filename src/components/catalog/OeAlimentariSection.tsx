@@ -1787,6 +1787,37 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
       .filter(r => r.totale > 0);
   }, [qteStrenneRows, strennaFotoDbFab, cestiDbFab]);
 
+  type CestoFabbisognoRow = { cestoCodice: string; emporio: string; giacenza: number; ordinato: number };
+  const qc2 = useQueryClient();
+  const { data: cestiFabDb = [], refetch: refetchCestiFab } = useQuery<CestoFabbisognoRow[]>({
+    queryKey: ['oe-cesti-fabbisogno'],
+    queryFn: async () => {
+      const res = await fetch('/api/oe/alimentari/cesti/fabbisogno');
+      return res.ok ? res.json() : [];
+    },
+    staleTime: 30_000,
+  });
+
+  const [editingCestoFab, setEditingCestoFab] = useState<{ codice: string; emporio: string; field: 'giacenza' | 'ordinato' } | null>(null);
+  const [editCestoFabVal, setEditCestoFabVal] = useState('');
+
+  const startEditCestoFab = (codice: string, emporio: string, field: 'giacenza' | 'ordinato', current: number) => {
+    setEditingCestoFab({ codice, emporio, field });
+    setEditCestoFabVal(String(current));
+  };
+
+  const saveCestoFab = async () => {
+    if (!editingCestoFab) return;
+    const { codice, emporio, field } = editingCestoFab;
+    await fetch('/api/oe/alimentari/cesti/fabbisogno', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cestoCodice: codice, emporio, [field]: parseInt(editCestoFabVal) || 0 }),
+    });
+    setEditingCestoFab(null);
+    refetchCestiFab();
+    qc2.invalidateQueries({ queryKey: ['oe-cesti-fabbisogno'] });
+  };
+
   const startEdit = (id: string, field: string, current: number) => {
     setEditing({ id, field });
     setEditVal(String(current));
@@ -2000,40 +2031,111 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
           <div className="overflow-x-auto -mx-4 px-4">
             <table className="min-w-full text-xs border-collapse">
               <thead>
+                {/* Riga 1: intestazioni macro */}
+                <tr className="text-left text-gray-400 border-b border-border/40">
+                  <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2} />
+                  {EMPORI.map(e => (
+                    <th key={e} colSpan={3} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40">
+                      {e}
+                    </th>
+                  ))}
+                  <th className="pb-1 px-2 font-medium text-center text-gray-500" rowSpan={2} />
+                </tr>
+                {/* Riga 2: sotto-intestazioni */}
                 <tr className="text-left text-gray-400 border-b-2 border-border">
-                  <th className="pb-2 pr-3 font-medium min-w-[160px]">Cesto</th>
-                  {EMPORI.map(e => <th key={e} className="pb-2 px-2 font-medium text-center text-amber-600">{e}</th>)}
-                  <th className="pb-2 px-2 font-medium text-center font-bold text-gray-700">Totale</th>
+                  {EMPORI.map(e => (
+                    <>
+                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px]">Fab</th>
+                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px]">Gia</th>
+                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px]">Ord</th>
+                    </>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {cestiFabbisogno.map(({ codice, cesto, empMap, totale }) => (
-                  <tr key={codice} className="border-b border-border/40 hover:bg-gray-50">
-                    <td className="py-2 pr-3">
-                      <div className="flex items-center gap-2">
-                        {cesto?.fotoUrl
-                          ? <img src={cesto.fotoUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
-                          : <div className="w-6 h-6 rounded bg-gray-100 flex-shrink-0" />
-                        }
-                        <div>
-                          <p className="font-medium text-primary leading-tight">{cesto?.descrizione ?? codice}</p>
-                          <p className="text-[10px] text-gray-400">{codice}</p>
+                {cestiFabbisogno.map(({ codice, cesto, empMap, totale }) => {
+                  const dbRow = (emp: string) => cestiFabDb.find(r => r.cestoCodice === codice && r.emporio === emp);
+                  const totGiacenza = EMPORI.reduce((a, e) => a + (dbRow(e)?.giacenza ?? 0), 0);
+                  const totOrdinato = EMPORI.reduce((a, e) => a + (dbRow(e)?.ordinato ?? 0), 0);
+                  const coperto = totale > 0 && (totGiacenza + totOrdinato) >= totale;
+
+                  return (
+                    <tr key={codice} className="border-b border-border/40 hover:bg-gray-50">
+                      <td className="py-2 pr-3">
+                        <div className="flex items-center gap-2">
+                          {cesto?.fotoUrl
+                            ? <img src={cesto.fotoUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
+                            : <div className="w-6 h-6 rounded bg-gray-100 flex-shrink-0" />
+                          }
+                          <div>
+                            <p className="font-medium text-primary leading-tight">{cesto?.descrizione ?? codice}</p>
+                            <p className="text-[10px] text-gray-400">{codice}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    {EMPORI.map(emp => {
-                      const qta = empMap[emp] ?? 0;
-                      return (
-                        <td key={emp} className="py-2 px-2 text-center">
-                          <span className={cn('font-medium', qta > 0 ? 'text-amber-700' : 'text-gray-300')}>
-                            {qta > 0 ? qta : '—'}
-                          </span>
-                        </td>
-                      );
-                    })}
-                    <td className="py-2 px-2 text-center font-bold text-primary">{totale}</td>
-                  </tr>
-                ))}
+                      </td>
+                      {EMPORI.map(emp => {
+                        const fab = empMap[emp] ?? 0;
+                        const row = dbRow(emp);
+                        const giac = row?.giacenza ?? 0;
+                        const ord = row?.ordinato ?? 0;
+                        const isEditG = editingCestoFab?.codice === codice && editingCestoFab.emporio === emp && editingCestoFab.field === 'giacenza';
+                        const isEditO = editingCestoFab?.codice === codice && editingCestoFab.emporio === emp && editingCestoFab.field === 'ordinato';
+                        return (
+                          <>
+                            {/* Fabbisogno */}
+                            <td key={`${emp}-fab`} className="py-1.5 px-1 text-center border-l border-border/40">
+                              <span className={cn('font-medium', fab > 0 ? 'text-blue-600' : 'text-gray-300')}>
+                                {fab > 0 ? fab : '—'}
+                              </span>
+                            </td>
+                            {/* Giacenza */}
+                            <td key={`${emp}-gia`} className="py-1.5 px-0.5 text-center">
+                              {isEditG ? (
+                                <input autoFocus type="number" min="0"
+                                  className="w-10 text-center text-xs border border-primary rounded px-0.5 py-0.5"
+                                  value={editCestoFabVal}
+                                  onChange={e => setEditCestoFabVal(e.target.value)}
+                                  onBlur={saveCestoFab}
+                                  onKeyDown={e => e.key === 'Enter' && saveCestoFab()}
+                                />
+                              ) : (
+                                <button
+                                  onClick={() => startEditCestoFab(codice, emp, 'giacenza', giac)}
+                                  className={cn('w-full min-w-[28px] py-0.5 rounded hover:bg-gray-100 hover:ring-1 hover:ring-gray-300 transition-all', giac > 0 ? 'text-gray-700 font-medium' : 'text-gray-300')}
+                                >
+                                  {giac > 0 ? giac : '0'}
+                                </button>
+                              )}
+                            </td>
+                            {/* Ordinato */}
+                            <td key={`${emp}-ord`} className="py-1.5 px-0.5 text-center">
+                              {isEditO ? (
+                                <input autoFocus type="number" min="0"
+                                  className="w-10 text-center text-xs border border-green-500 rounded px-0.5 py-0.5"
+                                  value={editCestoFabVal}
+                                  onChange={e => setEditCestoFabVal(e.target.value)}
+                                  onBlur={saveCestoFab}
+                                  onKeyDown={e => e.key === 'Enter' && saveCestoFab()}
+                                />
+                              ) : (
+                                <button
+                                  onClick={() => startEditCestoFab(codice, emp, 'ordinato', ord)}
+                                  className={cn('w-full min-w-[28px] py-0.5 rounded hover:bg-green-50 hover:ring-1 hover:ring-green-300 transition-all font-semibold', ord > 0 ? 'text-green-700' : 'text-gray-300')}
+                                >
+                                  {ord > 0 ? ord : '0'}
+                                </button>
+                              )}
+                            </td>
+                          </>
+                        );
+                      })}
+                      {/* Spia */}
+                      <td className="py-1.5 px-2 text-center">
+                        <span className={cn('inline-block w-2.5 h-2.5 rounded-full', totale === 0 ? 'bg-gray-200' : coperto ? 'bg-green-500' : 'bg-red-500')} title={coperto ? 'Coperto' : `Mancano ${totale - totGiacenza - totOrdinato}`} />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

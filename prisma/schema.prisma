@@ -1302,6 +1302,17 @@ model OeStrennaQta {
   @@map("oe_strenne_qte")
 }
 
+model OeCestoFabbisogno {
+  cestoCodice String   @map("cesto_codice")
+  emporio     String
+  giacenza    Int      @default(0)
+  ordinato    Int      @default(0)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@id([cestoCodice, emporio])
+  @@map("oe_cesti_fabbisogno")
+}
+
 model OeStrennaProdotto {
   strennaBarcode String @map("strenna_barcode")
   prodottoNome   String @map("prodotto_nome")
