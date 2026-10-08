@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
-import { STRENNE, FABBISOGNO_STRENNE, EMPORI, STRENNA_FOTO, type Emporio } from '@/data/oeAlimentariStatico';
+import { STRENNE, EMPORI, STRENNA_FOTO, type Emporio } from '@/data/oeAlimentariStatico';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1739,6 +1739,36 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
     return Array.from(set).sort((a, b) => (a ?? '').localeCompare(b ?? '', 'it')) as string[];
   }, [prodotti]);
 
+  const { data: qteStrenneRows = [] } = useQuery<QtaRow[]>({
+    queryKey: ['oe-strenne-qte'],
+    queryFn: async () => {
+      const res = await fetch('/api/oe/alimentari/strenne/qte');
+      return res.ok ? res.json() : [];
+    },
+    staleTime: 30_000,
+  });
+
+  const { data: composizioneDbFab = {} } = useQuery<Record<string, string[]>>({
+    queryKey: ['oe-strenne-composizione'],
+    queryFn: async () => {
+      const res = await fetch('/api/oe/alimentari/strenne/composizione');
+      return res.ok ? res.json() : {};
+    },
+    staleTime: 60_000,
+  });
+
+  // Quantità strenne per prodotto: somma (pezzi_in_strenna × qta_totale_strenna su tutti gli empori)
+  const fabbisognoStrenneCalc = useMemo(() => {
+    const result: Record<string, number> = {};
+    STRENNE.forEach(s => {
+      const prodotti = composizioneDbFab[s.barcode] ?? [];
+      const totalQta = qteStrenneRows.filter(r => r.barcode === s.barcode).reduce((a, r) => a + r.qta, 0);
+      if (totalQta === 0) return;
+      prodotti.forEach(nome => { result[nome] = (result[nome] ?? 0) + totalQta; });
+    });
+    return result;
+  }, [composizioneDbFab, qteStrenneRows]);
+
   const displayedProdotti = useMemo(() => {
     const q = searchFab.toLowerCase().trim();
     let list = prodotti.filter(p => {
@@ -1746,7 +1776,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
       if (!q) return true;
       return p.nome.toLowerCase().includes(q) || (p.fornitore ?? '').toLowerCase().includes(q);
     });
-    const totale = (p: Prodotto) => (FABBISOGNO_STRENNE[p.nome] ?? 0) + EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
+    const totale = (p: Prodotto) => (fabbisognoStrenneCalc[p.nome] ?? 0) + EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
     const daOrdinare = (p: Prodotto) => totale(p) - (p.ordinato?.ordinato ?? 0);
     switch (sortFab) {
       case 'nome_az':          list = [...list].sort((a, b) => a.nome.localeCompare(b.nome, 'it')); break;
@@ -1756,16 +1786,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
       case 'da_ordinare_desc': list = [...list].sort((a, b) => daOrdinare(b) - daOrdinare(a)); break;
     }
     return list;
-  }, [prodotti, searchFab, filtroFab, sortFab]);
-
-  const { data: qteStrenneRows = [] } = useQuery<QtaRow[]>({
-    queryKey: ['oe-strenne-qte'],
-    queryFn: async () => {
-      const res = await fetch('/api/oe/alimentari/strenne/qte');
-      return res.ok ? res.json() : [];
-    },
-    staleTime: 30_000,
-  });
+  }, [prodotti, searchFab, filtroFab, sortFab, fabbisognoStrenneCalc]);
 
   const { data: strennaFotoDbFab = {} } = useQuery<Record<string, { fotoUrl: string; nome: string; cestoCodice: string }>>({
     queryKey: ['oe-strenne-foto'],
@@ -1974,7 +1995,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               </thead>
               <tbody>
                 {displayedProdotti.map(p => {
-                  const fabStr = FABBISOGNO_STRENNE[p.nome] ?? 0;
+                  const fabStr = fabbisognoStrenneCalc[p.nome] ?? 0;
                   const totFab = fabStr + EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
                   const totGia = EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.giacenza ?? 0), 0);
                   const totOrd = EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.ordinato ?? 0), 0);
@@ -2256,6 +2277,35 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
     staleTime: 60_000,
   });
 
+  const { data: qteStrenneAnalisi = [] } = useQuery<QtaRow[]>({
+    queryKey: ['oe-strenne-qte'],
+    queryFn: async () => {
+      const res = await fetch('/api/oe/alimentari/strenne/qte');
+      return res.ok ? res.json() : [];
+    },
+    staleTime: 30_000,
+  });
+
+  const { data: composizioneAnalisi = {} } = useQuery<Record<string, string[]>>({
+    queryKey: ['oe-strenne-composizione'],
+    queryFn: async () => {
+      const res = await fetch('/api/oe/alimentari/strenne/composizione');
+      return res.ok ? res.json() : {};
+    },
+    staleTime: 60_000,
+  });
+
+  const fabbisognoStrenneCalc = useMemo(() => {
+    const result: Record<string, number> = {};
+    STRENNE.forEach(s => {
+      const ps = composizioneAnalisi[s.barcode] ?? [];
+      const totalQta = qteStrenneAnalisi.filter(r => r.barcode === s.barcode).reduce((a, r) => a + r.qta, 0);
+      if (totalQta === 0) return;
+      ps.forEach(nome => { result[nome] = (result[nome] ?? 0) + totalQta; });
+    });
+    return result;
+  }, [composizioneAnalisi, qteStrenneAnalisi]);
+
   // ── KPI catalogo ────────────────────────────────────────────────────────────
   const byFornitore: Record<string, Prodotto[]> = {};
   prodotti.forEach(p => {
@@ -2498,7 +2548,7 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
             .map(([fornitore, prods]) => {
               const costoEffettivo = prods.reduce((a, p) => a + (p.ordinato?.ordinato ?? 0) * p.costoIi, 0);
               const costoStima = prods.reduce((a, p) => {
-                const fabStr  = FABBISOGNO_STRENNE[p.nome] ?? 0;
+                const fabStr  = fabbisognoStrenneCalc[p.nome] ?? 0;
                 const totEmp  = EMPORI.reduce((s, e) => s + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
                 const totale  = fabStr + totEmp;
                 const da      = Math.max(0, totale - (p.ordinato?.ordinato ?? 0));
