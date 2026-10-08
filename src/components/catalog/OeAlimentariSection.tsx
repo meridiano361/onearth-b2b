@@ -2006,36 +2006,38 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                 </button>
                               )}
                             </td>
-                            <td key={`${emp}-gia`} className="py-1 px-0.5 text-center">
+                            <td key={`${emp}-gia`}
+                              className={cn('py-1 px-0.5 text-center', !isEditGia && 'cursor-pointer hover:bg-primary/5')}
+                              onClick={() => !isEditGia && startEditGO(p.id, emp, 'giacenza', gia)}
+                            >
                               {isEditGia ? (
-                                <input autoFocus type="number" min="0"
-                                  className="w-10 text-center text-xs border-2 border-primary rounded-md px-0.5 py-1 outline-none bg-white"
+                                <input autoFocus type="number" inputMode="numeric" min="0"
+                                  className="w-full min-w-[2.5rem] text-center text-xs border-2 border-primary rounded-md px-1 py-1.5 outline-none bg-white"
                                   value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
+                                  onFocus={e => e.target.select()}
                                   onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
                                 />
                               ) : (
-                                <button onClick={() => startEditGO(p.id, emp, 'giacenza', gia)}
-                                  className={cn('w-10 py-1 rounded-md border text-xs font-medium transition-all hover:border-primary hover:bg-primary/5',
-                                    gia > 0 ? 'border-gray-300 bg-white text-gray-700' : 'border-dashed border-gray-300 bg-gray-50 text-gray-400')}
-                                >
+                                <span className={cn('text-xs font-medium', gia > 0 ? 'text-gray-700' : 'text-gray-300')}>
                                   {gia > 0 ? gia : '—'}
-                                </button>
+                                </span>
                               )}
                             </td>
-                            <td key={`${emp}-ord`} className="py-1 px-0.5 text-center">
+                            <td key={`${emp}-ord`}
+                              className={cn('py-1 px-0.5 text-center', !isEditOrd && 'cursor-pointer hover:bg-green-50')}
+                              onClick={() => !isEditOrd && startEditGO(p.id, emp, 'ordinato', ord)}
+                            >
                               {isEditOrd ? (
-                                <input autoFocus type="number" min="0"
-                                  className="w-10 text-center text-xs border-2 border-green-500 rounded-md px-0.5 py-1 outline-none bg-white"
+                                <input autoFocus type="number" inputMode="numeric" min="0"
+                                  className="w-full min-w-[2.5rem] text-center text-xs border-2 border-green-500 rounded-md px-1 py-1.5 outline-none bg-white"
                                   value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
+                                  onFocus={e => e.target.select()}
                                   onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
                                 />
                               ) : (
-                                <button onClick={() => startEditGO(p.id, emp, 'ordinato', ord)}
-                                  className={cn('w-10 py-1 rounded-md border text-xs font-semibold transition-all hover:border-green-500 hover:bg-green-50',
-                                    ord > 0 ? 'border-green-300 bg-green-50/60 text-green-700' : 'border-dashed border-gray-300 bg-gray-50 text-gray-400')}
-                                >
+                                <span className={cn('text-xs font-semibold', ord > 0 ? 'text-green-700' : 'text-gray-300')}>
                                   {ord > 0 ? ord : '—'}
-                                </button>
+                                </span>
                               )}
                             </td>
                             <td key={`${emp}-spia`} className="py-1.5 px-1 text-center">
@@ -2131,51 +2133,43 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                               </span>
                             </td>
                             {/* Giacenza */}
-                            <td key={`${emp}-gia`} className="py-1 px-0.5 text-center">
+                            <td key={`${emp}-gia`}
+                              className={cn('py-1 px-0.5 text-center', !isEditG && 'cursor-pointer hover:bg-primary/5')}
+                              onClick={() => !isEditG && startEditCestoFab(codice, emp, 'giacenza', giac)}
+                            >
                               {isEditG ? (
-                                <input autoFocus type="number" min="0"
-                                  className="w-10 text-center text-xs border-2 border-primary rounded-md px-0.5 py-1 outline-none bg-white"
+                                <input autoFocus type="number" inputMode="numeric" min="0"
+                                  className="w-full min-w-[2.5rem] text-center text-xs border-2 border-primary rounded-md px-1 py-1.5 outline-none bg-white"
                                   value={editCestoFabVal}
                                   onChange={e => setEditCestoFabVal(e.target.value)}
+                                  onFocus={e => e.target.select()}
                                   onBlur={saveCestoFab}
                                   onKeyDown={e => e.key === 'Enter' && saveCestoFab()}
                                 />
                               ) : (
-                                <button
-                                  onClick={() => startEditCestoFab(codice, emp, 'giacenza', giac)}
-                                  className={cn(
-                                    'w-10 py-1 rounded-md border text-xs font-medium transition-all hover:border-primary hover:bg-primary/5',
-                                    giac > 0
-                                      ? 'border-gray-300 bg-white text-gray-700'
-                                      : 'border-dashed border-gray-300 bg-gray-50 text-gray-400'
-                                  )}
-                                >
+                                <span className={cn('text-xs font-medium', giac > 0 ? 'text-gray-700' : 'text-gray-300')}>
                                   {giac > 0 ? giac : '—'}
-                                </button>
+                                </span>
                               )}
                             </td>
                             {/* Ordinato */}
-                            <td key={`${emp}-ord`} className="py-1 px-0.5 text-center">
+                            <td key={`${emp}-ord`}
+                              className={cn('py-1 px-0.5 text-center', !isEditO && 'cursor-pointer hover:bg-green-50')}
+                              onClick={() => !isEditO && startEditCestoFab(codice, emp, 'ordinato', ord)}
+                            >
                               {isEditO ? (
-                                <input autoFocus type="number" min="0"
-                                  className="w-10 text-center text-xs border-2 border-green-500 rounded-md px-0.5 py-1 outline-none bg-white"
+                                <input autoFocus type="number" inputMode="numeric" min="0"
+                                  className="w-full min-w-[2.5rem] text-center text-xs border-2 border-green-500 rounded-md px-1 py-1.5 outline-none bg-white"
                                   value={editCestoFabVal}
                                   onChange={e => setEditCestoFabVal(e.target.value)}
+                                  onFocus={e => e.target.select()}
                                   onBlur={saveCestoFab}
                                   onKeyDown={e => e.key === 'Enter' && saveCestoFab()}
                                 />
                               ) : (
-                                <button
-                                  onClick={() => startEditCestoFab(codice, emp, 'ordinato', ord)}
-                                  className={cn(
-                                    'w-10 py-1 rounded-md border text-xs font-semibold transition-all hover:border-green-500 hover:bg-green-50',
-                                    ord > 0
-                                      ? 'border-green-300 bg-green-50/60 text-green-700'
-                                      : 'border-dashed border-gray-300 bg-gray-50 text-gray-400'
-                                  )}
-                                >
+                                <span className={cn('text-xs font-semibold', ord > 0 ? 'text-green-700' : 'text-gray-300')}>
                                   {ord > 0 ? ord : '—'}
-                                </button>
+                                </span>
                               )}
                             </td>
                             {/* Spia per emporio */}
