@@ -1715,8 +1715,20 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   const [sortFab, setSortFab] = useState<FabbisognoSortBy>('default');
   const [filtroFab, setFiltroFab] = useState<string | null>(null);
   const [anagratica, setAnagratica] = useState<AnagraticaState | null>(null);
-  const [openAlimentari, setOpenAlimentari] = useState(true);
-  const [openCesti, setOpenCesti] = useState(true);
+  const [openAlimentari, setOpenAlimentari] = useState(() => {
+    try { return localStorage.getItem('fab-alimentari-open') !== 'false'; } catch { return true; }
+  });
+  const [openCesti, setOpenCesti] = useState(() => {
+    try { return localStorage.getItem('fab-cesti-open') !== 'false'; } catch { return true; }
+  });
+  const toggleAlimentari = () => setOpenAlimentari(o => {
+    try { localStorage.setItem('fab-alimentari-open', String(!o)); } catch {}
+    return !o;
+  });
+  const toggleCesti = () => setOpenCesti(o => {
+    try { localStorage.setItem('fab-cesti-open', String(!o)); } catch {}
+    return !o;
+  });
   const [editingGO, setEditingGO] = useState<{ id: string; emporio: string; field: 'giacenza' | 'ordinato' } | null>(null);
   const [editGOVal, setEditGOVal] = useState('');
 
@@ -1904,11 +1916,11 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
 
       {/* ── Sottosezione: ALIMENTARI ──────────────────────────────────────────── */}
       <div className="space-y-3">
-        <button onClick={() => setOpenAlimentari(o => !o)} className="flex items-center gap-2 w-full text-left group">
+        <button onClick={toggleAlimentari} className="flex items-center gap-2 w-full text-left group px-3 py-2 rounded-lg border border-border/60 bg-gray-50 hover:bg-gray-100 transition-colors">
           <Package size={14} className="text-primary flex-shrink-0" />
-          <span className="text-sm font-semibold text-gray-700">Alimentari</span>
-          <div className="flex-1 h-px bg-border" />
-          {openAlimentari ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+          <span className="text-sm font-semibold text-gray-700 flex-1">Alimentari</span>
+          <span className="text-[10px] text-gray-400 font-normal">{openAlimentari ? 'Chiudi' : 'Apri'}</span>
+          <ChevronDown size={15} className={cn('text-gray-400 transition-transform duration-200 group-hover:text-primary', openAlimentari && 'rotate-180')} />
         </button>
 
         {openAlimentari && <>
@@ -2062,11 +2074,11 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
       {/* ── Sottosezione: CESTI ───────────────────────────────────────────────── */}
       {cestiFabbisogno.length > 0 && (
         <div className="space-y-2">
-          <button onClick={() => setOpenCesti(o => !o)} className="flex items-center gap-2 w-full text-left">
+          <button onClick={toggleCesti} className="flex items-center gap-2 w-full text-left group px-3 py-2 rounded-lg border border-border/60 bg-gray-50 hover:bg-gray-100 transition-colors">
             <ShoppingBasket size={14} className="text-primary flex-shrink-0" />
-            <span className="text-sm font-semibold text-gray-700">Cesti</span>
-            <div className="flex-1 h-px bg-border" />
-            {openCesti ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+            <span className="text-sm font-semibold text-gray-700 flex-1">Cesti</span>
+            <span className="text-[10px] text-gray-400 font-normal">{openCesti ? 'Chiudi' : 'Apri'}</span>
+            <ChevronDown size={15} className={cn('text-gray-400 transition-transform duration-200 group-hover:text-primary', openCesti && 'rotate-180')} />
           </button>
           {openCesti && <div className="overflow-x-auto -mx-4 px-4">
             <table className="min-w-full text-xs border-collapse">
