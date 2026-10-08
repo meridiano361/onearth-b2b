@@ -2109,6 +2109,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                 {/* Riga 1: intestazioni macro */}
                 <tr className="text-left text-gray-400 border-b border-border/40">
                   <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2} />
+                  <th className="pb-1 px-2 font-medium text-center text-blue-500" rowSpan={2}>Str.</th>
                   {EMPORI.map(e => (
                     <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40">
                       {e}
@@ -2151,6 +2152,9 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                             <p className="text-[10px] text-gray-400">{codice}</p>
                           </div>
                         </div>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <span className={cn('font-medium', totale > 0 ? 'text-blue-600' : 'text-gray-300')}>{totale > 0 ? totale : '—'}</span>
                       </td>
                       {EMPORI.map(emp => {
                         const fab = empMap[emp] ?? 0;
