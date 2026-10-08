@@ -1740,6 +1740,53 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
     return list;
   }, [prodotti, searchFab, filtroFab, sortFab]);
 
+  const { data: qteStrenneRows = [] } = useQuery<QtaRow[]>({
+    queryKey: ['oe-strenne-qte'],
+    queryFn: async () => {
+      const res = await fetch('/api/oe/alimentari/strenne/qte');
+      return res.ok ? res.json() : [];
+    },
+    staleTime: 30_000,
+  });
+
+  const { data: strennaFotoDbFab = {} } = useQuery<Record<string, { fotoUrl: string; nome: string; cestoCodice: string }>>({
+    queryKey: ['oe-strenne-foto'],
+    queryFn: async () => {
+      const res = await fetch('/api/oe/alimentari/strenne/foto');
+      return res.ok ? res.json() : {};
+    },
+    staleTime: 60_000,
+  });
+
+  const { data: cestiDbFab = [] } = useQuery<CestoDB[]>({
+    queryKey: ['oe-cesti'],
+    queryFn: () => fetch('/api/oe/alimentari/cesti').then(r => r.json()),
+    staleTime: 60_000,
+  });
+
+  const cestiFabbisogno = useMemo(() => {
+    const qteMap = new Map<string, number>();
+    qteStrenneRows.forEach(r => qteMap.set(`${r.barcode}:${r.emporio}`, r.qta));
+
+    const map = new Map<string, Record<string, number>>();
+    STRENNE.forEach(s => {
+      const codice = strennaFotoDbFab[s.barcode]?.cestoCodice || s.cestoCodice;
+      if (!map.has(codice)) map.set(codice, {});
+      const empMap = map.get(codice)!;
+      EMPORI.forEach(emp => {
+        empMap[emp] = (empMap[emp] ?? 0) + (qteMap.get(`${s.barcode}:${emp}`) ?? 0);
+      });
+    });
+
+    return [...map.entries()]
+      .map(([codice, empMap]) => {
+        const cesto = cestiDbFab.find(c => c.codice === codice);
+        const totale = EMPORI.reduce((a, e) => a + (empMap[e] ?? 0), 0);
+        return { codice, cesto, empMap, totale };
+      })
+      .filter(r => r.totale > 0);
+  }, [qteStrenneRows, strennaFotoDbFab, cestiDbFab]);
+
   const startEdit = (id: string, field: string, current: number) => {
     setEditing({ id, field });
     setEditVal(String(current));
@@ -1943,6 +1990,55 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
           </tbody>
         </table>
       </div>
+
+      {/* Cesti lichens da strenne */}
+      {cestiFabbisogno.length > 0 && (
+        <div className="mt-2">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <ShoppingBasket size={12} /> Cesti Lichens
+          </h3>
+          <div className="overflow-x-auto -mx-4 px-4">
+            <table className="min-w-full text-xs border-collapse">
+              <thead>
+                <tr className="text-left text-gray-400 border-b-2 border-border">
+                  <th className="pb-2 pr-3 font-medium min-w-[160px]">Cesto</th>
+                  {EMPORI.map(e => <th key={e} className="pb-2 px-2 font-medium text-center text-amber-600">{e}</th>)}
+                  <th className="pb-2 px-2 font-medium text-center font-bold text-gray-700">Totale</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cestiFabbisogno.map(({ codice, cesto, empMap, totale }) => (
+                  <tr key={codice} className="border-b border-border/40 hover:bg-gray-50">
+                    <td className="py-2 pr-3">
+                      <div className="flex items-center gap-2">
+                        {cesto?.fotoUrl
+                          ? <img src={cesto.fotoUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
+                          : <div className="w-6 h-6 rounded bg-gray-100 flex-shrink-0" />
+                        }
+                        <div>
+                          <p className="font-medium text-primary leading-tight">{cesto?.descrizione ?? codice}</p>
+                          <p className="text-[10px] text-gray-400">{codice}</p>
+                        </div>
+                      </div>
+                    </td>
+                    {EMPORI.map(emp => {
+                      const qta = empMap[emp] ?? 0;
+                      return (
+                        <td key={emp} className="py-2 px-2 text-center">
+                          <span className={cn('font-medium', qta > 0 ? 'text-amber-700' : 'text-gray-300')}>
+                            {qta > 0 ? qta : '—'}
+                          </span>
+                        </td>
+                      );
+                    })}
+                    <td className="py-2 px-2 text-center font-bold text-primary">{totale}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
     </>
   );
