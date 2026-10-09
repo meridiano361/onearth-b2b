@@ -31,7 +31,7 @@ function Tip({ children, text }: { children?: React.ReactNode; text: string }) {
   return (
     <span className="relative group/tip cursor-help inline-block">
       {children ?? <span className="inline-block w-3 h-1" />}
-      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 invisible group-hover/tip:visible z-[999] bg-gray-800 text-white text-[11px] leading-snug rounded px-2 py-1 whitespace-nowrap shadow-lg">
+      <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1.5 invisible group-hover/tip:visible z-[999] bg-gray-800 text-white text-[11px] leading-snug rounded px-2 py-1 whitespace-nowrap shadow-lg">
         {text}
       </span>
     </span>
@@ -2141,7 +2141,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                   const totOrdStr   = EMPORI.reduce((a, e) => a + getRowFab(e).ordinatoStr, 0);
 
                   const productNameCell = (
-                    <td className="py-1 pr-2 align-middle overflow-hidden" rowSpan={bothRows ? 2 : 1}>
+                    <td className="py-1 pr-2 align-middle overflow-hidden" rowSpan={bothRows ? 3 : 1}>
                       <button onClick={() => setAnagratica({ kind: 'prodotto', data: p })} className="flex items-center gap-2 text-left group/btn min-w-0 w-full">
                         {p.fotoUrl
                           ? <img src={p.fotoUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
@@ -2218,7 +2218,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                         </tr>
                       )}
                       {showScaf && (
-                        <tr className="border-b border-border/40 hover:bg-gray-50">
+                        <tr className={cn('hover:bg-gray-50', !bothRows && 'border-b border-border/40')}>
                           {!bothRows && productNameCell}
                           <td className="py-0.5 px-1 text-center">
                             <span className="text-[10px] font-semibold text-blue-600">Scf</span>
@@ -2293,6 +2293,46 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                           </td>
                         </tr>
                       )}
+                      {bothRows && (
+                        <tr className="border-b-2 border-border bg-gray-100/60">
+                          <td className="py-0.5 px-1 text-center">
+                            <span className="text-[10px] font-bold text-gray-500">Tot</span>
+                          </td>
+                          {EMPORI.map(emp => {
+                            const { qta: fabScf, giacenza: giaScf, ordinato: ordScf, giacenzaStr: giaStr, ordinatoStr: ordStr } = getRowFab(emp);
+                            const fabStr = fabbisognoStrennePerEmporio[p.nome]?.[emp] ?? 0;
+                            const fabTot = fabStr + fabScf;
+                            const giaTot = giaStr + giaScf;
+                            const ordTot = ordStr + ordScf;
+                            const spia = getSpia(giaTot, ordTot, fabTot);
+                            return (
+                              <Fragment key={emp}>
+                                <td className="py-0.5 px-0 text-center border-l border-border/40">
+                                  <span className={cn('text-xs font-bold', fabTot > 0 ? 'text-gray-800' : 'text-gray-300')}>{fabTot || '—'}</span>
+                                </td>
+                                <td className="py-0.5 px-0 text-center">
+                                  <span className={cn('text-xs', giaTot > 0 ? 'text-gray-600' : 'text-gray-300')}>{giaTot || '—'}</span>
+                                </td>
+                                <td className="py-0.5 px-0 text-center">
+                                  <span className={cn('text-xs', ordTot > 0 ? 'text-gray-600' : 'text-gray-300')}>{ordTot || '—'}</span>
+                                </td>
+                                <td className="py-0.5 px-0 text-center">
+                                  {spia && <span className={cn('inline-block w-2 h-2 rounded-full', spiaClass(spia))} />}
+                                </td>
+                              </Fragment>
+                            );
+                          })}
+                          <td className="py-0.5 px-0.5 text-center border-l border-border/40">
+                            <span className={cn('text-xs font-bold', (strTotal + negTotal) > 0 ? 'text-gray-800' : 'text-gray-300')}>{(strTotal + negTotal) || '—'}</span>
+                          </td>
+                          <td className="py-0.5 px-0.5 text-center">
+                            <span className={cn('text-xs font-bold', (totGiaStr + totGiaScaf) > 0 ? 'text-gray-600' : 'text-gray-300')}>{(totGiaStr + totGiaScaf) || '—'}</span>
+                          </td>
+                          <td className="py-0.5 px-0.5 text-center">
+                            <span className={cn('text-xs font-bold', (totOrdStr + totOrdScaf) > 0 ? 'text-gray-600' : 'text-gray-300')}>{(totOrdStr + totOrdScaf) || '—'}</span>
+                          </td>
+                        </tr>
+                      )}
                     </Fragment>
                   );
                 })}
@@ -2344,11 +2384,29 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                 </tr>
               </thead>
               <tbody>
-                {cestiFabbisogno.filter(({ codice, cesto }) => {
-                  if (!searchFab) return true;
-                  const q = searchFab.toLowerCase();
-                  return codice.toLowerCase().includes(q) || (cesto?.descrizione ?? '').toLowerCase().includes(q);
-                }).map(({ codice, cesto, empMap, totale }) => {
+                {(() => {
+                  const filteredCesti = cestiFabbisogno.filter(({ codice, cesto }) => {
+                    if (!searchFab) return true;
+                    const q = searchFab.toLowerCase();
+                    return codice.toLowerCase().includes(q) || (cesto?.descrizione ?? '').toLowerCase().includes(q);
+                  });
+                  const getCestoRowGlobal = (codice: string, emp: string) => {
+                    const r = cestiFabDb.find(r => r.cestoCodice === codice && r.emporio === emp);
+                    const ovr = cestiOverrides[`${codice}:${emp}`];
+                    return {
+                      giacenza: ovr?.giacenza !== undefined ? ovr.giacenza : (r?.giacenza ?? 0),
+                      ordinato: ovr?.ordinato !== undefined ? ovr.ordinato : (r?.ordinato ?? 0),
+                    };
+                  };
+                  const cestiGrandFab = EMPORI.reduce((acc, e) => { acc[e] = filteredCesti.reduce((s, { empMap }) => s + (empMap[e] ?? 0), 0); return acc; }, {} as Record<string, number>);
+                  const cestiGrandGia = EMPORI.reduce((acc, e) => { acc[e] = filteredCesti.reduce((s, { codice }) => s + getCestoRowGlobal(codice, e).giacenza, 0); return acc; }, {} as Record<string, number>);
+                  const cestiGrandOrd = EMPORI.reduce((acc, e) => { acc[e] = filteredCesti.reduce((s, { codice }) => s + getCestoRowGlobal(codice, e).ordinato, 0); return acc; }, {} as Record<string, number>);
+                  const grandTotFab = filteredCesti.reduce((s, { totale }) => s + totale, 0);
+                  const grandTotGia = EMPORI.reduce((s, e) => s + cestiGrandGia[e], 0);
+                  const grandTotOrd = EMPORI.reduce((s, e) => s + cestiGrandOrd[e], 0);
+
+                  return (<>
+                  {filteredCesti.map(({ codice, cesto, empMap, totale }) => {
                   const dbRow = (emp: string) => cestiFabDb.find(r => r.cestoCodice === codice && r.emporio === emp);
                   const getCestoRow = (emp: string) => {
                     const r = dbRow(emp);
@@ -2455,6 +2513,47 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                     </tr>
                   );
                 })}
+                <tr className="border-t-2 border-border bg-gray-100/80">
+                  <td className="py-1 pr-2">
+                    <span className="text-xs font-bold text-gray-600">Totali</span>
+                  </td>
+                  <td className="py-0.5 px-1 text-center">
+                    <span className="text-[10px] font-semibold text-amber-600">Str</span>
+                  </td>
+                  {EMPORI.map(emp => {
+                    const fab = cestiGrandFab[emp] ?? 0;
+                    const gia = cestiGrandGia[emp] ?? 0;
+                    const ord = cestiGrandOrd[emp] ?? 0;
+                    const spia = getSpia(gia, ord, fab);
+                    return (
+                      <Fragment key={emp}>
+                        <td className="py-0.5 px-0.5 text-center border-l border-border/40">
+                          <span className={cn('text-xs font-bold', fab > 0 ? 'text-blue-600' : 'text-gray-300')}>{fab || '—'}</span>
+                        </td>
+                        <td className="py-0.5 px-0.5 text-center">
+                          <span className={cn('text-xs font-bold', gia > 0 ? 'text-gray-700' : 'text-gray-300')}>{gia || '—'}</span>
+                        </td>
+                        <td className="py-0.5 px-0.5 text-center">
+                          <span className={cn('text-xs font-bold', ord > 0 ? 'text-green-700' : 'text-gray-300')}>{ord || '—'}</span>
+                        </td>
+                        <td className="py-0.5 px-0.5 text-center">
+                          {spia && <span className={cn('inline-block w-2 h-2 rounded-full', spiaClass(spia))} />}
+                        </td>
+                      </Fragment>
+                    );
+                  })}
+                  <td className="py-0.5 px-0.5 text-center border-l border-border/40">
+                    <span className={cn('text-xs font-bold', grandTotFab > 0 ? 'text-amber-600' : 'text-gray-300')}>{grandTotFab || '—'}</span>
+                  </td>
+                  <td className="py-0.5 px-0.5 text-center">
+                    <span className={cn('text-xs font-bold', grandTotGia > 0 ? 'text-gray-700' : 'text-gray-300')}>{grandTotGia || '—'}</span>
+                  </td>
+                  <td className="py-0.5 px-0.5 text-center">
+                    <span className={cn('text-xs font-bold', grandTotOrd > 0 ? 'text-green-700' : 'text-gray-300')}>{grandTotOrd || '—'}</span>
+                  </td>
+                </tr>
+                </>);
+                })()}
               </tbody>
             </table>
           </div>}
