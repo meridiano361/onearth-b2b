@@ -1733,6 +1733,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   });
   const [editingGO, setEditingGO] = useState<{ id: string; emporio: string; field: 'giacenza' | 'ordinato'; row: 'strenne' | 'scaffale' } | null>(null);
   const [editGOVal, setEditGOVal] = useState('');
+  const [filtroDestinazione, setFiltroDestinazione] = useState<'tutte' | 'strenne' | 'scaffale'>('tutte');
 
   const fornitoriFab = useMemo(() => {
     const set = new Set(prodotti.map(p => p.fornitore).filter(Boolean));
@@ -1983,6 +1984,19 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               ))}
             </div>
           )}
+          {/* Filtro destinazione */}
+          <div className="flex gap-1.5 items-center">
+            <span className="text-[11px] text-gray-400">Mostra:</span>
+            {(['tutte', 'strenne', 'scaffale'] as const).map(d => (
+              <button key={d} onClick={() => setFiltroDestinazione(d)}
+                className={cn('px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors',
+                  filtroDestinazione === d ? 'bg-primary text-white border-primary' : 'border-border text-gray-500 hover:border-gray-400'
+                )}
+              >
+                {d === 'tutte' ? 'Tutte' : d.charAt(0).toUpperCase() + d.slice(1)}
+              </button>
+            ))}
+          </div>
           <div className="overflow-x-auto -mx-4 px-4">
             <table className="min-w-full text-xs border-collapse">
               <thead>
@@ -1999,176 +2013,190 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                 <tr className="text-left text-gray-400 border-b-2 border-border">
                   {EMPORI.map(e => (
                     <>
-                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px]">Fab</th>
-                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px]">Gia</th>
-                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px]">Ord</th>
+                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-9">Fab</th>
+                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9">Gia</th>
+                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9">Ord</th>
                       <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5" />
                     </>
                   ))}
-                  <th className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px]">Fab</th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px]">Gia</th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px]">Ord</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-9">Fab</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9">Gia</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9">Ord</th>
                 </tr>
               </thead>
               <tbody>
                 {displayedProdotti.map(p => {
+                  const showStr = filtroDestinazione !== 'scaffale';
+                  const showScaf = filtroDestinazione !== 'strenne';
+                  const bothRows = showStr && showScaf;
                   const strTotal = fabbisognoStrenneCalc[p.nome] ?? 0;
                   const negTotal = EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
-                  const totFab = strTotal + negTotal;
                   const totGia = EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.giacenza ?? 0), 0);
                   const totOrd = EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.ordinato ?? 0), 0);
 
+                  const productNameCell = (
+                    <td className="py-1.5 pr-3 align-middle" rowSpan={bothRows ? 2 : 1}>
+                      <button onClick={() => setAnagratica({ kind: 'prodotto', data: p })} className="flex items-center gap-2 text-left group/btn">
+                        {p.fotoUrl
+                          ? <img src={p.fotoUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
+                          : <div className="w-6 h-6 rounded bg-gray-100 flex-shrink-0" />
+                        }
+                        <p className="font-medium text-primary leading-tight group-hover/btn:underline">{p.nome}</p>
+                      </button>
+                    </td>
+                  );
+
+                  const totaliGiaOrd = (
+                    <>
+                      <td className="py-1 px-1.5 text-center align-middle" rowSpan={bothRows ? 2 : 1}>
+                        <span className={cn('text-xs font-bold', totGia > 0 ? 'text-gray-700' : 'text-gray-300')}>{totGia || '—'}</span>
+                      </td>
+                      <td className="py-1 px-1.5 text-center align-middle" rowSpan={bothRows ? 2 : 1}>
+                        <span className={cn('text-xs font-bold', totOrd > 0 ? 'text-green-700' : 'text-gray-300')}>{totOrd || '—'}</span>
+                      </td>
+                    </>
+                  );
+
                   return (
                     <Fragment key={p.id}>
-                      {/* ── Riga Strenne ── */}
-                      <tr className="bg-amber-50/40 hover:bg-amber-50/70">
-                        <td className="py-1.5 pr-3 align-middle" rowSpan={2}>
-                          <button onClick={() => setAnagratica({ kind: 'prodotto', data: p })} className="flex items-center gap-2 text-left group/btn">
-                            {p.fotoUrl
-                              ? <img src={p.fotoUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
-                              : <div className="w-6 h-6 rounded bg-gray-100 flex-shrink-0" />
-                            }
-                            <p className="font-medium text-primary leading-tight group-hover/btn:underline">{p.nome}</p>
-                          </button>
-                        </td>
-                        <td className="py-1 px-2 text-center">
-                          <span className="text-[11px] font-semibold text-amber-600">Strenne</span>
-                        </td>
-                        {EMPORI.map(emp => {
-                          const fabStr = fabbisognoStrennePerEmporio[p.nome]?.[emp] ?? 0;
-                          const row = p.fabbisognoEmpori.find(r => r.emporio === emp);
-                          const fabNeg = row?.qta ?? 0;
-                          const fab = fabStr + fabNeg;
-                          const gia = row?.giacenza ?? 0;
-                          const ord = row?.ordinato ?? 0;
-                          const empCoperto = fab > 0 && (gia + ord) >= fab;
-                          const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza' && editingGO.row === 'strenne';
-                          const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato' && editingGO.row === 'strenne';
-                          return (
-                            <Fragment key={emp}>
-                              <td className="py-1 px-0.5 text-center border-l border-border/40">
-                                <span className={cn('text-xs font-medium', fabStr > 0 ? 'text-amber-600' : 'text-gray-200')}>{fabStr > 0 ? fabStr : '—'}</span>
-                              </td>
-                              <td className={cn('py-1 px-0.5 text-center', !isEditGia && 'cursor-pointer hover:bg-primary/5')}
-                                onClick={() => !isEditGia && startEditGO(p.id, emp, 'giacenza', gia, 'strenne')}>
-                                {isEditGia ? (
-                                  <input autoFocus type="number" inputMode="numeric" min="0"
-                                    className="w-full min-w-[2.5rem] text-center text-xs border-2 border-primary rounded-md px-1 py-1.5 outline-none bg-white"
-                                    value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
-                                    onFocus={e => e.target.select()}
-                                    onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
-                                  />
-                                ) : (
-                                  <span className={cn('text-xs font-medium', gia > 0 ? 'text-gray-700' : 'text-gray-300')}>{gia > 0 ? gia : '—'}</span>
-                                )}
-                              </td>
-                              <td className={cn('py-1 px-0.5 text-center', !isEditOrd && 'cursor-pointer hover:bg-green-50')}
-                                onClick={() => !isEditOrd && startEditGO(p.id, emp, 'ordinato', ord, 'strenne')}>
-                                {isEditOrd ? (
-                                  <input autoFocus type="number" inputMode="numeric" min="0"
-                                    className="w-full min-w-[2.5rem] text-center text-xs border-2 border-green-500 rounded-md px-1 py-1.5 outline-none bg-white"
-                                    value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
-                                    onFocus={e => e.target.select()}
-                                    onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
-                                  />
-                                ) : (
-                                  <span className={cn('text-xs font-semibold', ord > 0 ? 'text-green-700' : 'text-gray-300')}>{ord > 0 ? ord : '—'}</span>
-                                )}
-                              </td>
-                              <td className="py-1.5 px-1 text-center">
-                                {fab > 0 && (
-                                  <span className={cn('inline-block w-2 h-2 rounded-full', empCoperto ? 'bg-green-500' : 'bg-red-500')}
-                                    title={empCoperto ? 'Coperto' : `Mancano ${fab - gia - ord}`} />
-                                )}
-                              </td>
-                            </Fragment>
-                          );
-                        })}
-                        {/* Totali Fab strenne | Gia (rowSpan) | Ord (rowSpan) */}
-                        <td className="py-1 px-1.5 text-center border-l border-border/40">
-                          <span className={cn('text-xs font-bold', strTotal > 0 ? 'text-amber-600' : 'text-gray-300')}>{strTotal || '—'}</span>
-                        </td>
-                        <td className="py-1 px-1.5 text-center align-middle" rowSpan={2}>
-                          <span className={cn('text-xs font-bold', totGia > 0 ? 'text-gray-700' : 'text-gray-300')}>{totGia || '—'}</span>
-                        </td>
-                        <td className="py-1 px-1.5 text-center align-middle" rowSpan={2}>
-                          <span className={cn('text-xs font-bold', totOrd > 0 ? 'text-green-700' : 'text-gray-300')}>{totOrd || '—'}</span>
-                        </td>
-                      </tr>
-                      {/* ── Riga Scaffale ── */}
-                      <tr className="border-b border-border/40 hover:bg-gray-50">
-                        <td className="py-1 px-2 text-center">
-                          <span className="text-[11px] font-semibold text-blue-600">Scaffale</span>
-                        </td>
-                        {EMPORI.map(emp => {
-                          const row = p.fabbisognoEmpori.find(r => r.emporio === emp);
-                          const fabNeg = row?.qta ?? 0;
-                          const fabStr = fabbisognoStrennePerEmporio[p.nome]?.[emp] ?? 0;
-                          const fab = fabNeg + fabStr;
-                          const gia = row?.giacenza ?? 0;
-                          const ord = row?.ordinato ?? 0;
-                          const empCoperto = fab > 0 && (gia + ord) >= fab;
-                          const isEditFab = editing?.id === p.id && editing?.field === emp;
-                          const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza' && editingGO.row === 'scaffale';
-                          const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato' && editingGO.row === 'scaffale';
-                          return (
-                            <Fragment key={emp}>
-                              <td className="py-1 px-0.5 text-center border-l border-border/40">
-                                {isEditFab ? (
-                                  <input autoFocus type="number" inputMode="numeric" min="0"
-                                    className="w-full min-w-[2.5rem] text-center text-xs border-2 border-primary rounded-md px-1 py-1 outline-none bg-white"
-                                    value={editVal} onChange={e => setEditVal(e.target.value)}
-                                    onFocus={e => e.target.select()}
-                                    onBlur={() => saveEmporio(p.id, emp)} onKeyDown={e => e.key === 'Enter' && saveEmporio(p.id, emp)}
-                                  />
-                                ) : (
-                                  <button onClick={() => startEdit(p.id, emp, fabNeg)}
-                                    className={cn('w-full py-0.5 rounded text-xs font-medium transition-all hover:ring-1 hover:ring-primary/40', fabNeg > 0 ? 'text-blue-600' : 'text-gray-300')}
-                                  >
-                                    {fabNeg > 0 ? fabNeg : '—'}
-                                  </button>
-                                )}
-                              </td>
-                              <td className={cn('py-1 px-0.5 text-center', !isEditGia && 'cursor-pointer hover:bg-primary/5')}
-                                onClick={() => !isEditGia && startEditGO(p.id, emp, 'giacenza', gia, 'scaffale')}>
-                                {isEditGia ? (
-                                  <input autoFocus type="number" inputMode="numeric" min="0"
-                                    className="w-full min-w-[2.5rem] text-center text-xs border-2 border-primary rounded-md px-1 py-1.5 outline-none bg-white"
-                                    value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
-                                    onFocus={e => e.target.select()}
-                                    onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
-                                  />
-                                ) : (
-                                  <span className={cn('text-xs font-medium', gia > 0 ? 'text-gray-700' : 'text-gray-300')}>{gia > 0 ? gia : '—'}</span>
-                                )}
-                              </td>
-                              <td className={cn('py-1 px-0.5 text-center', !isEditOrd && 'cursor-pointer hover:bg-green-50')}
-                                onClick={() => !isEditOrd && startEditGO(p.id, emp, 'ordinato', ord, 'scaffale')}>
-                                {isEditOrd ? (
-                                  <input autoFocus type="number" inputMode="numeric" min="0"
-                                    className="w-full min-w-[2.5rem] text-center text-xs border-2 border-green-500 rounded-md px-1 py-1.5 outline-none bg-white"
-                                    value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
-                                    onFocus={e => e.target.select()}
-                                    onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
-                                  />
-                                ) : (
-                                  <span className={cn('text-xs font-semibold', ord > 0 ? 'text-green-700' : 'text-gray-300')}>{ord > 0 ? ord : '—'}</span>
-                                )}
-                              </td>
-                              <td className="py-1.5 px-1 text-center">
-                                {fab > 0 && (
-                                  <span className={cn('inline-block w-2 h-2 rounded-full', empCoperto ? 'bg-green-500' : 'bg-red-500')}
-                                    title={empCoperto ? 'Coperto' : `Mancano ${fab - gia - ord}`} />
-                                )}
-                              </td>
-                            </Fragment>
-                          );
-                        })}
-                        {/* Totale Fab scaffale (gia e ord vengono dalla riga strenne con rowSpan=2) */}
-                        <td className="py-1 px-1.5 text-center border-l border-border/40">
-                          <span className={cn('text-xs font-bold', negTotal > 0 ? 'text-blue-600' : 'text-gray-300')}>{negTotal || '—'}</span>
-                        </td>
-                      </tr>
+                      {showStr && (
+                        <tr className={cn('bg-amber-50/40 hover:bg-amber-50/70', !showScaf && 'border-b border-border/40')}>
+                          {productNameCell}
+                          <td className="py-1 px-2 text-center">
+                            <span className="text-[11px] font-semibold text-amber-600">Strenne</span>
+                          </td>
+                          {EMPORI.map(emp => {
+                            const fabStr = fabbisognoStrennePerEmporio[p.nome]?.[emp] ?? 0;
+                            const row = p.fabbisognoEmpori.find(r => r.emporio === emp);
+                            const gia = row?.giacenza ?? 0;
+                            const ord = row?.ordinato ?? 0;
+                            const fabNeg = row?.qta ?? 0;
+                            const fab = fabStr + fabNeg;
+                            const empCoperto = fab > 0 && (gia + ord) >= fab;
+                            const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza' && editingGO.row === 'strenne';
+                            const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato' && editingGO.row === 'strenne';
+                            return (
+                              <Fragment key={emp}>
+                                <td className="py-1 px-0.5 text-center border-l border-border/40">
+                                  <span className={cn('text-xs font-medium', fabStr > 0 ? 'text-amber-600' : 'text-gray-200')}>{fabStr > 0 ? fabStr : '—'}</span>
+                                </td>
+                                <td className="py-1 px-0.5 text-center cursor-pointer hover:bg-blue-50 transition-colors"
+                                  onClick={() => !isEditGia && startEditGO(p.id, emp, 'giacenza', gia, 'strenne')}>
+                                  {isEditGia ? (
+                                    <input autoFocus type="number" inputMode="numeric" min="0"
+                                      className="w-full text-center text-xs border-2 border-primary rounded px-0 py-1 outline-none bg-white"
+                                      value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
+                                      onFocus={e => e.target.select()}
+                                      onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
+                                    />
+                                  ) : (
+                                    <span className={cn('text-xs font-medium', gia > 0 ? 'text-gray-700' : 'text-gray-400 border-b border-dashed border-gray-300')}>{gia > 0 ? gia : '—'}</span>
+                                  )}
+                                </td>
+                                <td className="py-1 px-0.5 text-center cursor-pointer hover:bg-green-50 transition-colors"
+                                  onClick={() => !isEditOrd && startEditGO(p.id, emp, 'ordinato', ord, 'strenne')}>
+                                  {isEditOrd ? (
+                                    <input autoFocus type="number" inputMode="numeric" min="0"
+                                      className="w-full text-center text-xs border-2 border-green-500 rounded px-0 py-1 outline-none bg-white"
+                                      value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
+                                      onFocus={e => e.target.select()}
+                                      onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
+                                    />
+                                  ) : (
+                                    <span className={cn('text-xs font-semibold', ord > 0 ? 'text-green-700' : 'text-gray-400 border-b border-dashed border-gray-300')}>{ord > 0 ? ord : '—'}</span>
+                                  )}
+                                </td>
+                                <td className="py-1.5 px-1 text-center">
+                                  {fab > 0 && (
+                                    <span className={cn('inline-block w-2 h-2 rounded-full', empCoperto ? 'bg-green-500' : 'bg-red-500')}
+                                      title={empCoperto ? 'Coperto' : `Mancano ${fab - gia - ord}`} />
+                                  )}
+                                </td>
+                              </Fragment>
+                            );
+                          })}
+                          <td className="py-1 px-1.5 text-center border-l border-border/40">
+                            <span className={cn('text-xs font-bold', strTotal > 0 ? 'text-amber-600' : 'text-gray-300')}>{strTotal || '—'}</span>
+                          </td>
+                          {totaliGiaOrd}
+                        </tr>
+                      )}
+                      {showScaf && (
+                        <tr className="border-b border-border/40 hover:bg-gray-50">
+                          {!bothRows && productNameCell}
+                          <td className="py-1 px-2 text-center">
+                            <span className="text-[11px] font-semibold text-blue-600">Scaffale</span>
+                          </td>
+                          {EMPORI.map(emp => {
+                            const row = p.fabbisognoEmpori.find(r => r.emporio === emp);
+                            const fabNeg = row?.qta ?? 0;
+                            const fabStr = fabbisognoStrennePerEmporio[p.nome]?.[emp] ?? 0;
+                            const fab = fabNeg + fabStr;
+                            const gia = row?.giacenza ?? 0;
+                            const ord = row?.ordinato ?? 0;
+                            const empCoperto = fab > 0 && (gia + ord) >= fab;
+                            const isEditFab = editing?.id === p.id && editing?.field === emp;
+                            const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza' && editingGO.row === 'scaffale';
+                            const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato' && editingGO.row === 'scaffale';
+                            return (
+                              <Fragment key={emp}>
+                                <td className="py-1 px-0.5 text-center border-l border-border/40">
+                                  {isEditFab ? (
+                                    <input autoFocus type="number" inputMode="numeric" min="0"
+                                      className="w-full text-center text-xs border-2 border-primary rounded px-0 py-1 outline-none bg-white"
+                                      value={editVal} onChange={e => setEditVal(e.target.value)}
+                                      onFocus={e => e.target.select()}
+                                      onBlur={() => saveEmporio(p.id, emp)} onKeyDown={e => e.key === 'Enter' && saveEmporio(p.id, emp)}
+                                    />
+                                  ) : (
+                                    <button onClick={() => startEdit(p.id, emp, fabNeg)}
+                                      className={cn('w-full py-0.5 rounded text-xs font-medium transition-all hover:bg-blue-50', fabNeg > 0 ? 'text-blue-600' : 'text-gray-400 border-b border-dashed border-gray-300')}
+                                    >
+                                      {fabNeg > 0 ? fabNeg : '—'}
+                                    </button>
+                                  )}
+                                </td>
+                                <td className="py-1 px-0.5 text-center cursor-pointer hover:bg-blue-50 transition-colors"
+                                  onClick={() => !isEditGia && startEditGO(p.id, emp, 'giacenza', gia, 'scaffale')}>
+                                  {isEditGia ? (
+                                    <input autoFocus type="number" inputMode="numeric" min="0"
+                                      className="w-full text-center text-xs border-2 border-primary rounded px-0 py-1 outline-none bg-white"
+                                      value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
+                                      onFocus={e => e.target.select()}
+                                      onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
+                                    />
+                                  ) : (
+                                    <span className={cn('text-xs font-medium', gia > 0 ? 'text-gray-700' : 'text-gray-400 border-b border-dashed border-gray-300')}>{gia > 0 ? gia : '—'}</span>
+                                  )}
+                                </td>
+                                <td className="py-1 px-0.5 text-center cursor-pointer hover:bg-green-50 transition-colors"
+                                  onClick={() => !isEditOrd && startEditGO(p.id, emp, 'ordinato', ord, 'scaffale')}>
+                                  {isEditOrd ? (
+                                    <input autoFocus type="number" inputMode="numeric" min="0"
+                                      className="w-full text-center text-xs border-2 border-green-500 rounded px-0 py-1 outline-none bg-white"
+                                      value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
+                                      onFocus={e => e.target.select()}
+                                      onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
+                                    />
+                                  ) : (
+                                    <span className={cn('text-xs font-semibold', ord > 0 ? 'text-green-700' : 'text-gray-400 border-b border-dashed border-gray-300')}>{ord > 0 ? ord : '—'}</span>
+                                  )}
+                                </td>
+                                <td className="py-1.5 px-1 text-center">
+                                  {fab > 0 && (
+                                    <span className={cn('inline-block w-2 h-2 rounded-full', empCoperto ? 'bg-green-500' : 'bg-red-500')}
+                                      title={empCoperto ? 'Coperto' : `Mancano ${fab - gia - ord}`} />
+                                  )}
+                                </td>
+                              </Fragment>
+                            );
+                          })}
+                          <td className="py-1 px-1.5 text-center border-l border-border/40">
+                            <span className={cn('text-xs font-bold', negTotal > 0 ? 'text-blue-600' : 'text-gray-300')}>{negTotal || '—'}</span>
+                          </td>
+                          {!bothRows && totaliGiaOrd}
+                        </tr>
+                      )}
                     </Fragment>
                   );
                 })}
@@ -2205,15 +2233,15 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                 <tr className="text-left text-gray-400 border-b-2 border-border">
                   {EMPORI.map(e => (
                     <>
-                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px]">Fab</th>
-                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px]">Gia</th>
-                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px]">Ord</th>
+                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-9">Fab</th>
+                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9">Gia</th>
+                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9">Ord</th>
                       <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5" />
                     </>
                   ))}
-                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px]">Fab</th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px]">Gia</th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px]">Ord</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-9">Fab</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9">Gia</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9">Ord</th>
                 </tr>
               </thead>
               <tbody>
@@ -2261,12 +2289,12 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                             </td>
                             {/* Giacenza */}
                             <td key={`${emp}-gia`}
-                              className={cn('py-1 px-0.5 text-center', !isEditG && 'cursor-pointer hover:bg-primary/5')}
+                              className="py-1 px-0.5 text-center cursor-pointer hover:bg-blue-50 transition-colors"
                               onClick={() => !isEditG && startEditCestoFab(codice, emp, 'giacenza', giac)}
                             >
                               {isEditG ? (
                                 <input autoFocus type="number" inputMode="numeric" min="0"
-                                  className="w-full min-w-[2.5rem] text-center text-xs border-2 border-primary rounded-md px-1 py-1.5 outline-none bg-white"
+                                  className="w-full text-center text-xs border-2 border-primary rounded px-0 py-1 outline-none bg-white"
                                   value={editCestoFabVal}
                                   onChange={e => setEditCestoFabVal(e.target.value)}
                                   onFocus={e => e.target.select()}
@@ -2274,19 +2302,19 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                   onKeyDown={e => e.key === 'Enter' && saveCestoFab()}
                                 />
                               ) : (
-                                <span className={cn('text-xs font-medium', giac > 0 ? 'text-gray-700' : 'text-gray-300')}>
+                                <span className={cn('text-xs font-medium', giac > 0 ? 'text-gray-700' : 'text-gray-400 border-b border-dashed border-gray-300')}>
                                   {giac > 0 ? giac : '—'}
                                 </span>
                               )}
                             </td>
                             {/* Ordinato */}
                             <td key={`${emp}-ord`}
-                              className={cn('py-1 px-0.5 text-center', !isEditO && 'cursor-pointer hover:bg-green-50')}
+                              className="py-1 px-0.5 text-center cursor-pointer hover:bg-green-50 transition-colors"
                               onClick={() => !isEditO && startEditCestoFab(codice, emp, 'ordinato', ord)}
                             >
                               {isEditO ? (
                                 <input autoFocus type="number" inputMode="numeric" min="0"
-                                  className="w-full min-w-[2.5rem] text-center text-xs border-2 border-green-500 rounded-md px-1 py-1.5 outline-none bg-white"
+                                  className="w-full text-center text-xs border-2 border-green-500 rounded px-0 py-1 outline-none bg-white"
                                   value={editCestoFabVal}
                                   onChange={e => setEditCestoFabVal(e.target.value)}
                                   onFocus={e => e.target.select()}
@@ -2294,7 +2322,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                   onKeyDown={e => e.key === 'Enter' && saveCestoFab()}
                                 />
                               ) : (
-                                <span className={cn('text-xs font-semibold', ord > 0 ? 'text-green-700' : 'text-gray-300')}>
+                                <span className={cn('text-xs font-semibold', ord > 0 ? 'text-green-700' : 'text-gray-400 border-b border-dashed border-gray-300')}>
                                   {ord > 0 ? ord : '—'}
                                 </span>
                               )}
