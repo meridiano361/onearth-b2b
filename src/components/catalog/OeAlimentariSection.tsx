@@ -2091,30 +2091,30 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
             <table className="min-w-full text-xs border-collapse">
               <thead>
                 <tr className="text-left text-gray-400 border-b border-border/40">
-                  <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2} />
-                  <th className="pb-1 px-2 font-medium text-center text-gray-500" rowSpan={2}><Tip text="Strenne = prodotto destinato a cesti regalo · Scaffale = prodotto in vendita diretta in negozio">DESTINAZIONE</Tip></th>
+                  <th className="pb-1 pr-2 font-medium min-w-[110px]" rowSpan={2} />
+                  <th className="pb-1 px-1 font-medium text-center text-gray-400 w-10" rowSpan={2}><Tip text="Strenne = cesti regalo · Scaffale = vendita diretta in negozio">DEST</Tip></th>
                   {EMPORI.map(e => {
                     const nomiEmpori: Record<string, string> = { MN: 'Mantova', RE: 'Reggio Emilia', CR: 'Cremona', CA: 'Cagliari', VI: 'Vicenza' };
                     return (
-                      <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40">
+                      <th key={e} colSpan={4} className="pb-1 px-0.5 font-semibold text-center text-amber-700 border-l border-border/40">
                         <Tip text={nomiEmpori[e] ?? e}>{e}</Tip>
                       </th>
                     );
                   })}
-                  <th colSpan={3} className="pb-1 px-1 font-semibold text-center text-gray-500 border-l border-border/40"><Tip text="Totali su tutti gli empori">Totali</Tip></th>
+                  <th colSpan={3} className="pb-1 px-0.5 font-semibold text-center text-gray-500 border-l border-border/40"><Tip text="Totali su tutti gli empori">Tot</Tip></th>
                 </tr>
                 <tr className="text-left text-gray-400 border-b-2 border-border">
                   {EMPORI.map(e => (
                     <>
-                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-9"><Tip text="Fabbisogno: quantità necessaria per questo emporio">Fab</Tip></th>
-                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9"><Tip text="Giacenza: quantità attualmente in magazzino">Gia</Tip></th>
-                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9"><Tip text="Ordinato: quantità già ordinata al fornitore">Ord</Tip></th>
-                      <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5"><Tip text="🟢 giacenza copre il fabbisogno · 🟠 giacenza+ordini coprono · 🔴 scoperto">●</Tip></th>
+                      <th key={`${e}-fab`} className="pb-1 px-0.5 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-6"><Tip text="Fabbisogno: quantità necessaria per questo emporio">Fab</Tip></th>
+                      <th key={`${e}-gia`} className="pb-1 px-0.5 font-medium text-center text-gray-400 text-[10px] w-6"><Tip text="Giacenza: quantità attualmente in magazzino">Gia</Tip></th>
+                      <th key={`${e}-ord`} className="pb-1 px-0.5 font-medium text-center text-green-600 text-[10px] w-6"><Tip text="Ordinato: quantità già ordinata al fornitore">Ord</Tip></th>
+                      <th key={`${e}-spia`} className="pb-1 text-center text-[10px] w-4"><Tip text="🟢 giacenza copre · 🟠 ordini coprono · 🔴 scoperto">●</Tip></th>
                     </>
                   ))}
-                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-9"><Tip text="Totale fabbisogno su tutti gli empori">Fab</Tip></th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9"><Tip text="Totale giacenze su tutti gli empori">Gia</Tip></th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9"><Tip text="Totale ordinato su tutti gli empori">Ord</Tip></th>
+                  <th className="pb-1 px-0.5 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-6"><Tip text="Totale fabbisogno">Fab</Tip></th>
+                  <th className="pb-1 px-0.5 font-medium text-center text-gray-400 text-[10px] w-6"><Tip text="Totale giacenze">Gia</Tip></th>
+                  <th className="pb-1 px-0.5 font-medium text-center text-green-600 text-[10px] w-6"><Tip text="Totale ordinato">Ord</Tip></th>
                 </tr>
               </thead>
               <tbody>
@@ -2141,7 +2141,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                   const totOrdStr   = EMPORI.reduce((a, e) => a + getRowFab(e).ordinatoStr, 0);
 
                   const productNameCell = (
-                    <td className="py-1.5 pr-3 align-middle" rowSpan={bothRows ? 2 : 1}>
+                    <td className="py-1 pr-2 align-middle" rowSpan={bothRows ? 2 : 1}>
                       <button onClick={() => setAnagratica({ kind: 'prodotto', data: p })} className="flex items-center gap-2 text-left group/btn">
                         {p.fotoUrl
                           ? <img src={p.fotoUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
@@ -2157,8 +2157,8 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       {showStr && (
                         <tr className={cn('bg-amber-50/40 hover:bg-amber-50/70', !showScaf && 'border-b border-border/40')}>
                           {productNameCell}
-                          <td className="py-1 px-2 text-center">
-                            <span className="text-[11px] font-semibold text-amber-600">Strenne</span>
+                          <td className="py-0.5 px-1 text-center">
+                            <span className="text-[10px] font-semibold text-amber-600">Str</span>
                           </td>
                           {EMPORI.map(emp => {
                             const fabStr = fabbisognoStrennePerEmporio[p.nome]?.[emp] ?? 0;
@@ -2168,10 +2168,10 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                             const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinatoStr' && editingGO.row === 'strenne';
                             return (
                               <Fragment key={emp}>
-                                <td className="py-1 px-0.5 text-center border-l border-border/40">
+                                <td className="py-0.5 px-0 text-center border-l border-border/40">
                                   <span className={cn('text-xs font-medium', fabStr > 0 ? 'text-amber-600' : 'text-gray-200')}>{fabStr > 0 ? fabStr : '—'}</span>
                                 </td>
-                                <td className="py-1 px-0.5 text-center cursor-pointer hover:bg-blue-50 transition-colors"
+                                <td className="py-0.5 px-0 text-center cursor-pointer hover:bg-blue-50 transition-colors"
                                   onClick={() => !isEditGia && startEditGO(p.id, emp, 'giacenza', gia, 'strenne')}>
                                   {isEditGia ? (
                                     <input autoFocus type="number" inputMode="numeric" min="0"
@@ -2184,7 +2184,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                     <span className={cn('text-xs font-medium', gia > 0 ? 'text-gray-700' : 'text-gray-400 border-b border-dashed border-gray-300')}>{gia > 0 ? gia : '—'}</span>
                                   )}
                                 </td>
-                                <td className="py-1 px-0.5 text-center cursor-pointer hover:bg-green-50 transition-colors"
+                                <td className="py-0.5 px-0 text-center cursor-pointer hover:bg-green-50 transition-colors"
                                   onClick={() => !isEditOrd && startEditGO(p.id, emp, 'ordinato', ord, 'strenne')}>
                                   {isEditOrd ? (
                                     <input autoFocus type="number" inputMode="numeric" min="0"
@@ -2197,7 +2197,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                     <span className={cn('text-xs font-semibold', ord > 0 ? 'text-green-700' : 'text-gray-400 border-b border-dashed border-gray-300')}>{ord > 0 ? ord : '—'}</span>
                                   )}
                                 </td>
-                                <td className="py-1.5 px-1 text-center">
+                                <td className="py-0.5 px-0 text-center">
                                   {spia && (
                                     <span className={cn('inline-block w-2 h-2 rounded-full', spiaClass(spia))}
                                       title={spia === 'verde' ? 'In giacenza' : spia === 'arancione' ? `Coperto da ordini (mancano ${fabStr - gia} in giacenza)` : `Scoperto: mancano ${fabStr - gia - ord}`} />
@@ -2206,13 +2206,13 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                               </Fragment>
                             );
                           })}
-                          <td className="py-1 px-1.5 text-center border-l border-border/40">
+                          <td className="py-0.5 px-0.5 text-center border-l border-border/40">
                             <span className={cn('text-xs font-bold', strTotal > 0 ? 'text-amber-600' : 'text-gray-300')}>{strTotal || '—'}</span>
                           </td>
-                          <td className="py-1 px-1.5 text-center">
+                          <td className="py-0.5 px-0.5 text-center">
                             <span className={cn('text-xs font-bold', totGiaStr > 0 ? 'text-gray-700' : 'text-gray-300')}>{totGiaStr || '—'}</span>
                           </td>
-                          <td className="py-1 px-1.5 text-center">
+                          <td className="py-0.5 px-0.5 text-center">
                             <span className={cn('text-xs font-bold', totOrdStr > 0 ? 'text-green-700' : 'text-gray-300')}>{totOrdStr || '—'}</span>
                           </td>
                         </tr>
@@ -2220,8 +2220,8 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       {showScaf && (
                         <tr className="border-b border-border/40 hover:bg-gray-50">
                           {!bothRows && productNameCell}
-                          <td className="py-1 px-2 text-center">
-                            <span className="text-[11px] font-semibold text-blue-600">Scaffale</span>
+                          <td className="py-0.5 px-1 text-center">
+                            <span className="text-[10px] font-semibold text-blue-600">Scf</span>
                           </td>
                           {EMPORI.map(emp => {
                             const { qta: fabNeg, giacenza: gia, ordinato: ord } = getRowFab(emp);
@@ -2231,7 +2231,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                             const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato' && editingGO.row === 'scaffale';
                             return (
                               <Fragment key={emp}>
-                                <td className="py-1 px-0.5 text-center border-l border-border/40">
+                                <td className="py-0.5 px-0 text-center border-l border-border/40">
                                   {isEditFab ? (
                                     <input autoFocus type="number" inputMode="numeric" min="0"
                                       className="w-full text-center text-xs border-2 border-primary rounded px-0 py-1 outline-none bg-white"
@@ -2247,7 +2247,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                     </button>
                                   )}
                                 </td>
-                                <td className="py-1 px-0.5 text-center cursor-pointer hover:bg-blue-50 transition-colors"
+                                <td className="py-0.5 px-0 text-center cursor-pointer hover:bg-blue-50 transition-colors"
                                   onClick={() => !isEditGia && startEditGO(p.id, emp, 'giacenza', gia, 'scaffale')}>
                                   {isEditGia ? (
                                     <input autoFocus type="number" inputMode="numeric" min="0"
@@ -2260,7 +2260,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                     <span className={cn('text-xs font-medium', gia > 0 ? 'text-gray-700' : 'text-gray-400 border-b border-dashed border-gray-300')}>{gia > 0 ? gia : '—'}</span>
                                   )}
                                 </td>
-                                <td className="py-1 px-0.5 text-center cursor-pointer hover:bg-green-50 transition-colors"
+                                <td className="py-0.5 px-0 text-center cursor-pointer hover:bg-green-50 transition-colors"
                                   onClick={() => !isEditOrd && startEditGO(p.id, emp, 'ordinato', ord, 'scaffale')}>
                                   {isEditOrd ? (
                                     <input autoFocus type="number" inputMode="numeric" min="0"
@@ -2273,7 +2273,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                     <span className={cn('text-xs font-semibold', ord > 0 ? 'text-green-700' : 'text-gray-400 border-b border-dashed border-gray-300')}>{ord > 0 ? ord : '—'}</span>
                                   )}
                                 </td>
-                                <td className="py-1.5 px-1 text-center">
+                                <td className="py-0.5 px-0 text-center">
                                   {spia && (
                                     <span className={cn('inline-block w-2 h-2 rounded-full', spiaClass(spia))}
                                       title={spia === 'verde' ? 'In giacenza' : spia === 'arancione' ? `Coperto da ordini (mancano ${fabNeg - gia} in giacenza)` : `Scoperto: mancano ${fabNeg - gia - ord}`} />
@@ -2282,13 +2282,13 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                               </Fragment>
                             );
                           })}
-                          <td className="py-1 px-1.5 text-center border-l border-border/40">
+                          <td className="py-0.5 px-0.5 text-center border-l border-border/40">
                             <span className={cn('text-xs font-bold', negTotal > 0 ? 'text-blue-600' : 'text-gray-300')}>{negTotal || '—'}</span>
                           </td>
-                          <td className="py-1 px-1.5 text-center">
+                          <td className="py-0.5 px-0.5 text-center">
                             <span className={cn('text-xs font-bold', totGiaScaf > 0 ? 'text-gray-700' : 'text-gray-300')}>{totGiaScaf || '—'}</span>
                           </td>
-                          <td className="py-1 px-1.5 text-center">
+                          <td className="py-0.5 px-0.5 text-center">
                             <span className={cn('text-xs font-bold', totOrdScaf > 0 ? 'text-green-700' : 'text-gray-300')}>{totOrdScaf || '—'}</span>
                           </td>
                         </tr>
@@ -2316,8 +2316,8 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               <thead>
                 {/* Riga 1: intestazioni macro */}
                 <tr className="text-left text-gray-400 border-b border-border/40">
-                  <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2} />
-                  <th className="pb-1 px-2 font-medium text-center text-gray-500" rowSpan={2}><Tip text="I cesti sono interamente destinati alle strenne">DESTINAZIONE</Tip></th>
+                  <th className="pb-1 pr-2 font-medium min-w-[110px]" rowSpan={2} />
+                  <th className="pb-1 px-0.5 font-medium text-center text-gray-500 w-10" rowSpan={2}><Tip text="I cesti sono interamente destinati alle strenne">DEST</Tip></th>
                   {EMPORI.map(e => {
                     const nomiEmpori: Record<string, string> = { MN: 'Mantova', RE: 'Reggio Emilia', CR: 'Cremona', CA: 'Cagliari', VI: 'Vicenza' };
                     return (
@@ -2326,21 +2326,21 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       </th>
                     );
                   })}
-                  <th colSpan={3} className="pb-1 px-1 font-semibold text-center text-gray-500 border-l border-border/40"><Tip text="Totali su tutti gli empori">Totali</Tip></th>
+                  <th colSpan={3} className="pb-1 px-0.5 font-semibold text-center text-gray-500 border-l border-border/40"><Tip text="Totali su tutti gli empori">Tot</Tip></th>
                 </tr>
                 {/* Riga 2: sotto-intestazioni */}
                 <tr className="text-left text-gray-400 border-b-2 border-border">
                   {EMPORI.map(e => (
                     <>
-                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-9"><Tip text="Fabbisogno cesto per questo emporio">Fab</Tip></th>
-                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9"><Tip text="Giacenza: quantità in magazzino">Gia</Tip></th>
-                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9"><Tip text="Ordinato: quantità già ordinata">Ord</Tip></th>
-                      <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5"><Tip text="🟢 giacenza copre il fabbisogno · 🟠 giacenza+ordini coprono · 🔴 scoperto">●</Tip></th>
+                      <th key={`${e}-fab`} className="pb-1 px-0.5 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-6"><Tip text="Fabbisogno cesto per questo emporio">Fab</Tip></th>
+                      <th key={`${e}-gia`} className="pb-1 px-0.5 font-medium text-center text-gray-400 text-[10px] w-6"><Tip text="Giacenza: quantità in magazzino">Gia</Tip></th>
+                      <th key={`${e}-ord`} className="pb-1 px-0.5 font-medium text-center text-green-600 text-[10px] w-6"><Tip text="Ordinato: quantità già ordinata">Ord</Tip></th>
+                      <th key={`${e}-spia`} className="pb-1 px-0 text-center text-[10px] w-4"><Tip text="🟢 giacenza copre il fabbisogno · 🟠 giacenza+ordini coprono · 🔴 scoperto">●</Tip></th>
                     </>
                   ))}
-                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-9"><Tip text="Totale fabbisogno cesti su tutti gli empori">Fab</Tip></th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9"><Tip text="Totale giacenze su tutti gli empori">Gia</Tip></th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9"><Tip text="Totale ordinato su tutti gli empori">Ord</Tip></th>
+                  <th className="pb-1 px-0.5 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-6"><Tip text="Totale fabbisogno cesti su tutti gli empori">Fab</Tip></th>
+                  <th className="pb-1 px-0.5 font-medium text-center text-gray-400 text-[10px] w-6"><Tip text="Totale giacenze su tutti gli empori">Gia</Tip></th>
+                  <th className="pb-1 px-0.5 font-medium text-center text-green-600 text-[10px] w-6"><Tip text="Totale ordinato su tutti gli empori">Ord</Tip></th>
                 </tr>
               </thead>
               <tbody>
@@ -2364,7 +2364,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
 
                   return (
                     <tr key={codice} className="border-b border-border/40 hover:bg-gray-50">
-                      <td className="py-2 pr-3">
+                      <td className="py-1 pr-2">
                         <div className="flex items-center gap-2">
                           {cesto?.fotoUrl
                             ? <img src={cesto.fotoUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
@@ -2376,8 +2376,8 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                           </div>
                         </div>
                       </td>
-                      <td className="py-2 px-2 text-center">
-                        <span className="text-[11px] font-semibold text-amber-600">Strenne</span>
+                      <td className="py-0.5 px-1 text-center">
+                        <span className="text-[10px] font-semibold text-amber-600">Str</span>
                       </td>
                       {EMPORI.map(emp => {
                         const fab = empMap[emp] ?? 0;
@@ -2387,14 +2387,14 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                         return (
                           <>
                             {/* Fabbisogno */}
-                            <td key={`${emp}-fab`} className="py-1.5 px-1 text-center border-l border-border/40">
+                            <td key={`${emp}-fab`} className="py-0.5 px-0.5 text-center border-l border-border/40">
                               <span className={cn('font-medium', fab > 0 ? 'text-blue-600' : 'text-gray-300')}>
                                 {fab > 0 ? fab : '—'}
                               </span>
                             </td>
                             {/* Giacenza */}
                             <td key={`${emp}-gia`}
-                              className="py-1 px-0.5 text-center cursor-pointer hover:bg-blue-50 transition-colors"
+                              className="py-0.5 px-0 text-center cursor-pointer hover:bg-blue-50 transition-colors"
                               onClick={() => !isEditG && startEditCestoFab(codice, emp, 'giacenza', giac)}
                             >
                               {isEditG ? (
@@ -2414,7 +2414,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                             </td>
                             {/* Ordinato */}
                             <td key={`${emp}-ord`}
-                              className="py-1 px-0.5 text-center cursor-pointer hover:bg-green-50 transition-colors"
+                              className="py-0.5 px-0 text-center cursor-pointer hover:bg-green-50 transition-colors"
                               onClick={() => !isEditO && startEditCestoFab(codice, emp, 'ordinato', ord)}
                             >
                               {isEditO ? (
@@ -2433,7 +2433,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                               )}
                             </td>
                             {/* Spia per emporio */}
-                            <td key={`${emp}-spia`} className="py-1.5 px-1 text-center">
+                            <td key={`${emp}-spia`} className="py-0.5 px-0 text-center">
                               {(() => { const s = getSpia(giac, ord, fab); return s ? (
                                 <span className={cn('inline-block w-2 h-2 rounded-full', spiaClass(s))}
                                   title={s === 'verde' ? 'In giacenza' : s === 'arancione' ? `Coperto da ordini (mancano ${fab - giac} in giacenza)` : `Scoperto: mancano ${fab - giac - ord}`} />
@@ -2443,13 +2443,13 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                         );
                       })}
                       {/* Totali */}
-                      <td className="py-1 px-1.5 text-center border-l border-border/40">
+                      <td className="py-0.5 px-0.5 text-center border-l border-border/40">
                         <span className={cn('text-xs font-bold', totale > 0 ? 'text-amber-600' : 'text-gray-300')}>{totale || '—'}</span>
                       </td>
-                      <td className="py-1 px-1.5 text-center">
+                      <td className="py-0.5 px-0.5 text-center">
                         <span className={cn('text-xs font-bold', totGiacenza > 0 ? 'text-gray-700' : 'text-gray-300')}>{totGiacenza || '—'}</span>
                       </td>
-                      <td className="py-1 px-1.5 text-center">
+                      <td className="py-0.5 px-0.5 text-center">
                         <span className={cn('text-xs font-bold', totOrdinato > 0 ? 'text-green-700' : 'text-gray-300')}>{totOrdinato || '—'}</span>
                       </td>
                     </tr>
