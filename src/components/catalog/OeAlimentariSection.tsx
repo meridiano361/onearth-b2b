@@ -1731,7 +1731,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
     try { localStorage.setItem('fab-cesti-open', String(!o)); } catch {}
     return !o;
   });
-  const [editingGO, setEditingGO] = useState<{ id: string; emporio: string; field: 'giacenza' | 'ordinato' } | null>(null);
+  const [editingGO, setEditingGO] = useState<{ id: string; emporio: string; field: 'giacenza' | 'ordinato'; row: 'strenne' | 'scaffale' } | null>(null);
   const [editGOVal, setEditGOVal] = useState('');
 
   const fornitoriFab = useMemo(() => {
@@ -1900,8 +1900,8 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
 
   const cellKey = (id: string, field: string) => `${id}:${field}`;
 
-  const startEditGO = (id: string, emporio: string, field: 'giacenza' | 'ordinato', current: number) => {
-    setEditingGO({ id, emporio, field });
+  const startEditGO = (id: string, emporio: string, field: 'giacenza' | 'ordinato', current: number, row: 'strenne' | 'scaffale') => {
+    setEditingGO({ id, emporio, field, row });
     setEditGOVal(String(current));
   };
 
@@ -2043,15 +2043,15 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                           const gia = row?.giacenza ?? 0;
                           const ord = row?.ordinato ?? 0;
                           const empCoperto = fab > 0 && (gia + ord) >= fab;
-                          const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza';
-                          const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato';
+                          const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza' && editingGO.row === 'strenne';
+                          const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato' && editingGO.row === 'strenne';
                           return (
                             <Fragment key={emp}>
                               <td className="py-1 px-0.5 text-center border-l border-border/40">
                                 <span className={cn('text-xs font-medium', fabStr > 0 ? 'text-amber-600' : 'text-gray-200')}>{fabStr > 0 ? fabStr : '—'}</span>
                               </td>
                               <td className={cn('py-1 px-0.5 text-center', !isEditGia && 'cursor-pointer hover:bg-primary/5')}
-                                onClick={() => !isEditGia && startEditGO(p.id, emp, 'giacenza', gia)}>
+                                onClick={() => !isEditGia && startEditGO(p.id, emp, 'giacenza', gia, 'strenne')}>
                                 {isEditGia ? (
                                   <input autoFocus type="number" inputMode="numeric" min="0"
                                     className="w-full min-w-[2.5rem] text-center text-xs border-2 border-primary rounded-md px-1 py-1.5 outline-none bg-white"
@@ -2064,7 +2064,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                 )}
                               </td>
                               <td className={cn('py-1 px-0.5 text-center', !isEditOrd && 'cursor-pointer hover:bg-green-50')}
-                                onClick={() => !isEditOrd && startEditGO(p.id, emp, 'ordinato', ord)}>
+                                onClick={() => !isEditOrd && startEditGO(p.id, emp, 'ordinato', ord, 'strenne')}>
                                 {isEditOrd ? (
                                   <input autoFocus type="number" inputMode="numeric" min="0"
                                     className="w-full min-w-[2.5rem] text-center text-xs border-2 border-green-500 rounded-md px-1 py-1.5 outline-none bg-white"
@@ -2111,8 +2111,8 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                           const ord = row?.ordinato ?? 0;
                           const empCoperto = fab > 0 && (gia + ord) >= fab;
                           const isEditFab = editing?.id === p.id && editing?.field === emp;
-                          const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza';
-                          const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato';
+                          const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza' && editingGO.row === 'scaffale';
+                          const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato' && editingGO.row === 'scaffale';
                           return (
                             <Fragment key={emp}>
                               <td className="py-1 px-0.5 text-center border-l border-border/40">
@@ -2132,7 +2132,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                 )}
                               </td>
                               <td className={cn('py-1 px-0.5 text-center', !isEditGia && 'cursor-pointer hover:bg-primary/5')}
-                                onClick={() => !isEditGia && startEditGO(p.id, emp, 'giacenza', gia)}>
+                                onClick={() => !isEditGia && startEditGO(p.id, emp, 'giacenza', gia, 'scaffale')}>
                                 {isEditGia ? (
                                   <input autoFocus type="number" inputMode="numeric" min="0"
                                     className="w-full min-w-[2.5rem] text-center text-xs border-2 border-primary rounded-md px-1 py-1.5 outline-none bg-white"
@@ -2145,7 +2145,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                 )}
                               </td>
                               <td className={cn('py-1 px-0.5 text-center', !isEditOrd && 'cursor-pointer hover:bg-green-50')}
-                                onClick={() => !isEditOrd && startEditGO(p.id, emp, 'ordinato', ord)}>
+                                onClick={() => !isEditOrd && startEditGO(p.id, emp, 'ordinato', ord, 'scaffale')}>
                                 {isEditOrd ? (
                                   <input autoFocus type="number" inputMode="numeric" min="0"
                                     className="w-full min-w-[2.5rem] text-center text-xs border-2 border-green-500 rounded-md px-1 py-1.5 outline-none bg-white"
