@@ -1863,11 +1863,12 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   const saveCestoFab = async () => {
     if (!editingCestoFab) return;
     const { codice, emporio, field } = editingCestoFab;
+    const val = Math.max(0, parseInt(editCestoFabVal) || 0);
+    setEditingCestoFab(null); // immediato: previene double-save da onBlur dopo Enter
     await fetch('/api/oe/alimentari/cesti/fabbisogno', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cestoCodice: codice, emporio, [field]: parseInt(editCestoFabVal) || 0 }),
+      body: JSON.stringify({ cestoCodice: codice, emporio, [field]: val }),
     });
-    setEditingCestoFab(null);
     refetchCestiFab();
     qc2.invalidateQueries({ queryKey: ['oe-cesti-fabbisogno'] });
   };
@@ -1878,12 +1879,14 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   };
 
   const saveEmporio = async (prodottoId: string, emporio: string) => {
+    if (!editing) return;
+    const val = Math.max(0, parseInt(editVal) || 0);
+    setEditing(null);
     setSaving(true);
     await fetch('/api/oe/alimentari/fabbisogno', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prodottoId, emporio, qta: parseInt(editVal) || 0 }),
+      body: JSON.stringify({ prodottoId, emporio, qta: val }),
     });
-    setEditing(null);
     setSaving(false);
     refetch();
   };
@@ -1901,6 +1904,15 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
 
   const cellKey = (id: string, field: string) => `${id}:${field}`;
 
+  const getSpia = (gia: number, ord: number, fab: number): 'verde' | 'arancione' | 'rosso' | null => {
+    if (fab <= 0) return null;
+    if (gia >= fab) return 'verde';
+    if (gia + ord >= fab) return 'arancione';
+    return 'rosso';
+  };
+  const spiaClass = (s: ReturnType<typeof getSpia>) =>
+    s === 'verde' ? 'bg-green-500' : s === 'arancione' ? 'bg-orange-400' : 'bg-red-500';
+
   const startEditGO = (id: string, emporio: string, field: 'giacenza' | 'ordinato', current: number, row: 'strenne' | 'scaffale') => {
     setEditingGO({ id, emporio, field, row });
     setEditGOVal(String(current));
@@ -1909,11 +1921,12 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   const saveGO = async () => {
     if (!editingGO) return;
     const { id, emporio, field } = editingGO;
+    const val = Math.max(0, parseInt(editGOVal) || 0);
+    setEditingGO(null); // immediato: previene double-save da onBlur dopo Enter
     await fetch('/api/oe/alimentari/fabbisogno', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prodottoId: id, emporio, [field]: parseInt(editGOVal) || 0 }),
+      body: JSON.stringify({ prodottoId: id, emporio, [field]: val }),
     });
-    setEditingGO(null);
     refetch();
   };
 
@@ -2070,9 +2083,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                             const row = p.fabbisognoEmpori.find(r => r.emporio === emp);
                             const gia = row?.giacenza ?? 0;
                             const ord = row?.ordinato ?? 0;
-                            const fabNeg = row?.qta ?? 0;
-                            const fab = fabStr + fabNeg;
-                            const empCoperto = fab > 0 && (gia + ord) >= fab;
+                            const spia = getSpia(gia, ord, fabStr);
                             const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza' && editingGO.row === 'strenne';
                             const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato' && editingGO.row === 'strenne';
                             return (
@@ -2107,9 +2118,9 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                   )}
                                 </td>
                                 <td className="py-1.5 px-1 text-center">
-                                  {fab > 0 && (
-                                    <span className={cn('inline-block w-2 h-2 rounded-full', empCoperto ? 'bg-green-500' : 'bg-red-500')}
-                                      title={empCoperto ? 'Coperto' : `Mancano ${fab - gia - ord}`} />
+                                  {spia && (
+                                    <span className={cn('inline-block w-2 h-2 rounded-full', spiaClass(spia))}
+                                      title={spia === 'verde' ? 'In giacenza' : spia === 'arancione' ? `Coperto da ordini (mancano ${fabStr - gia} in giacenza)` : `Scoperto: mancano ${fabStr - gia - ord}`} />
                                   )}
                                 </td>
                               </Fragment>
@@ -2130,11 +2141,9 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                           {EMPORI.map(emp => {
                             const row = p.fabbisognoEmpori.find(r => r.emporio === emp);
                             const fabNeg = row?.qta ?? 0;
-                            const fabStr = fabbisognoStrennePerEmporio[p.nome]?.[emp] ?? 0;
-                            const fab = fabNeg + fabStr;
                             const gia = row?.giacenza ?? 0;
                             const ord = row?.ordinato ?? 0;
-                            const empCoperto = fab > 0 && (gia + ord) >= fab;
+                            const spia = getSpia(gia, ord, fabNeg);
                             const isEditFab = editing?.id === p.id && editing?.field === emp;
                             const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza' && editingGO.row === 'scaffale';
                             const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato' && editingGO.row === 'scaffale';
@@ -2183,9 +2192,9 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                                   )}
                                 </td>
                                 <td className="py-1.5 px-1 text-center">
-                                  {fab > 0 && (
-                                    <span className={cn('inline-block w-2 h-2 rounded-full', empCoperto ? 'bg-green-500' : 'bg-red-500')}
-                                      title={empCoperto ? 'Coperto' : `Mancano ${fab - gia - ord}`} />
+                                  {spia && (
+                                    <span className={cn('inline-block w-2 h-2 rounded-full', spiaClass(spia))}
+                                      title={spia === 'verde' ? 'In giacenza' : spia === 'arancione' ? `Coperto da ordini (mancano ${fabNeg - gia} in giacenza)` : `Scoperto: mancano ${fabNeg - gia - ord}`} />
                                   )}
                                 </td>
                               </Fragment>
@@ -2329,10 +2338,10 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                             </td>
                             {/* Spia per emporio */}
                             <td key={`${emp}-spia`} className="py-1.5 px-1 text-center">
-                              {fab > 0 && (
-                                <span className={cn('inline-block w-2 h-2 rounded-full', (giac + ord) >= fab ? 'bg-green-500' : 'bg-red-500')}
-                                  title={(giac + ord) >= fab ? 'Coperto' : `Mancano ${fab - giac - ord}`} />
-                              )}
+                              {(() => { const s = getSpia(giac, ord, fab); return s ? (
+                                <span className={cn('inline-block w-2 h-2 rounded-full', spiaClass(s))}
+                                  title={s === 'verde' ? 'In giacenza' : s === 'arancione' ? `Coperto da ordini (mancano ${fab - giac} in giacenza)` : `Scoperto: mancano ${fab - giac - ord}`} />
+                              ) : null; })()}
                             </td>
                           </>
                         );
