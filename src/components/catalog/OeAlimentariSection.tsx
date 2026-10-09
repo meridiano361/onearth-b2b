@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useMemo, Fragment } from 'react';
+import { useState, useRef, useMemo, useEffect, Fragment } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Pencil, Trash2, Plus, X, Check, ChevronDown, ChevronUp,
@@ -1734,6 +1734,13 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   const [editingGO, setEditingGO] = useState<{ id: string; emporio: string; field: 'giacenza' | 'ordinato'; row: 'strenne' | 'scaffale' } | null>(null);
   const [editGOVal, setEditGOVal] = useState('');
   const [filtroDestinazione, setFiltroDestinazione] = useState<'tutte' | 'strenne' | 'scaffale'>('tutte');
+  // optimistic overrides: chiave "prodottoId:emporio" -> valori aggiornati localmente
+  const [fabOverrides, setFabOverrides] = useState<Record<string, { giacenza?: number; ordinato?: number; qta?: number }>>({});
+  // optimistic overrides per cesti: chiave "cestoCodice:emporio"
+  const [cestiOverrides, setCestiOverrides] = useState<Record<string, { giacenza?: number; ordinato?: number }>>({});
+
+  // Cancella gli override quando i dati del server arrivano
+  useEffect(() => { setFabOverrides({}); }, [prodotti]);
 
   const fornitoriFab = useMemo(() => {
     const set = new Set(prodotti.map(p => p.fornitore).filter(Boolean));
@@ -1852,6 +1859,8 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
     staleTime: 30_000,
   });
 
+  useEffect(() => { setCestiOverrides({}); }, [cestiFabDb]);
+
   const [editingCestoFab, setEditingCestoFab] = useState<{ codice: string; emporio: string; field: 'giacenza' | 'ordinato' } | null>(null);
   const [editCestoFabVal, setEditCestoFabVal] = useState('');
 
@@ -1864,7 +1873,9 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
     if (!editingCestoFab) return;
     const { codice, emporio, field } = editingCestoFab;
     const val = Math.max(0, parseInt(editCestoFabVal) || 0);
-    setEditingCestoFab(null); // immediato: previene double-save da onBlur dopo Enter
+    setEditingCestoFab(null);
+    const ovrKey = `${codice}:${emporio}`;
+    setCestiOverrides(prev => ({ ...prev, [ovrKey]: { ...prev[ovrKey], [field]: val } }));
     await fetch('/api/oe/alimentari/cesti/fabbisogno', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cestoCodice: codice, emporio, [field]: val }),
@@ -1882,6 +1893,8 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
     if (!editing) return;
     const val = Math.max(0, parseInt(editVal) || 0);
     setEditing(null);
+    const ovrKey = `${prodottoId}:${emporio}`;
+    setFabOverrides(prev => ({ ...prev, [ovrKey]: { ...prev[ovrKey], qta: val } }));
     setSaving(true);
     await fetch('/api/oe/alimentari/fabbisogno', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -1922,7 +1935,9 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
     if (!editingGO) return;
     const { id, emporio, field } = editingGO;
     const val = Math.max(0, parseInt(editGOVal) || 0);
-    setEditingGO(null); // immediato: previene double-save da onBlur dopo Enter
+    setEditingGO(null);
+    const ovrKey = `${id}:${emporio}`;
+    setFabOverrides(prev => ({ ...prev, [ovrKey]: { ...prev[ovrKey], [field]: val } }));
     await fetch('/api/oe/alimentari/fabbisogno', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prodottoId: id, emporio, [field]: val }),
@@ -2015,26 +2030,29 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               <thead>
                 <tr className="text-left text-gray-400 border-b border-border/40">
                   <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2} />
-                  <th className="pb-1 px-2 font-medium text-center text-gray-500" rowSpan={2}>DESTINAZIONE</th>
-                  {EMPORI.map(e => (
-                    <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40">
-                      {e}
-                    </th>
-                  ))}
-                  <th colSpan={3} className="pb-1 px-1 font-semibold text-center text-gray-500 border-l border-border/40">Totali</th>
+                  <th className="pb-1 px-2 font-medium text-center text-gray-500 cursor-help" rowSpan={2} title="Strenne = prodotto destinato a cesti regalo · Scaffale = prodotto in vendita diretta in negozio">DESTINAZIONE</th>
+                  {EMPORI.map(e => {
+                    const nomiEmpori: Record<string, string> = { MN: 'Mantova', RE: 'Reggio Emilia', CR: 'Cremona', CA: 'Cagliari', VI: 'Vicenza' };
+                    return (
+                      <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40 cursor-help" title={nomiEmpori[e] ?? e}>
+                        {e}
+                      </th>
+                    );
+                  })}
+                  <th colSpan={3} className="pb-1 px-1 font-semibold text-center text-gray-500 border-l border-border/40" title="Totali su tutti gli empori">Totali</th>
                 </tr>
                 <tr className="text-left text-gray-400 border-b-2 border-border">
                   {EMPORI.map(e => (
                     <>
-                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-9">Fab</th>
-                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9">Gia</th>
-                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9">Ord</th>
-                      <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5" />
+                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-9 cursor-help" title="Fabbisogno: quantità necessaria per questo emporio">Fab</th>
+                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9 cursor-help" title="Giacenza: quantità attualmente in magazzino">Gia</th>
+                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9 cursor-help" title="Ordinato: quantità già ordinata al fornitore">Ord</th>
+                      <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5 cursor-help" title="Stato copertura: 🟢 giacenza copre · 🟠 ordini coprono · 🔴 scoperto" />
                     </>
                   ))}
-                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-9">Fab</th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9">Gia</th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9">Ord</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-9 cursor-help" title="Totale fabbisogno su tutti gli empori">Fab</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9 cursor-help" title="Totale giacenze su tutti gli empori">Gia</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9 cursor-help" title="Totale ordinato su tutti gli empori">Ord</th>
                 </tr>
               </thead>
               <tbody>
@@ -2043,9 +2061,18 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                   const showScaf = filtroDestinazione !== 'strenne';
                   const bothRows = showStr && showScaf;
                   const strTotal = fabbisognoStrenneCalc[p.nome] ?? 0;
-                  const negTotal = EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
-                  const totGia = EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.giacenza ?? 0), 0);
-                  const totOrd = EMPORI.reduce((a, e) => a + (p.fabbisognoEmpori.find(r => r.emporio === e)?.ordinato ?? 0), 0);
+                  const getRowFab = (emp: string) => {
+                    const dbRow = p.fabbisognoEmpori.find(r => r.emporio === emp);
+                    const ovr = fabOverrides[`${p.id}:${emp}`];
+                    return {
+                      qta:      ovr?.qta      !== undefined ? ovr.qta      : (dbRow?.qta      ?? 0),
+                      giacenza: ovr?.giacenza !== undefined ? ovr.giacenza : (dbRow?.giacenza ?? 0),
+                      ordinato: ovr?.ordinato !== undefined ? ovr.ordinato : (dbRow?.ordinato ?? 0),
+                    };
+                  };
+                  const negTotal = EMPORI.reduce((a, e) => a + getRowFab(e).qta, 0);
+                  const totGia   = EMPORI.reduce((a, e) => a + getRowFab(e).giacenza, 0);
+                  const totOrd   = EMPORI.reduce((a, e) => a + getRowFab(e).ordinato, 0);
 
                   const productNameCell = (
                     <td className="py-1.5 pr-3 align-middle" rowSpan={bothRows ? 2 : 1}>
@@ -2080,9 +2107,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                           </td>
                           {EMPORI.map(emp => {
                             const fabStr = fabbisognoStrennePerEmporio[p.nome]?.[emp] ?? 0;
-                            const row = p.fabbisognoEmpori.find(r => r.emporio === emp);
-                            const gia = row?.giacenza ?? 0;
-                            const ord = row?.ordinato ?? 0;
+                            const { giacenza: gia, ordinato: ord } = getRowFab(emp);
                             const spia = getSpia(gia, ord, fabStr);
                             const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza' && editingGO.row === 'strenne';
                             const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato' && editingGO.row === 'strenne';
@@ -2139,10 +2164,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                             <span className="text-[11px] font-semibold text-blue-600">Scaffale</span>
                           </td>
                           {EMPORI.map(emp => {
-                            const row = p.fabbisognoEmpori.find(r => r.emporio === emp);
-                            const fabNeg = row?.qta ?? 0;
-                            const gia = row?.giacenza ?? 0;
-                            const ord = row?.ordinato ?? 0;
+                            const { qta: fabNeg, giacenza: gia, ordinato: ord } = getRowFab(emp);
                             const spia = getSpia(gia, ord, fabNeg);
                             const isEditFab = editing?.id === p.id && editing?.field === emp;
                             const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza' && editingGO.row === 'scaffale';
@@ -2230,26 +2252,29 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                 {/* Riga 1: intestazioni macro */}
                 <tr className="text-left text-gray-400 border-b border-border/40">
                   <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2} />
-                  <th className="pb-1 px-2 font-medium text-center text-gray-500" rowSpan={2}>DESTINAZIONE</th>
-                  {EMPORI.map(e => (
-                    <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40">
-                      {e}
-                    </th>
-                  ))}
-                  <th colSpan={3} className="pb-1 px-1 font-semibold text-center text-gray-500 border-l border-border/40">Totali</th>
+                  <th className="pb-1 px-2 font-medium text-center text-gray-500 cursor-help" rowSpan={2} title="I cesti sono interamente destinati alle strenne">DESTINAZIONE</th>
+                  {EMPORI.map(e => {
+                    const nomiEmpori: Record<string, string> = { MN: 'Mantova', RE: 'Reggio Emilia', CR: 'Cremona', CA: 'Cagliari', VI: 'Vicenza' };
+                    return (
+                      <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40 cursor-help" title={nomiEmpori[e] ?? e}>
+                        {e}
+                      </th>
+                    );
+                  })}
+                  <th colSpan={3} className="pb-1 px-1 font-semibold text-center text-gray-500 border-l border-border/40" title="Totali su tutti gli empori">Totali</th>
                 </tr>
                 {/* Riga 2: sotto-intestazioni */}
                 <tr className="text-left text-gray-400 border-b-2 border-border">
                   {EMPORI.map(e => (
                     <>
-                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-9">Fab</th>
-                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9">Gia</th>
-                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9">Ord</th>
-                      <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5" />
+                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-9 cursor-help" title="Fabbisogno cesto per questo emporio">Fab</th>
+                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9 cursor-help" title="Giacenza: quantità in magazzino">Gia</th>
+                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9 cursor-help" title="Ordinato: quantità già ordinata">Ord</th>
+                      <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5 cursor-help" title="🟢 giacenza copre · 🟠 ordini coprono · 🔴 scoperto" />
                     </>
                   ))}
-                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-9">Fab</th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9">Gia</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-9 cursor-help" title="Totale fabbisogno cesti su tutti gli empori">Fab</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9 cursor-help" title="Totale giacenze su tutti gli empori">Gia</th>
                   <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9">Ord</th>
                 </tr>
               </thead>
@@ -2260,8 +2285,16 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                   return codice.toLowerCase().includes(q) || (cesto?.descrizione ?? '').toLowerCase().includes(q);
                 }).map(({ codice, cesto, empMap, totale }) => {
                   const dbRow = (emp: string) => cestiFabDb.find(r => r.cestoCodice === codice && r.emporio === emp);
-                  const totGiacenza = EMPORI.reduce((a, e) => a + (dbRow(e)?.giacenza ?? 0), 0);
-                  const totOrdinato = EMPORI.reduce((a, e) => a + (dbRow(e)?.ordinato ?? 0), 0);
+                  const getCestoRow = (emp: string) => {
+                    const r = dbRow(emp);
+                    const ovr = cestiOverrides[`${codice}:${emp}`];
+                    return {
+                      giacenza: ovr?.giacenza !== undefined ? ovr.giacenza : (r?.giacenza ?? 0),
+                      ordinato: ovr?.ordinato !== undefined ? ovr.ordinato : (r?.ordinato ?? 0),
+                    };
+                  };
+                  const totGiacenza = EMPORI.reduce((a, e) => a + getCestoRow(e).giacenza, 0);
+                  const totOrdinato = EMPORI.reduce((a, e) => a + getCestoRow(e).ordinato, 0);
                   const coperto = totale > 0 && (totGiacenza + totOrdinato) >= totale;
 
                   return (
@@ -2283,9 +2316,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       </td>
                       {EMPORI.map(emp => {
                         const fab = empMap[emp] ?? 0;
-                        const row = dbRow(emp);
-                        const giac = row?.giacenza ?? 0;
-                        const ord = row?.ordinato ?? 0;
+                        const { giacenza: giac, ordinato: ord } = getCestoRow(emp);
                         const isEditG = editingCestoFab?.codice === codice && editingCestoFab.emporio === emp && editingCestoFab.field === 'giacenza';
                         const isEditO = editingCestoFab?.codice === codice && editingCestoFab.emporio === emp && editingCestoFab.field === 'ordinato';
                         return (
