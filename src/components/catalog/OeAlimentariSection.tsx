@@ -4,7 +4,7 @@ import { useState, useRef, useMemo, Fragment } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Pencil, Trash2, Plus, X, Check, ChevronDown, ChevronUp,
-  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info, TrendingUp, ImageIcon, ZoomIn,
+  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info, TrendingUp, ImageIcon, ZoomIn, Download,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
@@ -265,6 +265,35 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
     refetch();
   };
 
+  const exportCSV = () => {
+    const esc = (v: string | number | null | undefined) => {
+      const s = String(v ?? '');
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const fmt2 = (n: number) => n.toFixed(2).replace('.', ',');
+    const header = ['Nome', 'Fornitore', 'Formato', 'Codice', 'Barcode', 'IVA%', 'Costo II (€)', 'PVP II (€)', 'PVP consigliato (€)', 'Margine%', 'Stato', 'Note'];
+    const rows = filtered.map(p => [
+      esc(p.nome),
+      esc(p.fornitore),
+      esc(p.formato),
+      esc(p.codice),
+      esc(p.barcode),
+      esc(p.ivaPerc),
+      esc(fmt2(p.costoIi)),
+      esc(fmt2(p.pvpIi)),
+      esc(p.pvpConsigliato ? fmt2(p.pvpConsigliato) : ''),
+      esc(margine(p) ?? ''),
+      p.prezziConfermati ? 'Confermato' : 'Provvisorio',
+      esc(p.note),
+    ].join(';'));
+    const csv = [header.join(';'), ...rows].join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `alimentari_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     let list = prodotti.filter(p => {
@@ -335,6 +364,9 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
             <List size={14} />
           </button>
         </div>
+        <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 py-1.5 border border-border text-gray-600 text-xs rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0">
+          <Download size={13} /> CSV
+        </button>
         <button onClick={() => setAdding(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs rounded-lg hover:opacity-80 transition-opacity flex-shrink-0">
           <Plus size={13} /> Aggiungi
         </button>
