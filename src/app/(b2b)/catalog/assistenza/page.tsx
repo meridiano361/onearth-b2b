@@ -1,4 +1,4 @@
-// AGGIORNATO: 2026-10-09d
+// AGGIORNATO: 2026-10-09e
 
 import {
   LogIn, BookOpen, Heart, ShoppingBag, ShoppingCart, MapPin, Package,

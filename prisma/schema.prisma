@@ -1249,12 +1249,14 @@ model OeAlimentariProdotto {
 }
 
 model OeAlimentariFabbisognoEmpori {
-  prodottoId String   @map("prodotto_id")
-  emporio    String
-  qta        Int      @default(0)
-  giacenza   Int      @default(0)
-  ordinato   Int      @default(0)
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  prodottoId  String   @map("prodotto_id")
+  emporio     String
+  qta         Int      @default(0)
+  giacenza    Int      @default(0)
+  ordinato    Int      @default(0)
+  giacenzaStr Int      @default(0) @map("giacenza_str")
+  ordinatoStr Int      @default(0) @map("ordinato_str")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   prodotto OeAlimentariProdotto @relation(fields: [prodottoId], references: [id], onDelete: Cascade)
 

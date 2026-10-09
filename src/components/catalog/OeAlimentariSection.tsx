@@ -12,7 +12,7 @@ import { STRENNE, EMPORI, STRENNA_FOTO, type Emporio } from '@/data/oeAlimentari
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type FabbisognoEmpori = { emporio: string; qta: number; giacenza: number; ordinato: number };
+type FabbisognoEmpori = { emporio: string; qta: number; giacenza: number; ordinato: number; giacenzaStr: number; ordinatoStr: number };
 type Ordinato = { ordinato: number } | null;
 
 type Prodotto = {
@@ -1792,11 +1792,11 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
     try { localStorage.setItem('fab-cesti-open', String(!o)); } catch {}
     return !o;
   });
-  const [editingGO, setEditingGO] = useState<{ id: string; emporio: string; field: 'giacenza' | 'ordinato'; row: 'strenne' | 'scaffale' } | null>(null);
+  const [editingGO, setEditingGO] = useState<{ id: string; emporio: string; field: 'giacenza' | 'ordinato' | 'giacenzaStr' | 'ordinatoStr'; row: 'strenne' | 'scaffale' } | null>(null);
   const [editGOVal, setEditGOVal] = useState('');
   const [filtroDestinazione, setFiltroDestinazione] = useState<'tutte' | 'strenne' | 'scaffale'>('tutte');
   // optimistic overrides: chiave "prodottoId:emporio" -> valori aggiornati localmente
-  const [fabOverrides, setFabOverrides] = useState<Record<string, { giacenza?: number; ordinato?: number; qta?: number }>>({});
+  const [fabOverrides, setFabOverrides] = useState<Record<string, { giacenza?: number; ordinato?: number; giacenzaStr?: number; ordinatoStr?: number; qta?: number }>>({});
   // optimistic overrides per cesti: chiave "cestoCodice:emporio"
   const [cestiOverrides, setCestiOverrides] = useState<Record<string, { giacenza?: number; ordinato?: number }>>({});
 
@@ -1985,7 +1985,10 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   const spiaClass = (s: ReturnType<typeof getSpia>) =>
     s === 'verde' ? 'bg-green-500' : s === 'arancione' ? 'bg-orange-400' : 'bg-red-500';
 
-  const startEditGO = (id: string, emporio: string, field: 'giacenza' | 'ordinato', current: number, row: 'strenne' | 'scaffale') => {
+  const startEditGO = (id: string, emporio: string, baseField: 'giacenza' | 'ordinato', current: number, row: 'strenne' | 'scaffale') => {
+    const field = row === 'strenne'
+      ? (baseField === 'giacenza' ? 'giacenzaStr' : 'ordinatoStr')
+      : baseField;
     setEditingGO({ id, emporio, field, row });
     setEditGOVal(String(current));
   };
@@ -2124,14 +2127,18 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                     const dbRow = p.fabbisognoEmpori.find(r => r.emporio === emp);
                     const ovr = fabOverrides[`${p.id}:${emp}`];
                     return {
-                      qta:      ovr?.qta      !== undefined ? ovr.qta      : (dbRow?.qta      ?? 0),
-                      giacenza: ovr?.giacenza !== undefined ? ovr.giacenza : (dbRow?.giacenza ?? 0),
-                      ordinato: ovr?.ordinato !== undefined ? ovr.ordinato : (dbRow?.ordinato ?? 0),
+                      qta:         ovr?.qta         !== undefined ? ovr.qta         : (dbRow?.qta         ?? 0),
+                      giacenza:    ovr?.giacenza    !== undefined ? ovr.giacenza    : (dbRow?.giacenza    ?? 0),
+                      ordinato:    ovr?.ordinato    !== undefined ? ovr.ordinato    : (dbRow?.ordinato    ?? 0),
+                      giacenzaStr: ovr?.giacenzaStr !== undefined ? ovr.giacenzaStr : (dbRow?.giacenzaStr ?? 0),
+                      ordinatoStr: ovr?.ordinatoStr !== undefined ? ovr.ordinatoStr : (dbRow?.ordinatoStr ?? 0),
                     };
                   };
-                  const negTotal = EMPORI.reduce((a, e) => a + getRowFab(e).qta, 0);
-                  const totGia   = EMPORI.reduce((a, e) => a + getRowFab(e).giacenza, 0);
-                  const totOrd   = EMPORI.reduce((a, e) => a + getRowFab(e).ordinato, 0);
+                  const negTotal    = EMPORI.reduce((a, e) => a + getRowFab(e).qta, 0);
+                  const totGiaScaf  = EMPORI.reduce((a, e) => a + getRowFab(e).giacenza, 0);
+                  const totOrdScaf  = EMPORI.reduce((a, e) => a + getRowFab(e).ordinato, 0);
+                  const totGiaStr   = EMPORI.reduce((a, e) => a + getRowFab(e).giacenzaStr, 0);
+                  const totOrdStr   = EMPORI.reduce((a, e) => a + getRowFab(e).ordinatoStr, 0);
 
                   const productNameCell = (
                     <td className="py-1.5 pr-3 align-middle" rowSpan={bothRows ? 2 : 1}>
@@ -2145,17 +2152,6 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                     </td>
                   );
 
-                  const totaliGiaOrd = (
-                    <>
-                      <td className="py-1 px-1.5 text-center align-middle" rowSpan={bothRows ? 2 : 1}>
-                        <span className={cn('text-xs font-bold', totGia > 0 ? 'text-gray-700' : 'text-gray-300')}>{totGia || '—'}</span>
-                      </td>
-                      <td className="py-1 px-1.5 text-center align-middle" rowSpan={bothRows ? 2 : 1}>
-                        <span className={cn('text-xs font-bold', totOrd > 0 ? 'text-green-700' : 'text-gray-300')}>{totOrd || '—'}</span>
-                      </td>
-                    </>
-                  );
-
                   return (
                     <Fragment key={p.id}>
                       {showStr && (
@@ -2166,10 +2162,10 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                           </td>
                           {EMPORI.map(emp => {
                             const fabStr = fabbisognoStrennePerEmporio[p.nome]?.[emp] ?? 0;
-                            const { giacenza: gia, ordinato: ord } = getRowFab(emp);
+                            const { giacenzaStr: gia, ordinatoStr: ord } = getRowFab(emp);
                             const spia = getSpia(gia, ord, fabStr);
-                            const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza' && editingGO.row === 'strenne';
-                            const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato' && editingGO.row === 'strenne';
+                            const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenzaStr' && editingGO.row === 'strenne';
+                            const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinatoStr' && editingGO.row === 'strenne';
                             return (
                               <Fragment key={emp}>
                                 <td className="py-1 px-0.5 text-center border-l border-border/40">
@@ -2213,7 +2209,12 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                           <td className="py-1 px-1.5 text-center border-l border-border/40">
                             <span className={cn('text-xs font-bold', strTotal > 0 ? 'text-amber-600' : 'text-gray-300')}>{strTotal || '—'}</span>
                           </td>
-                          {totaliGiaOrd}
+                          <td className="py-1 px-1.5 text-center">
+                            <span className={cn('text-xs font-bold', totGiaStr > 0 ? 'text-gray-700' : 'text-gray-300')}>{totGiaStr || '—'}</span>
+                          </td>
+                          <td className="py-1 px-1.5 text-center">
+                            <span className={cn('text-xs font-bold', totOrdStr > 0 ? 'text-green-700' : 'text-gray-300')}>{totOrdStr || '—'}</span>
+                          </td>
                         </tr>
                       )}
                       {showScaf && (
@@ -2284,7 +2285,12 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                           <td className="py-1 px-1.5 text-center border-l border-border/40">
                             <span className={cn('text-xs font-bold', negTotal > 0 ? 'text-blue-600' : 'text-gray-300')}>{negTotal || '—'}</span>
                           </td>
-                          {!bothRows && totaliGiaOrd}
+                          <td className="py-1 px-1.5 text-center">
+                            <span className={cn('text-xs font-bold', totGiaScaf > 0 ? 'text-gray-700' : 'text-gray-300')}>{totGiaScaf || '—'}</span>
+                          </td>
+                          <td className="py-1 px-1.5 text-center">
+                            <span className={cn('text-xs font-bold', totOrdScaf > 0 ? 'text-green-700' : 'text-gray-300')}>{totOrdScaf || '—'}</span>
+                          </td>
                         </tr>
                       )}
                     </Fragment>
