@@ -2193,12 +2193,13 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                 {/* Riga 1: intestazioni macro */}
                 <tr className="text-left text-gray-400 border-b border-border/40">
                   <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2} />
-                  <th className="pb-1 px-2 font-medium text-center text-blue-500" rowSpan={2}>Str.</th>
+                  <th className="pb-1 px-2 font-medium text-center text-gray-500" rowSpan={2}>DESTINAZIONE</th>
                   {EMPORI.map(e => (
                     <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40">
                       {e}
                     </th>
                   ))}
+                  <th colSpan={3} className="pb-1 px-1 font-semibold text-center text-gray-500 border-l border-border/40">Totali</th>
                 </tr>
                 {/* Riga 2: sotto-intestazioni */}
                 <tr className="text-left text-gray-400 border-b-2 border-border">
@@ -2210,6 +2211,9 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5" />
                     </>
                   ))}
+                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px]">Fab</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px]">Gia</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px]">Ord</th>
                 </tr>
               </thead>
               <tbody>
@@ -2238,7 +2242,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                         </div>
                       </td>
                       <td className="py-2 px-2 text-center">
-                        <span className={cn('font-medium', totale > 0 ? 'text-blue-600' : 'text-gray-300')}>{totale > 0 ? totale : '—'}</span>
+                        <span className="text-[11px] font-semibold text-amber-600">Strenne</span>
                       </td>
                       {EMPORI.map(emp => {
                         const fab = empMap[emp] ?? 0;
@@ -2305,7 +2309,16 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                           </>
                         );
                       })}
-
+                      {/* Totali */}
+                      <td className="py-1 px-1.5 text-center border-l border-border/40">
+                        <span className={cn('text-xs font-bold', totale > 0 ? 'text-amber-600' : 'text-gray-300')}>{totale || '—'}</span>
+                      </td>
+                      <td className="py-1 px-1.5 text-center">
+                        <span className={cn('text-xs font-bold', totGiacenza > 0 ? 'text-gray-700' : 'text-gray-300')}>{totGiacenza || '—'}</span>
+                      </td>
+                      <td className="py-1 px-1.5 text-center">
+                        <span className={cn('text-xs font-bold', totOrdinato > 0 ? 'text-green-700' : 'text-gray-300')}>{totOrdinato || '—'}</span>
+                      </td>
                     </tr>
                   );
                 })}
