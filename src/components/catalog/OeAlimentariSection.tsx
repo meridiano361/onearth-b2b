@@ -1988,7 +1988,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               <thead>
                 <tr className="text-left text-gray-400 border-b border-border/40">
                   <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2} />
-                  <th className="pb-1 px-2 font-medium text-center text-blue-500" rowSpan={2}>TOTALE</th>
+                  <th className="pb-1 px-2 font-medium text-center text-gray-500" rowSpan={2}>DESTINAZIONE</th>
                   {EMPORI.map(e => (
                     <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40">
                       {e}
@@ -2032,8 +2032,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                           </button>
                         </td>
                         <td className="py-1 px-2 text-center">
-                          <span className={cn('text-xs font-medium', strTotal > 0 ? 'text-amber-600' : 'text-gray-300')}>{strTotal > 0 ? strTotal : '—'}</span>
-                          <div className="text-[9px] text-amber-400 leading-none">str.</div>
+                          <span className="text-[11px] font-semibold text-amber-600">Strenne</span>
                         </td>
                         {EMPORI.map(emp => {
                           const fabStr = fabbisognoStrennePerEmporio[p.nome]?.[emp] ?? 0;
@@ -2099,8 +2098,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       {/* ── Riga Scaffale ── */}
                       <tr className="border-b border-border/40 hover:bg-gray-50">
                         <td className="py-1 px-2 text-center">
-                          <span className={cn('text-xs font-medium', negTotal > 0 ? 'text-blue-600' : 'text-gray-300')}>{negTotal > 0 ? negTotal : '—'}</span>
-                          <div className="text-[9px] text-blue-400 leading-none">scaf.</div>
+                          <span className="text-[11px] font-semibold text-blue-600">Scaffale</span>
                         </td>
                         {EMPORI.map(emp => {
                           const row = p.fabbisognoEmpori.find(r => r.emporio === emp);
