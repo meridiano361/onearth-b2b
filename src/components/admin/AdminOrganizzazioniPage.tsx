@@ -7,6 +7,7 @@ import {
   Eye, EyeOff, KeyRound, Store, Globe, Radio, Package,
   Users, MapPin, Copy, CheckSquare, Square, Loader2, Send,
   ShoppingBag, Building, ShoppingCart, Tag, Landmark, X, Search, Download,
+  ArrowUp, ArrowDown, ArrowUpDown,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -545,6 +546,28 @@ export default function AdminOrganizzazioniPage() {
   const [orgBulkLoading, setOrgBulkLoading] = useState(false);
   const [orgBulkResetResults, setOrgBulkResetResults] = useState<{ name: string; password: string }[] | null>(null);
 
+  const [opSort, setOpSort] = useState<{ field: 'nome' | 'email'; dir: 'asc' | 'desc' }>({ field: 'nome', dir: 'asc' });
+
+  const sortOps = (ops: Operator[]) => [...ops].sort((a, b) => {
+    const va = opSort.field === 'nome' ? `${a.cognome} ${a.nome}` : a.email;
+    const vb = opSort.field === 'nome' ? `${b.cognome} ${b.nome}` : b.email;
+    const cmp = va.localeCompare(vb, 'it', { sensitivity: 'base' });
+    return opSort.dir === 'asc' ? cmp : -cmp;
+  });
+
+  function toggleOpSort(field: 'nome' | 'email') {
+    setOpSort(prev => prev.field === field
+      ? { field, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+      : { field, dir: 'asc' });
+  }
+
+  function SortIcon({ field }: { field: 'nome' | 'email' }) {
+    if (opSort.field !== field) return <ArrowUpDown size={10} className="text-gray-300 ml-0.5" />;
+    return opSort.dir === 'asc'
+      ? <ArrowUp size={10} className="text-primary ml-0.5" />
+      : <ArrowDown size={10} className="text-primary ml-0.5" />;
+  }
+
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-organizations'],
@@ -973,14 +996,18 @@ export default function AdminOrganizzazioniPage() {
                                         : <Square size={13} />}
                                     </button>
                                   </th>
-                                  <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Nome</th>
-                                  <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Email</th>
+                                  <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">
+                                    <button onClick={() => toggleOpSort('nome')} className="flex items-center gap-0.5 hover:text-primary transition-colors">Nome<SortIcon field="nome" /></button>
+                                  </th>
+                                  <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">
+                                    <button onClick={() => toggleOpSort('email')} className="flex items-center gap-0.5 hover:text-primary transition-colors">Email<SortIcon field="email" /></button>
+                                  </th>
                                   <th className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wider text-2xs">Stato</th>
                                   <th className="w-24"></th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-border">
-                                {ops.map((op) => {
+                                {sortOps(ops).map((op) => {
                                   const isSelected = selectedOpIds.has(op.id);
                                   return (
                                     <tr key={op.id} className={`transition-colors ${isSelected ? 'bg-accent/8' : 'hover:bg-cream/50'}`}>
@@ -1052,7 +1079,7 @@ export default function AdminOrganizzazioniPage() {
                                 : <Square size={13} />}
                               {allOrgOpsSelected ? 'Deseleziona tutti' : 'Seleziona tutti'}
                             </button>
-                            {ops.map((op) => {
+                            {sortOps(ops).map((op) => {
                               const isSelected = selectedOpIds.has(op.id);
                               return (
                                 <div

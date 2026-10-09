@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useMemo, useEffect, Fragment } from 'react';
+import { useState, useRef, useMemo, Fragment } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Pencil, Trash2, Plus, X, Check, ChevronDown, ChevronUp,
@@ -24,6 +24,19 @@ type Prodotto = {
   fabbisognoEmpori: FabbisognoEmpori[];
   ordinato: Ordinato;
 };
+
+// ── Tooltip inline ────────────────────────────────────────────────────────────
+
+function Tip({ children, text }: { children?: React.ReactNode; text: string }) {
+  return (
+    <span className="relative group/tip cursor-help inline-block">
+      {children ?? <span className="inline-block w-3 h-1" />}
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 invisible group-hover/tip:visible z-[999] bg-gray-800 text-white text-[11px] leading-snug rounded px-2 py-1 whitespace-nowrap shadow-lg">
+        {text}
+      </span>
+    </span>
+  );
+}
 
 // ── ImageLightbox ─────────────────────────────────────────────────────────────
 
@@ -77,9 +90,10 @@ function margine(p: Prodotto) {
 
 // ── Tab: Prodotti ─────────────────────────────────────────────────────────────
 
-function ProdottoFoto({ p, uploadFoto, fileRefs }: {
+function ProdottoFoto({ p, uploadFoto, deleteFoto, fileRefs }: {
   p: Prodotto;
   uploadFoto: (id: string, file: File) => void;
+  deleteFoto: (id: string) => void;
   fileRefs: React.MutableRefObject<Record<string, HTMLInputElement | null>>;
 }) {
   const [lightbox, setLightbox] = useState(false);
@@ -93,15 +107,24 @@ function ProdottoFoto({ p, uploadFoto, fileRefs }: {
               className="w-full h-full object-cover cursor-zoom-in"
               onClick={() => setLightbox(true)}
             />
-            {/* Camera button — bottom-right corner */}
-            <button
-              type="button"
-              onClick={e => { e.stopPropagation(); fileRefs.current[p.id]?.click(); }}
-              className="absolute bottom-0.5 right-0.5 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-              title="Sostituisci foto"
-            >
-              <Camera size={10} />
-            </button>
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); fileRefs.current[p.id]?.click(); }}
+                className="p-1 rounded-full bg-white/80 text-gray-700 hover:bg-white transition-colors"
+                title="Sostituisci foto"
+              >
+                <Camera size={11} />
+              </button>
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); deleteFoto(p.id); }}
+                className="p-1 rounded-full bg-white/80 text-red-500 hover:bg-white transition-colors"
+                title="Elimina foto"
+              >
+                <Trash2 size={11} />
+              </button>
+            </div>
           </>
         ) : (
           <div
@@ -233,6 +256,12 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
     if (!res.ok) { alert('Errore upload'); return; }
     const { url } = await res.json();
     await fetch(`/api/oe/alimentari/prodotti/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fotoUrl: url }) });
+    refetch();
+  };
+
+  const deleteFoto = async (id: string) => {
+    if (!confirm('Eliminare la foto?')) return;
+    await fetch(`/api/oe/alimentari/prodotti/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fotoUrl: null }) });
     refetch();
   };
 
@@ -410,7 +439,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
             return (
               <div key={p.id} className="border border-border rounded-xl bg-white overflow-hidden">
                 <div className="flex gap-3 p-3">
-                  <ProdottoFoto p={p} uploadFoto={uploadFoto} fileRefs={fileRefs} />
+                  <ProdottoFoto p={p} uploadFoto={uploadFoto} deleteFoto={deleteFoto} fileRefs={fileRefs} />
                   <div className="flex-1 min-w-0">
                     {p.fornitore && (
                       <span className={cn('inline-block text-[10px] font-medium px-1.5 py-0.5 rounded mb-1', fornitoreBadge(p.fornitore))}>
@@ -476,7 +505,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
             return (
               <div key={p.id} className="border border-border rounded-xl bg-white overflow-hidden">
                 <div className="flex items-center gap-3 p-3">
-                  <ProdottoFoto p={p} uploadFoto={uploadFoto} fileRefs={fileRefs} />
+                  <ProdottoFoto p={p} uploadFoto={uploadFoto} deleteFoto={deleteFoto} fileRefs={fileRefs} />
                   {/* Info */}
                   <div className="flex-1 min-w-0 space-y-0.5">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -1740,7 +1769,6 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
   const [cestiOverrides, setCestiOverrides] = useState<Record<string, { giacenza?: number; ordinato?: number }>>({});
 
   // Cancella gli override quando i dati del server arrivano
-  useEffect(() => { setFabOverrides({}); }, [prodotti]);
 
   const fornitoriFab = useMemo(() => {
     const set = new Set(prodotti.map(p => p.fornitore).filter(Boolean));
@@ -1859,7 +1887,6 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
     staleTime: 30_000,
   });
 
-  useEffect(() => { setCestiOverrides({}); }, [cestiFabDb]);
 
   const [editingCestoFab, setEditingCestoFab] = useState<{ codice: string; emporio: string; field: 'giacenza' | 'ordinato' } | null>(null);
   const [editCestoFabVal, setEditCestoFabVal] = useState('');
@@ -2030,29 +2057,29 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               <thead>
                 <tr className="text-left text-gray-400 border-b border-border/40">
                   <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2} />
-                  <th className="pb-1 px-2 font-medium text-center text-gray-500 cursor-help" rowSpan={2} title="Strenne = prodotto destinato a cesti regalo · Scaffale = prodotto in vendita diretta in negozio">DESTINAZIONE</th>
+                  <th className="pb-1 px-2 font-medium text-center text-gray-500" rowSpan={2}><Tip text="Strenne = prodotto destinato a cesti regalo · Scaffale = prodotto in vendita diretta in negozio">DESTINAZIONE</Tip></th>
                   {EMPORI.map(e => {
                     const nomiEmpori: Record<string, string> = { MN: 'Mantova', RE: 'Reggio Emilia', CR: 'Cremona', CA: 'Cagliari', VI: 'Vicenza' };
                     return (
-                      <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40 cursor-help" title={nomiEmpori[e] ?? e}>
-                        {e}
+                      <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40">
+                        <Tip text={nomiEmpori[e] ?? e}>{e}</Tip>
                       </th>
                     );
                   })}
-                  <th colSpan={3} className="pb-1 px-1 font-semibold text-center text-gray-500 border-l border-border/40" title="Totali su tutti gli empori">Totali</th>
+                  <th colSpan={3} className="pb-1 px-1 font-semibold text-center text-gray-500 border-l border-border/40"><Tip text="Totali su tutti gli empori">Totali</Tip></th>
                 </tr>
                 <tr className="text-left text-gray-400 border-b-2 border-border">
                   {EMPORI.map(e => (
                     <>
-                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-9 cursor-help" title="Fabbisogno: quantità necessaria per questo emporio">Fab</th>
-                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9 cursor-help" title="Giacenza: quantità attualmente in magazzino">Gia</th>
-                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9 cursor-help" title="Ordinato: quantità già ordinata al fornitore">Ord</th>
-                      <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5 cursor-help" title="Stato copertura: 🟢 giacenza copre · 🟠 ordini coprono · 🔴 scoperto" />
+                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-9"><Tip text="Fabbisogno: quantità necessaria per questo emporio">Fab</Tip></th>
+                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9"><Tip text="Giacenza: quantità attualmente in magazzino">Gia</Tip></th>
+                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9"><Tip text="Ordinato: quantità già ordinata al fornitore">Ord</Tip></th>
+                      <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5"><Tip text="🟢 giacenza copre il fabbisogno · 🟠 giacenza+ordini coprono · 🔴 scoperto">●</Tip></th>
                     </>
                   ))}
-                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-9 cursor-help" title="Totale fabbisogno su tutti gli empori">Fab</th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9 cursor-help" title="Totale giacenze su tutti gli empori">Gia</th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9 cursor-help" title="Totale ordinato su tutti gli empori">Ord</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-9"><Tip text="Totale fabbisogno su tutti gli empori">Fab</Tip></th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9"><Tip text="Totale giacenze su tutti gli empori">Gia</Tip></th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9"><Tip text="Totale ordinato su tutti gli empori">Ord</Tip></th>
                 </tr>
               </thead>
               <tbody>
@@ -2252,30 +2279,30 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                 {/* Riga 1: intestazioni macro */}
                 <tr className="text-left text-gray-400 border-b border-border/40">
                   <th className="pb-1 pr-3 font-medium min-w-[160px]" rowSpan={2} />
-                  <th className="pb-1 px-2 font-medium text-center text-gray-500 cursor-help" rowSpan={2} title="I cesti sono interamente destinati alle strenne">DESTINAZIONE</th>
+                  <th className="pb-1 px-2 font-medium text-center text-gray-500" rowSpan={2}><Tip text="I cesti sono interamente destinati alle strenne">DESTINAZIONE</Tip></th>
                   {EMPORI.map(e => {
                     const nomiEmpori: Record<string, string> = { MN: 'Mantova', RE: 'Reggio Emilia', CR: 'Cremona', CA: 'Cagliari', VI: 'Vicenza' };
                     return (
-                      <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40 cursor-help" title={nomiEmpori[e] ?? e}>
-                        {e}
+                      <th key={e} colSpan={4} className="pb-1 px-1 font-semibold text-center text-amber-700 border-l border-border/40">
+                        <Tip text={nomiEmpori[e] ?? e}>{e}</Tip>
                       </th>
                     );
                   })}
-                  <th colSpan={3} className="pb-1 px-1 font-semibold text-center text-gray-500 border-l border-border/40" title="Totali su tutti gli empori">Totali</th>
+                  <th colSpan={3} className="pb-1 px-1 font-semibold text-center text-gray-500 border-l border-border/40"><Tip text="Totali su tutti gli empori">Totali</Tip></th>
                 </tr>
                 {/* Riga 2: sotto-intestazioni */}
                 <tr className="text-left text-gray-400 border-b-2 border-border">
                   {EMPORI.map(e => (
                     <>
-                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-9 cursor-help" title="Fabbisogno cesto per questo emporio">Fab</th>
-                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9 cursor-help" title="Giacenza: quantità in magazzino">Gia</th>
-                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9 cursor-help" title="Ordinato: quantità già ordinata">Ord</th>
-                      <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5 cursor-help" title="🟢 giacenza copre · 🟠 ordini coprono · 🔴 scoperto" />
+                      <th key={`${e}-fab`} className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] w-9"><Tip text="Fabbisogno cesto per questo emporio">Fab</Tip></th>
+                      <th key={`${e}-gia`} className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9"><Tip text="Giacenza: quantità in magazzino">Gia</Tip></th>
+                      <th key={`${e}-ord`} className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9"><Tip text="Ordinato: quantità già ordinata">Ord</Tip></th>
+                      <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5"><Tip text="🟢 giacenza copre il fabbisogno · 🟠 giacenza+ordini coprono · 🔴 scoperto">●</Tip></th>
                     </>
                   ))}
-                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-9 cursor-help" title="Totale fabbisogno cesti su tutti gli empori">Fab</th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9 cursor-help" title="Totale giacenze su tutti gli empori">Gia</th>
-                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9">Ord</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] w-9"><Tip text="Totale fabbisogno cesti su tutti gli empori">Fab</Tip></th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px] w-9"><Tip text="Totale giacenze su tutti gli empori">Gia</Tip></th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px] w-9"><Tip text="Totale ordinato su tutti gli empori">Ord</Tip></th>
                 </tr>
               </thead>
               <tbody>
@@ -2761,7 +2788,7 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
 type Tab = 'prodotti' | 'cesti' | 'strenne' | 'fabbisogno' | 'analisi';
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: 'prodotti', label: 'Prodotti', icon: Package },
+  { id: 'prodotti', label: 'Alimentari', icon: Package },
   { id: 'cesti', label: 'Cesti', icon: ShoppingBasket },
   { id: 'strenne', label: 'Strenne', icon: Gift },
   { id: 'fabbisogno', label: 'Fabbisogno', icon: BarChart2 },
