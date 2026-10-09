@@ -1994,7 +1994,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       {e}
                     </th>
                   ))}
-                  <th className="pb-1 px-2 font-medium text-center text-gray-500" rowSpan={2}>Tot</th>
+                  <th colSpan={3} className="pb-1 px-1 font-semibold text-center text-gray-500 border-l border-border/40">Totali</th>
                 </tr>
                 <tr className="text-left text-gray-400 border-b-2 border-border">
                   {EMPORI.map(e => (
@@ -2005,6 +2005,9 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       <th key={`${e}-spia`} className="pb-1.5 px-1 text-center text-[10px] w-5" />
                     </>
                   ))}
+                  <th className="pb-1.5 px-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px]">Fab</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-gray-400 text-[10px]">Gia</th>
+                  <th className="pb-1.5 px-1 font-medium text-center text-green-600 text-[10px]">Ord</th>
                 </tr>
               </thead>
               <tbody>
@@ -2034,18 +2037,64 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                         </td>
                         {EMPORI.map(emp => {
                           const fabStr = fabbisognoStrennePerEmporio[p.nome]?.[emp] ?? 0;
+                          const row = p.fabbisognoEmpori.find(r => r.emporio === emp);
+                          const fabNeg = row?.qta ?? 0;
+                          const fab = fabStr + fabNeg;
+                          const gia = row?.giacenza ?? 0;
+                          const ord = row?.ordinato ?? 0;
+                          const empCoperto = fab > 0 && (gia + ord) >= fab;
+                          const isEditGia = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'giacenza';
+                          const isEditOrd = editingGO?.id === p.id && editingGO.emporio === emp && editingGO.field === 'ordinato';
                           return (
                             <Fragment key={emp}>
                               <td className="py-1 px-0.5 text-center border-l border-border/40">
                                 <span className={cn('text-xs font-medium', fabStr > 0 ? 'text-amber-600' : 'text-gray-200')}>{fabStr > 0 ? fabStr : '—'}</span>
                               </td>
-                              <td className="text-gray-200 text-center text-xs">—</td>
-                              <td className="text-gray-200 text-center text-xs">—</td>
-                              <td />
+                              <td className={cn('py-1 px-0.5 text-center', !isEditGia && 'cursor-pointer hover:bg-primary/5')}
+                                onClick={() => !isEditGia && startEditGO(p.id, emp, 'giacenza', gia)}>
+                                {isEditGia ? (
+                                  <input autoFocus type="number" inputMode="numeric" min="0"
+                                    className="w-full min-w-[2.5rem] text-center text-xs border-2 border-primary rounded-md px-1 py-1.5 outline-none bg-white"
+                                    value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
+                                    onFocus={e => e.target.select()}
+                                    onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
+                                  />
+                                ) : (
+                                  <span className={cn('text-xs font-medium', gia > 0 ? 'text-gray-700' : 'text-gray-300')}>{gia > 0 ? gia : '—'}</span>
+                                )}
+                              </td>
+                              <td className={cn('py-1 px-0.5 text-center', !isEditOrd && 'cursor-pointer hover:bg-green-50')}
+                                onClick={() => !isEditOrd && startEditGO(p.id, emp, 'ordinato', ord)}>
+                                {isEditOrd ? (
+                                  <input autoFocus type="number" inputMode="numeric" min="0"
+                                    className="w-full min-w-[2.5rem] text-center text-xs border-2 border-green-500 rounded-md px-1 py-1.5 outline-none bg-white"
+                                    value={editGOVal} onChange={e => setEditGOVal(e.target.value)}
+                                    onFocus={e => e.target.select()}
+                                    onBlur={saveGO} onKeyDown={e => e.key === 'Enter' && saveGO()}
+                                  />
+                                ) : (
+                                  <span className={cn('text-xs font-semibold', ord > 0 ? 'text-green-700' : 'text-gray-300')}>{ord > 0 ? ord : '—'}</span>
+                                )}
+                              </td>
+                              <td className="py-1.5 px-1 text-center">
+                                {fab > 0 && (
+                                  <span className={cn('inline-block w-2 h-2 rounded-full', empCoperto ? 'bg-green-500' : 'bg-red-500')}
+                                    title={empCoperto ? 'Coperto' : `Mancano ${fab - gia - ord}`} />
+                                )}
+                              </td>
                             </Fragment>
                           );
                         })}
-                        <td />
+                        {/* Totali Fab strenne | Gia (rowSpan) | Ord (rowSpan) */}
+                        <td className="py-1 px-1.5 text-center border-l border-border/40">
+                          <span className={cn('text-xs font-bold', strTotal > 0 ? 'text-amber-600' : 'text-gray-300')}>{strTotal || '—'}</span>
+                        </td>
+                        <td className="py-1 px-1.5 text-center align-middle" rowSpan={2}>
+                          <span className={cn('text-xs font-bold', totGia > 0 ? 'text-gray-700' : 'text-gray-300')}>{totGia || '—'}</span>
+                        </td>
+                        <td className="py-1 px-1.5 text-center align-middle" rowSpan={2}>
+                          <span className={cn('text-xs font-bold', totOrd > 0 ? 'text-green-700' : 'text-gray-300')}>{totOrd || '—'}</span>
+                        </td>
                       </tr>
                       {/* ── Riga Scaffale ── */}
                       <tr className="border-b border-border/40 hover:bg-gray-50">
@@ -2117,7 +2166,10 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                             </Fragment>
                           );
                         })}
-                        <td className="py-1.5 px-2 text-center font-bold text-primary">{totFab || '—'}</td>
+                        {/* Totale Fab scaffale (gia e ord vengono dalla riga strenne con rowSpan=2) */}
+                        <td className="py-1 px-1.5 text-center border-l border-border/40">
+                          <span className={cn('text-xs font-bold', negTotal > 0 ? 'text-blue-600' : 'text-gray-300')}>{negTotal || '—'}</span>
+                        </td>
                       </tr>
                     </Fragment>
                   );
