@@ -40,3 +40,6 @@ prisma/dev.db-journal
 
 # uploads
 /public/uploads/
+
+# backup locali del database (non committare mai — contengono dati sensibili)
+/backups/
