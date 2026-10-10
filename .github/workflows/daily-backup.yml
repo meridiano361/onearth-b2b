@@ -35,7 +35,7 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
       - name: Esegui backup
-        run: npx ts-node --project tsconfig.json scripts/backup.ts
+        run: npx tsx scripts/backup.ts
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
