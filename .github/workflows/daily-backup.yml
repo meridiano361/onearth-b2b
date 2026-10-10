@@ -1,0 +1,54 @@
+name: Backup Quotidiano Database
+
+on:
+  schedule:
+    # Ogni giorno alle 03:00 UTC = 04:00 ora italiana (05:00 in estate CEST)
+    - cron: '0 3 * * *'
+  # Permette di avviare il backup manualmente dalla tab Actions su GitHub
+  workflow_dispatch:
+
+jobs:
+  backup:
+    name: Esporta tutti i dati
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout codice
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Installa dipendenze
+        run: npm ci
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+      - name: Esegui backup
+        run: npx ts-node --project tsconfig.json scripts/backup.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+      - name: Verifica che il backup non sia vuoto
+        run: |
+          FILE=$(ls backups/backup-*.json | head -1)
+          SIZE=$(wc -c < "$FILE")
+          echo "File: $FILE  —  Dimensione: $SIZE byte"
+          if [ "$SIZE" -lt 10000 ]; then
+            echo "❌ Il backup sembra troppo piccolo, qualcosa è andato storto"
+            exit 1
+          fi
+          echo "✅ Backup OK"
+
+      - name: Salva artifact (conservato 30 giorni)
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_number }}
+          path: backups/
+          retention-days: 30
+          if-no-files-found: error
