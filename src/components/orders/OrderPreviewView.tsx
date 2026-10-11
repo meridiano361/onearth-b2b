@@ -1349,6 +1349,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
     try {
       const orderItems = (order?.items ?? []).map((i: any) => ({
         productId: i.productId,
+        taglia: i.taglia ?? '',
         quantity: i.quantity,
         unitPrice: i.unitPrice,
       }));

@@ -5,11 +5,13 @@ import { isAdminRole } from '@/lib/roles';
 import { getPreviewFromSession } from '@/lib/preview';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { MODA_COLLEZIONE, MODA_BRANCH_ID, CASA_BRANCH_ID } from '@/lib/modaAccess';
 
 const orderItemSchema = z.object({
   productId: z.string(),
   quantity: z.coerce.number().int().positive(),
   unitPrice: z.coerce.number().positive(),
+  taglia: z.string().default(''),
 });
 
 const createOrderSchema = z.object({
@@ -175,9 +177,10 @@ export async function POST(req: NextRequest) {
       where: { id: { in: productIds }, isActive: true },
     });
 
-    if (products.length !== productIds.length) {
+    const uniqueProductIds = [...new Set(productIds)];
+    if (products.length !== uniqueProductIds.length) {
       const foundIds = new Set(products.map((p) => p.id));
-      const missingIds = productIds.filter((id) => !foundIds.has(id));
+      const missingIds = uniqueProductIds.filter((id) => !foundIds.has(id));
       console.error('[POST /api/orders] prodotti non trovati o inattivi:', missingIds);
       return NextResponse.json({ error: `Prodotti non trovati o non più attivi: rimuovili dal carrello e riprova.`, missing: missingIds }, { status: 400 });
     }
@@ -192,12 +195,16 @@ export async function POST(req: NextRequest) {
       const subtotal = unitPrice * item.quantity;
       totalValue += subtotal;
       totalItems += item.quantity;
-      return { productId: item.productId, quantity: item.quantity, unitPrice, subtotal };
+      return { productId: item.productId, taglia: item.taglia ?? '', quantity: item.quantity, unitPrice, subtotal };
     });
+
+    const hasModaProducts = products.some((p) => (p as any).collezione === MODA_COLLEZIONE);
+    const catalogBranch = hasModaProducts ? MODA_BRANCH_ID : CASA_BRANCH_ID;
 
     // Determine ownership
     let orderData: any = {
       collectionId: data.collectionId || null,
+      catalogBranch,
       status: 'MERCE_DA_ORDINARE',
       totalValue,
       totalItems,
