@@ -41,6 +41,7 @@ function ModaProductCard({ product }: { product: Product }) {
         )}
         <button
           onClick={(e) => { e.preventDefault(); setPendingProduct({ product, quantity: product.lotSize || 1 }); }}
+          data-tooltip="Aggiungi al carrello"
           className="absolute bottom-0 left-0 right-0 py-2.5 bg-white/90 backdrop-blur-sm text-black text-xs font-medium text-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         >
           Aggiungi al carrello
@@ -125,6 +126,7 @@ export default function ModaCatalogo() {
             <span className="text-xs text-white/30">{filtered.length}</span>
             <button
               onClick={() => setShowFilters((v) => !v)}
+              data-tooltip={showFilters ? 'Chiudi filtri' : 'Apri filtri e ordinamento'}
               className={`p-1.5 rounded-lg transition-colors ${showFilters ? 'bg-white text-black' : 'text-white/40 hover:text-white/70'}`}
             >
               <SlidersHorizontal size={15} />
@@ -142,7 +144,7 @@ export default function ModaCatalogo() {
             className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-8 py-2 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/30"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
+            <button onClick={() => setSearch('')} data-tooltip="Cancella ricerca" className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
               <X size={14} />
             </button>
           )}
@@ -192,6 +194,7 @@ export default function ModaCatalogo() {
             {(search || selectedCategory) && (
               <button
                 onClick={() => { setSearch(''); setSelectedCategory(''); }}
+                data-tooltip="Rimuovi tutti i filtri attivi"
                 className="text-xs text-white/30 hover:text-white/60 transition-colors"
               >
                 × Rimuovi filtri

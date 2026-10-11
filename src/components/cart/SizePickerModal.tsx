@@ -66,6 +66,7 @@ export default function SizePickerModal({ product, onClose, onConfirm }: Props) 
                   onClick={() => change(v.taglia, -1)}
                   className="w-7 h-7 rounded border border-border flex items-center justify-center text-gray-500 hover:border-primary hover:text-primary transition-colors disabled:opacity-30"
                   disabled={!quantities[v.taglia]}
+                  data-tooltip="Riduci quantità"
                 >
                   <Minus size={12} />
                 </button>
@@ -79,6 +80,7 @@ export default function SizePickerModal({ product, onClose, onConfirm }: Props) 
                 <button
                   onClick={() => change(v.taglia, 1)}
                   className="w-7 h-7 rounded border border-border flex items-center justify-center text-gray-500 hover:border-primary hover:text-primary transition-colors"
+                  data-tooltip="Aumenta quantità"
                 >
                   <Plus size={12} />
                 </button>
@@ -89,12 +91,13 @@ export default function SizePickerModal({ product, onClose, onConfirm }: Props) 
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-border flex items-center gap-3">
-          <button onClick={onClose} className="flex-1 py-2.5 text-xs border border-border rounded text-gray-500 hover:bg-cream transition-colors">
+          <button onClick={onClose} data-tooltip="Annulla e chiudi" className="flex-1 py-2.5 text-xs border border-border rounded text-gray-500 hover:bg-cream transition-colors">
             Annulla
           </button>
           <button
             onClick={handleConfirm}
             disabled={total === 0}
+            data-tooltip="Aggiungi le taglie selezionate al carrello"
             className="flex-1 py-2.5 text-xs bg-primary text-white rounded hover:bg-warm-darker disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 transition-colors"
           >
             <ShoppingCart size={13} />

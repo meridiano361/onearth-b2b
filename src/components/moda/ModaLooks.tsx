@@ -58,7 +58,7 @@ function CreateLookModal({ onClose, onCreated }: { onClose: () => void; onCreate
       <div className="w-full max-w-md bg-[#111] border border-white/10 rounded-2xl p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-sm font-semibold text-white">Nuovo look</h2>
-          <button onClick={onClose} className="text-white/40 hover:text-white/70">
+          <button onClick={onClose} data-tooltip="Annulla e chiudi" className="text-white/40 hover:text-white/70">
             <X size={18} />
           </button>
         </div>
@@ -148,6 +148,7 @@ export default function ModaLooks() {
           </div>
           <button
             onClick={() => setShowCreate(true)}
+            data-tooltip="Crea un nuovo total look"
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-black text-xs font-medium rounded-lg hover:bg-white/90 transition-colors"
           >
             <Plus size={13} /> Nuovo look
@@ -170,6 +171,7 @@ export default function ModaLooks() {
             <p className="text-xs mt-1">Crea il primo total look PE27</p>
             <button
               onClick={() => setShowCreate(true)}
+              data-tooltip="Crea il primo total look PE27"
               className="mt-5 px-5 py-2.5 bg-white text-black text-sm rounded-xl font-medium flex items-center gap-2 hover:bg-white/90 transition-colors"
             >
               <Plus size={14} /> Crea look
@@ -220,6 +222,7 @@ export default function ModaLooks() {
                     e.stopPropagation();
                     if (confirm('Eliminare il look?')) deleteLook.mutate(look.id);
                   }}
+                  data-tooltip="Elimina questo look"
                   className="absolute top-3 right-3 w-7 h-7 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center text-white/40 hover:text-white/80 opacity-0 group-hover:opacity-100 transition-all"
                 >
                   <X size={13} />

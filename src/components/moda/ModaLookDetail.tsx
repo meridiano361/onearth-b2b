@@ -87,7 +87,7 @@ function AddProductsPanel({ lookId, existingIds, onClose }: {
       <div className="w-full max-w-lg bg-[#111] border border-white/10 rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[85vh]">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-white/10 flex-shrink-0">
           <p className="flex-1 text-sm font-medium text-white">Aggiungi prodotti PE27</p>
-          <button onClick={onClose} className="text-white/40 hover:text-white/70"><X size={18} /></button>
+          <button onClick={onClose} data-tooltip="Chiudi pannello" className="text-white/40 hover:text-white/70"><X size={18} /></button>
         </div>
 
         {/* Tipo selector */}
@@ -136,6 +136,7 @@ function AddProductsPanel({ lookId, existingIds, onClose }: {
                 </div>
                 <button
                   onClick={() => isIn ? removeMutation.mutate(p.id) : addMutation.mutate(p.id)}
+                  data-tooltip={isIn ? 'Rimuovi dal look' : 'Aggiungi al look'}
                   className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
                     isIn
                       ? 'bg-white/10 text-white/60 hover:bg-red-500/20 hover:text-red-400'
@@ -200,12 +201,14 @@ function LookSection({
             <div className="flex flex-col gap-1.5 flex-shrink-0">
               <button
                 onClick={() => onAddToCart(lp)}
+                data-tooltip="Aggiungi al carrello"
                 className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-white/60 hover:bg-white hover:text-black transition-all"
               >
                 <ShoppingBag size={13} />
               </button>
               <button
                 onClick={() => onRemove(lp.product.id)}
+                data-tooltip="Rimuovi dal look"
                 className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center text-white/20 hover:bg-red-500/20 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
               >
                 <X size={13} />
@@ -307,14 +310,15 @@ export default function ModaLookDetail({ lookId }: { lookId: string }) {
                     if (e.key === 'Escape') setEditingTitle(false);
                   }}
                 />
-                <button onClick={() => updateTitle.mutate(titleValue)} className="text-white/60 hover:text-white"><Check size={14} /></button>
-                <button onClick={() => setEditingTitle(false)} className="text-white/40 hover:text-white/60"><X size={14} /></button>
+                <button onClick={() => updateTitle.mutate(titleValue)} data-tooltip="Salva titolo" className="text-white/60 hover:text-white"><Check size={14} /></button>
+                <button onClick={() => setEditingTitle(false)} data-tooltip="Annulla modifica" className="text-white/40 hover:text-white/60"><X size={14} /></button>
               </div>
             ) : (
               <div className="flex items-center gap-2 mt-0.5">
                 <p className="text-sm font-medium truncate">{look.titolo}</p>
                 <button
                   onClick={() => { setTitleValue(look.titolo); setEditingTitle(true); }}
+                  data-tooltip="Modifica titolo look"
                   className="text-white/20 hover:text-white/50 transition-colors flex-shrink-0"
                 >
                   <Pencil size={12} />
@@ -324,6 +328,7 @@ export default function ModaLookDetail({ lookId }: { lookId: string }) {
           </div>
           <button
             onClick={() => setShowAdd(true)}
+            data-tooltip="Aggiungi prodotti al look"
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-black text-xs font-medium rounded-lg hover:bg-white/90 transition-colors flex-shrink-0"
           >
             <Plus size={13} /> Prodotto
@@ -361,6 +366,7 @@ export default function ModaLookDetail({ lookId }: { lookId: string }) {
               <p className="text-xs text-white/40">{look.prodotti.length} prodott{look.prodotti.length === 1 ? 'o' : 'i'}</p>
               <button
                 onClick={handleAddAll}
+                data-tooltip="Aggiungi tutti i prodotti di questo look al carrello"
                 className="flex items-center gap-1.5 text-xs text-white/60 hover:text-white transition-colors"
               >
                 <ShoppingBag size={12} /> Aggiungi tutti al carrello

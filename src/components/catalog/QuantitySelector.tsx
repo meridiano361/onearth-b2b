@@ -63,6 +63,8 @@ export default function QuantitySelector({
     if (e.key === 'Enter') inputRef.current?.blur();
   }
 
+  const step = lotSize > 1 ? lotSize : 1;
+
   if (compact) {
     return (
       <div className="flex items-center">
@@ -70,6 +72,7 @@ export default function QuantitySelector({
           type="button"
           onClick={decrement}
           disabled={value <= min}
+          data-tooltip={`Riduci di ${step}`}
           className="w-8 h-8 flex items-center justify-center border border-border rounded-l bg-cream hover:bg-accent/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <Minus size={12} />
@@ -90,6 +93,7 @@ export default function QuantitySelector({
           type="button"
           onClick={increment}
           disabled={max !== undefined && value >= max}
+          data-tooltip={`Aggiungi ${step}`}
           className="w-8 h-8 flex items-center justify-center border border-border rounded-r bg-cream hover:bg-accent/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <Plus size={12} />
@@ -105,6 +109,7 @@ export default function QuantitySelector({
           type="button"
           onClick={decrement}
           disabled={value <= min}
+          data-tooltip={`Riduci di ${step}`}
           className="w-8 h-8 flex items-center justify-center border border-border rounded-l bg-cream hover:bg-accent/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <Minus size={12} />
@@ -125,6 +130,7 @@ export default function QuantitySelector({
           type="button"
           onClick={increment}
           disabled={max !== undefined && value >= max}
+          data-tooltip={`Aggiungi ${step}`}
           className="w-8 h-8 flex items-center justify-center border border-border rounded-r bg-cream hover:bg-accent/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <Plus size={12} />

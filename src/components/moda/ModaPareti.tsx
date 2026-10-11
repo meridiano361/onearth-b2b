@@ -103,7 +103,7 @@ export default function ModaPareti() {
       {/* Header */}
       <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur border-b border-gray-100 px-4 py-4">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <button onClick={() => router.back()} className="text-gray-400 hover:text-gray-700 transition-colors">
+          <button onClick={() => router.back()} data-tooltip="Torna indietro" className="text-gray-400 hover:text-gray-700 transition-colors">
             <ArrowLeft size={20} />
           </button>
           <div className="flex-1">
@@ -112,6 +112,7 @@ export default function ModaPareti() {
           </div>
           <button
             onClick={() => setShowCreate(true)}
+            data-tooltip="Crea un nuovo layout parete"
             className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-medium rounded-xl hover:bg-primary/90 transition-colors"
           >
             <Plus size={14} /> Nuovo
@@ -134,6 +135,7 @@ export default function ModaPareti() {
             <p className="text-xs mt-1 text-gray-400">Simula l'esposizione in negozio</p>
             <button
               onClick={() => setShowCreate(true)}
+              data-tooltip="Crea il primo layout parete"
               className="mt-5 px-5 py-2.5 bg-primary text-white text-sm rounded-xl font-medium flex items-center gap-2 hover:bg-primary/90 transition-colors"
             >
               <Plus size={14} /> Crea layout
@@ -192,6 +194,7 @@ export default function ModaPareti() {
                   {/* Delete */}
                   <button
                     onClick={(e) => { e.stopPropagation(); deleteParete(p.id); }}
+                    data-tooltip="Elimina questo layout parete"
                     className="absolute top-3 right-3 w-7 h-7 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm"
                   >
                     <X size={13} />

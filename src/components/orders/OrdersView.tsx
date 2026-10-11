@@ -109,6 +109,7 @@ function OrderRow({ order, isHighlighted, onDeleted }: { order: Order; isHighlig
           <button
             onClick={(e) => { e.stopPropagation(); handleExportExcel(); }}
             disabled={isExporting}
+            data-tooltip="Scarica l'ordine in formato Excel"
             className="text-xs text-gray-400 hover:text-primary border border-border rounded px-2 py-1.5 hover:bg-cream transition-all flex items-center gap-1 disabled:opacity-50"
           >
             <Download size={11} />
@@ -122,6 +123,7 @@ function OrderRow({ order, isHighlighted, onDeleted }: { order: Order; isHighlig
           <button
             onClick={(e) => { e.stopPropagation(); handleDelete(); }}
             disabled={isDeleting}
+            data-tooltip="Elimina definitivamente questo ordine"
             className="text-xs text-red-400 hover:text-red-600 border border-red-200 rounded px-2 py-1.5 hover:bg-red-50 transition-all flex items-center gap-1 disabled:opacity-50"
           >
             <Trash2 size={11} />

@@ -75,7 +75,7 @@ function CreateOutfitModal({ onClose, onCreated }: { onClose: () => void; onCrea
       <div className="w-full max-w-md bg-[#111] border border-white/10 rounded-2xl p-6 max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-sm font-semibold text-white">Nuovo outfit espositivo</h2>
-          <button onClick={onClose} className="text-white/40 hover:text-white/70"><X size={18} /></button>
+          <button onClick={onClose} data-tooltip="Annulla e chiudi" className="text-white/40 hover:text-white/70"><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -188,6 +188,7 @@ export default function ModaEsposizione() {
           </div>
           <button
             onClick={() => setShowCreate(true)}
+            data-tooltip="Crea un nuovo outfit espositivo"
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-black text-xs font-medium rounded-lg hover:bg-white/90"
           >
             <Plus size={13} /> Nuovo outfit
@@ -207,6 +208,7 @@ export default function ModaEsposizione() {
             <p className="text-xs mt-1">Crea il primo outfit a parete PE27</p>
             <button
               onClick={() => setShowCreate(true)}
+              data-tooltip="Crea il primo outfit espositivo PE27"
               className="mt-5 px-5 py-2.5 bg-white text-black text-sm rounded-xl font-medium flex items-center gap-2 hover:bg-white/90"
             >
               <Plus size={14} /> Crea outfit
@@ -289,6 +291,7 @@ export default function ModaEsposizione() {
                   {/* Delete */}
                   <button
                     onClick={(e) => { e.stopPropagation(); if (confirm('Eliminare l\'outfit?')) deleteOutfit.mutate(outfit.id); }}
+                    data-tooltip="Elimina questo outfit"
                     className="absolute top-3 right-3 w-7 h-7 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center text-white/40 hover:text-white/80 opacity-0 group-hover:opacity-100 transition-all"
                   >
                     <X size={13} />

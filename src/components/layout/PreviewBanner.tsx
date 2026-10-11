@@ -28,6 +28,7 @@ export default function PreviewBanner({ orgName, operatorName }: Props) {
       </div>
       <button
         onClick={exitPreview}
+        data-tooltip="Esci dalla modalità anteprima e torna al pannello admin"
         className="flex items-center gap-1 whitespace-nowrap hover:opacity-70 transition-opacity flex-shrink-0"
       >
         <X size={13} />

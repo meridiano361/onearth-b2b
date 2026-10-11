@@ -64,6 +64,7 @@ export default function OrderPDFExport({ order }: Props) {
     <>
       <button
         onClick={(e) => { e.stopPropagation(); setIsOpen(true); }}
+        data-tooltip="Esporta l'ordine in PDF con raggruppamento personalizzabile"
         className="text-xs text-gray-400 hover:text-primary border border-border rounded px-2 py-1.5 hover:bg-cream transition-all flex items-center gap-1"
       >
         <FileText size={11} />

@@ -209,11 +209,11 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
       <div className="flex items-center gap-4 mb-6">
         <h2 className="text-sm font-semibold text-primary flex-1">Calendario Esposizione</h2>
         <div className="flex items-center gap-2 bg-cream border border-border rounded px-3 py-1.5">
-          <button onClick={() => setAnno(y => y - 1)} className="text-gray-400 hover:text-primary transition-colors">
+          <button onClick={() => setAnno(y => y - 1)} data-tooltip="Anno precedente" className="text-gray-400 hover:text-primary transition-colors">
             <ChevronLeft size={14} />
           </button>
           <span className="text-sm font-semibold text-primary w-10 text-center">{anno}</span>
-          <button onClick={() => setAnno(y => y + 1)} className="text-gray-400 hover:text-primary transition-colors">
+          <button onClick={() => setAnno(y => y + 1)} data-tooltip="Anno successivo" className="text-gray-400 hover:text-primary transition-colors">
             <ChevronRight size={14} />
           </button>
         </div>
@@ -301,7 +301,7 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
                           }}
                           style={{ fontSize: 12, width: '100%', border: '1px solid #E8DDD0', borderRadius: 4, padding: '2px 6px' }}
                         />
-                        <button onClick={() => renameSpazio(spazio.id, editingNome)} className="text-[#8FAF8F] flex-shrink-0">
+                        <button onClick={() => renameSpazio(spazio.id, editingNome)} data-tooltip="Salva nuovo nome" className="text-[#8FAF8F] flex-shrink-0">
                           <Check size={11} />
                         </button>
                       </div>
@@ -315,12 +315,14 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
                         </span>
                         <button
                           onClick={() => { setEditingSpazioId(spazio.id); setEditingNome(spazio.nome); }}
+                          data-tooltip="Rinomina questo spazio"
                           className="opacity-0 group-hover/name:opacity-100 transition-opacity text-gray-400 hover:text-primary flex-shrink-0"
                         >
                           <Pencil size={10} />
                         </button>
                         <button
                           onClick={() => deleteSpazio(spazio.id)}
+                          data-tooltip="Elimina questo spazio"
                           className="opacity-0 group-hover/name:opacity-100 transition-opacity text-gray-400 hover:text-[#C17A5A] flex-shrink-0"
                         >
                           <X size={10} />
@@ -418,12 +420,13 @@ export default function CalendarioEsposizione({ orderId }: CalendarioEsposizione
                         }}
                         style={{ fontSize: 12, width: '100%', border: '1px solid #E8DDD0', borderRadius: 4, padding: '2px 6px' }}
                       />
-                      <button onClick={addSpazio} className="text-[#8FAF8F] flex-shrink-0"><Check size={13} /></button>
-                      <button onClick={() => { setAddingSpazio(false); setNewSpazioName(''); }} className="text-gray-400 flex-shrink-0"><X size={13} /></button>
+                      <button onClick={addSpazio} data-tooltip="Conferma nuovo spazio" className="text-[#8FAF8F] flex-shrink-0"><Check size={13} /></button>
+                      <button onClick={() => { setAddingSpazio(false); setNewSpazioName(''); }} data-tooltip="Annulla" className="text-gray-400 flex-shrink-0"><X size={13} /></button>
                     </div>
                   ) : (
                     <button
                       onClick={() => setAddingSpazio(true)}
+                      data-tooltip="Aggiungi un nuovo spazio espositivo"
                       className="flex items-center gap-1 transition-colors"
                       style={{ fontSize: 13, color: '#9CA3AF' }}
                       onMouseEnter={e => (e.currentTarget.style.color = '#111827')}
@@ -551,7 +554,7 @@ function SchedulePopover({
             </p>
             <p className="text-[11px] text-gray-400 mt-0.5">Settimana S{popover.week}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-primary p-0.5 flex-shrink-0 transition-colors">
+          <button onClick={onClose} data-tooltip="Chiudi" className="text-gray-400 hover:text-primary p-0.5 flex-shrink-0 transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -636,6 +639,7 @@ function SchedulePopover({
             <div className="flex gap-2">
               <button
                 onClick={onClose}
+                data-tooltip="Annulla e chiudi"
                 className="flex-1 py-2.5 text-xs border border-border rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
               >
                 Annulla
@@ -643,6 +647,7 @@ function SchedulePopover({
               <button
                 onClick={handleSubmit}
                 disabled={saving || !selectedGroupId}
+                data-tooltip="Assegna il gruppo selezionato a questa settimana"
                 className="flex-1 py-2.5 text-xs bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 {saving && <Loader2 size={11} className="animate-spin" />}
@@ -654,6 +659,7 @@ function SchedulePopover({
               <button
                 onClick={handleSubmit}
                 disabled={saving}
+                data-tooltip="Salva modifiche alla pianificazione"
                 className="flex-1 py-2.5 text-xs bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 {saving && <Loader2 size={11} className="animate-spin" />}
@@ -661,6 +667,7 @@ function SchedulePopover({
               </button>
               <button
                 onClick={onDelete}
+                data-tooltip="Rimuovi questa pianificazione"
                 className="flex-1 py-2.5 text-xs border rounded-lg transition-colors"
                 style={{ borderColor: '#C17A5A', color: '#C17A5A' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#FDF5F0'; }}

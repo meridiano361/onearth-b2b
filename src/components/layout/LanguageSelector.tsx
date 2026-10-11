@@ -42,6 +42,7 @@ export default function LanguageSelector() {
           <button
             key={l}
             onClick={() => setLocale(l)}
+            data-tooltip={{ it: 'Italiano', en: 'English', de: 'Deutsch', fr: 'Français', es: 'Español' }[l]}
             className={cn(
               'text-2xs font-medium px-1.5 py-0.5 rounded transition-colors uppercase tracking-wide',
               l === locale
