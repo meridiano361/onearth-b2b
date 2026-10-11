@@ -85,6 +85,8 @@ export default function ProductCard({ product }: ProductCardProps) {
               setHeartPop(true);
               setTimeout(() => setHeartPop(false), 200);
             }}
+            data-tooltip={isFavorited(product.id) ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
+            data-tooltip-pos="bottom"
             className={cn(
               'absolute top-0 left-0 w-11 h-11 flex items-center justify-center transition-transform duration-200',
               heartPop ? 'scale-125' : 'scale-100'
@@ -228,6 +230,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         {!isReadOnly && cs.aggiungi && (hasSizeVariants ? (
           <button
             onClick={handleAddToCart}
+            data-tooltip="Scegli la taglia e aggiungi al carrello"
             className={cn(
               'w-full py-2 text-xs font-medium rounded transition-all duration-200',
               justAdded
@@ -256,6 +259,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         ) : (
           <button
             onClick={handleAddToCart}
+            data-tooltip="Aggiungi al carrello"
             className={cn(
               'w-full py-2 text-xs font-medium rounded transition-all duration-200',
               justAdded

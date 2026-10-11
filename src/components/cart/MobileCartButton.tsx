@@ -15,6 +15,7 @@ export default function MobileCartButton() {
       {/* Floating button */}
       <button
         onClick={() => setIsOpen(true)}
+        data-tooltip="Apri il carrello"
         className="lg:hidden fixed right-4 z-30 bg-primary text-background rounded-full w-14 h-14 flex items-center justify-center shadow-luxury-xl"
         style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px) + 1rem)' }}
       >

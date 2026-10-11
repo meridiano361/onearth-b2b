@@ -187,6 +187,36 @@
   display: none;
 }
 
+/* ── Tooltip globale via attributo data-tooltip ───────────────────────── */
+[data-tooltip] { position: relative; }
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111827;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+  font-weight: 500;
+  padding: 4px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  z-index: 9999;
+  font-family: 'Nunito', system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+[data-tooltip]:hover::after { opacity: 1; }
+/* Variante tooltip sotto (per bottoni in cima allo schermo) */
+[data-tooltip][data-tooltip-pos="bottom"]::after {
+  bottom: auto;
+  top: calc(100% + 7px);
+}
+
 /* ── AddProductsModal — sizing forzata, immune da qualsiasi ancestor ── */
 .apm-overlay {
   position: fixed !important;

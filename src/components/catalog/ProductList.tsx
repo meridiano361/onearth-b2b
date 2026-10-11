@@ -53,6 +53,8 @@ function ProductRow({ product }: { product: Product }) {
             setHeartPop(true);
             setTimeout(() => setHeartPop(false), 200);
           }}
+          data-tooltip={isFavorited(product.id) ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
+          data-tooltip-pos="bottom"
           className={cn(
             'absolute top-0 left-0 w-11 h-11 flex items-center justify-center transition-transform duration-200',
             heartPop ? 'scale-125' : 'scale-100'
@@ -120,6 +122,7 @@ function ProductRow({ product }: { product: Product }) {
       {/* Add button */}
       <button
         onClick={handleAdd}
+        data-tooltip={inCart ? 'Già nel carrello — clicca per aggiungere di più' : 'Aggiungi al carrello'}
         className={cn(
           'flex-shrink-0 flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded transition-all duration-150 min-w-[2.5rem]',
           justAdded

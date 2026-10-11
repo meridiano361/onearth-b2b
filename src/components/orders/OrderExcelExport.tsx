@@ -42,6 +42,7 @@ export default function OrderExcelExport({ orderId, className }: Props) {
     <button
       onClick={handleExport}
       disabled={loading}
+      data-tooltip="Scarica l'ordine completo in formato Excel"
       className={
         className ??
         'flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded hover:bg-cream transition-colors text-gray-600 hover:text-primary disabled:opacity-50 flex-shrink-0'

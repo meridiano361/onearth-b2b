@@ -7,6 +7,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'xs' | 'sm' | 'md' | 'lg';
   loading?: boolean;
   icon?: React.ReactNode;
+  tooltip?: string;
+  tooltipPos?: 'top' | 'bottom';
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -19,6 +21,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       disabled,
       icon,
       children,
+      tooltip,
+      tooltipPos,
       ...props
     },
     ref
@@ -46,6 +50,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(base, variants[variant], sizes[size], className)}
+        data-tooltip={tooltip}
+        data-tooltip-pos={tooltipPos === 'bottom' ? 'bottom' : undefined}
         {...props}
       >
         {loading ? (

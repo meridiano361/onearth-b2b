@@ -130,6 +130,8 @@ function ProductCard({
           onClick={(e) => { e.stopPropagation(); onRemove(item.id); }}
           className="absolute top-1.5 left-1.5 bg-white/80 rounded p-0.5 text-gray-500 hover:text-red-500 transition-colors"
           title={removeLabel}
+          data-tooltip="Rimuovi dall'ordine"
+          data-tooltip-pos="bottom"
         >
           <X size={10} />
         </button>
@@ -170,6 +172,7 @@ function ProductCard({
             <button
               onClick={() => onQtyChange(item.id, Number(item.quantity), -lotSize)}
               disabled={isSaving}
+              data-tooltip={`Riduci di ${lotSize}`}
               className="w-7 h-7 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label={decreaseLabel}
             >
@@ -179,6 +182,7 @@ function ProductCard({
             <button
               onClick={() => onQtyChange(item.id, Number(item.quantity), +lotSize)}
               disabled={isSaving}
+              data-tooltip={`Aggiungi ${lotSize}`}
               className="w-7 h-7 flex items-center justify-center rounded border border-border hover:bg-cream transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label={increaseLabel}
             >
@@ -677,6 +681,7 @@ function AddProductsModal({
             <button
               onClick={() => handleAdd(product)}
               disabled={isAdding}
+              data-tooltip="Aggiungi questo prodotto all'ordine"
               className="text-sm bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors disabled:opacity-50 min-w-[80px]"
             >
               {isAdding ? '…' : 'Aggiungi'}
@@ -732,6 +737,7 @@ function AddProductsModal({
       {Object.values(filters).some(Boolean) && (
         <button
           onClick={() => setFilters({})}
+          data-tooltip="Rimuovi tutti i filtri attivi"
           className="text-xs text-gray-400 hover:text-primary transition-colors"
         >
           × Azzera filtri
@@ -1543,12 +1549,14 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
             <div className="flex gap-1 ml-1 overflow-x-auto flex-shrink-0" style={{ scrollbarWidth: 'none' }}>
               <button
                 onClick={() => setViewMode('ordine')}
+                data-tooltip="Visualizza l'elenco prodotti dell'ordine"
                 className={`flex-shrink-0 text-xs px-2.5 py-1 rounded transition-colors ${viewMode === 'ordine' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-cream border border-border'}`}
               >
                 Ordine
               </button>
               <button
                 onClick={() => setViewMode('mondi')}
+                data-tooltip="Pianifica i mondi espositivi del negozio"
                 className={`flex-shrink-0 flex items-center gap-1 text-xs px-2.5 py-1 rounded transition-colors ${viewMode === 'mondi' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-cream border border-border'}`}
               >
                 <Layers size={11} />
@@ -1559,6 +1567,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
               </button>
               <button
                 onClick={() => setViewMode('calendario')}
+                data-tooltip="Visualizza il calendario di consegna e allestimento"
                 className={`flex-shrink-0 flex items-center gap-1 text-xs px-2.5 py-1 rounded transition-colors ${viewMode === 'calendario' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-cream border border-border'}`}
               >
                 <CalendarDays size={11} />
@@ -1707,7 +1716,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
               className="flex-1 text-2xs outline-none bg-transparent text-primary placeholder-gray-300"
             />
             {productSearch && (
-              <button onClick={() => setProductSearch('')} className="text-gray-300 hover:text-gray-500 flex-shrink-0">
+              <button onClick={() => setProductSearch('')} data-tooltip="Cancella ricerca" className="text-gray-300 hover:text-gray-500 flex-shrink-0">
                 <X size={9} />
               </button>
             )}
@@ -1725,6 +1734,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
           {order.status !== 'ESPORTATO' && (
             <button
               onClick={() => { setNewCanaleId(order.canaleId ?? ''); setShowChangeDestModal(true); }}
+              data-tooltip="Cambia il negozio di destinazione dell'ordine"
               className="text-xs text-accent hover:text-accent/80 transition-colors flex-shrink-0"
             >
               Cambia
@@ -1927,6 +1937,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
             {/* Add products */}
             <button
               onClick={() => setAddProductsOpen(true)}
+              data-tooltip="Cerca e aggiungi prodotti all'ordine"
               className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded hover:bg-cream transition-colors text-gray-600 hover:text-primary flex-shrink-0"
             >
               <Plus size={12} />
@@ -1937,6 +1948,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
             <button
               onClick={handleExportPDF}
               disabled={exporting}
+              data-tooltip="Esporta l'ordine in formato PDF stampabile"
               className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded hover:bg-cream transition-colors text-gray-600 hover:text-primary disabled:opacity-50 flex-shrink-0"
             >
               <FileText size={12} />
@@ -1952,6 +1964,7 @@ export default function OrderPreviewView({ id, initialTab }: { id: string; initi
             {/* Duplica ordine */}
             <button
               onClick={() => { setDupCanaleId(order.canaleId ?? ''); setShowDupModal(true); }}
+              data-tooltip="Crea una copia identica di questo ordine"
               className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded hover:bg-cream transition-colors text-gray-600 hover:text-primary flex-shrink-0"
             >
               <Copy size={12} />

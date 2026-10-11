@@ -550,6 +550,7 @@ export default function CatalogView({
             {/* Mobile filter button */}
             <button
               onClick={openMobileFilters}
+              data-tooltip="Apri i filtri del catalogo"
               className="md:hidden flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-border rounded px-2.5 py-2 hover:bg-cream transition-colors flex-shrink-0 relative"
             >
               <SlidersHorizontal size={13} />
@@ -574,6 +575,7 @@ export default function CatalogView({
               {search && (
                 <button
                   onClick={() => { setSearch(''); setDebouncedSearch(''); updateUrl(filters, sortBy, ''); }}
+                  data-tooltip="Cancella ricerca"
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   <X size={12} />
@@ -602,6 +604,7 @@ export default function CatalogView({
             {/* Favorites toggle — desktop only */}
             <button
               onClick={() => setOnlyFavorites((v) => !v)}
+              data-tooltip={onlyFavorites ? 'Mostra tutti i prodotti' : 'Mostra solo i prodotti preferiti'}
               className={cn(
                 'hidden md:flex items-center gap-1.5 text-xs font-medium border rounded px-2.5 py-2 transition-colors flex-shrink-0',
                 onlyFavorites
@@ -619,7 +622,7 @@ export default function CatalogView({
                 {productsLoading ? 'Caricamento...' : `${filteredProducts.length} prodotti`}
               </span>
               {hasActiveFilters && (
-                <button onClick={handleResetAll} className="text-xs text-accent hover:text-primary transition-colors font-medium">
+                <button onClick={handleResetAll} data-tooltip="Rimuovi tutti i filtri attivi" className="text-xs text-accent hover:text-primary transition-colors font-medium">
                   Azzera filtri
                 </button>
               )}
@@ -678,6 +681,7 @@ export default function CatalogView({
             <div className="flex flex-col items-center gap-1 mt-6 mb-4">
               <button
                 onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+                data-tooltip="Mostra altri prodotti nel catalogo"
                 className="px-6 py-2.5 text-sm font-medium border border-border rounded-lg text-gray-600 hover:bg-cream transition-colors"
               >
                 Carica altri {Math.min(PAGE_SIZE, filteredProducts.length - visibleCount)} prodotti

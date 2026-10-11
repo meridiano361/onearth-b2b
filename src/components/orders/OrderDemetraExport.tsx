@@ -197,6 +197,7 @@ export default function OrderDemetraExport({ order, onExported }: Props) {
         onClick={toggleMenu}
         onMouseEnter={showHelp}
         onMouseLeave={scheduleHideHelp}
+        data-tooltip="Esporta l'ordine in formato CSV/Excel per Demetra"
         className="flex items-center gap-1.5 px-3 py-2 text-xs border border-black rounded hover:bg-gray-50 transition-colors text-black flex-shrink-0"
       >
         <Database size={11} />

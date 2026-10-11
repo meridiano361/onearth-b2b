@@ -297,6 +297,7 @@ export default function ProductDetailView({ id, readOnly = false }: Props) {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-24 md:pb-8">
       <button
         onClick={() => router.back()}
+        data-tooltip="Torna al catalogo"
         className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary transition-colors mb-6"
       >
         <ArrowLeft size={13} />
@@ -448,6 +449,7 @@ export default function ProductDetailView({ id, readOnly = false }: Props) {
               /* ── Single product: not yet in cart ── */
               <button
                 onClick={handleAdd}
+                data-tooltip="Aggiungi al carrello"
                 className="w-full py-3 text-sm font-medium rounded transition-all duration-200 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker active:scale-95"
               >
                 {justAdded ? (

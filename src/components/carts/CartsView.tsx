@@ -367,6 +367,7 @@ export default function CartsView({ collection }: CartsViewProps) {
         </div>
         <button
           onClick={() => setShowCreate(true)}
+          data-tooltip="Crea un nuovo carrello per raccogliere prodotti"
           className="flex items-center gap-1.5 text-xs bg-primary text-background rounded px-3 py-2 hover:bg-warm-darker transition-colors"
         >
           <Plus size={13} /> Nuovo carrello
@@ -522,6 +523,7 @@ export default function CartsView({ collection }: CartsViewProps) {
           <p className="text-xs text-gray-300">Crea il primo carrello per iniziare ad aggiungere prodotti.</p>
           <button
             onClick={() => setShowCreate(true)}
+            data-tooltip="Crea un nuovo carrello"
             className="mt-4 text-xs text-accent hover:underline"
           >
             + Crea carrello
@@ -704,7 +706,7 @@ export default function CartsView({ collection }: CartsViewProps) {
                     <button
                       onClick={() => { setRenamingId(cart.id); setRenameInput(cart.name); }}
                       className="p-1.5 text-gray-400 hover:text-primary transition-colors rounded hover:bg-cream"
-                      title="Rinomina"
+                      data-tooltip="Rinomina questo carrello"
                     >
                       <Pencil size={12} />
                     </button>
@@ -712,7 +714,7 @@ export default function CartsView({ collection }: CartsViewProps) {
                       onClick={() => handleDelete(cart)}
                       disabled={isDeleting}
                       className="p-1.5 text-gray-300 hover:text-red-500 transition-colors rounded hover:bg-red-50 disabled:opacity-40"
-                      title="Elimina"
+                      data-tooltip="Elimina definitivamente questo carrello"
                     >
                       {isDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
                     </button>
@@ -724,6 +726,7 @@ export default function CartsView({ collection }: CartsViewProps) {
                   {!isActive && (
                     <button
                       onClick={() => handleActivate(cart)}
+                      data-tooltip="Imposta come carrello attivo"
                       className="text-xs border border-border rounded px-3 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
                     >
                       Seleziona
@@ -732,8 +735,8 @@ export default function CartsView({ collection }: CartsViewProps) {
                   <button
                     onClick={() => router.push(routes.catalog)}
                     disabled={!isActive}
+                    data-tooltip={isActive ? 'Vai al catalogo per aggiungere prodotti' : 'Seleziona prima questo carrello'}
                     className="text-xs border border-border rounded px-3 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    title={isActive ? 'Vai al catalogo' : 'Seleziona prima questo carrello'}
                   >
                     + Aggiungi prodotti
                   </button>
@@ -752,6 +755,7 @@ export default function CartsView({ collection }: CartsViewProps) {
                       <button
                         onClick={() => handleConvert(cart.id)}
                         disabled={convertingId === cart.id}
+                        data-tooltip="Trasforma il carrello in un ordine definitivo"
                         className="flex items-center gap-1.5 text-xs bg-primary text-background rounded px-3 py-1.5 hover:bg-warm-darker transition-colors disabled:opacity-50"
                       >
                         {convertingId === cart.id
@@ -768,6 +772,7 @@ export default function CartsView({ collection }: CartsViewProps) {
                         setCopySelection(new Set());
                         setCopyTargetId('');
                       }}
+                      data-tooltip={isExpanded ? 'Comprimi la lista prodotti' : 'Espandi per vedere i prodotti nel carrello'}
                       className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-primary transition-colors"
                     >
                       {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}

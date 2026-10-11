@@ -162,7 +162,7 @@ export default function CartSidebar() {
           <button
             onClick={() => setShowCartPicker(true)}
             className="text-gray-300 hover:text-gray-600 transition-colors"
-            title="Cambia carrello"
+            data-tooltip="Passa a un altro carrello"
           >
             <ArrowLeftRight size={13} />
           </button>
@@ -179,7 +179,7 @@ export default function CartSidebar() {
                 }
               }}
               className="text-gray-300 hover:text-red-400 transition-colors"
-              title="Elimina carrello"
+              data-tooltip="Elimina definitivamente questo carrello"
             >
               <Trash2 size={13} />
             </button>
@@ -202,7 +202,7 @@ export default function CartSidebar() {
                   <p className="text-xs text-gray-400 italic">Non impostata</p>
                 )}
               </div>
-              <button onClick={openEditDest} className="text-2xs text-accent hover:underline flex-shrink-0 mt-1">
+              <button onClick={openEditDest} data-tooltip={canale ? 'Cambia il negozio di destinazione' : 'Imposta il negozio di destinazione'} className="text-2xs text-accent hover:underline flex-shrink-0 mt-1">
                 {canale ? 'Modifica' : 'Imposta'}
               </button>
             </div>
@@ -356,6 +356,7 @@ export default function CartSidebar() {
         <div className="px-4 py-3 border-b border-border flex-shrink-0">
           <button
             onClick={() => router.push(routes.catalog)}
+            data-tooltip="Torna al catalogo per aggiungere prodotti"
             className="w-full py-2 text-xs font-semibold rounded bg-primary text-background flex items-center justify-center gap-1.5 hover:bg-warm-darker transition-colors"
           >
             <Plus size={12} /> Aggiungi prodotti
@@ -405,6 +406,7 @@ export default function CartSidebar() {
                       </div>
                       <button
                         onClick={() => setPendingProduct({ product: p as any, quantity: p.lotSize || 1 })}
+                        data-tooltip="Aggiungi al carrello"
                         className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-primary text-white rounded hover:bg-warm-darker transition-colors"
                       >
                         <ShoppingBag size={11} />
@@ -430,6 +432,7 @@ export default function CartSidebar() {
               <button
                 onClick={async () => { if (!isSubmitting) await submitOrder(); }}
                 disabled={isSubmitting}
+                data-tooltip="Trasforma il carrello in un ordine definitivo"
                 className="w-full py-2 text-xs font-medium rounded transition-all duration-150 flex items-center justify-center gap-2 bg-primary text-background hover:bg-warm-darker disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (

@@ -493,7 +493,7 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                         checked={mergeSelection.has(order.id)}
                         onChange={() => toggleMergeSelect(order.id)}
                         className="mt-0.5 flex-shrink-0 cursor-pointer accent-primary"
-                        title="Seleziona per unire"
+                        title="Seleziona due ordini per unirli"
                       />
                     )}
                     <div className="min-w-0">
@@ -630,7 +630,7 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                               confMap.forEach((_, k) => { init[k] = budgetConf[k] != null ? String(budgetConf[k]) : ''; });
                               setBudgetConfInputs(init);
                               setEditingBudgetConfId(order.id);
-                            }} className="text-2xs text-gray-400 hover:text-primary transition-colors flex items-center gap-0.5">
+                            }} data-tooltip="Imposta un budget per conferente" className="text-2xs text-gray-400 hover:text-primary transition-colors flex items-center gap-0.5">
                               <Pencil size={9} /> Budget
                             </button>
                           )}
@@ -673,12 +673,14 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                                       <div className="flex items-center gap-0.5">
                                         <button
                                           onClick={() => setResoChoices(p => ({ ...p, [order.id]: { ...(p[order.id] ?? {}), [conf]: 'con' } }))}
+                                          data-tooltip="Calcola il costo includendo il diritto di reso"
                                           className={`text-2xs px-1.5 py-0.5 rounded transition-colors tabular-nums ${!choice || choice === 'con' ? 'bg-primary text-white font-medium' : 'text-gray-400 hover:text-primary border border-border'}`}
                                         >
                                           c/reso {formatCurrency(data.costCon)}
                                         </button>
                                         <button
                                           onClick={() => setResoChoices(p => ({ ...p, [order.id]: { ...(p[order.id] ?? {}), [conf]: 'senza' } }))}
+                                          data-tooltip="Calcola il costo senza il diritto di reso"
                                           className={`text-2xs px-1.5 py-0.5 rounded transition-colors tabular-nums ${choice === 'senza' ? 'bg-primary text-white font-medium' : 'text-gray-400 hover:text-primary border border-border'}`}
                                         >
                                           s/reso {formatCurrency(data.costSenza)}
@@ -713,7 +715,7 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                                 famMap.forEach((_, k) => { init[k] = budgetFam[k] != null ? String(budgetFam[k]) : ''; });
                                 setBudgetFamInputs(init);
                                 setEditingBudgetFamId(order.id);
-                              }} className="text-2xs text-gray-400 hover:text-primary transition-colors flex items-center gap-0.5">
+                              }} data-tooltip="Imposta un budget per famiglia prodotto" className="text-2xs text-gray-400 hover:text-primary transition-colors flex items-center gap-0.5">
                                 <Pencil size={9} /> Budget
                               </button>
                             )}
@@ -810,6 +812,7 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                           setBudgetEditInput(String(order.budgetPersonalizzato ?? ''));
                         }
                       }}
+                      data-tooltip="Imposta un budget per questo ordine"
                       className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
                     >
                       <Wallet size={11} />
@@ -820,6 +823,7 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                   {/* Anteprima */}
                   <button
                     onClick={() => router.push(routes.orderPreview(order.id))}
+                    data-tooltip="Visualizza, modifica e stampa l'ordine"
                     className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
                   >
                     <ScanEye size={11} />
@@ -863,6 +867,7 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                           setConfirmingId(order.id);
                         }
                       }}
+                      data-tooltip="Elimina definitivamente questo ordine"
                       className="flex items-center gap-1 text-xs border border-red-200 rounded px-2 py-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                     >
                       <Trash2 size={11} />
@@ -876,16 +881,16 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
                   <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <button
                       onClick={() => router.push(routes.orderPreview(order.id, 'esposizione'))}
+                      data-tooltip="Pianifica l'esposizione dei prodotti in negozio"
                       className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
-                      title="Esposizione"
                     >
                       <Layers size={11} />
                       <span className="hidden sm:inline">Esposizione</span>
                     </button>
                     <button
                       onClick={() => router.push(routes.orderPreview(order.id, 'calendario'))}
+                      data-tooltip="Visualizza il calendario di consegna e allestimento"
                       className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1.5 text-gray-500 hover:text-primary hover:bg-cream transition-colors"
-                      title="Calendario Esposizione"
                     >
                       <CalendarDays size={11} />
                       <span className="hidden sm:inline">Calendario</span>
@@ -907,6 +912,7 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
           {mergeSelection.size === 2 && (
             <button
               onClick={openMergeModal}
+              data-tooltip="Unisce i prodotti dei due ordini in uno solo"
               className="bg-background text-primary text-xs font-semibold rounded-full px-3 py-1.5 hover:bg-cream transition-colors"
             >
               Unisci
@@ -914,6 +920,7 @@ export default function CustomerOrdersView({ collectionId }: { collectionId?: st
           )}
           <button
             onClick={() => setMergeSelection(new Set())}
+            data-tooltip="Deseleziona tutto"
             className="text-background/70 hover:text-background transition-colors ml-1"
           >
             <X size={14} />
