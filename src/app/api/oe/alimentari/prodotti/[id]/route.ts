@@ -25,6 +25,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (body.costoIi !== undefined)        data.costoIi = Number(body.costoIi);
   if (body.pvpIi !== undefined)          data.pvpIi = Number(body.pvpIi);
   if (body.pvpConsigliato !== undefined) data.pvpConsigliato = body.pvpConsigliato ? Number(body.pvpConsigliato) : null;
+  if (body.lotto !== undefined)            data.lotto = body.lotto || null;
   if (body.fotoUrl !== undefined)          data.fotoUrl = body.fotoUrl || null;
   if (body.note !== undefined)             data.note = body.note || null;
   if (body.prezziConfermati !== undefined) data.prezziConfermati = Boolean(body.prezziConfermati);

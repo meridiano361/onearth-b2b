@@ -1238,6 +1238,7 @@ model OeAlimentariProdotto {
   pvpConsigliato     Float?                @map("pvp_consigliato")
   prezziConfermati   Boolean  @default(false) @map("prezzi_confermati")
   fotoUrl        String?               @map("foto_url")
+  lotto          String?
   note           String?
   ordine         Int      @default(0)
   updatedAt      DateTime @updatedAt   @map("updated_at")

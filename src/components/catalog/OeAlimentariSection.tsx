@@ -19,7 +19,7 @@ type Prodotto = {
   id: string; codice: string | null; barcode: string | null; fornitore: string | null;
   nome: string; formato: string | null; ivaPerc: number;
   costoIi: number; pvpIi: number; pvpConsigliato: number | null;
-  fotoUrl: string | null; note: string | null; ordine: number;
+  fotoUrl: string | null; lotto: string | null; note: string | null; ordine: number;
   prezziConfermati: boolean;
   fabbisognoEmpori: FabbisognoEmpori[];
   ordinato: Ordinato;
@@ -179,6 +179,7 @@ function EditForm({ editData, setEditData, onSave, onCancel, saving }: {
           <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">€</span>
           <input className="input-oe pl-6" type="number" step="0.01" placeholder="PVP consigliato" value={editData.pvpConsigliato ?? ''} onChange={e => setEditData(d => ({ ...d, pvpConsigliato: parseFloat(e.target.value) }))} />
         </div>
+        <input className="input-oe col-span-2" placeholder="Lotto" value={editData.lotto ?? ''} onChange={e => setEditData(d => ({ ...d, lotto: e.target.value }))} />
         <input className="input-oe col-span-2" placeholder="Note" value={editData.note ?? ''} onChange={e => setEditData(d => ({ ...d, note: e.target.value }))} />
       </div>
       <div className="flex gap-2">
@@ -213,7 +214,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
 
   const startEdit = (p: Prodotto) => {
     setEditId(p.id);
-    setEditData({ nome: p.nome, barcode: p.barcode ?? '', fornitore: p.fornitore ?? '', formato: p.formato ?? '', ivaPerc: p.ivaPerc, costoIi: p.costoIi, pvpIi: p.pvpIi, pvpConsigliato: p.pvpConsigliato ?? undefined, note: p.note ?? '' });
+    setEditData({ nome: p.nome, barcode: p.barcode ?? '', fornitore: p.fornitore ?? '', formato: p.formato ?? '', ivaPerc: p.ivaPerc, costoIi: p.costoIi, pvpIi: p.pvpIi, pvpConsigliato: p.pvpConsigliato ?? undefined, lotto: p.lotto ?? '', note: p.note ?? '' });
   };
 
   const saveEdit = async (id: string) => {
@@ -271,7 +272,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
       return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const fmt2 = (n: number) => n.toFixed(2).replace('.', ',');
-    const header = ['Nome', 'Fornitore', 'Formato', 'Codice', 'Barcode', 'IVA%', 'Costo II (€)', 'PVP II (€)', 'PVP consigliato (€)', 'Margine%', 'Stato', 'Note'];
+    const header = ['Nome', 'Fornitore', 'Formato', 'Codice', 'Barcode', 'IVA%', 'Costo II (€)', 'PVP II (€)', 'PVP consigliato (€)', 'Margine%', 'Stato', 'Lotto', 'Note'];
     const rows = filtered.map(p => [
       esc(p.nome),
       esc(p.fornitore),
@@ -284,6 +285,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
       esc(p.pvpConsigliato ? fmt2(p.pvpConsigliato) : ''),
       esc(margine(p) ?? ''),
       p.prezziConfermati ? 'Confermato' : 'Provvisorio',
+      esc(p.lotto),
       esc(p.note),
     ].join(';'));
     const csv = [header.join(';'), ...rows].join('\n');
@@ -453,6 +455,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">€</span>
               <input className="input-oe pl-6 col-span-2" placeholder="PVP consigliato" type="number" step="0.01" value={newData.pvpConsigliato ?? ''} onChange={e => setNewData(d => ({ ...d, pvpConsigliato: parseFloat(e.target.value) }))} />
             </div>
+            <input className="input-oe col-span-2" placeholder="Lotto" value={newData.lotto ?? ''} onChange={e => setNewData(d => ({ ...d, lotto: e.target.value }))} />
             <input className="input-oe col-span-2" placeholder="Note" value={newData.note ?? ''} onChange={e => setNewData(d => ({ ...d, note: e.target.value }))} />
           </div>
           <div className="flex gap-2">
@@ -481,6 +484,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
                     <p className="text-sm font-semibold text-primary leading-tight truncate">{p.nome}</p>
                     {p.formato && <p className="text-xs text-gray-400">{p.formato}</p>}
                     {p.barcode && <p className="text-[10px] text-gray-400 font-mono">{p.barcode}</p>}
+                    {p.lotto && <p className="text-[10px] text-gray-500">Lotto: {p.lotto}</p>}
                   </div>
                   <div className="flex flex-col gap-1">
                     <button onClick={() => isEditing ? setEditId(null) : startEdit(p)} className="p-1 text-gray-400 hover:text-primary transition-colors">
@@ -551,6 +555,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
                     <div className="flex items-center gap-2 flex-wrap">
                       {p.formato && <span className="text-xs text-gray-400">{p.formato}</span>}
                       {p.barcode && <span className="text-[10px] font-mono text-gray-400">{p.barcode}</span>}
+                      {p.lotto && <span className="text-[10px] text-gray-500">Lotto: {p.lotto}</span>}
                     </div>
                     {p.note && <p className="text-[10px] text-amber-600 bg-amber-50 rounded px-1.5 py-0.5 inline-block">{p.note}</p>}
                   </div>
