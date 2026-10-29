@@ -2097,7 +2097,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               </button>
             ))}
           </div>
-          <div className="overflow-x-auto -mx-4 px-4">
+          <div className="overflow-auto -mx-4 px-4 max-h-[calc(100vh-260px)] min-h-[200px]">
             <table className="w-full table-fixed text-xs border-collapse">
               <thead className="sticky top-0 z-20">
                 <tr className="text-left text-gray-400 border-b border-border/40">
