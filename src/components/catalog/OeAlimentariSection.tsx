@@ -1541,7 +1541,8 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                 const cIe = cIi / (1 + iva);
                 const pIi = prod?.pvpIi ?? 0;
                 const pIe = pIi / (1 + iva);
-                return { nome, prod, cIi, cIe, pIi, pIe, marg: pIe - cIe };
+                const pIiMod = (prod?.pvpConsigliato != null && prod.pvpConsigliato !== pIi) ? prod.pvpConsigliato : null;
+                return { nome, prod, cIi, cIe, pIi, pIe, pIiMod, marg: pIe - cIe };
               });
               const totCIi = righe.reduce((a, r) => a + r.cIi, 0) + s.costoCesto;
               const totCIe = righe.reduce((a, r) => a + r.cIe, 0) + cestoIe;
@@ -1641,6 +1642,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                           <th className="pb-1.5 font-medium pr-2">Costo i.i.</th>
                           <th className="pb-1.5 font-medium pr-2">PVP i.e.</th>
                           <th className="pb-1.5 font-medium pr-2">PVP i.i.</th>
+                          <th className="pb-1.5 font-medium pr-2 text-blue-600"><Tip text="PVP consigliato modificato rispetto al listino">PVP mod.</Tip></th>
                           <th className="pb-1.5 font-medium">Marg. ie</th>
                         </tr>
                       </thead>
@@ -1661,6 +1663,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                           <td className="py-1.5 pr-2 text-right text-gray-500">{fmt(s.costoCesto)}</td>
                           <td className="py-1.5 pr-2 text-right text-gray-500">{fmt(cestoPvpIe)}</td>
                           <td className="py-1.5 pr-2 text-right text-gray-500">{fmt(cestoPvpIi)}</td>
+                          <td className="py-1.5 pr-2 text-right text-gray-400">—</td>
                           <td className="py-1.5 text-right font-medium text-green-700">{fmt(cestoPvpIe - cestoIe)}</td>
                         </tr>
                         {/* Prodotti */}
@@ -1683,6 +1686,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                             <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.cIi) : '—'}</td>
                             <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.pIe) : '—'}</td>
                             <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.pIi) : '—'}</td>
+                            <td className="py-1.5 pr-2 text-right font-medium text-blue-600">{r.pIiMod != null ? fmt(r.pIiMod) : <span className="text-gray-300">—</span>}</td>
                             <td className="py-1.5 text-right font-medium text-green-700">{r.prod ? fmt(r.marg) : '—'}</td>
                           </tr>
                         ))}
@@ -1694,6 +1698,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                           <td className="pt-1.5 pr-2 text-right">{fmt(totCIi)}</td>
                           <td className="pt-1.5 pr-2 text-right">{fmt(totPIe)}</td>
                           <td className="pt-1.5 pr-2 text-right">{fmt(totPIi)}</td>
+                          <td className="pt-1.5 pr-2 text-right text-blue-600">{righe.some(r => r.pIiMod != null) ? fmt(righe.reduce((a, r) => a + (r.pIiMod ?? r.pIi), 0) + cestoPvpIi) : <span className="text-gray-300">—</span>}</td>
                           <td className="pt-1.5 text-right text-green-700">{fmt(margTotIe)}</td>
                         </tr>
                       </tfoot>
@@ -2094,32 +2099,32 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
           </div>
           <div className="overflow-x-auto -mx-4 px-4">
             <table className="w-full table-fixed text-xs border-collapse">
-              <thead>
+              <thead className="sticky top-0 z-20">
                 <tr className="text-left text-gray-400 border-b border-border/40">
-                  <th className="pb-1 pr-2 font-medium w-[190px]" rowSpan={2} />
-                  <th className="pb-1 px-1 font-medium text-center text-gray-400 w-[42px]" rowSpan={2}><Tip text="Strenne = cesti regalo · Scaffale = vendita diretta in negozio">DEST</Tip></th>
+                  <th className="pb-1 pr-2 font-medium w-[190px] bg-white" rowSpan={2} />
+                  <th className="pb-1 px-1 font-medium text-center text-gray-400 w-[42px] bg-white" rowSpan={2}><Tip text="Strenne = cesti regalo · Scaffale = vendita diretta in negozio">DEST</Tip></th>
                   {EMPORI.map(e => {
                     const nomiEmpori: Record<string, string> = { MN: 'Mantova', RE: 'Reggio Emilia', CR: 'Cremona', CA: 'Cagliari', VI: 'Vicenza' };
                     return (
-                      <th key={e} colSpan={4} className="pb-1 px-0.5 font-semibold text-center text-amber-700 border-l border-border/40">
+                      <th key={e} colSpan={4} className="pb-1 px-0.5 font-semibold text-center text-amber-700 border-l border-border/40 bg-white">
                         <Tip text={nomiEmpori[e] ?? e}>{e}</Tip>
                       </th>
                     );
                   })}
-                  <th colSpan={3} className="pb-1 px-0.5 font-semibold text-center text-gray-500 border-l border-border/40"><Tip text="Totali su tutti gli empori">Tot</Tip></th>
+                  <th colSpan={3} className="pb-1 px-0.5 font-semibold text-center text-gray-500 border-l border-border/40 bg-white"><Tip text="Totali su tutti gli empori">Tot</Tip></th>
                 </tr>
                 <tr className="text-left text-gray-400 border-b-2 border-border">
                   {EMPORI.map(e => (
                     <>
-                      <th key={`${e}-fab`} className="pb-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px]"><Tip text="Fabbisogno: quantità necessaria per questo emporio">Fab</Tip></th>
-                      <th key={`${e}-gia`} className="pb-1 font-medium text-center text-gray-400 text-[10px]"><Tip text="Giacenza: quantità attualmente in magazzino">Gia</Tip></th>
-                      <th key={`${e}-ord`} className="pb-1 font-medium text-center text-green-600 text-[10px]"><Tip text="Ordinato: quantità già ordinata al fornitore">Ord</Tip></th>
-                      <th key={`${e}-spia`} className="pb-1 text-center text-[10px]"><Tip text="🟢 giacenza copre · 🟠 ordini coprono · 🔴 scoperto">●</Tip></th>
+                      <th key={`${e}-fab`} className="pb-1 font-medium text-center text-blue-500 border-l border-border/40 text-[10px] bg-white"><Tip text="Fabbisogno: quantità necessaria per questo emporio">Fab</Tip></th>
+                      <th key={`${e}-gia`} className="pb-1 font-medium text-center text-gray-400 text-[10px] bg-white"><Tip text="Giacenza: quantità attualmente in magazzino">Gia</Tip></th>
+                      <th key={`${e}-ord`} className="pb-1 font-medium text-center text-green-600 text-[10px] bg-white"><Tip text="Ordinato: quantità già ordinata al fornitore">Ord</Tip></th>
+                      <th key={`${e}-spia`} className="pb-1 text-center text-[10px] bg-white"><Tip text="🟢 giacenza copre · 🟠 ordini coprono · 🔴 scoperto">●</Tip></th>
                     </>
                   ))}
-                  <th className="pb-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px]"><Tip text="Totale fabbisogno">Fab</Tip></th>
-                  <th className="pb-1 font-medium text-center text-gray-400 text-[10px]"><Tip text="Totale giacenze">Gia</Tip></th>
-                  <th className="pb-1 font-medium text-center text-green-600 text-[10px]"><Tip text="Totale ordinato">Ord</Tip></th>
+                  <th className="pb-1 font-medium text-center text-amber-600 border-l border-border/40 text-[10px] bg-white"><Tip text="Totale fabbisogno">Fab</Tip></th>
+                  <th className="pb-1 font-medium text-center text-gray-400 text-[10px] bg-white"><Tip text="Totale giacenze">Gia</Tip></th>
+                  <th className="pb-1 font-medium text-center text-green-600 text-[10px] bg-white"><Tip text="Totale ordinato">Ord</Tip></th>
                 </tr>
               </thead>
               <tbody>
