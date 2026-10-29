@@ -1157,39 +1157,6 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
   const [editNomi, setEditNomi] = useState<string[]>([]);
   const [addingProd, setAddingProd] = useState(false);
   const [savingComp, setSavingComp] = useState(false);
-  const [pvpModEdit, setPvpModEdit] = useState<{ barcode: string; nome: string; val: string } | null>(null);
-  const pvpModValRef = useRef('');
-  const [pvpCestoModEdit, setPvpCestoModEdit] = useState<{ barcode: string; val: string } | null>(null);
-  const pvpCestoModValRef = useRef('');
-
-  const savePvpMod = async (barcode: string, nome: string, prod: Prodotto | undefined, val: string) => {
-    if (!prod) { setPvpModEdit(null); return; }
-    const trimmed = val.trim();
-    if (!trimmed) { setPvpModEdit(null); return; } // campo vuoto → chiudi senza salvare
-    const v = parseFloat(trimmed.replace(',', '.'));
-    const newVal = isNaN(v) || v <= 0 ? null : v;
-    await fetch(`/api/oe/alimentari/prodotti/${prod.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pvpConsigliato: newVal }),
-    });
-    setPvpModEdit(null);
-    qc.invalidateQueries({ queryKey: ['oe-alimentari-prodotti'] });
-  };
-
-  const savePvpCestoMod = async (cestoCodice: string, _pvpBase: number, val: string) => {
-    const trimmed = val.trim();
-    if (!trimmed) { setPvpCestoModEdit(null); return; } // campo vuoto → chiudi senza salvare
-    const v = parseFloat(trimmed.replace(',', '.'));
-    const newVal = isNaN(v) || v <= 0 ? null : v;
-    await fetch(`/api/oe/alimentari/cesti/${encodeURIComponent(cestoCodice)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pvpConsigliato: newVal }),
-    });
-    setPvpCestoModEdit(null);
-    qc.invalidateQueries({ queryKey: ['oe-cesti'] });
-  };
   const [uploadingStrennaFoto, setUploadingStrennaFoto] = useState<string | null>(null);
   const strennaFotoRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -1698,28 +1665,29 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                           <td className="py-1.5 pr-2 text-right text-gray-500">{fmt(cestoPvpIe)}</td>
                           <td className="py-1.5 pr-2 text-right text-gray-500">{fmt(cestoPvpIi)}</td>
                           <td className="py-1.5 pr-2 text-right font-medium">
-                            {pvpCestoModEdit?.barcode === s.barcode ? (
+                            {cesto ? (
                               <input
-                                autoFocus
-                                type="number" step="0.01"
-                                className="w-20 text-right text-xs border border-primary rounded px-1 py-0.5 text-blue-600"
-                                value={pvpCestoModEdit.val}
-                                onChange={e => { pvpCestoModValRef.current = e.target.value; setPvpCestoModEdit(d => d ? { ...d, val: e.target.value } : null); }}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter') savePvpCestoMod(cestoCodiceEff, cestoPvpIi, pvpCestoModValRef.current);
-                                  if (e.key === 'Escape') setPvpCestoModEdit(null);
+                                key={cestoPvpMod ?? 'none'}
+                                type="text"
+                                inputMode="decimal"
+                                className="w-20 text-right text-xs bg-transparent border-0 placeholder-gray-300 focus:outline-none focus:border focus:border-primary focus:rounded focus:px-1 focus:bg-white text-blue-600"
+                                defaultValue={cestoPvpMod?.toFixed(2) ?? ''}
+                                placeholder="—"
+                                onFocus={e => e.target.select()}
+                                onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { e.currentTarget.value = cestoPvpMod?.toFixed(2) ?? ''; e.currentTarget.blur(); } }}
+                                onBlur={e => {
+                                  const v = e.target.value.trim().replace(',', '.');
+                                  const parsed = parseFloat(v);
+                                  const newVal = isNaN(parsed) || parsed <= 0 ? null : parsed;
+                                  if (newVal === cestoPvpMod) return;
+                                  fetch(`/api/oe/alimentari/cesti/${encodeURIComponent(cestoCodiceEff)}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ pvpConsigliato: newVal }),
+                                  }).then(() => qc.invalidateQueries({ queryKey: ['oe-cesti'] }));
                                 }}
-                                onBlur={() => savePvpCestoMod(cestoCodiceEff, cestoPvpIi, pvpCestoModValRef.current)}
                               />
-                            ) : (
-                              <button
-                                onClick={() => { if (!cesto) return; const v = String(cestoPvpMod ?? ''); pvpCestoModValRef.current = v; setPvpCestoModEdit({ barcode: s.barcode, val: v }); }}
-                                className={cn('w-full text-right', cestoPvpMod != null ? 'text-blue-600' : 'text-gray-300 hover:text-blue-400')}
-                                title="Click per modificare il PVP i.i. del cesto"
-                              >
-                                {cestoPvpMod != null ? fmt(cestoPvpMod) : '—'}
-                              </button>
-                            )}
+                            ) : <span className="text-gray-300">—</span>}
                           </td>
                           <td className="py-1.5 text-right font-medium text-green-700">{fmt(cestoPvpIe - cestoIe)}</td>
                         </tr>
@@ -1744,28 +1712,29 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                             <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.pIe) : '—'}</td>
                             <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.pIi) : '—'}</td>
                             <td className="py-1.5 pr-2 text-right font-medium">
-                              {pvpModEdit?.barcode === s.barcode && pvpModEdit.nome === r.nome ? (
+                              {r.prod ? (
                                 <input
-                                  autoFocus
-                                  type="number" step="0.01"
-                                  className="w-20 text-right text-xs border border-primary rounded px-1 py-0.5 text-blue-600"
-                                  value={pvpModEdit.val}
-                                  onChange={e => { pvpModValRef.current = e.target.value; setPvpModEdit(d => d ? { ...d, val: e.target.value } : null); }}
-                                  onKeyDown={e => {
-                                    if (e.key === 'Enter') savePvpMod(s.barcode, r.nome, r.prod, pvpModValRef.current);
-                                    if (e.key === 'Escape') setPvpModEdit(null);
+                                  key={r.pIiMod ?? 'none'}
+                                  type="text"
+                                  inputMode="decimal"
+                                  className="w-20 text-right text-xs bg-transparent border-0 placeholder-gray-300 focus:outline-none focus:border focus:border-primary focus:rounded focus:px-1 focus:bg-white text-blue-600"
+                                  defaultValue={r.pIiMod?.toFixed(2) ?? ''}
+                                  placeholder="—"
+                                  onFocus={e => e.target.select()}
+                                  onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { e.currentTarget.value = r.pIiMod?.toFixed(2) ?? ''; e.currentTarget.blur(); } }}
+                                  onBlur={e => {
+                                    const v = e.target.value.trim().replace(',', '.');
+                                    const parsed = parseFloat(v);
+                                    const newVal = isNaN(parsed) || parsed <= 0 ? null : parsed;
+                                    if (newVal === r.pIiMod) return;
+                                    fetch(`/api/oe/alimentari/prodotti/${r.prod!.id}`, {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ pvpConsigliato: newVal }),
+                                    }).then(() => qc.invalidateQueries({ queryKey: ['oe-alimentari-prodotti'] }));
                                   }}
-                                  onBlur={() => savePvpMod(s.barcode, r.nome, r.prod, pvpModValRef.current)}
                                 />
-                              ) : (
-                                <button
-                                  onClick={() => { const v = String(r.pIiMod ?? ''); pvpModValRef.current = v; setPvpModEdit({ barcode: s.barcode, nome: r.nome, val: v }); }}
-                                  className={cn('w-full text-right', r.pIiMod != null ? 'text-blue-600' : 'text-gray-300 hover:text-blue-400')}
-                                  title="Click per modificare il PVP i.i."
-                                >
-                                  {r.pIiMod != null ? fmt(r.pIiMod) : '—'}
-                                </button>
-                              )}
+                              ) : <span className="text-gray-300">—</span>}
                             </td>
                             <td className="py-1.5 text-right font-medium text-green-700">{r.prod ? fmt(r.marg) : '—'}</td>
                           </tr>
