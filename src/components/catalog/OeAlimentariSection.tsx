@@ -1158,12 +1158,16 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
   const [addingProd, setAddingProd] = useState(false);
   const [savingComp, setSavingComp] = useState(false);
   const [pvpModEdit, setPvpModEdit] = useState<{ barcode: string; nome: string; val: string } | null>(null);
+  const pvpModValRef = useRef('');
   const [pvpCestoModEdit, setPvpCestoModEdit] = useState<{ barcode: string; val: string } | null>(null);
+  const pvpCestoModValRef = useRef('');
 
   const savePvpMod = async (barcode: string, nome: string, prod: Prodotto | undefined, val: string) => {
     if (!prod) { setPvpModEdit(null); return; }
-    const v = parseFloat(val.replace(',', '.'));
-    const newVal = isNaN(v) || v <= 0 || v === prod.pvpIi ? null : v;
+    const trimmed = val.trim();
+    if (!trimmed) { setPvpModEdit(null); return; } // campo vuoto → chiudi senza salvare
+    const v = parseFloat(trimmed.replace(',', '.'));
+    const newVal = isNaN(v) || v <= 0 ? null : v;
     await fetch(`/api/oe/alimentari/prodotti/${prod.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -1173,9 +1177,11 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
     qc.invalidateQueries({ queryKey: ['oe-alimentari-prodotti'] });
   };
 
-  const savePvpCestoMod = async (cestoCodice: string, pvpBase: number, val: string) => {
-    const v = parseFloat(val.replace(',', '.'));
-    const newVal = isNaN(v) || v <= 0 || v === pvpBase ? null : v;
+  const savePvpCestoMod = async (cestoCodice: string, _pvpBase: number, val: string) => {
+    const trimmed = val.trim();
+    if (!trimmed) { setPvpCestoModEdit(null); return; } // campo vuoto → chiudi senza salvare
+    const v = parseFloat(trimmed.replace(',', '.'));
+    const newVal = isNaN(v) || v <= 0 ? null : v;
     await fetch(`/api/oe/alimentari/cesti/${encodeURIComponent(cestoCodice)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -1698,16 +1704,16 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                                 type="number" step="0.01"
                                 className="w-20 text-right text-xs border border-primary rounded px-1 py-0.5 text-blue-600"
                                 value={pvpCestoModEdit.val}
-                                onChange={e => setPvpCestoModEdit(d => d ? { ...d, val: e.target.value } : null)}
+                                onChange={e => { pvpCestoModValRef.current = e.target.value; setPvpCestoModEdit(d => d ? { ...d, val: e.target.value } : null); }}
                                 onKeyDown={e => {
-                                  if (e.key === 'Enter') savePvpCestoMod(cestoCodiceEff, cestoPvpIi, pvpCestoModEdit.val);
+                                  if (e.key === 'Enter') savePvpCestoMod(cestoCodiceEff, cestoPvpIi, pvpCestoModValRef.current);
                                   if (e.key === 'Escape') setPvpCestoModEdit(null);
                                 }}
-                                onBlur={() => savePvpCestoMod(cestoCodiceEff, cestoPvpIi, pvpCestoModEdit!.val)}
+                                onBlur={() => savePvpCestoMod(cestoCodiceEff, cestoPvpIi, pvpCestoModValRef.current)}
                               />
                             ) : (
                               <button
-                                onClick={() => cesto && setPvpCestoModEdit({ barcode: s.barcode, val: String(cestoPvpMod ?? '') })}
+                                onClick={() => { if (!cesto) return; const v = String(cestoPvpMod ?? ''); pvpCestoModValRef.current = v; setPvpCestoModEdit({ barcode: s.barcode, val: v }); }}
                                 className={cn('w-full text-right', cestoPvpMod != null ? 'text-blue-600' : 'text-gray-300 hover:text-blue-400')}
                                 title="Click per modificare il PVP i.i. del cesto"
                               >
@@ -1744,16 +1750,16 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                                   type="number" step="0.01"
                                   className="w-20 text-right text-xs border border-primary rounded px-1 py-0.5 text-blue-600"
                                   value={pvpModEdit.val}
-                                  onChange={e => setPvpModEdit(d => d ? { ...d, val: e.target.value } : null)}
+                                  onChange={e => { pvpModValRef.current = e.target.value; setPvpModEdit(d => d ? { ...d, val: e.target.value } : null); }}
                                   onKeyDown={e => {
-                                    if (e.key === 'Enter') savePvpMod(s.barcode, r.nome, r.prod, pvpModEdit.val);
+                                    if (e.key === 'Enter') savePvpMod(s.barcode, r.nome, r.prod, pvpModValRef.current);
                                     if (e.key === 'Escape') setPvpModEdit(null);
                                   }}
-                                  onBlur={() => savePvpMod(s.barcode, r.nome, r.prod, pvpModEdit!.val)}
+                                  onBlur={() => savePvpMod(s.barcode, r.nome, r.prod, pvpModValRef.current)}
                                 />
                               ) : (
                                 <button
-                                  onClick={() => setPvpModEdit({ barcode: s.barcode, nome: r.nome, val: String(r.pIiMod ?? '') })}
+                                  onClick={() => { const v = String(r.pIiMod ?? ''); pvpModValRef.current = v; setPvpModEdit({ barcode: s.barcode, nome: r.nome, val: v }); }}
                                   className={cn('w-full text-right', r.pIiMod != null ? 'text-blue-600' : 'text-gray-300 hover:text-blue-400')}
                                   title="Click per modificare il PVP i.i."
                                 >
