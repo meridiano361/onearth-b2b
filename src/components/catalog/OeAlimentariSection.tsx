@@ -2176,7 +2176,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               <thead className="sticky top-[37px] z-20">
                 <tr className="text-left text-gray-400 border-b border-border/40">
                   <th className="pb-1 pr-2 font-medium w-[190px] bg-white" rowSpan={2} />
-                  <th className="pb-1 px-1 font-medium text-center text-gray-400 w-[42px] bg-white" rowSpan={2}><Tip text="Strenne = cesti regalo · Scaffale = vendita diretta in negozio">DEST</Tip></th>
+                  <th className="pb-1 px-1 font-medium text-left text-gray-400 w-[42px] bg-white" rowSpan={2}><Tip text="Strenne = cesti regalo · Scaffale = vendita diretta in negozio">Destinatario</Tip></th>
                   {EMPORI.map(e => {
                     const nomiEmpori: Record<string, string> = { MN: 'Mantova', RE: 'Reggio Emilia', CR: 'Cremona', CA: 'Cagliari', VI: 'Vicenza' };
                     return (
@@ -2241,7 +2241,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       {showStr && (
                         <tr className={cn('bg-amber-50/40 hover:bg-amber-50/70', !showScaf && 'border-b border-border/40')}>
                           {productNameCell}
-                          <td className="py-0.5 px-1 text-center">
+                          <td className="py-0.5 px-1 text-left">
                             <span className="text-[10px] font-semibold text-amber-600">Str</span>
                           </td>
                           {EMPORI.map(emp => {
@@ -2304,7 +2304,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       {showScaf && (
                         <tr className={cn('hover:bg-gray-50', !bothRows && 'border-b border-border/40')}>
                           {!bothRows && productNameCell}
-                          <td className="py-0.5 px-1 text-center">
+                          <td className="py-0.5 px-1 text-left">
                             <span className="text-[10px] font-semibold text-blue-600">Scf</span>
                           </td>
                           {EMPORI.map(emp => {
@@ -2379,7 +2379,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
                       )}
                       {bothRows && (
                         <tr className="border-b-2 border-border bg-gray-100/60">
-                          <td className="py-0.5 px-1 text-center">
+                          <td className="py-0.5 px-1 text-left">
                             <span className="text-[10px] font-bold text-gray-500">Tot</span>
                           </td>
                           {EMPORI.map(emp => {
