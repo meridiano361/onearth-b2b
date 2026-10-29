@@ -2173,12 +2173,12 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               </button>
             ))}
           </div>
-          <div className="overflow-x-auto [overflow-y:clip] -mx-4 px-4">
+          <div className="overflow-auto -mx-4 px-4" style={{ maxHeight: 'calc(100vh - 260px)' }}>
             <table className="w-full table-fixed text-xs border-collapse">
-              <thead className="sticky top-[37px] z-20">
+              <thead className="sticky top-0 z-20">
                 <tr className="text-left text-gray-400 border-b border-border/40">
                   <th className="pb-1 pr-2 font-medium w-[190px] bg-white" rowSpan={2} />
-                  <th className="pb-1 px-1 font-medium text-left text-gray-400 w-[42px] bg-white" rowSpan={2}><Tip text="Strenne = cesti regalo · Scaffale = vendita diretta in negozio">Destinatario</Tip></th>
+                  <th className="pb-1 px-1 font-medium text-gray-400 w-[42px] bg-white" rowSpan={2} style={{ textAlign: 'left', verticalAlign: 'middle' }}><Tip text="Strenne = cesti regalo · Scaffale = vendita diretta in negozio">Destinatario</Tip></th>
                   {EMPORI.map(e => {
                     const nomiEmpori: Record<string, string> = { MN: 'Mantova', RE: 'Reggio Emilia', CR: 'Cremona', CA: 'Cagliari', VI: 'Vicenza' };
                     return (
