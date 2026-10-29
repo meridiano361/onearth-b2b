@@ -1533,7 +1533,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
               const cestoIe = s.costoCesto / 1.22;
               const cestoPvpIi = cesto?.pvp ?? 0;
               const cestoPvpIe = cestoPvpIi / 1.22;
-              const cestoPvpMod = (cesto?.pvpConsigliato != null && cesto.pvpConsigliato !== cestoPvpIi) ? cesto.pvpConsigliato : null;
+              const cestoPvpMod = cesto?.pvpConsigliato ?? null;
               const isEditComp = editingComp === s.barcode;
               const righe = nomiComp.map(nome => {
                 const prod = prodotti.find(p => p.nome === nome);
@@ -1542,7 +1542,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                 const cIe = cIi / (1 + iva);
                 const pIi = prod?.pvpIi ?? 0;
                 const pIe = pIi / (1 + iva);
-                const pIiMod = (prod?.pvpConsigliato != null && prod.pvpConsigliato !== pIi) ? prod.pvpConsigliato : null;
+                const pIiMod = prod?.pvpConsigliato ?? null;
                 return { nome, prod, cIi, cIe, pIi, pIe, pIiMod, marg: pIe - cIe };
               });
               const totCIi = righe.reduce((a, r) => a + r.cIi, 0) + s.costoCesto;
@@ -1672,10 +1672,10 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                                   type="text"
                                   inputMode="decimal"
                                   className="w-16 text-right text-xs bg-transparent border-0 placeholder-gray-300 focus:outline-none focus:border focus:border-primary focus:rounded focus:px-1 focus:bg-white text-blue-600"
-                                  defaultValue={cestoPvpMod?.toFixed(2) ?? ''}
+                                  defaultValue={cestoPvpMod != null ? cestoPvpMod.toFixed(2).replace('.', ',') : ''}
                                   placeholder="—"
                                   onFocus={e => e.target.select()}
-                                  onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { e.currentTarget.value = cestoPvpMod?.toFixed(2) ?? ''; e.currentTarget.blur(); } }}
+                                  onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { e.currentTarget.value = cestoPvpMod != null ? cestoPvpMod.toFixed(2).replace('.', ',') : ''; e.currentTarget.blur(); } }}
                                   onBlur={e => {
                                     const v = e.target.value.trim().replace(',', '.');
                                     const parsed = parseFloat(v);
@@ -1734,10 +1734,10 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                                     type="text"
                                     inputMode="decimal"
                                     className="w-16 text-right text-xs bg-transparent border-0 placeholder-gray-300 focus:outline-none focus:border focus:border-primary focus:rounded focus:px-1 focus:bg-white text-blue-600"
-                                    defaultValue={r.pIiMod?.toFixed(2) ?? ''}
+                                    defaultValue={r.pIiMod != null ? r.pIiMod.toFixed(2).replace('.', ',') : ''}
                                     placeholder="—"
                                     onFocus={e => e.target.select()}
-                                    onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { e.currentTarget.value = r.pIiMod?.toFixed(2) ?? ''; e.currentTarget.blur(); } }}
+                                    onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { e.currentTarget.value = r.pIiMod != null ? r.pIiMod.toFixed(2).replace('.', ',') : ''; e.currentTarget.blur(); } }}
                                     onBlur={e => {
                                       const v = e.target.value.trim().replace(',', '.');
                                       const parsed = parseFloat(v);
