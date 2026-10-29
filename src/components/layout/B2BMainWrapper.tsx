@@ -9,6 +9,7 @@ const CONTAINED_PATHS = [
   '/moda/catalogo',
   '/moda/ruota-cromatica',
   '/moda/product',
+  '/oe-alimentari',
 ];
 
 function isContained(pathname: string) {

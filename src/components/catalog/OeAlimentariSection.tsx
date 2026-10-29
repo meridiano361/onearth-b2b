@@ -2173,7 +2173,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               </button>
             ))}
           </div>
-          <div className="overflow-auto -mx-4 px-4" style={{ maxHeight: 'calc(100vh - 260px)' }}>
+          <div className="-mx-4 px-4 [overflow-x:clip]">
             <table className="w-full table-fixed text-xs border-collapse">
               <thead className="sticky top-0 z-20">
                 <tr className="text-left text-gray-400 border-b border-border/40">
@@ -3033,15 +3033,15 @@ export default function OeAlimentariSection() {
   });
 
   return (
-    <div className="min-h-screen bg-[#faf8f5] pb-28">
+    <div className="h-full flex flex-col bg-[#faf8f5]">
       {/* Header */}
-      <div className="px-5 pt-8 pb-4">
+      <div className="flex-shrink-0 px-5 pt-8 pb-4">
         <p className="text-2xs tracking-[0.2em] uppercase text-gray-400">sezione</p>
         <h1 className="font-display text-3xl font-light tracking-widest leading-tight mt-0.5">OE ALIMENTARI</h1>
       </div>
 
       {/* Tabs */}
-      <div className="sticky top-0 z-10 bg-[#faf8f5] border-b border-border px-4">
+      <div className="flex-shrink-0 bg-[#faf8f5] border-b border-border px-4">
         <div className="flex gap-1 overflow-x-auto">
           {TABS.map(t => (
             <button
@@ -3062,7 +3062,7 @@ export default function OeAlimentariSection() {
       </div>
 
       {/* Content */}
-      <div className="px-4 pt-5">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-5 pb-nav-safe md:pb-4">
         {isLoading ? (
           <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Caricamento...</div>
         ) : tab === 'prodotti' ? (
