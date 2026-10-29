@@ -1157,6 +1157,20 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
   const [editNomi, setEditNomi] = useState<string[]>([]);
   const [addingProd, setAddingProd] = useState(false);
   const [savingComp, setSavingComp] = useState(false);
+  const [pvpModEdit, setPvpModEdit] = useState<{ nome: string; val: string } | null>(null);
+
+  const savePvpMod = async (nome: string, prod: Prodotto | undefined, val: string) => {
+    if (!prod) return;
+    const v = parseFloat(val.replace(',', '.'));
+    const newVal = isNaN(v) || v <= 0 || v === prod.pvpIi ? null : v;
+    await fetch(`/api/oe/alimentari/prodotti/${prod.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pvpConsigliato: newVal }),
+    });
+    setPvpModEdit(null);
+    qc.invalidateQueries({ queryKey: ['oe-alimentari-prodotti'] });
+  };
   const [uploadingStrennaFoto, setUploadingStrennaFoto] = useState<string | null>(null);
   const strennaFotoRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -1686,7 +1700,31 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                             <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.cIi) : '—'}</td>
                             <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.pIe) : '—'}</td>
                             <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.pIi) : '—'}</td>
-                            <td className="py-1.5 pr-2 text-right font-medium text-blue-600">{r.pIiMod != null ? fmt(r.pIiMod) : <span className="text-gray-300">—</span>}</td>
+                            <td className="py-1.5 pr-2 text-right font-medium">
+                              {pvpModEdit?.nome === r.nome ? (
+                                <input
+                                  autoFocus
+                                  type="number"
+                                  step="0.01"
+                                  className="w-20 text-right text-xs border border-primary rounded px-1 py-0.5 text-blue-600"
+                                  value={pvpModEdit.val}
+                                  onChange={e => setPvpModEdit(d => d ? { ...d, val: e.target.value } : null)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') savePvpMod(r.nome, r.prod, pvpModEdit.val);
+                                    if (e.key === 'Escape') setPvpModEdit(null);
+                                  }}
+                                  onBlur={() => savePvpMod(r.nome, r.prod, pvpModEdit!.val)}
+                                />
+                              ) : (
+                                <button
+                                  onClick={() => r.prod && setPvpModEdit({ nome: r.nome, val: String(r.pIiMod ?? '') })}
+                                  className={cn('w-full text-right', r.pIiMod != null ? 'text-blue-600' : 'text-gray-300 hover:text-blue-400')}
+                                  title="Click per modificare il PVP i.i."
+                                >
+                                  {r.pIiMod != null ? fmt(r.pIiMod) : '—'}
+                                </button>
+                              )}
+                            </td>
                             <td className="py-1.5 text-right font-medium text-green-700">{r.prod ? fmt(r.marg) : '—'}</td>
                           </tr>
                         ))}
@@ -2097,7 +2135,7 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               </button>
             ))}
           </div>
-          <div className="overflow-auto -mx-4 px-4 max-h-[calc(100vh-260px)] min-h-[200px]">
+          <div className="overflow-auto -mx-4 px-4 max-h-[60vh]">
             <table className="w-full table-fixed text-xs border-collapse">
               <thead className="sticky top-0 z-20">
                 <tr className="text-left text-gray-400 border-b border-border/40">
