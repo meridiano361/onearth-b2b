@@ -1276,13 +1276,14 @@ model OeAlimentariOrdinato {
 }
 
 model OeCesto {
-  codice      String   @id
-  descrizione String   @default("")
-  misure      String   @default("") @map("misure")
-  pvp         Float    @default(0)
-  costo       Float    @default(0)
-  fotoUrl     String   @default("") @map("foto_url")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  codice         String   @id
+  descrizione    String   @default("")
+  misure         String   @default("") @map("misure")
+  pvp            Float    @default(0)
+  pvpConsigliato Float?   @map("pvp_consigliato")
+  costo          Float    @default(0)
+  fotoUrl        String   @default("") @map("foto_url")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@map("oe_cesti")
 }

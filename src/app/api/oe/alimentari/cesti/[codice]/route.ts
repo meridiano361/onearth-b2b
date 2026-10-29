@@ -14,7 +14,7 @@ async function requireM361() {
 export async function PATCH(req: NextRequest, { params }: { params: { codice: string } }) {
   if (!await requireM361()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const body = await req.json();
-  const { descrizione, misure, pvp, costo, fotoUrl } = body;
+  const { descrizione, misure, pvp, pvpConsigliato, costo, fotoUrl } = body;
   try {
     const cesto = await prisma.oeCesto.update({
       where: { codice: params.codice },
@@ -22,6 +22,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { codice: st
         ...(descrizione !== undefined && { descrizione }),
         ...(misure !== undefined && { misure }),
         ...(pvp !== undefined && { pvp: Number(pvp) }),
+        ...(pvpConsigliato !== undefined && { pvpConsigliato: pvpConsigliato !== null ? Number(pvpConsigliato) : null }),
         ...(costo !== undefined && { costo: Number(costo) }),
         ...(fotoUrl !== undefined && { fotoUrl }),
       },

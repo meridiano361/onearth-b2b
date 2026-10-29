@@ -603,9 +603,9 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
 // ── Tab: Cesti ────────────────────────────────────────────────────────────────
 
 type GiacenzaRow = { cestoCodice: string; negozio: string; qta: number };
-type CestoDB = { codice: string; descrizione: string; misure: string; pvp: number; costo: number; fotoUrl: string };
+type CestoDB = { codice: string; descrizione: string; misure: string; pvp: number; pvpConsigliato: number | null; costo: number; fotoUrl: string };
 
-const EMPTY_CESTO: Omit<CestoDB, 'fotoUrl'> & { fotoUrl: string } = { codice: '', descrizione: '', misure: '', pvp: 0, costo: 0, fotoUrl: '' };
+const EMPTY_CESTO: Omit<CestoDB, 'fotoUrl'> & { fotoUrl: string } = { codice: '', descrizione: '', misure: '', pvp: 0, pvpConsigliato: null, costo: 0, fotoUrl: '' };
 
 function TabCesti() {
   const STORES_ALL = ['CR', 'RE', 'CA', 'VI', 'MN', 'TN', 'HUB'] as const;
@@ -1157,10 +1157,11 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
   const [editNomi, setEditNomi] = useState<string[]>([]);
   const [addingProd, setAddingProd] = useState(false);
   const [savingComp, setSavingComp] = useState(false);
-  const [pvpModEdit, setPvpModEdit] = useState<{ nome: string; val: string } | null>(null);
+  const [pvpModEdit, setPvpModEdit] = useState<{ barcode: string; nome: string; val: string } | null>(null);
+  const [pvpCestoModEdit, setPvpCestoModEdit] = useState<{ barcode: string; val: string } | null>(null);
 
-  const savePvpMod = async (nome: string, prod: Prodotto | undefined, val: string) => {
-    if (!prod) return;
+  const savePvpMod = async (barcode: string, nome: string, prod: Prodotto | undefined, val: string) => {
+    if (!prod) { setPvpModEdit(null); return; }
     const v = parseFloat(val.replace(',', '.'));
     const newVal = isNaN(v) || v <= 0 || v === prod.pvpIi ? null : v;
     await fetch(`/api/oe/alimentari/prodotti/${prod.id}`, {
@@ -1170,6 +1171,18 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
     });
     setPvpModEdit(null);
     qc.invalidateQueries({ queryKey: ['oe-alimentari-prodotti'] });
+  };
+
+  const savePvpCestoMod = async (cestoCodice: string, pvpBase: number, val: string) => {
+    const v = parseFloat(val.replace(',', '.'));
+    const newVal = isNaN(v) || v <= 0 || v === pvpBase ? null : v;
+    await fetch(`/api/oe/alimentari/cesti/${encodeURIComponent(cestoCodice)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pvpConsigliato: newVal }),
+    });
+    setPvpCestoModEdit(null);
+    qc.invalidateQueries({ queryKey: ['oe-cesti'] });
   };
   const [uploadingStrennaFoto, setUploadingStrennaFoto] = useState<string | null>(null);
   const strennaFotoRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -1545,8 +1558,9 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
             {isOpen && (() => {
               // calcoli ie per composizione
               const cestoIe = s.costoCesto / 1.22;
-              const cestoPvpIe = (cesto?.pvp ?? 0) / 1.22;
               const cestoPvpIi = cesto?.pvp ?? 0;
+              const cestoPvpIe = cestoPvpIi / 1.22;
+              const cestoPvpMod = (cesto?.pvpConsigliato != null && cesto.pvpConsigliato !== cestoPvpIi) ? cesto.pvpConsigliato : null;
               const isEditComp = editingComp === s.barcode;
               const righe = nomiComp.map(nome => {
                 const prod = prodotti.find(p => p.nome === nome);
@@ -1677,7 +1691,30 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                           <td className="py-1.5 pr-2 text-right text-gray-500">{fmt(s.costoCesto)}</td>
                           <td className="py-1.5 pr-2 text-right text-gray-500">{fmt(cestoPvpIe)}</td>
                           <td className="py-1.5 pr-2 text-right text-gray-500">{fmt(cestoPvpIi)}</td>
-                          <td className="py-1.5 pr-2 text-right text-gray-400">—</td>
+                          <td className="py-1.5 pr-2 text-right font-medium">
+                            {pvpCestoModEdit?.barcode === s.barcode ? (
+                              <input
+                                autoFocus
+                                type="number" step="0.01"
+                                className="w-20 text-right text-xs border border-primary rounded px-1 py-0.5 text-blue-600"
+                                value={pvpCestoModEdit.val}
+                                onChange={e => setPvpCestoModEdit(d => d ? { ...d, val: e.target.value } : null)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') savePvpCestoMod(cestoCodiceEff, cestoPvpIi, pvpCestoModEdit.val);
+                                  if (e.key === 'Escape') setPvpCestoModEdit(null);
+                                }}
+                                onBlur={() => savePvpCestoMod(cestoCodiceEff, cestoPvpIi, pvpCestoModEdit!.val)}
+                              />
+                            ) : (
+                              <button
+                                onClick={() => cesto && setPvpCestoModEdit({ barcode: s.barcode, val: String(cestoPvpMod ?? '') })}
+                                className={cn('w-full text-right', cestoPvpMod != null ? 'text-blue-600' : 'text-gray-300 hover:text-blue-400')}
+                                title="Click per modificare il PVP i.i. del cesto"
+                              >
+                                {cestoPvpMod != null ? fmt(cestoPvpMod) : '—'}
+                              </button>
+                            )}
+                          </td>
                           <td className="py-1.5 text-right font-medium text-green-700">{fmt(cestoPvpIe - cestoIe)}</td>
                         </tr>
                         {/* Prodotti */}
@@ -1701,23 +1738,22 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                             <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.pIe) : '—'}</td>
                             <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.pIi) : '—'}</td>
                             <td className="py-1.5 pr-2 text-right font-medium">
-                              {pvpModEdit?.nome === r.nome ? (
+                              {pvpModEdit?.barcode === s.barcode && pvpModEdit.nome === r.nome ? (
                                 <input
                                   autoFocus
-                                  type="number"
-                                  step="0.01"
+                                  type="number" step="0.01"
                                   className="w-20 text-right text-xs border border-primary rounded px-1 py-0.5 text-blue-600"
                                   value={pvpModEdit.val}
                                   onChange={e => setPvpModEdit(d => d ? { ...d, val: e.target.value } : null)}
                                   onKeyDown={e => {
-                                    if (e.key === 'Enter') savePvpMod(r.nome, r.prod, pvpModEdit.val);
+                                    if (e.key === 'Enter') savePvpMod(s.barcode, r.nome, r.prod, pvpModEdit.val);
                                     if (e.key === 'Escape') setPvpModEdit(null);
                                   }}
-                                  onBlur={() => savePvpMod(r.nome, r.prod, pvpModEdit!.val)}
+                                  onBlur={() => savePvpMod(s.barcode, r.nome, r.prod, pvpModEdit!.val)}
                                 />
                               ) : (
                                 <button
-                                  onClick={() => r.prod && setPvpModEdit({ nome: r.nome, val: String(r.pIiMod ?? '') })}
+                                  onClick={() => setPvpModEdit({ barcode: s.barcode, nome: r.nome, val: String(r.pIiMod ?? '') })}
                                   className={cn('w-full text-right', r.pIiMod != null ? 'text-blue-600' : 'text-gray-300 hover:text-blue-400')}
                                   title="Click per modificare il PVP i.i."
                                 >
@@ -1736,7 +1772,7 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                           <td className="pt-1.5 pr-2 text-right">{fmt(totCIi)}</td>
                           <td className="pt-1.5 pr-2 text-right">{fmt(totPIe)}</td>
                           <td className="pt-1.5 pr-2 text-right">{fmt(totPIi)}</td>
-                          <td className="pt-1.5 pr-2 text-right text-blue-600">{righe.some(r => r.pIiMod != null) ? fmt(righe.reduce((a, r) => a + (r.pIiMod ?? r.pIi), 0) + cestoPvpIi) : <span className="text-gray-300">—</span>}</td>
+                          <td className="pt-1.5 pr-2 text-right text-blue-600">{(righe.some(r => r.pIiMod != null) || cestoPvpMod != null) ? fmt(righe.reduce((a, r) => a + (r.pIiMod ?? r.pIi), 0) + (cestoPvpMod ?? cestoPvpIi)) : <span className="text-gray-300">—</span>}</td>
                           <td className="pt-1.5 text-right text-green-700">{fmt(margTotIe)}</td>
                         </tr>
                       </tfoot>
@@ -2135,9 +2171,9 @@ function TabFabbisogno({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: (
               </button>
             ))}
           </div>
-          <div className="overflow-auto -mx-4 px-4 max-h-[60vh]">
+          <div className="overflow-x-auto [overflow-y:clip] -mx-4 px-4">
             <table className="w-full table-fixed text-xs border-collapse">
-              <thead className="sticky top-0 z-20">
+              <thead className="sticky top-[37px] z-20">
                 <tr className="text-left text-gray-400 border-b border-border/40">
                   <th className="pb-1 pr-2 font-medium w-[190px] bg-white" rowSpan={2} />
                   <th className="pb-1 px-1 font-medium text-center text-gray-400 w-[42px] bg-white" rowSpan={2}><Tip text="Strenne = cesti regalo · Scaffale = vendita diretta in negozio">DEST</Tip></th>
