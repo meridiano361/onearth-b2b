@@ -1147,6 +1147,39 @@ function AnagraticaDrawer({ item, onClose }: { item: AnagraticaState; onClose: (
 
 type QtaRow = { barcode: string; emporio: string; qta: number };
 
+function PvpModInput({ savedValue, onSave }: {
+  savedValue: number | null;
+  onSave: (v: number | null) => void;
+}) {
+  const fmtLocal = (v: number | null) => v != null ? v.toFixed(2).replace('.', ',') : '';
+  const [str, setStr] = useState(() => fmtLocal(savedValue));
+  return (
+    <div className="flex items-center justify-end gap-0.5">
+      <input
+        type="text"
+        inputMode="decimal"
+        className="w-16 text-right text-xs bg-transparent border-0 placeholder-gray-300 focus:outline-none focus:border focus:border-primary focus:rounded focus:px-1 focus:bg-white text-blue-600"
+        value={str}
+        placeholder="—"
+        onChange={e => setStr(e.target.value)}
+        onFocus={e => e.target.select()}
+        onKeyDown={e => {
+          if (e.key === 'Enter') e.currentTarget.blur();
+          if (e.key === 'Escape') { setStr(fmtLocal(savedValue)); e.currentTarget.blur(); }
+        }}
+        onBlur={() => {
+          const v = str.trim().replace(',', '.');
+          const parsed = parseFloat(v);
+          const newVal = isNaN(parsed) || parsed <= 0 ? null : parsed;
+          if (newVal === savedValue) { setStr(fmtLocal(savedValue)); return; }
+          onSave(newVal);
+        }}
+      />
+      <span className="text-xs text-blue-600">€</span>
+    </div>
+  );
+}
+
 function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
   const qc = useQueryClient();
   const [openIdx, setOpenIdx] = useState<number | null>(null);
@@ -1666,42 +1699,24 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                           <td className="py-1.5 pr-2 text-right text-gray-500">{fmt(cestoPvpIi)}</td>
                           <td className="py-1.5 pr-2 text-right font-medium">
                             {cesto ? (
-                              <div className="flex items-center justify-end gap-0.5">
-                                <input
-                                  key={cesto.pvpConsigliato ?? 'none'}
-                                  type="text"
-                                  inputMode="decimal"
-                                  className="w-16 text-right text-xs bg-transparent border-0 placeholder-gray-300 focus:outline-none focus:border focus:border-primary focus:rounded focus:px-1 focus:bg-white text-blue-600"
-                                  defaultValue={cestoPvpMod != null ? cestoPvpMod.toFixed(2).replace('.', ',') : ''}
-                                  placeholder="—"
-                                  onFocus={e => e.target.select()}
-                                  onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { e.currentTarget.value = cestoPvpMod != null ? cestoPvpMod.toFixed(2).replace('.', ',') : ''; e.currentTarget.blur(); } }}
-                                  onBlur={e => {
-                                    const v = e.target.value.trim().replace(',', '.');
-                                    const parsed = parseFloat(v);
-                                    const newVal = isNaN(parsed) || parsed <= 0 ? null : parsed;
-                                    if (newVal === (cesto.pvpConsigliato ?? null)) return;
-                                    qc.setQueryData<CestoDB[]>(['oe-cesti'], old =>
-                                      old?.map(c => c.codice === cestoCodiceEff ? { ...c, pvpConsigliato: newVal } : c) ?? old
-                                    );
-                                    fetch(`/api/oe/alimentari/cesti/${encodeURIComponent(cestoCodiceEff)}`, {
-                                      method: 'PATCH',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ pvpConsigliato: newVal }),
-                                    }).then(async res => {
-                                      if (!res.ok) {
-                                        qc.invalidateQueries({ queryKey: ['oe-cesti'] });
-                                        const err = await res.json().catch(() => ({}));
-                                        toast.error(err.error ?? 'Salvataggio fallito');
-                                      }
-                                    }).catch(() => {
+                              <PvpModInput
+                                key={cesto.pvpConsigliato ?? 'null'}
+                                savedValue={cestoPvpMod}
+                                onSave={newVal => {
+                                  fetch(`/api/oe/alimentari/cesti/${encodeURIComponent(cestoCodiceEff)}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ pvpConsigliato: newVal }),
+                                  }).then(async res => {
+                                    if (!res.ok) {
+                                      const err = await res.json().catch(() => ({}));
+                                      toast.error(err.error ?? 'Salvataggio fallito');
+                                    } else {
                                       qc.invalidateQueries({ queryKey: ['oe-cesti'] });
-                                      toast.error('Errore di rete');
-                                    });
-                                  }}
-                                />
-                                <span className="text-xs text-blue-600">€</span>
-                              </div>
+                                    }
+                                  }).catch(() => toast.error('Errore di rete'));
+                                }}
+                              />
                             ) : <span className="text-gray-300">—</span>}
                           </td>
                           <td className="py-1.5 text-right font-medium text-green-700">{fmt(cestoPvpIe - cestoIe)}</td>
@@ -1728,42 +1743,24 @@ function TabStrenne({ prodotti }: { prodotti: Prodotto[] }) {
                             <td className="py-1.5 pr-2 text-right text-gray-500">{r.prod ? fmt(r.pIi) : '—'}</td>
                             <td className="py-1.5 pr-2 text-right font-medium">
                               {r.prod ? (
-                                <div className="flex items-center justify-end gap-0.5">
-                                  <input
-                                    key={r.prod.pvpConsigliato ?? 'none'}
-                                    type="text"
-                                    inputMode="decimal"
-                                    className="w-16 text-right text-xs bg-transparent border-0 placeholder-gray-300 focus:outline-none focus:border focus:border-primary focus:rounded focus:px-1 focus:bg-white text-blue-600"
-                                    defaultValue={r.pIiMod != null ? r.pIiMod.toFixed(2).replace('.', ',') : ''}
-                                    placeholder="—"
-                                    onFocus={e => e.target.select()}
-                                    onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { e.currentTarget.value = r.pIiMod != null ? r.pIiMod.toFixed(2).replace('.', ',') : ''; e.currentTarget.blur(); } }}
-                                    onBlur={e => {
-                                      const v = e.target.value.trim().replace(',', '.');
-                                      const parsed = parseFloat(v);
-                                      const newVal = isNaN(parsed) || parsed <= 0 ? null : parsed;
-                                      if (newVal === (r.prod!.pvpConsigliato ?? null)) return;
-                                      qc.setQueryData<Prodotto[]>(['oe-alimentari-prodotti'], old =>
-                                        old?.map(p => p.id === r.prod!.id ? { ...p, pvpConsigliato: newVal } : p) ?? old
-                                      );
-                                      fetch(`/api/oe/alimentari/prodotti/${r.prod!.id}`, {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ pvpConsigliato: newVal }),
-                                      }).then(async res => {
-                                        if (!res.ok) {
-                                          qc.invalidateQueries({ queryKey: ['oe-alimentari-prodotti'] });
-                                          const err = await res.json().catch(() => ({}));
-                                          toast.error(err.error ?? 'Salvataggio fallito');
-                                        }
-                                      }).catch(() => {
+                                <PvpModInput
+                                  key={r.prod.pvpConsigliato ?? 'null'}
+                                  savedValue={r.pIiMod}
+                                  onSave={newVal => {
+                                    fetch(`/api/oe/alimentari/prodotti/${r.prod!.id}`, {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ pvpConsigliato: newVal }),
+                                    }).then(async res => {
+                                      if (!res.ok) {
+                                        const err = await res.json().catch(() => ({}));
+                                        toast.error(err.error ?? 'Salvataggio fallito');
+                                      } else {
                                         qc.invalidateQueries({ queryKey: ['oe-alimentari-prodotti'] });
-                                        toast.error('Errore di rete');
-                                      });
-                                    }}
-                                  />
-                                  <span className="text-xs text-blue-600">€</span>
-                                </div>
+                                      }
+                                    }).catch(() => toast.error('Errore di rete'));
+                                  }}
+                                />
                               ) : <span className="text-gray-300">—</span>}
                             </td>
                             <td className="py-1.5 text-right font-medium text-green-700">{r.prod ? fmt(r.marg) : '—'}</td>
