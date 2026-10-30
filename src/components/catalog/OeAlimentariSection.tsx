@@ -2893,7 +2893,7 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
         </div>
         <div className="grid grid-cols-3 gap-3">
           <KpiCard label="Fatturato previsto" value={fmt(totFatturato)} sub={`${fmtN(totPzStrenne)} strenne totali`} accent />
-          <KpiCard label="Investimento" value={fmt(totCostoStrenne)} sub="costo acquisto stock" />
+          <KpiCard label="Investimento" value={fmt(totCostoStrenne)} sub="costo acquisto stock (i.i.)" />
           <KpiCard label="Margine previsto" value={fmt(totMargStrenne)} sub={`${margStrennePerc}% sul fatturato`} accent />
         </div>
       </AnalisiCard>
@@ -2909,9 +2909,9 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
                 {p.fornitore && <p className="text-[10px] text-gray-400">{p.fornitore}</p>}
               </div>
               <div className="hidden sm:flex items-center gap-2 text-gray-500 flex-shrink-0 text-[10px]">
-                <span>Costo {fmt(p.costoIi)}</span>
+                <span>Costo i.i. {fmt(p.costoIi)}</span>
                 <span className="text-gray-300">·</span>
-                <span>PVP {fmt(p.pvpIi)}</span>
+                <span>PVP i.i. {fmt(p.pvpIi)}</span>
                 <span className="text-gray-300">·</span>
                 <span>unit. {fmt(p.margUnit)}</span>
               </div>
@@ -2939,9 +2939,9 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
                 <p className="font-semibold text-primary">Strenna {s.prezzo}</p>
               </div>
               <div className="hidden sm:flex items-center gap-2 text-gray-500 flex-shrink-0 text-[10px]">
-                <span>Costo {fmt(s.costoReale)}</span>
+                <span>Costo i.i. {fmt(s.costoReale)}</span>
                 <span className="text-gray-300">·</span>
-                <span>PVP {fmt(s.prezzo)}</span>
+                <span>PVP i.i. {fmt(s.prezzo)}</span>
                 <span className="text-gray-300">·</span>
                 <span>Marg. {fmt(s.margUnit)}</span>
               </div>
@@ -2987,11 +2987,11 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
                   {(costoEffettivo > 0 || costoStima > 0) && (
                     <div className="flex gap-2 pt-1 border-t border-border/40">
                       <div className="flex-1 bg-blue-50 rounded-lg px-3 py-1.5 text-center">
-                        <p className="text-[10px] text-blue-500 font-medium">Costo effettivo (ordinato)</p>
+                        <p className="text-[10px] text-blue-500 font-medium">Costo i.i. effettivo (ordinato)</p>
                         <p className="text-sm font-bold text-blue-700">{fmt(costoEffettivo)}</p>
                       </div>
                       <div className="flex-1 bg-amber-50 rounded-lg px-3 py-1.5 text-center">
-                        <p className="text-[10px] text-amber-600 font-medium">Costo stimato (da ord.)</p>
+                        <p className="text-[10px] text-amber-600 font-medium">Costo i.i. stimato (da ord.)</p>
                         <p className="text-sm font-bold text-amber-700">{fmt(costoStima)}</p>
                       </div>
                     </div>
