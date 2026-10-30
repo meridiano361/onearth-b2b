@@ -2965,13 +2965,21 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
           {Object.entries(byFornitore)
             .sort((a, b) => b[1].length - a[1].length)
             .map(([fornitore, prods]) => {
-              const costoEffettivo = prods.reduce((a, p) => a + (p.ordinato?.ordinato ?? 0) * p.costoIi, 0);
+              const costoEffettivo   = prods.reduce((a, p) => a + (p.ordinato?.ordinato ?? 0) * p.costoIi, 0);
+              const costoEffettivoIe = prods.reduce((a, p) => a + (p.ordinato?.ordinato ?? 0) * (p.costoIi / (1 + p.ivaPerc / 100)), 0);
               const costoStima = prods.reduce((a, p) => {
                 const fabStr  = fabbisognoStrenneCalc[p.nome] ?? 0;
                 const totEmp  = EMPORI.reduce((s, e) => s + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
                 const totale  = fabStr + totEmp;
                 const da      = Math.max(0, totale - (p.ordinato?.ordinato ?? 0));
                 return a + da * p.costoIi;
+              }, 0);
+              const costoStimaIe = prods.reduce((a, p) => {
+                const fabStr  = fabbisognoStrenneCalc[p.nome] ?? 0;
+                const totEmp  = EMPORI.reduce((s, e) => s + (p.fabbisognoEmpori.find(r => r.emporio === e)?.qta ?? 0), 0);
+                const totale  = fabStr + totEmp;
+                const da      = Math.max(0, totale - (p.ordinato?.ordinato ?? 0));
+                return a + da * (p.costoIi / (1 + p.ivaPerc / 100));
               }, 0);
               return (
                 <div key={fornitore} className="bg-white border border-border rounded-xl p-3 space-y-2">
@@ -2987,12 +2995,14 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
                   {(costoEffettivo > 0 || costoStima > 0) && (
                     <div className="flex gap-2 pt-1 border-t border-border/40">
                       <div className="flex-1 bg-blue-50 rounded-lg px-3 py-1.5 text-center">
-                        <p className="text-[10px] text-blue-500 font-medium">Costo i.i. effettivo (ordinato)</p>
-                        <p className="text-sm font-bold text-blue-700">{fmt(costoEffettivo)}</p>
+                        <p className="text-[10px] text-blue-500 font-medium">Costo effettivo (ordinato)</p>
+                        <p className="text-sm font-bold text-blue-700">{fmt(costoEffettivo)} <span className="text-[10px] font-normal">i.i.</span></p>
+                        <p className="text-xs text-blue-600">{fmt(costoEffettivoIe)} <span className="text-[10px] font-normal">i.e.</span></p>
                       </div>
                       <div className="flex-1 bg-amber-50 rounded-lg px-3 py-1.5 text-center">
-                        <p className="text-[10px] text-amber-600 font-medium">Costo i.i. stimato (da ord.)</p>
-                        <p className="text-sm font-bold text-amber-700">{fmt(costoStima)}</p>
+                        <p className="text-[10px] text-amber-600 font-medium">Costo stimato (da ord.)</p>
+                        <p className="text-sm font-bold text-amber-700">{fmt(costoStima)} <span className="text-[10px] font-normal">i.i.</span></p>
+                        <p className="text-xs text-amber-600">{fmt(costoStimaIe)} <span className="text-[10px] font-normal">i.e.</span></p>
                       </div>
                     </div>
                   )}
