@@ -41,33 +41,31 @@ function Tip({ children, text }: { children?: React.ReactNode; text: string }) {
 // ── ImageLightbox ─────────────────────────────────────────────────────────────
 
 function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
-  const fetchBlob = async () => {
-    const res = await fetch(src);
-    return res.blob();
-  };
-  const handleDownload = async (e: React.MouseEvent) => {
+  const proxyUrl = (filename: string) =>
+    `/api/oe/alimentari/download-image?url=${encodeURIComponent(src)}&filename=${encodeURIComponent(filename)}`;
+
+  const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
-    try {
-      const blob = await fetchBlob();
-      const ext = blob.type.includes('png') ? 'png' : blob.type.includes('webp') ? 'webp' : 'jpg';
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `${alt}.${ext}`; a.click();
-      URL.revokeObjectURL(url);
-    } catch { toast.error('Download fallito'); }
+    const a = document.createElement('a');
+    a.href = proxyUrl(`${alt}.jpg`);
+    a.download = `${alt}.jpg`;
+    a.click();
   };
+
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const blob = await fetchBlob();
-      const pngBlob = blob.type === 'image/png' ? blob : await new Promise<Blob>((res, rej) => {
-        const img = new Image(); img.crossOrigin = 'anonymous';
+      const res = await fetch(proxyUrl(`${alt}.jpg`));
+      const blob = await res.blob();
+      const pngBlob = blob.type === 'image/png' ? blob : await new Promise<Blob>((resolve, reject) => {
+        const img = new Image();
         img.onload = () => {
-          const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+          const c = document.createElement('canvas');
+          c.width = img.naturalWidth; c.height = img.naturalHeight;
           c.getContext('2d')!.drawImage(img, 0, 0);
-          c.toBlob(b => b ? res(b) : rej(), 'image/png');
+          c.toBlob(b => b ? resolve(b) : reject(), 'image/png');
         };
-        img.onerror = rej;
+        img.onerror = reject;
         img.src = URL.createObjectURL(blob);
       });
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
