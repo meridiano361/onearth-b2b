@@ -49,28 +49,33 @@ function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClos
     const a = document.createElement('a');
     a.href = proxyUrl(`${alt}.jpg`);
     a.download = `${alt}.jpg`;
+    a.style.display = 'none';
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
   };
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const res = await fetch(proxyUrl(`${alt}.jpg`));
+      const res = await fetch(proxyUrl(`${alt}.png`));
+      if (!res.ok) throw new Error('fetch failed');
       const blob = await res.blob();
-      const pngBlob = blob.type === 'image/png' ? blob : await new Promise<Blob>((resolve, reject) => {
+      const pngBlob: Blob = blob.type === 'image/png' ? blob : await new Promise<Blob>((resolve, reject) => {
         const img = new Image();
+        const objUrl = URL.createObjectURL(blob);
         img.onload = () => {
           const c = document.createElement('canvas');
           c.width = img.naturalWidth; c.height = img.naturalHeight;
           c.getContext('2d')!.drawImage(img, 0, 0);
-          c.toBlob(b => b ? resolve(b) : reject(), 'image/png');
+          c.toBlob(b => { URL.revokeObjectURL(objUrl); b ? resolve(b) : reject(); }, 'image/png');
         };
-        img.onerror = reject;
-        img.src = URL.createObjectURL(blob);
+        img.onerror = () => { URL.revokeObjectURL(objUrl); reject(); };
+        img.src = objUrl;
       });
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
       toast.success('Immagine copiata');
-    } catch { toast.error('Copia non supportata dal browser'); }
+    } catch { toast.error('Copia non riuscita'); }
   };
   return (
     <div

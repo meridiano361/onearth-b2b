@@ -15,14 +15,17 @@ export async function GET(req: NextRequest) {
   const upstream = await fetch(url);
   if (!upstream.ok) return NextResponse.json({ error: 'Immagine non trovata' }, { status: 404 });
 
+  const buffer = await upstream.arrayBuffer();
   const contentType = upstream.headers.get('content-type') ?? 'image/jpeg';
   const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
-  const filename = req.nextUrl.searchParams.get('filename') ?? `immagine.${ext}`;
+  const rawName = req.nextUrl.searchParams.get('filename') ?? `immagine.${ext}`;
+  // RFC 5987: solo ASCII nel filename, caratteri speciali via filename*
+  const safeName = rawName.replace(/[^\x20-\x7E]/g, '_');
 
-  return new NextResponse(upstream.body, {
+  return new NextResponse(buffer, {
     headers: {
       'Content-Type': contentType,
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Disposition': `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(rawName)}`,
     },
   });
 }
