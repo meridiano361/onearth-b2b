@@ -44,17 +44,6 @@ function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClos
   const proxyUrl = (filename: string) =>
     `/api/oe/alimentari/download-image?url=${encodeURIComponent(src)}&filename=${encodeURIComponent(filename)}`;
 
-  const handleDownload = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const a = document.createElement('a');
-    a.href = proxyUrl(`${alt}.jpg`);
-    a.download = `${alt}.jpg`;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -90,9 +79,15 @@ function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClos
         onClick={e => e.stopPropagation()}
       />
       <div className="absolute top-4 right-4 flex items-center gap-2">
-        <button onClick={handleDownload} className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors" title="Scarica immagine">
+        <a
+          href={proxyUrl(`${alt}.jpg`)}
+          download={`${alt}.jpg`}
+          onClick={e => e.stopPropagation()}
+          className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+          title="Scarica immagine"
+        >
           <Download size={18} />
-        </button>
+        </a>
         <button onClick={handleCopy} className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors" title="Copia immagine">
           <Copy size={18} />
         </button>
@@ -157,6 +152,15 @@ function ProdottoFoto({ p, uploadFoto, deleteFoto, fileRefs }: {
               >
                 <Camera size={11} />
               </button>
+              <a
+                href={`/api/oe/alimentari/download-image?url=${encodeURIComponent(p.fotoUrl!)}&filename=${encodeURIComponent(p.nome + '.jpg')}`}
+                download
+                onClick={e => e.stopPropagation()}
+                className="p-1 rounded-full bg-white/80 text-gray-700 hover:bg-white transition-colors"
+                title="Scarica foto"
+              >
+                <Download size={11} />
+              </a>
               <button
                 type="button"
                 onClick={e => { e.stopPropagation(); deleteFoto(p.id); }}
