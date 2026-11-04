@@ -368,7 +368,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
       case 'margine_desc': list = [...list].sort((a, b) => (margine(b) ?? 0) - (margine(a) ?? 0)); break;
     }
     return list;
-  }, [prodotti, search, filtroFornitore, sortBy]);
+  }, [prodotti, search, filtroFornitore, filtroStato, sortBy]);
 
   return (
     <div className="space-y-3">
