@@ -226,11 +226,17 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
   };
 
   const toggleConferma = async (p: Prodotto) => {
-    await fetch(`/api/oe/alimentari/prodotti/${p.id}`, {
+    const res = await fetch(`/api/oe/alimentari/prodotti/${p.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prezziConfermati: !p.prezziConfermati }),
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error ?? `Errore ${res.status}`);
+      return;
+    }
+    toast.success(p.prezziConfermati ? 'Tornato a provvisorio' : 'Prezzi confermati');
     refetch();
   };
 
