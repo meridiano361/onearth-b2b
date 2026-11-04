@@ -4,7 +4,7 @@ import { useState, useRef, useMemo, Fragment } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Pencil, Trash2, Plus, X, Check, ChevronDown, ChevronUp,
-  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info, TrendingUp, ImageIcon, ZoomIn, Download,
+  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info, TrendingUp, ImageIcon, ZoomIn, Download, Copy,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
@@ -41,6 +41,39 @@ function Tip({ children, text }: { children?: React.ReactNode; text: string }) {
 // ── ImageLightbox ─────────────────────────────────────────────────────────────
 
 function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  const fetchBlob = async () => {
+    const res = await fetch(src);
+    return res.blob();
+  };
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const blob = await fetchBlob();
+      const ext = blob.type.includes('png') ? 'png' : blob.type.includes('webp') ? 'webp' : 'jpg';
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${alt}.${ext}`; a.click();
+      URL.revokeObjectURL(url);
+    } catch { toast.error('Download fallito'); }
+  };
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const blob = await fetchBlob();
+      const pngBlob = blob.type === 'image/png' ? blob : await new Promise<Blob>((res, rej) => {
+        const img = new Image(); img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+          c.getContext('2d')!.drawImage(img, 0, 0);
+          c.toBlob(b => b ? res(b) : rej(), 'image/png');
+        };
+        img.onerror = rej;
+        img.src = URL.createObjectURL(blob);
+      });
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+      toast.success('Immagine copiata');
+    } catch { toast.error('Copia non supportata dal browser'); }
+  };
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95"
@@ -53,12 +86,17 @@ function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClos
         style={{ touchAction: 'pinch-zoom' }}
         onClick={e => e.stopPropagation()}
       />
-      <button
-        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
-        onClick={onClose}
-      >
-        <X size={20} />
-      </button>
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <button onClick={handleDownload} className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors" title="Scarica immagine">
+          <Download size={18} />
+        </button>
+        <button onClick={handleCopy} className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors" title="Copia immagine">
+          <Copy size={18} />
+        </button>
+        <button className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors" onClick={onClose}>
+          <X size={20} />
+        </button>
+      </div>
     </div>
   );
 }
