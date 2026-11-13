@@ -401,20 +401,65 @@ function ListaPreventivi({
 
 // ── Riga prodotto nel form ────────────────────────────────────────────────────
 
+type SuggerimentoOE = { label: string; sublabel: string; art: Partial<Articolo> };
+
+function useSuggerimenti(query: string, prodottiOE: ProdottoOE[], cestiOE: CestoOE[]): SuggerimentoOE[] {
+  return useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q.length < 1) return [];
+    const out: SuggerimentoOE[] = [];
+    for (const p of prodottiOE) {
+      const matchCod = p.codice?.toLowerCase().startsWith(q);
+      const matchNome = p.nome.toLowerCase().includes(q);
+      if (!matchCod && !matchNome) continue;
+      const desc = p.formato ? `${p.nome} — ${p.formato}` : p.nome;
+      out.push({
+        label: desc,
+        sublabel: `${p.codice ?? ''} · IVA ${p.ivaPerc}% · PVP ${p.pvpIi.toFixed(2)} €`,
+        art: { codice: p.codice ?? '', descrizione: desc, prezzo: p.pvpIi, iva_perc: p.ivaPerc, costo_ii: p.costoIi },
+      });
+      if (out.length >= 8) break;
+    }
+    for (const c of cestiOE) {
+      if (out.length >= 8) break;
+      const matchCod = c.codice.toLowerCase().startsWith(q);
+      const matchDesc = c.descrizione.toLowerCase().includes(q);
+      if (!matchCod && !matchDesc) continue;
+      out.push({
+        label: `Cesto ${c.codice} — ${c.descrizione}`,
+        sublabel: `PVP ${c.pvp.toFixed(2)} € · costo ${c.costo.toFixed(2)} €`,
+        art: { codice: c.codice, descrizione: `Cesto ${c.codice} — ${c.descrizione}`, prezzo: c.pvp, iva_perc: 10, costo_ii: c.costo },
+      });
+    }
+    return out;
+  }, [query, prodottiOE, cestiOE]);
+}
+
 function ArticoloRow({
-  art, onUpdate, onDelete, isBomboniere, mostraMargini,
+  art, onUpdate, onDelete, isBomboniere, mostraMargini, prodottiOE, cestiOE,
 }: {
   art: Articolo;
   onUpdate: (updated: Partial<Articolo>) => void;
   onDelete: () => void;
   isBomboniere: boolean;
   mostraMargini: boolean;
+  prodottiOE: ProdottoOE[];
+  cestiOE: CestoOE[];
 }) {
   const [openCosto, setOpenCosto] = useState(false);
+  const [acQuery, setAcQuery] = useState('');
+  const [acOpen, setAcOpen] = useState(false);
+  const acRef = useRef<HTMLDivElement>(null);
+  const suggerimenti = useSuggerimenti(acQuery, prodottiOE, cestiOE);
+
+  const seleziona = (s: SuggerimentoOE) => {
+    onUpdate(s.art);
+    setAcQuery('');
+    setAcOpen(false);
+  };
 
   const prezzoIe = art.prezzo / (1 + art.iva_perc / 100);
   const prezzoSc = art.prezzo * (1 - art.sconto_perc / 100);
-  const prezzoScIe = prezzoIe * (1 - art.sconto_perc / 100);
   const totale = art.is_omaggio ? 0 : Math.round(prezzoSc * art.qta * 100) / 100;
   const costoIe = art.costo_ii / (1 + art.iva_perc / 100);
   const marginePz = prezzoSc - art.costo_ii;
@@ -439,16 +484,20 @@ function ArticoloRow({
       {/* Riga principale */}
       <div className="flex items-start gap-2 px-3 py-2 bg-white">
         <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap relative" ref={acRef}>
             <input
               value={art.codice}
-              onChange={e => onUpdate({ codice: e.target.value })}
+              onChange={e => { onUpdate({ codice: e.target.value }); setAcQuery(e.target.value); setAcOpen(true); }}
+              onFocus={() => { if (art.codice) { setAcQuery(art.codice); setAcOpen(true); } }}
+              onBlur={() => setTimeout(() => setAcOpen(false), 150)}
               placeholder="Cod."
               className={cn(smallInput, 'w-20')}
             />
             <input
               value={art.descrizione}
-              onChange={e => onUpdate({ descrizione: e.target.value })}
+              onChange={e => { onUpdate({ descrizione: e.target.value }); setAcQuery(e.target.value); setAcOpen(true); }}
+              onFocus={() => { if (art.descrizione) { setAcQuery(art.descrizione); setAcOpen(true); } }}
+              onBlur={() => setTimeout(() => setAcOpen(false), 150)}
               placeholder="Descrizione prodotto..."
               className={cn(smallInput, 'flex-1 min-w-[140px]')}
             />
@@ -456,6 +505,21 @@ function ArticoloRow({
               <input type="checkbox" checked={art.is_omaggio} onChange={e => onUpdate({ is_omaggio: e.target.checked })} className="accent-primary w-3 h-3" />
               Omaggio
             </label>
+            {/* Autocomplete dropdown */}
+            {acOpen && suggerimenti.length > 0 && (
+              <div className="absolute top-full left-0 z-50 mt-1 w-full min-w-[320px] bg-white border border-border rounded-xl shadow-lg overflow-hidden">
+                {suggerimenti.map((s, i) => (
+                  <button
+                    key={i}
+                    onMouseDown={() => seleziona(s)}
+                    className="w-full text-left px-3 py-2 hover:bg-primary/5 transition-colors border-b border-gray-50 last:border-0"
+                  >
+                    <p className="text-xs font-medium text-gray-800 leading-snug">{s.label}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{s.sublabel}</p>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex flex-col gap-0.5">
@@ -622,6 +686,8 @@ function GruppoProdotti({
             onDelete={() => onDeleteRiga(a.id)}
             isBomboniere={isBomboniere}
             mostraMargini={mostraMargini}
+            prodottiOE={prodottiOE}
+            cestiOE={cestiOE}
           />
         ))}
       </div>
