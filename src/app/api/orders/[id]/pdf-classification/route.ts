@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { isAdminRole } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
@@ -88,8 +89,13 @@ export async function GET(
 
     if (!order) return NextResponse.json({ error: 'Non trovato' }, { status: 404 });
 
-    if (session.user.role === 'CUSTOMER' && order.customerId !== session.user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!isAdminRole(session.user.role)) {
+      if (session.user.role === 'OPERATOR' && order.organizationId !== session.user.organizationId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      if (session.user.role === 'CUSTOMER' && order.customerId !== session.user.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
     }
 
     const validItems = order.items.filter((it) => it.product != null);
