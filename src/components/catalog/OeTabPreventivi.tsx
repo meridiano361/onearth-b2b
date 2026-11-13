@@ -234,8 +234,8 @@ function EmporioSelector({ onSelect }: { onSelect: (e: string) => void }) {
         <p className="text-xs tracking-widest uppercase text-gray-400 mb-1">Preventivi</p>
         <h2 className="text-2xl font-light tracking-wide text-gray-800">Seleziona l'emporio</h2>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-sm">
-        {EMPORI.map(e => (
+      <div className="flex flex-wrap justify-center gap-3 w-full max-w-2xl">
+        {[...EMPORI].sort().map(e => (
           <button
             key={e}
             onClick={() => onSelect(e)}
