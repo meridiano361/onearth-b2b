@@ -57,6 +57,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(p);
 }
 
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  if (!await requireM361()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const body = await req.json();
+  const p = await prisma.oePreventivo.update({
+    where: { id: params.id },
+    data: { stato: body.stato },
+  });
+  return NextResponse.json(p);
+}
+
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   if (!await requireM361()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 

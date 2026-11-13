@@ -3,9 +3,9 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Plus, Trash2, ChevronDown, ChevronUp, FileText, Download,
+  Plus, Trash2, ChevronDown, FileText, Download,
   Search, X, Check, Pencil, ArrowLeft, Copy, MessageCircle, Building2,
-  User, Package, ChevronRight, AlertCircle, Printer,
+  User, Package, ChevronRight, Printer,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
@@ -284,7 +284,7 @@ function ListaPreventivi({
   const { mutate: cambiaStato } = useMutation({
     mutationFn: async ({ id, stato }: { id: string; stato: string }) => {
       const r = await fetch(`/api/oe/alimentari/preventivi/${id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stato }),
       });
@@ -945,7 +945,9 @@ function FormPreventivo({
 
   // Condizioni
   const [condizioni, setCondizioni] = useState<CondizioniCommerciali>(
-    preventivoIniziale?.condizioniCommerciali ?? emptyCondizioni()
+    preventivoIniziale?.condizioniCommerciali
+      ? { ...emptyCondizioni(), ...preventivoIniziale.condizioniCommerciali }
+      : emptyCondizioni()
   );
   const [openConsegna, setOpenConsegna] = useState(false);
   const [openCondizioni, setOpenCondizioni] = useState(false);
