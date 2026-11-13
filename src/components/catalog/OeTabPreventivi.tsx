@@ -924,6 +924,7 @@ function FormPreventivo({
   const [condizioni, setCondizioni] = useState<CondizioniCommerciali>(
     preventivoIniziale?.condizioniCommerciali ?? emptyCondizioni()
   );
+  const [openConsegna, setOpenConsegna] = useState(false);
   const [openCondizioni, setOpenCondizioni] = useState(false);
   const [openMargini, setOpenMargini] = useState(false);
   const [mostraMargini, setMostraMargini] = useState(false);
@@ -1278,7 +1279,7 @@ function FormPreventivo({
         </div>
 
         {/* Sezione 5 — Consegna */}
-        <SectionCard title="Consegna" open={false} onToggle={() => {}}>
+        <SectionCard title="Consegna" open={openConsegna} onToggle={() => setOpenConsegna(v => !v)}>
           <div className="grid grid-cols-3 gap-3">
             <FieldRow label="Modalità"><input value={modalitaConsegna} onChange={e => setModalitaConsegna(e.target.value)} placeholder="es. Ritiro in sede" className={inputCls} /></FieldRow>
             <FieldRow label="Data consegna"><input type="date" value={consegnaData} onChange={e => setConsegnaData(e.target.value)} className={inputCls} /></FieldRow>
