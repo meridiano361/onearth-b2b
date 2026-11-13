@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const [source, target] = await Promise.all([
     prisma.order.findUnique({
       where: { id: sourceOrderId },
-      include: { items: { include: { product: { select: { costPrice: true } } } } },
+      include: { items: true },
     }),
     prisma.order.findUnique({
       where: { id: targetOrderId },
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       ti => ti.productId === si.productId && ti.taglia === si.taglia,
     );
     if (!alreadyMerged) {
-      const unitPrice = Number(si.product?.costPrice ?? si.unitPrice);
+      const unitPrice = Number(si.unitPrice);
       merged.push({ productId: si.productId, taglia: si.taglia, quantity: si.quantity, unitPrice, subtotal: unitPrice * si.quantity });
     }
   }

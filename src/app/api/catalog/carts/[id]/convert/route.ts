@@ -16,8 +16,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!cart) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const owns =
-    ((session.user.role === 'CUSTOMER' || isAdminRole(session.user.role)) && cart.customerId === session.user.id) ||
-    (session.user.role === 'OPERATOR' && cart.operatorId === session.user.id);
+    (session.user.role === 'CUSTOMER' && cart.customerId === session.user.id) ||
+    ((session.user.role === 'OPERATOR' || isAdminRole(session.user.role)) && cart.operatorId === session.user.id);
   if (!owns) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   if (cart.status !== 'DRAFT') return NextResponse.json({ error: 'Carrello già convertito' }, { status: 409 });
   if (cart.items.length === 0) return NextResponse.json({ error: 'Il carrello è vuoto' }, { status: 400 });
@@ -57,9 +57,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     items: { create: orderItems },
   };
 
-  if (session.user.role === 'CUSTOMER' || isAdminRole(session.user.role)) {
+  if (session.user.role === 'CUSTOMER') {
     orderData.customerId = session.user.id;
-  } else if (session.user.role === 'OPERATOR') {
+  } else if (session.user.role === 'OPERATOR' || isAdminRole(session.user.role)) {
     const op = await prisma.operator.findUnique({ where: { id: session.user.id }, select: { organizationId: true } });
     orderData.organizationId = op?.organizationId ?? null;
     orderData.operatorId = session.user.id;

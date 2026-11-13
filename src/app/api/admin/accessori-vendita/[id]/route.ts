@@ -29,7 +29,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const body = await req.json();
     const data: any = {};
     if (body.nome         !== undefined) data.nome         = body.nome?.trim()         || null;
-    if (body.immagineUrl  !== undefined) data.immagineUrl  = body.immagineUrl?.trim()  || '';
+    if (body.immagineUrl  !== undefined) data.immagineUrl  = body.immagineUrl?.trim()  || null;
     if (body.codice       !== undefined) data.codice       = body.codice?.trim()       || null;
     if (body.retailPrice  !== undefined) data.retailPrice  = body.retailPrice  != null ? Number(body.retailPrice)  : null;
     if (body.costPrice    !== undefined) data.costPrice    = body.costPrice    != null ? Number(body.costPrice)    : null;
