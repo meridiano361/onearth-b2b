@@ -1337,3 +1337,58 @@ model OeStrennaFoto {
 
   @@map("oe_strenne_foto")
 }
+
+model OePreventivo {
+  id                    String    @id @default(cuid())
+  numeroPreventivo      String    @unique @map("numero_preventivo")
+  tipoOrdine            String    @map("tipo_ordine")
+  sottotipoNatale       String?   @map("sottotipo_natale")
+  emporio               String
+  canale                String?
+  operatore             String?
+  dataPreventivo        DateTime  @map("data_preventivo")
+  clienteNome           String    @map("cliente_nome")
+  clienteCognome        String?   @map("cliente_cognome")
+  clienteCellulare      String?   @map("cliente_cellulare")
+  clienteEmail          String?   @map("cliente_email")
+  waAttivo              Boolean   @default(false) @map("wa_attivo")
+  clienteExtra          Json?     @map("cliente_extra")
+  modalitaConsegna      String?   @map("modalita_consegna")
+  consegnaData          DateTime? @map("consegna_data")
+  consegnaOra           String?   @map("consegna_ora")
+  totale                Float     @default(0)
+  totaleIe              Float     @default(0) @map("totale_ie")
+  acconto               Float     @default(0)
+  note                  String?
+  articoli              Json      @default("[]")
+  titolo                String    @default("")
+  condizioniCommerciali Json?     @map("condizioni_commerciali")
+  stato                 String    @default("bozza")
+  ordineId              String?   @map("ordine_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  dataModifica          DateTime  @updatedAt @map("data_modifica")
+
+  @@map("oe_preventivi")
+}
+
+model OePreventivoCliente {
+  id       String  @id @default(cuid())
+  nome     String
+  cognome  String?
+  cliente  String  @unique
+  telefono String?
+  email    String?
+  wa       Boolean @default(false)
+
+  @@map("oe_preventivi_clienti")
+}
+
+model OePreventivoOperatore {
+  id               String   @id @default(cuid())
+  nome             String
+  emporio          String
+  emporiAggiuntivi String[] @map("empori_aggiuntivi")
+  attivo           Boolean  @default(true)
+
+  @@map("oe_preventivi_operatori")
+}

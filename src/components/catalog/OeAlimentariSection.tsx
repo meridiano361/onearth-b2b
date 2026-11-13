@@ -4,11 +4,12 @@ import { useState, useRef, useMemo, Fragment } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Pencil, Trash2, Plus, X, Check, ChevronDown, ChevronUp,
-  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info, TrendingUp, ImageIcon, ZoomIn, Download, Copy,
+  Package, ShoppingBasket, Gift, BarChart2, LayoutGrid, List, Search, Info, TrendingUp, ImageIcon, ZoomIn, Download, Copy, ClipboardList,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 import { STRENNE, EMPORI, STRENNA_FOTO, type Emporio } from '@/data/oeAlimentariStatico';
+import TabPreventivi from './OeTabPreventivi';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -3069,7 +3070,7 @@ function TabAnalisi({ prodotti }: { prodotti: Prodotto[] }) {
 
 // ── Main Section ──────────────────────────────────────────────────────────────
 
-type Tab = 'prodotti' | 'cesti' | 'strenne' | 'fabbisogno' | 'analisi';
+type Tab = 'prodotti' | 'cesti' | 'strenne' | 'fabbisogno' | 'analisi' | 'preventivi';
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'prodotti', label: 'Alimentari', icon: Package },
@@ -3077,6 +3078,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'strenne', label: 'Strenne', icon: Gift },
   { id: 'fabbisogno', label: 'Fabbisogno', icon: BarChart2 },
   { id: 'analisi', label: 'Analisi', icon: TrendingUp },
+  { id: 'preventivi', label: 'Preventivi', icon: ClipboardList },
 ];
 
 export default function OeAlimentariSection() {
@@ -3134,8 +3136,10 @@ export default function OeAlimentariSection() {
           <TabStrenne prodotti={prodotti} />
         ) : tab === 'fabbisogno' ? (
           <TabFabbisogno prodotti={prodotti} refetch={refetch} />
-        ) : (
+        ) : tab === 'analisi' ? (
           <TabAnalisi prodotti={prodotti} />
+        ) : (
+          <TabPreventivi />
         )}
       </div>
 
