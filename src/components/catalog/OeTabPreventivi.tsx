@@ -12,6 +12,8 @@ import { cn } from '@/lib/utils';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+const AZIENDA_INFO_HTML = `Meridiano 361 Impresa Sociale s.r.l. – socio unico<br>Via Don Giovanni Verità 8 – 42124 Reggio nell'Emilia (RE)<br>Pec meridiano361@pec.confcooperative.it<br>C.F. e P.Iva 02834570356 · Sdi USAL8PV`;
+
 const EMPORI_NOMI: Record<string, string> = {
   MN: 'Mantova', RE: 'Reggio Emilia', CR: 'Cremona', CA: 'Cagliari', VI: 'Vicenza',
 };
@@ -251,12 +253,13 @@ function EmporioSelector({ onSelect }: { onSelect: (e: string) => void }) {
 // ── Lista preventivi ──────────────────────────────────────────────────────────
 
 function ListaPreventivi({
-  emporio, onCambiaEmporio, onNuovo, onModifica,
+  emporio, onCambiaEmporio, onNuovo, onModifica, loadingId,
 }: {
   emporio: string;
   onCambiaEmporio: () => void;
   onNuovo: () => void;
   onModifica: (p: Preventivo) => void;
+  loadingId: string | null;
 }) {
   const qc = useQueryClient();
   const [filtroStato, setFiltroStato] = useState('');
@@ -377,8 +380,8 @@ function ListaPreventivi({
                 >
                   {STATI.map(s => <option key={s} value={s}>{STATI_LABEL[s]}</option>)}
                 </select>
-                <button onClick={() => onModifica(p)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors">
-                  <Pencil size={14} />
+                <button onClick={() => onModifica(p)} disabled={loadingId === p.id} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors disabled:opacity-40">
+                  {loadingId === p.id ? <span className="text-[10px] px-1">...</span> : <Pencil size={14} />}
                 </button>
                 {confirmDelete === p.id ? (
                   <div className="flex items-center gap-1">
@@ -401,7 +404,7 @@ function ListaPreventivi({
 
 // ── Riga prodotto nel form ────────────────────────────────────────────────────
 
-type SuggerimentoOE = { label: string; sublabel: string; art: Partial<Articolo> };
+type SuggerimentoOE = { label: string; sublabel: string; fotoUrl: string | null; art: Partial<Articolo> };
 
 function useSuggerimenti(query: string, prodottiOE: ProdottoOE[], cestiOE: CestoOE[]): SuggerimentoOE[] {
   return useMemo(() => {
@@ -416,7 +419,8 @@ function useSuggerimenti(query: string, prodottiOE: ProdottoOE[], cestiOE: Cesto
       out.push({
         label: desc,
         sublabel: `${p.codice ?? ''} · IVA ${p.ivaPerc}% · PVP ${p.pvpIi.toFixed(2)} €`,
-        art: { codice: p.codice ?? '', descrizione: desc, prezzo: p.pvpIi, iva_perc: p.ivaPerc, costo_ii: p.costoIi },
+        fotoUrl: p.fotoUrl ?? null,
+        art: { codice: p.codice ?? '', descrizione: desc, prezzo: p.pvpIi, iva_perc: p.ivaPerc, costo_ii: p.costoIi, foto_url: p.fotoUrl ?? '' },
       });
       if (out.length >= 8) break;
     }
@@ -428,7 +432,8 @@ function useSuggerimenti(query: string, prodottiOE: ProdottoOE[], cestiOE: Cesto
       out.push({
         label: `Cesto ${c.codice} — ${c.descrizione}`,
         sublabel: `PVP ${c.pvp.toFixed(2)} € · costo ${c.costo.toFixed(2)} €`,
-        art: { codice: c.codice, descrizione: `Cesto ${c.codice} — ${c.descrizione}`, prezzo: c.pvp, iva_perc: 10, costo_ii: c.costo },
+        fotoUrl: c.fotoUrl ?? null,
+        art: { codice: c.codice, descrizione: `Cesto ${c.codice} — ${c.descrizione}`, prezzo: c.pvp, iva_perc: 10, costo_ii: c.costo, foto_url: c.fotoUrl ?? '' },
       });
     }
     return out;
@@ -483,6 +488,9 @@ function ArticoloRow({
     <div className={cn('border border-border rounded-xl overflow-hidden', art.is_omaggio && 'opacity-60')}>
       {/* Riga principale */}
       <div className="flex items-start gap-2 px-3 py-2 bg-white">
+        {art.foto_url && (
+          <img src={art.foto_url} alt="" className="w-10 h-10 object-cover rounded-lg flex-shrink-0 self-start mt-1" />
+        )}
         <div className="flex flex-col gap-1 flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap relative" ref={acRef}>
             <input
@@ -512,10 +520,17 @@ function ArticoloRow({
                   <button
                     key={i}
                     onMouseDown={() => seleziona(s)}
-                    className="w-full text-left px-3 py-2 hover:bg-primary/5 transition-colors border-b border-gray-50 last:border-0"
+                    className="w-full text-left px-3 py-2 hover:bg-primary/5 transition-colors border-b border-gray-50 last:border-0 flex items-center gap-2"
                   >
-                    <p className="text-xs font-medium text-gray-800 leading-snug">{s.label}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{s.sublabel}</p>
+                    {s.fotoUrl ? (
+                      <img src={s.fotoUrl} alt="" className="w-9 h-9 object-cover rounded flex-shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded bg-gray-100 flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-800 leading-snug truncate">{s.label}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">{s.sublabel}</p>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -554,6 +569,14 @@ function ArticoloRow({
                 <span className="text-xs text-gray-600 w-20 text-right">{fmtE(prezzoSc)}</span>
               </div>
             )}
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] text-green-600">Costo II</span>
+              <input value={art.costo_ii === 0 ? '' : art.costo_ii.toFixed(2)} onChange={e => onUpdate({ costo_ii: parseFloat(e.target.value.replace(',', '.')) || 0 })} className="w-20 border border-green-200 rounded px-2 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-green-400 bg-green-50" placeholder="0,00" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] text-green-600">Costo IE</span>
+              <span className="text-xs text-green-700 w-20 text-right font-mono">{costoIe > 0 ? costoIe.toFixed(2) + ' €' : '—'}</span>
+            </div>
           </div>
           {/* Confezionamento bomboniere */}
           {isBomboniere && (
@@ -1015,12 +1038,19 @@ function FormPreventivo({
       `;
     }).join('');
 
+    const logoUrl = `${window.location.origin}/logo-on-earth/onearth_solo.png`;
     const html = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">
       <title>Preventivo ${preventivoIniziale?.numeroPreventivo ?? ''}</title>
       <style>
         body { font-family: Arial, sans-serif; font-size: 11px; color: #111; margin: 20px; }
-        h1 { font-size: 18px; margin: 0; } h2 { font-size: 13px; color: #555; margin: 4px 0 0; }
-        .header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 12px; }
+        h1 { font-size: 16px; margin: 0 0 2px; } h2 { font-size: 13px; color: #555; margin: 2px 0 0; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 2px solid #333; padding-bottom: 12px; }
+        .header-brand { display: flex; flex-direction: column; gap: 4px; }
+        .header-brand img { height: 36px; object-fit: contain; }
+        .header-brand .azienda { font-size: 9px; color: #888; line-height: 1.5; }
+        .header-doc { text-align: right; }
+        .header-doc p { margin: 2px 0; font-size: 10px; color: #555; }
+        .cliente-block { margin: 12px 0 16px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb; }
         .meta { font-size: 10px; color: #666; }
         table { width: 100%; border-collapse: collapse; margin-top: 12px; }
         th { background: #f3f4f6; text-align: left; padding: 5px 6px; border-bottom: 2px solid #d1d5db; font-size: 10px; }
@@ -1037,17 +1067,21 @@ function FormPreventivo({
         @media print { body { margin: 10px; } }
       </style></head><body>
       <div class="header">
-        <div>
-          <h1>${titolo || 'Preventivo'}</h1>
-          <h2>${cliente}</h2>
-          <p class="meta">${clienteCellulare ? `Tel: ${clienteCellulare}` : ''} ${clienteEmail ? `· Email: ${clienteEmail}` : ''}</p>
+        <div class="header-brand">
+          <img src="${logoUrl}" alt="ON EARTH" onerror="this.style.display='none'" />
+          <div class="azienda">${AZIENDA_INFO_HTML}</div>
         </div>
-        <div class="meta" style="text-align:right">
-          <p><strong>${preventivoIniziale?.numeroPreventivo ?? ''}</strong></p>
+        <div class="header-doc">
+          <p><strong style="font-size:12px">${preventivoIniziale?.numeroPreventivo ?? ''}</strong></p>
           <p>Data: ${new Date(dataPrev).toLocaleDateString('it-IT')}</p>
           <p>Emporio: ${EMPORI_NOMI[emporio] ?? emporio}</p>
           ${operatore ? `<p>Operatore: ${operatore}</p>` : ''}
         </div>
+      </div>
+      <div class="cliente-block">
+        <h1>${titolo || 'Preventivo'}</h1>
+        <h2>${cliente}</h2>
+        <p class="meta">${clienteCellulare ? `Tel: ${clienteCellulare}` : ''} ${clienteEmail ? `· Email: ${clienteEmail}` : ''}</p>
       </div>
       <table>
         <thead><tr>
@@ -1427,6 +1461,22 @@ export default function TabPreventivi() {
   const [modalTipo, setModalTipo] = useState(false);
   const [preventivoEditing, setPreventivoEditing] = useState<Preventivo | null>(null);
   const [tipoNuovo, setTipoNuovo] = useState<{ tipo: string; sottotipo: string } | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const apriModifica = useCallback(async (p: Preventivo) => {
+    setLoadingId(p.id);
+    try {
+      const r = await fetch(`/api/oe/alimentari/preventivi/${p.id}`);
+      if (!r.ok) throw new Error();
+      const full: Preventivo = await r.json();
+      setPreventivoEditing(full);
+      setView('form');
+    } catch {
+      toast.error('Errore caricamento preventivo');
+    } finally {
+      setLoadingId(null);
+    }
+  }, []);
 
   if (!emporioCorrente) {
     return <EmporioSelector onSelect={setEmporioCorrente} />;
@@ -1450,7 +1500,8 @@ export default function TabPreventivi() {
         emporio={emporioCorrente}
         onCambiaEmporio={() => setEmporioCorrente(null)}
         onNuovo={() => setModalTipo(true)}
-        onModifica={p => { setPreventivoEditing(p); setView('form'); }}
+        onModifica={apriModifica}
+        loadingId={loadingId}
       />
       {modalTipo && (
         <ModalTipoPreventivo
