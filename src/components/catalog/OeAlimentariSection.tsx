@@ -21,6 +21,7 @@ type Prodotto = {
   nome: string; formato: string | null; ivaPerc: number;
   costoIi: number; pvpIi: number; pvpConsigliato: number | null;
   fotoUrl: string | null; lotto: string | null; ingredienti: string | null; note: string | null; ordine: number;
+  bio: boolean; senzaGlutine: boolean; vegan: boolean;
   prezziConfermati: boolean;
   fabbisognoEmpori: FabbisognoEmpori[];
   ordinato: Ordinato;
@@ -119,6 +120,48 @@ const FORNITORE_COLORS: Record<string, string> = {
 };
 const fornitoreBadge = (f: string | null) =>
   f ? (FORNITORE_COLORS[f] ?? 'bg-gray-100 text-gray-600') : 'bg-gray-100 text-gray-400';
+
+const FLAGS = [
+  { key: 'bio', label: 'BIO', cls: 'bg-green-50 text-green-700 border-green-200' },
+  { key: 'senzaGlutine', label: 'SENZA GLUTINE', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  { key: 'vegan', label: 'VEGAN', cls: 'bg-lime-50 text-lime-700 border-lime-200' },
+] as const;
+
+function FlagBadges({ p, className }: { p: Pick<Prodotto, 'bio' | 'senzaGlutine' | 'vegan'>; className?: string }) {
+  const active = FLAGS.filter(f => p[f.key]);
+  if (!active.length) return null;
+  return (
+    <div className={cn('flex flex-wrap gap-1', className)}>
+      {active.map(f => (
+        <span key={f.key} className={cn('text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded border', f.cls)}>{f.label}</span>
+      ))}
+    </div>
+  );
+}
+
+function FlagToggles({ data, setData }: {
+  data: Partial<Prodotto>;
+  setData: React.Dispatch<React.SetStateAction<Partial<Prodotto>>>;
+}) {
+  return (
+    <div className="col-span-2 flex flex-wrap gap-1.5">
+      {FLAGS.map(f => {
+        const on = Boolean(data[f.key]);
+        return (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => setData(d => ({ ...d, [f.key]: !on }))}
+            className={cn('flex items-center gap-1 text-[10px] font-bold tracking-wide px-2 py-1 rounded-lg border transition-colors',
+              on ? f.cls : 'bg-white text-gray-400 border-border hover:text-gray-600')}
+          >
+            {on && <Check size={10} />} {f.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function margine(p: Prodotto) {
   if (!p.pvpIi || !p.costoIi) return null;
@@ -226,6 +269,7 @@ function EditForm({ editData, setEditData, onSave, onCancel, saving }: {
           <input className="input-oe pl-6" type="number" step="0.01" placeholder="PVP consigliato" value={editData.pvpConsigliato ?? ''} onChange={e => setEditData(d => ({ ...d, pvpConsigliato: parseFloat(e.target.value) }))} />
         </div>
         <input className="input-oe col-span-2" placeholder="Lotto" value={editData.lotto ?? ''} onChange={e => setEditData(d => ({ ...d, lotto: e.target.value }))} />
+        <FlagToggles data={editData} setData={setEditData} />
         <textarea className="input-oe col-span-2 min-h-[64px] resize-y" placeholder="Ingredienti (es. farina di grano tenero, acqua, sale…)" value={editData.ingredienti ?? ''} onChange={e => setEditData(d => ({ ...d, ingredienti: e.target.value }))} />
         <input className="input-oe col-span-2" placeholder="Note" value={editData.note ?? ''} onChange={e => setEditData(d => ({ ...d, note: e.target.value }))} />
       </div>
@@ -261,7 +305,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
 
   const startEdit = (p: Prodotto) => {
     setEditId(p.id);
-    setEditData({ nome: p.nome, barcode: p.barcode ?? '', fornitore: p.fornitore ?? '', formato: p.formato ?? '', ivaPerc: p.ivaPerc, costoIi: p.costoIi, pvpIi: p.pvpIi, pvpConsigliato: p.pvpConsigliato ?? undefined, lotto: p.lotto ?? '', ingredienti: p.ingredienti ?? '', note: p.note ?? '' });
+    setEditData({ nome: p.nome, barcode: p.barcode ?? '', fornitore: p.fornitore ?? '', formato: p.formato ?? '', ivaPerc: p.ivaPerc, costoIi: p.costoIi, pvpIi: p.pvpIi, pvpConsigliato: p.pvpConsigliato ?? undefined, lotto: p.lotto ?? '', ingredienti: p.ingredienti ?? '', note: p.note ?? '', bio: p.bio, senzaGlutine: p.senzaGlutine, vegan: p.vegan });
   };
 
   const saveEdit = async (id: string) => {
@@ -325,7 +369,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
       return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const fmt2 = (n: number) => n.toFixed(2).replace('.', ',');
-    const header = ['Nome', 'Fornitore', 'Formato', 'Codice', 'Barcode', 'IVA%', 'Costo II (€)', 'PVP II (€)', 'PVP consigliato (€)', 'Margine%', 'Stato', 'Lotto', 'Ingredienti', 'Note'];
+    const header = ['Nome', 'Fornitore', 'Formato', 'Codice', 'Barcode', 'IVA%', 'Costo II (€)', 'PVP II (€)', 'PVP consigliato (€)', 'Margine%', 'Stato', 'BIO', 'Senza glutine', 'Vegan', 'Lotto', 'Ingredienti', 'Note'];
     const rows = filtered.map(p => [
       esc(p.nome),
       esc(p.fornitore),
@@ -338,6 +382,9 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
       esc(p.pvpConsigliato ? fmt2(p.pvpConsigliato) : ''),
       esc(margine(p) ?? ''),
       p.prezziConfermati ? 'Confermato' : 'Provvisorio',
+      p.bio ? 'Sì' : '',
+      p.senzaGlutine ? 'Sì' : '',
+      p.vegan ? 'Sì' : '',
       esc(p.lotto),
       esc(p.ingredienti),
       esc(p.note),
@@ -510,6 +557,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
               <input className="input-oe pl-6 col-span-2" placeholder="PVP consigliato" type="number" step="0.01" value={newData.pvpConsigliato ?? ''} onChange={e => setNewData(d => ({ ...d, pvpConsigliato: parseFloat(e.target.value) }))} />
             </div>
             <input className="input-oe col-span-2" placeholder="Lotto" value={newData.lotto ?? ''} onChange={e => setNewData(d => ({ ...d, lotto: e.target.value }))} />
+            <FlagToggles data={newData} setData={setNewData} />
             <textarea className="input-oe col-span-2 min-h-[64px] resize-y" placeholder="Ingredienti (es. farina di grano tenero, acqua, sale…)" value={newData.ingredienti ?? ''} onChange={e => setNewData(d => ({ ...d, ingredienti: e.target.value }))} />
             <input className="input-oe col-span-2" placeholder="Note" value={newData.note ?? ''} onChange={e => setNewData(d => ({ ...d, note: e.target.value }))} />
           </div>
@@ -540,6 +588,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
                     {p.formato && <p className="text-xs text-gray-400">{p.formato}</p>}
                     {p.barcode && <p className="text-[10px] text-gray-400 font-mono">{p.barcode}</p>}
                     {p.lotto && <p className="text-[10px] text-gray-500">Lotto: {p.lotto}</p>}
+                    <FlagBadges p={p} className="mt-1" />
                   </div>
                   <div className="flex flex-col gap-1">
                     <button onClick={() => isEditing ? setEditId(null) : startEdit(p)} className="p-1 text-gray-400 hover:text-primary transition-colors">
@@ -612,6 +661,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
                       {p.formato && <span className="text-xs text-gray-400">{p.formato}</span>}
                       {p.barcode && <span className="text-[10px] font-mono text-gray-400">{p.barcode}</span>}
                       {p.lotto && <span className="text-[10px] text-gray-500">Lotto: {p.lotto}</span>}
+                      <FlagBadges p={p} />
                     </div>
                     {p.ingredienti && <p className="text-[10px] text-gray-500 line-clamp-1" title={p.ingredienti}><span className="font-semibold">Ingredienti:</span> {p.ingredienti}</p>}
                     {p.note && <p className="text-[10px] text-amber-600 bg-amber-50 rounded px-1.5 py-0.5 inline-block">{p.note}</p>}
@@ -1040,6 +1090,7 @@ function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }
             {p.formato && <span className="text-sm text-gray-400">{p.formato}</span>}
             <span className="text-xs text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">IVA {p.ivaPerc}%</span>
           </div>
+          <FlagBadges p={p} className="mt-2" />
         </div>
         <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 flex-shrink-0">
           <X size={18} />

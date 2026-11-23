@@ -1240,6 +1240,9 @@ model OeAlimentariProdotto {
   fotoUrl        String?               @map("foto_url")
   lotto          String?
   ingredienti    String?
+  bio            Boolean  @default(false)
+  senzaGlutine   Boolean  @default(false) @map("senza_glutine")
+  vegan          Boolean  @default(false)
   note           String?
   ordine         Int      @default(0)
   updatedAt      DateTime @updatedAt   @map("updated_at")
