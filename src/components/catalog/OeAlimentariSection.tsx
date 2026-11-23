@@ -21,7 +21,7 @@ type Prodotto = {
   nome: string; formato: string | null; ivaPerc: number;
   costoIi: number; pvpIi: number; pvpConsigliato: number | null;
   fotoUrl: string | null; lotto: string | null; ingredienti: string | null; note: string | null; ordine: number;
-  bio: boolean; senzaGlutine: boolean; vegan: boolean;
+  bio: boolean | null; senzaGlutine: boolean | null; vegan: boolean | null;
   prezziConfermati: boolean;
   fabbisognoEmpori: FabbisognoEmpori[];
   ordinato: Ordinato;
@@ -127,8 +127,12 @@ const FLAGS = [
   { key: 'vegan', label: 'VEGAN', cls: 'bg-lime-50 text-lime-700 border-lime-200' },
 ] as const;
 
+function flagLabel(v: boolean | null | undefined) {
+  return v === true ? 'Sì' : v === false ? 'No' : 'Da definire';
+}
+
 function FlagBadges({ p, className }: { p: Pick<Prodotto, 'bio' | 'senzaGlutine' | 'vegan'>; className?: string }) {
-  const active = FLAGS.filter(f => p[f.key]);
+  const active = FLAGS.filter(f => p[f.key] === true);
   if (!active.length) return null;
   return (
     <div className={cn('flex flex-wrap gap-1', className)}>
@@ -143,20 +147,32 @@ function FlagToggles({ data, setData }: {
   data: Partial<Prodotto>;
   setData: React.Dispatch<React.SetStateAction<Partial<Prodotto>>>;
 }) {
+  const opts: { v: boolean | null; label: string; on: string }[] = [
+    { v: true,  label: 'Sì',          on: 'bg-green-600 text-white border-green-600' },
+    { v: false, label: 'No',          on: 'bg-red-500 text-white border-red-500' },
+    { v: null,  label: 'Da definire', on: 'bg-gray-200 text-gray-700 border-gray-300' },
+  ];
   return (
-    <div className="col-span-2 flex flex-wrap gap-1.5">
+    <div className="col-span-2 space-y-1.5 rounded-lg border border-border p-2">
       {FLAGS.map(f => {
-        const on = Boolean(data[f.key]);
+        const cur = data[f.key] ?? null;
         return (
-          <button
-            key={f.key}
-            type="button"
-            onClick={() => setData(d => ({ ...d, [f.key]: !on }))}
-            className={cn('flex items-center gap-1 text-[10px] font-bold tracking-wide px-2 py-1 rounded-lg border transition-colors',
-              on ? f.cls : 'bg-white text-gray-400 border-border hover:text-gray-600')}
-          >
-            {on && <Check size={10} />} {f.label}
-          </button>
+          <div key={f.key} className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-bold tracking-wide text-gray-600">{f.label}</span>
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              {opts.map(o => (
+                <button
+                  key={String(o.v)}
+                  type="button"
+                  onClick={() => setData(d => ({ ...d, [f.key]: o.v }))}
+                  className={cn('px-2.5 py-1 text-[10px] font-semibold border-l first:border-l-0 transition-colors',
+                    cur === o.v ? o.on : 'bg-white text-gray-400 border-border hover:text-gray-600')}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
         );
       })}
     </div>
@@ -306,7 +322,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
 
   const startEdit = (p: Prodotto) => {
     setEditId(p.id);
-    setEditData({ nome: p.nome, barcode: p.barcode ?? '', fornitore: p.fornitore ?? '', formato: p.formato ?? '', ivaPerc: p.ivaPerc, costoIi: p.costoIi, pvpIi: p.pvpIi, pvpConsigliato: p.pvpConsigliato ?? undefined, lotto: p.lotto ?? '', ingredienti: p.ingredienti ?? '', note: p.note ?? '', bio: p.bio, senzaGlutine: p.senzaGlutine, vegan: p.vegan });
+    setEditData({ nome: p.nome, barcode: p.barcode ?? '', fornitore: p.fornitore ?? '', formato: p.formato ?? '', ivaPerc: p.ivaPerc, costoIi: p.costoIi, pvpIi: p.pvpIi, pvpConsigliato: p.pvpConsigliato ?? undefined, lotto: p.lotto ?? '', ingredienti: p.ingredienti ?? '', note: p.note ?? '', bio: p.bio ?? null, senzaGlutine: p.senzaGlutine ?? null, vegan: p.vegan ?? null });
   };
 
   const saveEdit = async (id: string) => {
@@ -383,9 +399,9 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
       esc(p.pvpConsigliato ? fmt2(p.pvpConsigliato) : ''),
       esc(margine(p) ?? ''),
       p.prezziConfermati ? 'Confermato' : 'Provvisorio',
-      p.bio ? 'Sì' : '',
-      p.senzaGlutine ? 'Sì' : '',
-      p.vegan ? 'Sì' : '',
+      flagLabel(p.bio),
+      flagLabel(p.senzaGlutine),
+      flagLabel(p.vegan),
       esc(p.lotto),
       esc(p.ingredienti),
       esc(p.note),
@@ -1172,11 +1188,13 @@ function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }
             ['Codice', p.codice],
             ['Barcode', p.barcode],
             ['Lotto', p.lotto],
-            ...FLAGS.map(f => [f.label, p[f.key] ? 'Sì' : 'No'] as const),
+            ...FLAGS.map(f => [f.label, flagLabel(p[f.key])] as const),
           ] as const).map(([label, val]) => (
             <div key={label} className="flex justify-between gap-3 px-3 py-2">
               <dt className="text-gray-400">{label}</dt>
-              <dd className={cn('text-right', val ? 'text-gray-700' : 'text-gray-300', (label === 'Codice' || label === 'Barcode') && 'font-mono')}>{val || '—'}</dd>
+              <dd className={cn('text-right',
+                val === 'Sì' ? 'font-semibold text-green-700' : val === 'No' ? 'font-semibold text-red-500' : val === 'Da definire' ? 'italic text-gray-400' : val ? 'text-gray-700' : 'text-gray-300',
+                (label === 'Codice' || label === 'Barcode') && 'font-mono')}>{val || '—'}</dd>
             </div>
           ))}
         </dl>

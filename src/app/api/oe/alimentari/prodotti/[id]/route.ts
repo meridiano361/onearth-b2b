@@ -29,9 +29,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (body.fotoUrl !== undefined)          data.fotoUrl = body.fotoUrl || null;
   if (body.ingredienti !== undefined)      data.ingredienti = body.ingredienti?.trim() || null;
   if (body.note !== undefined)             data.note = body.note || null;
-  if (body.bio !== undefined)              data.bio = Boolean(body.bio);
-  if (body.senzaGlutine !== undefined)     data.senzaGlutine = Boolean(body.senzaGlutine);
-  if (body.vegan !== undefined)            data.vegan = Boolean(body.vegan);
+  if (body.bio !== undefined)              data.bio = body.bio === null ? null : Boolean(body.bio);
+  if (body.senzaGlutine !== undefined)     data.senzaGlutine = body.senzaGlutine === null ? null : Boolean(body.senzaGlutine);
+  if (body.vegan !== undefined)            data.vegan = body.vegan === null ? null : Boolean(body.vegan);
   if (body.prezziConfermati !== undefined) data.prezziConfermati = Boolean(body.prezziConfermati);
 
   try {
