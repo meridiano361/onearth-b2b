@@ -286,6 +286,7 @@ function EditForm({ editData, setEditData, onSave, onCancel, saving }: {
 type SortBy = 'default' | 'nome_az' | 'nome_za' | 'fornitore' | 'pvp_asc' | 'pvp_desc' | 'margine_desc';
 
 function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () => void }) {
+  const [anagratica, setAnagratica] = useState<AnagraticaState | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<Prodotto>>({});
   const [adding, setAdding] = useState(false);
@@ -584,7 +585,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
                         {p.fornitore}
                       </span>
                     )}
-                    <p className="text-sm font-semibold text-primary leading-tight truncate">{p.nome}</p>
+                    <button onClick={() => setAnagratica({ kind: 'prodotto', data: p })} className="block max-w-full text-left text-sm font-semibold text-primary leading-tight truncate hover:underline">{p.nome}</button>
                     {p.formato && <p className="text-xs text-gray-400">{p.formato}</p>}
                     {p.barcode && <p className="text-[10px] text-gray-400 font-mono">{p.barcode}</p>}
                     {p.lotto && <p className="text-[10px] text-gray-500">Lotto: {p.lotto}</p>}
@@ -655,7 +656,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
                           {p.fornitore}
                         </span>
                       )}
-                      <p className="text-sm font-semibold text-primary leading-none">{p.nome}</p>
+                      <button onClick={() => setAnagratica({ kind: 'prodotto', data: p })} className="text-left text-sm font-semibold text-primary leading-none hover:underline">{p.nome}</button>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       {p.formato && <span className="text-xs text-gray-400">{p.formato}</span>}
@@ -703,6 +704,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
           })}
         </div>
       )}
+      {anagratica && <AnagraticaDrawer item={anagratica} onClose={() => setAnagratica(null)} />}
     </div>
   );
 }
@@ -1155,8 +1157,11 @@ function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }
         </div>
       )}
 
-      {(p.codice || p.barcode) && (
+      {(p.codice || p.barcode || p.lotto) && (
         <div className="space-y-1">
+          {p.lotto && (
+            <p className="text-xs text-gray-500">Lotto: <span className="text-gray-700">{p.lotto}</span></p>
+          )}
           {p.codice && (
             <p className="text-xs text-gray-500">Codice: <span className="font-mono text-gray-700">{p.codice}</span></p>
           )}
