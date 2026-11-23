@@ -27,6 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (body.pvpConsigliato !== undefined) data.pvpConsigliato = body.pvpConsigliato ? Number(body.pvpConsigliato) : null;
   if (body.lotto !== undefined)            data.lotto = body.lotto || null;
   if (body.fotoUrl !== undefined)          data.fotoUrl = body.fotoUrl || null;
+  if (body.ingredienti !== undefined)      data.ingredienti = body.ingredienti?.trim() || null;
   if (body.note !== undefined)             data.note = body.note || null;
   if (body.prezziConfermati !== undefined) data.prezziConfermati = Boolean(body.prezziConfermati);
 

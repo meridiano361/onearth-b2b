@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       pvpIi: body.pvpIi ? Number(body.pvpIi) : 0,
       pvpConsigliato: body.pvpConsigliato ? Number(body.pvpConsigliato) : null,
       lotto: body.lotto?.trim() || null,
+      ingredienti: body.ingredienti?.trim() || null,
       note: body.note?.trim() || null,
       ordine: body.ordine ? Number(body.ordine) : 99,
     },
