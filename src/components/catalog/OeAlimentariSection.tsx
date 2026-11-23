@@ -1099,17 +1099,21 @@ function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }
         </button>
       </div>
 
-      {p.fotoUrl && (
-        <>
-          <div className="relative group cursor-zoom-in" onClick={() => setLightbox(true)}>
-            <img src={p.fotoUrl} alt={p.nome} className="w-full h-44 object-cover rounded-xl" />
-            <div className="absolute inset-0 rounded-xl bg-black/0 group-hover:bg-black/20 transition-colors flex items-end justify-end p-2">
-              <ZoomIn size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+      <div className="flex justify-center">
+        {p.fotoUrl ? (
+          <>
+            <div className="relative group cursor-zoom-in w-24 h-24" onClick={() => setLightbox(true)}>
+              <img src={p.fotoUrl} alt={p.nome} className="w-24 h-24 object-contain rounded-xl border border-border bg-white" />
+              <div className="absolute inset-0 rounded-xl bg-black/0 group-hover:bg-black/20 transition-colors flex items-end justify-end p-1.5">
+                <ZoomIn size={14} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+              </div>
             </div>
-          </div>
-          {lightbox && <ImageLightbox src={p.fotoUrl} alt={p.nome} onClose={() => setLightbox(false)} />}
-        </>
-      )}
+            {lightbox && <ImageLightbox src={p.fotoUrl} alt={p.nome} onClose={() => setLightbox(false)} />}
+          </>
+        ) : (
+          <div className="w-24 h-24 rounded-xl border border-dashed border-border flex items-center justify-center text-[10px] text-gray-300">Nessuna foto</div>
+        )}
+      </div>
 
       {/* Prezzi */}
       <div>
@@ -1131,56 +1135,61 @@ function ProdottoAnagrafica({ p, onClose }: { p: Prodotto; onClose: () => void }
             <p className="text-[10px] text-gray-400 mb-0.5">PVP IVA inclusa</p>
             <p className="text-sm font-semibold text-green-700">{fmt(p.pvpIi)}</p>
           </div>
-          {p.pvpConsigliato != null && p.pvpConsigliato !== p.pvpIi && (
-            <div className="bg-blue-50 rounded-xl p-3 col-span-2">
-              <p className="text-[10px] text-blue-400 mb-0.5">PVP consigliato IVA inclusa</p>
-              <p className="text-sm font-semibold text-blue-600">{fmt(p.pvpConsigliato)}</p>
-            </div>
-          )}
+          <div className="bg-blue-50 rounded-xl p-3">
+            <p className="text-[10px] text-blue-400 mb-0.5">PVP consigliato IVA inclusa</p>
+            <p className="text-sm font-semibold text-blue-600">{p.pvpConsigliato != null ? fmt(p.pvpConsigliato) : '—'}</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-[10px] text-gray-400 mb-0.5">Stato prezzi</p>
+            <p className={cn('text-sm font-semibold', p.prezziConfermati ? 'text-green-700' : 'text-amber-600')}>{p.prezziConfermati ? 'Confermati' : 'Provvisori'}</p>
+          </div>
         </div>
       </div>
 
       {/* Margine */}
-      {marginePerc !== null && (
-        <div>
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Margine</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-[10px] text-gray-400 mb-0.5">Margine %</p>
-              <p className="text-sm font-semibold text-gray-700">{marginePerc}%</p>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-[10px] text-gray-400 mb-0.5">Margine unitario</p>
-              <p className="text-sm font-semibold text-gray-700">{fmt(margineUnit)}</p>
-            </div>
+      <div>
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Margine</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-[10px] text-gray-400 mb-0.5">Margine %</p>
+            <p className="text-sm font-semibold text-gray-700">{marginePerc !== null ? `${marginePerc}%` : '—'}</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-[10px] text-gray-400 mb-0.5">Margine unitario</p>
+            <p className="text-sm font-semibold text-gray-700">{fmt(margineUnit)}</p>
           </div>
         </div>
-      )}
+      </div>
 
-      {(p.codice || p.barcode || p.lotto) && (
-        <div className="space-y-1">
-          {p.lotto && (
-            <p className="text-xs text-gray-500">Lotto: <span className="text-gray-700">{p.lotto}</span></p>
-          )}
-          {p.codice && (
-            <p className="text-xs text-gray-500">Codice: <span className="font-mono text-gray-700">{p.codice}</span></p>
-          )}
-          {p.barcode && (
-            <p className="text-xs text-gray-500">Barcode: <span className="font-mono text-gray-700">{p.barcode}</span></p>
-          )}
-        </div>
-      )}
-      {p.ingredienti && (
-        <div className="bg-gray-50 rounded-xl p-3">
-          <p className="text-[10px] text-gray-400 mb-0.5">Ingredienti</p>
-          <p className="text-xs text-gray-700 whitespace-pre-line">{p.ingredienti}</p>
-        </div>
-      )}
-      {p.note && (
-        <div className="bg-amber-50 rounded-xl p-3">
-          <p className="text-xs text-amber-700">{p.note}</p>
-        </div>
-      )}
+      {/* Dati prodotto */}
+      <div>
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Dati prodotto</p>
+        <dl className="divide-y divide-border text-xs border border-border rounded-xl overflow-hidden">
+          {([
+            ['Fornitore', p.fornitore],
+            ['Formato', p.formato],
+            ['IVA', `${p.ivaPerc}%`],
+            ['Codice', p.codice],
+            ['Barcode', p.barcode],
+            ['Lotto', p.lotto],
+            ...FLAGS.map(f => [f.label, p[f.key] ? 'Sì' : 'No'] as const),
+          ] as const).map(([label, val]) => (
+            <div key={label} className="flex justify-between gap-3 px-3 py-2">
+              <dt className="text-gray-400">{label}</dt>
+              <dd className={cn('text-right', val ? 'text-gray-700' : 'text-gray-300', (label === 'Codice' || label === 'Barcode') && 'font-mono')}>{val || '—'}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+
+      <div className="bg-gray-50 rounded-xl p-3">
+        <p className="text-[10px] text-gray-400 mb-0.5">Ingredienti</p>
+        <p className={cn('text-xs whitespace-pre-line', p.ingredienti ? 'text-gray-700' : 'text-gray-300')}>{p.ingredienti || '—'}</p>
+      </div>
+      <div className="bg-amber-50 rounded-xl p-3">
+        <p className="text-[10px] text-amber-500 mb-0.5">Note</p>
+        <p className={cn('text-xs whitespace-pre-line', p.note ? 'text-amber-700' : 'text-amber-300')}>{p.note || '—'}</p>
+      </div>
     </div>
   );
 }
