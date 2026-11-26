@@ -322,7 +322,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
 
   const startEdit = (p: Prodotto) => {
     setEditId(p.id);
-    setEditData({ nome: p.nome, barcode: p.barcode ?? '', fornitore: p.fornitore ?? '', formato: p.formato ?? '', ivaPerc: p.ivaPerc, costoIi: p.costoIi, pvpIi: p.pvpIi, pvpConsigliato: p.pvpConsigliato ?? undefined, lotto: p.lotto ?? '', ingredienti: p.ingredienti ?? '', note: p.note ?? '', bio: p.bio ?? null, senzaGlutine: p.senzaGlutine ?? null, vegan: p.vegan ?? null });
+    setEditData({ nome: p.nome, codice: p.codice ?? '', barcode: p.barcode ?? '', fornitore: p.fornitore ?? '', formato: p.formato ?? '', ivaPerc: p.ivaPerc, costoIi: p.costoIi, pvpIi: p.pvpIi, pvpConsigliato: p.pvpConsigliato ?? undefined, lotto: p.lotto ?? '', ingredienti: p.ingredienti ?? '', note: p.note ?? '', bio: p.bio ?? null, senzaGlutine: p.senzaGlutine ?? null, vegan: p.vegan ?? null });
   };
 
   const saveEdit = async (id: string) => {
@@ -423,6 +423,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
       if (!q) return true;
       return p.nome.toLowerCase().includes(q) ||
         (p.barcode ?? '').includes(q) ||
+        (p.codice ?? '').toLowerCase().includes(q) ||
         (p.fornitore ?? '').toLowerCase().includes(q) ||
         (p.formato ?? '').toLowerCase().includes(q);
     });
@@ -445,7 +446,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             className="input-oe pl-7"
-            placeholder="Cerca per nome, barcode, fornitore…"
+            placeholder="Cerca per nome, codice, barcode, fornitore…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -603,6 +604,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
                     )}
                     <button onClick={() => setAnagratica({ kind: 'prodotto', data: p })} className="block max-w-full text-left text-sm font-semibold text-primary leading-tight truncate hover:underline">{p.nome}</button>
                     {p.formato && <p className="text-xs text-gray-400">{p.formato}</p>}
+                    {p.codice && <p className="text-[10px] text-gray-500 font-mono">Cod. {p.codice}</p>}
                     {p.barcode && <p className="text-[10px] text-gray-400 font-mono">{p.barcode}</p>}
                     {p.lotto && <p className="text-[10px] text-gray-500">Lotto: {p.lotto}</p>}
                     <FlagBadges p={p} className="mt-1" />
@@ -676,6 +678,7 @@ function TabProdotti({ prodotti, refetch }: { prodotti: Prodotto[]; refetch: () 
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       {p.formato && <span className="text-xs text-gray-400">{p.formato}</span>}
+                      {p.codice && <span className="text-[10px] font-mono text-gray-500">Cod. {p.codice}</span>}
                       {p.barcode && <span className="text-[10px] font-mono text-gray-400">{p.barcode}</span>}
                       {p.lotto && <span className="text-[10px] text-gray-500">Lotto: {p.lotto}</span>}
                       <FlagBadges p={p} />
